@@ -13,7 +13,7 @@ Tests verify:
     5. IK round-trip (FK(IK(p)) ~ p)
     6. Reset behavior
     7. Singularity handling (near-vertical pose)
-    8. update_controller_params / update_buoyancy_force
+    8. update_controller_params (m_hat, F_bu)
 """
 
 import importlib.util
@@ -113,13 +113,15 @@ def _load_module(name: str, filepath: Path):
 
 # TDCControllerCfg is a plain dataclass (decorated with @configclass which is
 # a no-op in test context). Replicate it here to avoid loading the full
-# hero_agent_env_cfg.py which triggers the entire isaaclab_tasks package chain.
+# config.py which triggers the entire isaaclab_tasks package chain.
 class TDCControllerCfg:
-    """Mirror of hero_agent_env_cfg.TDCControllerCfg for testing."""
+    """Mirror of config.TDCControllerCfg for testing."""
 
     m_hat: tuple[float, float] = (0.15, 0.16)
     kp: float = 40.0
     kd: float = 12.0
+    # Test uses h=0.230 (full link2 length) vs production h=0.180 (CoG-to-ABPC offset).
+    # This exercises larger torque magnitudes without affecting correctness verification.
     h: float = 0.230
     dls_lambda_damping: float = 0.01
     nu_dot_ema_alpha: float = 0.05
@@ -132,9 +134,8 @@ class TDCControllerCfg:
 
 
 # Build a fake package hierarchy so relative imports in tdc.py resolve correctly.
-# tdc.py does: from ..hero_agent_env_cfg import TDCControllerCfg
-# This resolves to: <package>.hero_agent_env_cfg where <package> is the parent
-# of controllers (i.e., isaaclab_tasks.direct.hero_agent).
+# tdc.py imports from isaaclab.utils and isaaclab_assets.robots.uuv (mocked above).
+# TDCControllerCfg is defined in controllers/tdc.py itself (not in config.py).
 _PKG = "isaaclab_tasks.direct.hero_agent"
 _CTRL_PKG = f"{_PKG}.controllers"
 
@@ -142,11 +143,6 @@ _CTRL_PKG = f"{_PKG}.controllers"
 for pkg_name in ["isaaclab_tasks.direct", _PKG, _CTRL_PKG]:
     if pkg_name not in sys.modules:
         sys.modules[pkg_name] = types.ModuleType(pkg_name)
-
-# Register the cfg shim where tdc.py's relative import expects it
-_cfg_shim = types.ModuleType(f"{_PKG}.hero_agent_env_cfg")
-_cfg_shim.TDCControllerCfg = TDCControllerCfg
-sys.modules[f"{_PKG}.hero_agent_env_cfg"] = _cfg_shim
 
 # Load kinematics (no relative imports from parent)
 _kin_mod = _load_module(f"{_CTRL_PKG}.kinematics", _controllers_dir / "kinematics.py")
@@ -449,18 +445,18 @@ class TestUpdateParams:
         torch.testing.assert_close(controller._m_hat[2], original[2])
 
     def test_update_buoyancy_force_all(self, controller):
-        """update_buoyancy_force should set F_bu for all envs."""
+        """update_controller_params(F_bu=...) should set F_bu for all envs."""
         new_fbu = torch.full((NUM_ENVS,), 30.0)
-        controller.update_buoyancy_force(new_fbu)
+        controller.update_controller_params(F_bu=new_fbu)
 
         torch.testing.assert_close(controller._F_bu, new_fbu)
 
     def test_update_buoyancy_force_subset(self, controller):
-        """update_buoyancy_force with env_ids should only update those envs."""
+        """update_controller_params(F_bu=..., env_ids=...) should only update those envs."""
         original = controller._F_bu.clone()
         new_fbu = torch.tensor([30.0, 31.0, 32.0, 33.0])
         env_ids = torch.tensor([0, 2])
-        controller.update_buoyancy_force(new_fbu, env_ids=env_ids)
+        controller.update_controller_params(F_bu=new_fbu, env_ids=env_ids)
 
         assert controller._F_bu[0].item() == pytest.approx(30.0)
         assert controller._F_bu[2].item() == pytest.approx(32.0)
