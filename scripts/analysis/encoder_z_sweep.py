@@ -85,8 +85,8 @@ SWEEP_PARAMS = [
     SweepParam("Buoy Inertia Iyy", 13, 0.00278 * 0.75, 0.00278 * 1.3, "kg*m^2"),
     SweepParam("Payload Mass", 14, 0.0, 1.5, "kg"),
     SweepParam("Payload CoG Z", 17, -0.03, 0.0, "m"),
-    SweepParam("Main Added Mass Surge", 18, 5.76 * 0.5, 5.76 * 1.5, "kg"),
-    SweepParam("Buoy Added Mass Surge", 19, 1.5 * 0.5, 1.5 * 1.5, "kg"),
+    SweepParam("Main Added Mass Surge", 18, 5.76 * 0.85, 5.76 * 1.15, "kg"),
+    SweepParam("Buoy Added Mass Surge", 19, 1.5 * 0.85, 1.5 * 1.15, "kg"),
 ]
 
 # Encoder architecture constants (from rsl_rl_ppo_cfg.py)
