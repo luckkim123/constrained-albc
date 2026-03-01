@@ -16,41 +16,50 @@ import os
 from dataclasses import dataclass
 
 import matplotlib
-import torch
-import torch.nn as nn
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+import torch
+import torch.nn as nn
 
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
 
 LATEST_CHECKPOINT = (
-    "logs/rsl_rl/hero_agent_albc_encoder/2026-02-24_15-27-22/model_1499.pt"
+    "logs/rsl_rl/hero_agent_albc_encoder/2026-02-28_23-24-28/model_4999.pt"
 )
 
-# Nominal privileged obs (26D) assembled from env.yaml hydro/buoy configs.
+# Nominal privileged obs (20D) assembled from env.yaml hydro/buoy configs.
 # These are the *unscaled* nominal values (DR scale = 1.0).
-NOMINAL_26D = [
-    # Main body hydro (7D): volume, CoG(3), CoB(3)
+#
+# 20D structure:
+#   Main hydro (5D): volume, CoG_xyz, CoB_z
+#   Buoy hydro (5D): volume, CoG_xyz, CoB_z
+#   Main inertia (2D): Ixx, Iyy
+#   Buoy inertia (2D): Ixx, Iyy
+#   Payload (4D): mass, cog_offset_xyz
+#   Added mass surge (2D): main, buoy
+NOMINAL_20D = [
+    # Main body hydro (5D): volume, CoG(3), CoB_z(1)
     0.00827,                    # [0]  main volume
-    0.0, 0.0, -0.05,           # [1:4] main CoG
-    0.0, 0.0, 0.0,             # [4:7] main CoB
-    # Buoy body hydro (7D): volume, CoG(3), CoB(3)
-    0.00268,                    # [7]  buoy volume
-    0.0, 0.0, 0.0,             # [8:11] buoy CoG
-    0.0, 0.0, 0.0,             # [11:14] buoy CoB
-    # Main dynamics (4D): inertia Ixx/Iyy/Izz, body_mass
-    0.0994, 0.0994, 0.0372,    # [14:17] main inertia
-    9.18,                       # [17] main body mass
-    # Buoy dynamics (4D): inertia Ixx/Iyy/Izz, body_mass
-    0.00278, 0.00278, 0.00336, # [18:21] buoy inertia
-    0.93,                       # [21] buoy body mass
+    0.0, 0.0, -0.05,           # [1:4] main CoG xyz
+    0.0,                        # [4]  main CoB z
+    # Buoy body hydro (5D): volume, CoG(3), CoB_z(1)
+    0.00268,                    # [5]  buoy volume
+    0.0, 0.0, 0.0,             # [6:9] buoy CoG xyz
+    0.0,                        # [9]  buoy CoB z
+    # Main inertia (2D): Ixx, Iyy (no Izz)
+    0.0994, 0.0994,            # [10:12] main inertia
+    # Buoy inertia (2D): Ixx, Iyy (no Izz)
+    0.00278, 0.00278,          # [12:14] buoy inertia
     # Payload (4D): mass, cog_offset xyz
-    0.5,                        # [22] payload mass
-    0.0, 0.0, -0.015,          # [23:26] payload cog offset
+    0.5,                        # [14] payload mass
+    0.0, 0.0, -0.015,          # [15:18] payload cog offset
+    # Added mass surge (2D): main, buoy
+    5.76,                       # [18] main added mass surge
+    1.5,                        # [19] buoy added mass surge
 ]
 
 
@@ -65,20 +74,25 @@ class SweepParam:
     unit: str = ""
 
 
-# Key parameters to sweep: volume, mass, inertia, payload
+# Key parameters to sweep: volume, inertia, payload, added mass
 SWEEP_PARAMS = [
     SweepParam("Main Volume", 0, 0.00827 * 0.9, 0.00827 * 1.1, "m^3"),
-    SweepParam("Buoy Volume", 7, 0.00268 * 0.9, 0.00268 * 1.1, "m^3"),
-    SweepParam("Main Body Mass", 17, 9.18 * 0.9, 9.18 * 1.1, "kg"),
-    SweepParam("Buoy Body Mass", 21, 0.93 * 0.9, 0.93 * 1.1, "kg"),
-    SweepParam("Main Inertia Ixx", 14, 0.0994 * 0.75, 0.0994 * 1.3, "kg*m^2"),
-    SweepParam("Main Inertia Iyy", 15, 0.0994 * 0.75, 0.0994 * 1.3, "kg*m^2"),
-    SweepParam("Main Inertia Izz", 16, 0.0372 * 0.75, 0.0372 * 1.3, "kg*m^2"),
-    SweepParam("Buoy Inertia Ixx", 18, 0.00278 * 0.75, 0.00278 * 1.3, "kg*m^2"),
-    SweepParam("Buoy Inertia Iyy", 19, 0.00278 * 0.75, 0.00278 * 1.3, "kg*m^2"),
-    SweepParam("Buoy Inertia Izz", 20, 0.00336 * 0.75, 0.00336 * 1.3, "kg*m^2"),
-    SweepParam("Payload Mass", 22, 0.0, 1.5, "kg"),
+    SweepParam("Buoy Volume", 5, 0.00268 * 0.9, 0.00268 * 1.1, "m^3"),
+    SweepParam("Main CoG Z", 3, -0.05 - 0.02, -0.05 + 0.02, "m"),
+    SweepParam("Main Inertia Ixx", 10, 0.0994 * 0.75, 0.0994 * 1.3, "kg*m^2"),
+    SweepParam("Main Inertia Iyy", 11, 0.0994 * 0.75, 0.0994 * 1.3, "kg*m^2"),
+    SweepParam("Buoy Inertia Ixx", 12, 0.00278 * 0.75, 0.00278 * 1.3, "kg*m^2"),
+    SweepParam("Buoy Inertia Iyy", 13, 0.00278 * 0.75, 0.00278 * 1.3, "kg*m^2"),
+    SweepParam("Payload Mass", 14, 0.0, 1.5, "kg"),
+    SweepParam("Payload CoG Z", 17, -0.03, 0.0, "m"),
+    SweepParam("Main Added Mass Surge", 18, 5.76 * 0.5, 5.76 * 1.5, "kg"),
+    SweepParam("Buoy Added Mass Surge", 19, 1.5 * 0.5, 1.5 * 1.5, "kg"),
 ]
+
+# Encoder architecture constants (from rsl_rl_ppo_cfg.py)
+PRIVILEGED_DIM = 20
+ENCODER_HIDDEN_DIMS = [256, 128, 64]
+ENCODER_LATENT_DIM = 13
 
 
 # ---------------------------------------------------------------------------
@@ -86,37 +100,50 @@ SWEEP_PARAMS = [
 # ---------------------------------------------------------------------------
 
 
-def build_encoder_mlp() -> nn.Sequential:
-    """Reconstruct the encoder MLP: 26D -> [256,128,64] -> 13D with ELU + Tanh.
+def build_encoder_mlp(activation: str = "tanh") -> nn.Sequential:
+    """Reconstruct the encoder MLP: 20D -> [256,128,64] -> 13D.
 
-    Matches the rsl_rl MLP structure with last_activation='tanh'.
-    Layer indices: 0(Linear) 1(ELU) 2(Linear) 3(ELU) 4(Linear) 5(ELU) 6(Linear) 7(Tanh)
+    For tanh mode (default): last layer has tanh activation (built into MLP).
+    For sigmoid mode: no last activation (sigmoid applied externally).
+
+    Layer indices (tanh): 0(Linear) 1(ELU) 2(Linear) 3(ELU) 4(Linear) 5(ELU) 6(Linear) 7(Tanh)
+    Layer indices (sigmoid): 0(Linear) 1(ELU) 2(Linear) 3(ELU) 4(Linear) 5(ELU) 6(Linear)
     """
-    return nn.Sequential(
-        nn.Linear(26, 256),
+    layers: list[nn.Module] = [
+        nn.Linear(PRIVILEGED_DIM, ENCODER_HIDDEN_DIMS[0]),
         nn.ELU(),
-        nn.Linear(256, 128),
+        nn.Linear(ENCODER_HIDDEN_DIMS[0], ENCODER_HIDDEN_DIMS[1]),
         nn.ELU(),
-        nn.Linear(128, 64),
+        nn.Linear(ENCODER_HIDDEN_DIMS[1], ENCODER_HIDDEN_DIMS[2]),
         nn.ELU(),
-        nn.Linear(64, 13),
-        nn.Tanh(),
-    )
+        nn.Linear(ENCODER_HIDDEN_DIMS[2], ENCODER_LATENT_DIM),
+    ]
+    if activation == "tanh":
+        layers.append(nn.Tanh())
+    return nn.Sequential(*layers)
 
 
-def load_encoder(ckpt_path: str) -> tuple[nn.Sequential, torch.Tensor, torch.Tensor]:
+def activate_z(raw: torch.Tensor, activation: str = "tanh",
+               z_min: float = 0.01, z_max: float = 2.0) -> torch.Tensor:
+    """Apply output activation to raw encoder output."""
+    if activation == "tanh":
+        return torch.tanh(raw)
+    return z_min + torch.sigmoid(raw) * (z_max - z_min)
+
+
+def load_encoder(ckpt_path: str, activation: str = "tanh") -> tuple[nn.Sequential, torch.Tensor, torch.Tensor]:
     """Load encoder MLP and normalizer statistics from checkpoint.
 
     Returns:
         encoder: The encoder MLP in eval mode.
-        norm_mean: (1, 26) running mean from EmpiricalNormalization.
-        norm_std: (1, 26) running std from EmpiricalNormalization.
+        norm_mean: (1, D) running mean from EmpiricalNormalization.
+        norm_std: (1, D) running std from EmpiricalNormalization.
     """
     ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
     state_dict = ckpt["model_state_dict"]
 
     # Extract encoder weights
-    encoder = build_encoder_mlp()
+    encoder = build_encoder_mlp(activation)
     encoder_state = {
         k.removeprefix("encoder."): v
         for k, v in state_dict.items()
@@ -125,9 +152,15 @@ def load_encoder(ckpt_path: str) -> tuple[nn.Sequential, torch.Tensor, torch.Ten
     encoder.load_state_dict(encoder_state)
     encoder.eval()
 
-    # Extract normalizer statistics
-    norm_mean = state_dict["encoder_obs_normalizer._mean"]  # (1, 26)
-    norm_std = state_dict["encoder_obs_normalizer._std"]  # (1, 26)
+    # Extract normalizer statistics (fallback to identity if absent)
+    norm_mean = state_dict.get("encoder_obs_normalizer._mean", torch.zeros(1, PRIVILEGED_DIM))
+    norm_std = state_dict.get("encoder_obs_normalizer._std", torch.ones(1, PRIVILEGED_DIM))
+
+    if norm_mean.shape[-1] != PRIVILEGED_DIM:
+        raise ValueError(
+            f"Checkpoint privileged dim {norm_mean.shape[-1]} != expected {PRIVILEGED_DIM}. "
+            "Use the correct checkpoint or update PRIVILEGED_DIM."
+        )
 
     return encoder, norm_mean, norm_std
 
@@ -148,6 +181,7 @@ def sweep_parameter(
     norm_std: torch.Tensor,
     nominal: torch.Tensor,
     param: SweepParam,
+    activation: str = "tanh",
     num_points: int = 100,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Sweep a single parameter and return (values, z_responses).
@@ -156,8 +190,9 @@ def sweep_parameter(
         encoder: Loaded encoder MLP.
         norm_mean: Normalizer running mean.
         norm_std: Normalizer running std.
-        nominal: (26,) nominal privileged observation.
+        nominal: (D,) nominal privileged observation.
         param: Which parameter to sweep.
+        activation: "tanh" or "sigmoid".
         num_points: Number of sweep points.
 
     Returns:
@@ -170,7 +205,13 @@ def sweep_parameter(
 
     with torch.no_grad():
         normed = normalize_obs(batch, norm_mean, norm_std)
-        z = encoder(normed)
+        raw = encoder(normed)
+        # For tanh mode, tanh is already in the MLP, so raw is already activated.
+        # For sigmoid mode, we need to apply sigmoid externally.
+        if activation == "sigmoid":
+            z = activate_z(raw, activation)
+        else:
+            z = raw  # Already tanh'd
 
     return values.numpy(), z.numpy()
 
@@ -184,11 +225,14 @@ def plot_per_parameter(
     all_results: list[tuple[SweepParam, np.ndarray, np.ndarray]],
     nominal: torch.Tensor,
     output_dir: str,
-    z_dim: int = 13,
+    activation: str = "tanh",
+    z_dim: int = ENCODER_LATENT_DIM,
 ) -> None:
     """Create one figure per parameter, with a subplot for each z dimension."""
     n_cols = 4
     n_rows = (z_dim + n_cols - 1) // n_cols  # 4 rows for 13 dims
+
+    y_lo, y_hi = (-1.1, 1.1) if activation == "tanh" else (-0.1, 2.1)
 
     for param, values, z in all_results:
         fig, axes = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 3 * n_rows))
@@ -203,7 +247,7 @@ def plot_per_parameter(
 
             ax.plot(values, z[:, j], color="C0", linewidth=1.5)
             ax.axvline(nom_val, color="red", linestyle="--", alpha=0.6, linewidth=1)
-            ax.set_ylim(-1.1, 1.1)
+            ax.set_ylim(y_lo, y_hi)
             ax.set_title(f"z_{j}  (range={z_range:.3f})", fontsize=9, fontweight="bold")
             ax.grid(True, alpha=0.3)
 
@@ -234,21 +278,21 @@ def plot_sensitivity_heatmap(
 ) -> None:
     """Create a heatmap showing sensitivity magnitude (z range) per parameter per z dim."""
     n_params = len(all_results)
-    sensitivity = np.zeros((n_params, 13))
+    sensitivity = np.zeros((n_params, ENCODER_LATENT_DIM))
 
     param_names = []
     for i, (param, _values, z) in enumerate(all_results):
         param_names.append(param.name)
-        for j in range(13):
+        for j in range(ENCODER_LATENT_DIM):
             sensitivity[i, j] = z[:, j].max() - z[:, j].min()
 
-    fig, ax = plt.subplots(figsize=(14, 6))
+    fig, ax = plt.subplots(figsize=(16, 6))
     im = ax.imshow(sensitivity.T, aspect="auto", cmap="YlOrRd", interpolation="nearest")
 
     ax.set_xticks(range(n_params))
     ax.set_xticklabels(param_names, rotation=45, ha="right", fontsize=9)
-    ax.set_yticks(range(13))
-    ax.set_yticklabels([f"z_{j}" for j in range(13)], fontsize=9)
+    ax.set_yticks(range(ENCODER_LATENT_DIM))
+    ax.set_yticklabels([f"z_{j}" for j in range(ENCODER_LATENT_DIM)], fontsize=9)
     ax.set_xlabel("DR Parameter", fontsize=11)
     ax.set_ylabel("Latent Dimension", fontsize=11)
     ax.set_title(
@@ -259,7 +303,7 @@ def plot_sensitivity_heatmap(
 
     # Annotate cells with values
     for i in range(n_params):
-        for j in range(13):
+        for j in range(ENCODER_LATENT_DIM):
             val = sensitivity[i, j]
             color = "white" if val > sensitivity.max() * 0.6 else "black"
             ax.text(i, j, f"{val:.2f}", ha="center", va="center", fontsize=7, color=color)
@@ -295,6 +339,13 @@ def main() -> None:
         default=None,
         help="Output directory (default: same as checkpoint dir + /encoder_analysis)",
     )
+    parser.add_argument(
+        "--activation",
+        type=str,
+        default="tanh",
+        choices=["tanh", "sigmoid"],
+        help="Encoder output activation (default: tanh)",
+    )
     args = parser.parse_args()
 
     ckpt_path = args.checkpoint
@@ -306,26 +357,30 @@ def main() -> None:
         output_dir = os.path.join(os.path.dirname(ckpt_path), "encoder_analysis")
     os.makedirs(output_dir, exist_ok=True)
 
-    print(f"Loading encoder from: {ckpt_path}")
-    encoder, norm_mean, norm_std = load_encoder(ckpt_path)
-    nominal = torch.tensor(NOMINAL_26D, dtype=torch.float32)
+    activation = args.activation
+    z_range_str = "[-1, 1] (tanh)" if activation == "tanh" else "[0.01, 2.0] (sigmoid)"
 
-    print(f"Nominal obs (26D): {nominal.numpy()}")
+    print(f"Loading encoder from: {ckpt_path}")
+    encoder, norm_mean, norm_std = load_encoder(ckpt_path, activation)
+    nominal = torch.tensor(NOMINAL_20D, dtype=torch.float32)
+
+    print(f"Nominal obs ({PRIVILEGED_DIM}D): {nominal.numpy()}")
     print(f"Normalizer mean: {norm_mean.squeeze().numpy()}")
     print(f"Normalizer std:  {norm_std.squeeze().numpy()}")
+    print(f"z range: {z_range_str}")
     print(f"Sweeping {len(SWEEP_PARAMS)} parameters with {args.num_points} points each...\n")
 
     all_results = []
     for param in SWEEP_PARAMS:
-        values, z = sweep_parameter(encoder, norm_mean, norm_std, nominal, param, args.num_points)
+        values, z = sweep_parameter(encoder, norm_mean, norm_std, nominal, param, activation, args.num_points)
 
         # Print per-param summary
         z_ranges = z.max(axis=0) - z.min(axis=0)
         active_dims = np.sum(z_ranges > 0.05)
         print(
-            f"  {param.name:20s} | "
+            f"  {param.name:25s} | "
             f"sweep [{param.low:.5f}, {param.high:.5f}] | "
-            f"active z dims (range>0.05): {active_dims:2d}/13 | "
+            f"active z dims (range>0.05): {active_dims:2d}/{ENCODER_LATENT_DIM} | "
             f"max z range: {z_ranges.max():.4f}"
         )
         all_results.append((param, values, z))
@@ -334,12 +389,12 @@ def main() -> None:
     heatmap_path = os.path.join(output_dir, "z_sensitivity_heatmap.png")
 
     print(f"\nGenerating per-parameter plots -> {output_dir}/sweep_*.png")
-    plot_per_parameter(all_results, nominal, output_dir)
+    plot_per_parameter(all_results, nominal, output_dir, activation)
 
     print(f"Generating heatmap             -> {heatmap_path}")
     plot_sensitivity_heatmap(all_results, heatmap_path)
 
-    print("\nDone!")
+    print(f"\nDone! Output: {output_dir}")
 
 
 if __name__ == "__main__":
