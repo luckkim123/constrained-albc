@@ -31,17 +31,17 @@ LATEST_CHECKPOINT = (
     "logs/rsl_rl/hero_agent_albc_encoder/2026-02-28_23-24-28/model_4999.pt"
 )
 
-# Nominal privileged obs (20D) assembled from env.yaml hydro/buoy configs.
+# Nominal privileged obs (19D) assembled from env.yaml hydro/buoy configs.
 # These are the *unscaled* nominal values (DR scale = 1.0).
 #
-# 20D structure:
+# 19D structure:
 #   Main hydro (5D): volume, CoG_xyz, CoB_z
 #   Buoy hydro (5D): volume, CoG_xyz, CoB_z
 #   Main inertia (2D): Ixx, Iyy
 #   Buoy inertia (2D): Ixx, Iyy
 #   Payload (4D): mass, cog_offset_xyz
-#   Added mass surge (2D): main, buoy
-NOMINAL_20D = [
+#   Main added mass surge (1D)
+NOMINAL_19D = [
     # Main body hydro (5D): volume, CoG(3), CoB_z(1)
     0.00827,                    # [0]  main volume
     0.0, 0.0, -0.05,           # [1:4] main CoG xyz
@@ -57,9 +57,8 @@ NOMINAL_20D = [
     # Payload (4D): mass, cog_offset xyz
     0.5,                        # [14] payload mass
     0.0, 0.0, -0.015,          # [15:18] payload cog offset
-    # Added mass surge (2D): main, buoy
+    # Main added mass surge (1D)
     5.76,                       # [18] main added mass surge
-    1.5,                        # [19] buoy added mass surge
 ]
 
 
@@ -86,11 +85,10 @@ SWEEP_PARAMS = [
     SweepParam("Payload Mass", 14, 0.0, 1.5, "kg"),
     SweepParam("Payload CoG Z", 17, -0.03, 0.0, "m"),
     SweepParam("Main Added Mass Surge", 18, 5.76 * 0.85, 5.76 * 1.15, "kg"),
-    SweepParam("Buoy Added Mass Surge", 19, 1.5 * 0.85, 1.5 * 1.15, "kg"),
 ]
 
 # Encoder architecture constants (from rsl_rl_ppo_cfg.py)
-PRIVILEGED_DIM = 20
+PRIVILEGED_DIM = 19
 ENCODER_HIDDEN_DIMS = [256, 128, 64]
 ENCODER_LATENT_DIM = 13
 
@@ -100,8 +98,8 @@ ENCODER_LATENT_DIM = 13
 # ---------------------------------------------------------------------------
 
 
-def build_encoder_mlp(activation: str = "tanh") -> nn.Sequential:
-    """Reconstruct the encoder MLP: 20D -> [256,128,64] -> 13D.
+def build_encoder_mlp(activation: str = "tanh", input_dim: int = PRIVILEGED_DIM) -> nn.Sequential:
+    """Reconstruct the encoder MLP: input_dim -> [256,128,64] -> 13D.
 
     For tanh mode (default): last layer has tanh activation (built into MLP).
     For sigmoid mode: no last activation (sigmoid applied externally).
@@ -110,7 +108,7 @@ def build_encoder_mlp(activation: str = "tanh") -> nn.Sequential:
     Layer indices (sigmoid): 0(Linear) 1(ELU) 2(Linear) 3(ELU) 4(Linear) 5(ELU) 6(Linear)
     """
     layers: list[nn.Module] = [
-        nn.Linear(PRIVILEGED_DIM, ENCODER_HIDDEN_DIMS[0]),
+        nn.Linear(input_dim, ENCODER_HIDDEN_DIMS[0]),
         nn.ELU(),
         nn.Linear(ENCODER_HIDDEN_DIMS[0], ENCODER_HIDDEN_DIMS[1]),
         nn.ELU(),
@@ -142,25 +140,20 @@ def load_encoder(ckpt_path: str, activation: str = "tanh") -> tuple[nn.Sequentia
     ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
     state_dict = ckpt["model_state_dict"]
 
-    # Extract encoder weights
-    encoder = build_encoder_mlp(activation)
+    # Extract encoder weights and detect input dim from first layer
     encoder_state = {
         k.removeprefix("encoder."): v
         for k, v in state_dict.items()
         if k.startswith("encoder.")
     }
+    ckpt_input_dim = encoder_state["0.weight"].shape[1]
+    encoder = build_encoder_mlp(activation, input_dim=ckpt_input_dim)
     encoder.load_state_dict(encoder_state)
     encoder.eval()
 
     # Extract normalizer statistics (fallback to identity if absent)
-    norm_mean = state_dict.get("encoder_obs_normalizer._mean", torch.zeros(1, PRIVILEGED_DIM))
-    norm_std = state_dict.get("encoder_obs_normalizer._std", torch.ones(1, PRIVILEGED_DIM))
-
-    if norm_mean.shape[-1] != PRIVILEGED_DIM:
-        raise ValueError(
-            f"Checkpoint privileged dim {norm_mean.shape[-1]} != expected {PRIVILEGED_DIM}. "
-            "Use the correct checkpoint or update PRIVILEGED_DIM."
-        )
+    norm_mean = state_dict.get("encoder_obs_normalizer._mean", torch.zeros(1, ckpt_input_dim))
+    norm_std = state_dict.get("encoder_obs_normalizer._std", torch.ones(1, ckpt_input_dim))
 
     return encoder, norm_mean, norm_std
 
@@ -362,16 +355,29 @@ def main() -> None:
 
     print(f"Loading encoder from: {ckpt_path}")
     encoder, norm_mean, norm_std = load_encoder(ckpt_path, activation)
-    nominal = torch.tensor(NOMINAL_20D, dtype=torch.float32)
+    ckpt_dim = norm_mean.shape[-1]
 
-    print(f"Nominal obs ({PRIVILEGED_DIM}D): {nominal.numpy()}")
+    # Select nominal values and sweep params based on checkpoint dim
+    if ckpt_dim == 19:
+        nominal = torch.tensor(NOMINAL_19D, dtype=torch.float32)
+        sweep_params = SWEEP_PARAMS
+    elif ckpt_dim == 20:
+        # Legacy 20D: append buoy added mass surge to nominal
+        nominal = torch.tensor(NOMINAL_19D + [1.5], dtype=torch.float32)
+        sweep_params = SWEEP_PARAMS + [
+            SweepParam("Buoy Added Mass Surge", 19, 1.5 * 0.85, 1.5 * 1.15, "kg"),
+        ]
+    else:
+        raise ValueError(f"Unsupported checkpoint dim {ckpt_dim}. Expected 19 or 20.")
+
+    print(f"Nominal obs ({ckpt_dim}D): {nominal.numpy()}")
     print(f"Normalizer mean: {norm_mean.squeeze().numpy()}")
     print(f"Normalizer std:  {norm_std.squeeze().numpy()}")
     print(f"z range: {z_range_str}")
-    print(f"Sweeping {len(SWEEP_PARAMS)} parameters with {args.num_points} points each...\n")
+    print(f"Sweeping {len(sweep_params)} parameters with {args.num_points} points each...\n")
 
     all_results = []
-    for param in SWEEP_PARAMS:
+    for param in sweep_params:
         values, z = sweep_parameter(encoder, norm_mean, norm_std, nominal, param, activation, args.num_points)
 
         # Print per-param summary
