@@ -43,13 +43,13 @@ LATEST_CHECKPOINT = (
 #   Main added mass surge (1D)
 NOMINAL_19D = [
     # Main body hydro (5D): volume, CoG(3), CoB_z(1)
-    0.00827,                    # [0]  main volume
+    0.009,                      # [0]  main volume (0.00827 cylinder + 8.8% appendage)
     0.0, 0.0, -0.05,           # [1:4] main CoG xyz
     0.0,                        # [4]  main CoB z
     # Buoy body hydro (5D): volume, CoG(3), CoB_z(1)
     0.00268,                    # [5]  buoy volume
-    0.0, 0.0, 0.0,             # [6:9] buoy CoG xyz
-    0.0,                        # [9]  buoy CoB z
+    0.0, 0.0, 0.059,           # [6:9] buoy CoG xyz (URDF inertial origin z-offset)
+    0.059,                      # [9]  buoy CoB z (URDF collision origin z-offset)
     # Main inertia (2D): Ixx, Iyy (no Izz)
     0.0994, 0.0994,            # [10:12] main inertia
     # Buoy inertia (2D): Ixx, Iyy (no Izz)
@@ -58,7 +58,7 @@ NOMINAL_19D = [
     0.5,                        # [14] payload mass
     0.0, 0.0, -0.015,          # [15:18] payload cog offset
     # Main added mass surge (1D)
-    5.76,                       # [18] main added mass surge
+    8.0,                        # [18] main added mass surge (capped from theory 8.25)
 ]
 
 
@@ -75,16 +75,16 @@ class SweepParam:
 
 # Key parameters to sweep: volume, inertia, payload, added mass
 SWEEP_PARAMS = [
-    SweepParam("Main Volume", 0, 0.00827 * 0.9, 0.00827 * 1.1, "m^3"),
+    SweepParam("Main Volume", 0, 0.009 * 0.9, 0.009 * 1.1, "m^3"),
     SweepParam("Buoy Volume", 5, 0.00268 * 0.9, 0.00268 * 1.1, "m^3"),
     SweepParam("Main CoG Z", 3, -0.05 - 0.02, -0.05 + 0.02, "m"),
     SweepParam("Main Inertia Ixx", 10, 0.0994 * 0.75, 0.0994 * 1.3, "kg*m^2"),
     SweepParam("Main Inertia Iyy", 11, 0.0994 * 0.75, 0.0994 * 1.3, "kg*m^2"),
     SweepParam("Buoy Inertia Ixx", 12, 0.00278 * 0.75, 0.00278 * 1.3, "kg*m^2"),
     SweepParam("Buoy Inertia Iyy", 13, 0.00278 * 0.75, 0.00278 * 1.3, "kg*m^2"),
-    SweepParam("Payload Mass", 14, 0.0, 1.5, "kg"),
+    SweepParam("Payload Mass", 14, 0.0, 1.0, "kg"),
     SweepParam("Payload CoG Z", 17, -0.03, 0.0, "m"),
-    SweepParam("Main Added Mass Surge", 18, 5.76 * 0.85, 5.76 * 1.15, "kg"),
+    SweepParam("Main Added Mass Surge", 18, 8.0 * 0.85, 8.0 * 1.15, "kg"),
 ]
 
 # Encoder architecture constants (from rsl_rl_ppo_cfg.py)
