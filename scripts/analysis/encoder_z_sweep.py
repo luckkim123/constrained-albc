@@ -344,6 +344,11 @@ def main() -> None:
     ckpt_path = args.checkpoint
     if not os.path.isabs(ckpt_path):
         ckpt_path = os.path.join("/workspace/isaaclab", ckpt_path)
+    # Prefer best_model.pt when using the default checkpoint path
+    if args.checkpoint == LATEST_CHECKPOINT:
+        best_path = os.path.join(os.path.dirname(ckpt_path), "best_model.pt")
+        if os.path.isfile(best_path):
+            ckpt_path = best_path
 
     output_dir = args.output_dir
     if output_dir is None:
