@@ -1,11 +1,18 @@
-"""Compare eval_dr results from two different policies side-by-side.
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
+"""Compare eval_dr results from multiple policies side-by-side.
+
+Reads .npz files produced by eval_dr.py and generates comparison plots.
+No Isaac Sim dependency.
 
 Usage:
-    python scripts/analysis/compare_eval_dr.py \
-        --dirs logs/eval_dr/heroagent_encoder_base/2026-03-03_10-26-27 \
-              logs/eval_dr/heroagent_tdc/2026-03-03_10-31-49 \
+    python scripts/analysis/compare_dr.py \
+        --dirs logs/eval_dr/run_a/ts logs/eval_dr/run_b/ts \
         --labels "Encoder-Base" "TDC" \
-        --output logs/eval_dr/comparison_encoder_vs_tdc.png
+        --output logs/eval_dr/comparison.png
 """
 
 import argparse
@@ -16,10 +23,9 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 import numpy as np
 
-matplotlib.use("Agg")
+from common import DR_LEVELS, DR_SCALE
 
-DR_LEVELS = ["none", "soft", "medium", "hard"]
-DR_SCALE = {"none": 0, "soft": 30, "medium": 60, "hard": 100}
+matplotlib.use("Agg")
 
 
 def load_eval_data(eval_dir: str) -> dict[str, dict]:
@@ -54,26 +60,8 @@ def compute_level_metrics(d: dict) -> dict:
     return {"total_mean": total_mean, "ss_mean": ss_mean, "survival": survival}
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Compare eval_dr results from multiple policies.")
-    parser.add_argument("--dirs", nargs="+", required=True, help="eval_dr output directories")
-    parser.add_argument("--labels", nargs="+", required=True, help="Labels for each directory")
-    parser.add_argument("--output", type=str, default=None, help="Output path (default: auto)")
-    args = parser.parse_args()
-
-    assert len(args.dirs) == len(args.labels), "--dirs and --labels must have same length"
-
-    # Policy colors (up to 4 policies)
-    POLICY_COLORS = ["#2196F3", "#F44336", "#4CAF50", "#FF9800"]
-    POLICY_LINESTYLES = ["-", "--", "-.", ":"]
-
-    labels = args.labels
-    all_policy_data = {}
-    all_policy_metrics = {}
-    for label, eval_dir in zip(labels, args.dirs):
-        all_policy_data[label] = load_eval_data(eval_dir)
-
-    # Align time ranges: downsample longer datasets by 2x to match shortest
+def align_time_ranges(all_policy_data: dict, labels: list[str]) -> None:
+    """Downsample longer datasets to match shortest, in place."""
     for lvl in DR_LEVELS:
         datasets = [(l, all_policy_data[l][lvl]) for l in labels if lvl in all_policy_data[l]]
         if len(datasets) < 2:
@@ -82,27 +70,47 @@ def main():
         for l, d in datasets:
             n = d["time"].shape[0]
             if n > min_steps:
+                end_time = d["time"][-1]
                 ratio = n // min_steps
                 for key in d:
                     arr = d[key]
                     if isinstance(arr, np.ndarray) and arr.shape[0] == n:
                         d[key] = arr[::ratio]
-                # Rescale time to match shorter range
-                d["time"] = np.linspace(0, datasets[0][1]["time"][-1], len(d["time"]))
+                d["time"] = np.linspace(0, end_time, len(d["time"]))
 
-    for label in labels:
-        all_policy_metrics[label] = {
-            lvl: compute_level_metrics(d) for lvl, d in all_policy_data[label].items()
-        }
+
+def main():
+    parser = argparse.ArgumentParser(description="Compare eval_dr results from multiple policies.")
+    parser.add_argument("--dirs", nargs="+", required=True, help="eval_dr output directories")
+    parser.add_argument("--labels", nargs="+", required=True, help="Labels for each directory")
+    parser.add_argument("--output", type=str, default=None, help="Output path prefix (default: auto)")
+    args = parser.parse_args()
+
+    assert len(args.dirs) == len(args.labels), "--dirs and --labels must have same length"
+
+    POLICY_COLORS = ["#2196F3", "#F44336", "#4CAF50", "#FF9800"]
+    POLICY_LINESTYLES = ["-", "--", "-.", ":"]
+
+    labels = args.labels
+    all_policy_data = {}
+    for label, eval_dir in zip(labels, args.dirs):
+        all_policy_data[label] = load_eval_data(eval_dir)
+
+    align_time_ranges(all_policy_data, labels)
+
+    all_policy_metrics = {
+        label: {lvl: compute_level_metrics(d) for lvl, d in all_policy_data[label].items()}
+        for label in labels
+    }
 
     levels = [lvl for lvl in DR_LEVELS if all(lvl in all_policy_data[l] for l in labels)]
+    dr_pct = {lvl: int(DR_SCALE[lvl] * 100) for lvl in levels}
 
-    # ---- Figure 1: Tracking error over time (per DR level, policies overlaid) ----
+    # ---- Figure 1: Tracking error per DR level, policies overlaid ----
     fig1, axes1 = plt.subplots(len(levels), 2, figsize=(18, 3.5 * len(levels)), sharex=True)
     fig1.suptitle("Tracking Error: Policy Comparison across DR Levels", fontsize=14, y=0.99)
 
     for row, lvl in enumerate(levels):
-        dr_pct = DR_SCALE[lvl]
         for pid, label in enumerate(labels):
             d = all_policy_data[label][lvl]
             color = POLICY_COLORS[pid % len(POLICY_COLORS)]
@@ -118,20 +126,17 @@ def main():
                 err_vals = np.where(alive, np.abs(d[err_key]), np.nan)
                 mean = np.nanmean(err_vals, axis=1)
                 std = np.nanstd(err_vals, axis=1)
-
                 ax.plot(time_s, mean, color=color, linestyle=ls, linewidth=1.2, label=label)
                 ax.fill_between(time_s, mean - std, mean + std, color=color, alpha=0.08)
 
-                # Target reference (only once per subplot)
                 if pid == 0:
                     ax.plot(time_s, np.abs(d[tgt_key]), "k--", linewidth=0.8, alpha=0.3, label="target")
 
                 ax.set_ylabel(axis_name, fontsize=9)
                 ax.yaxis.set_major_locator(MultipleLocator(15))
                 ax.grid(True, alpha=0.3)
-
                 if col == 0:
-                    ax.set_title(f"DR {dr_pct}% ({lvl})", fontsize=11, fontweight="bold")
+                    ax.set_title(f"DR {dr_pct[lvl]}% ({lvl})", fontsize=11, fontweight="bold")
                 if row == len(levels) - 1:
                     ax.set_xlabel("Time (s)")
 
@@ -158,18 +163,14 @@ def main():
             color = POLICY_COLORS[pid % len(POLICY_COLORS)]
             offset = (pid - n_policies / 2 + 0.5) * bar_width
             bars = ax.bar(x + offset, vals, bar_width * 0.9, color=color, label=label, alpha=0.85)
-            # Value labels on bars
             for bar, val in zip(bars, vals):
                 if not np.isnan(val):
                     ax.text(
-                        bar.get_x() + bar.get_width() / 2,
-                        bar.get_height() + 0.3,
-                        f"{val:.1f}",
-                        ha="center", va="bottom", fontsize=7,
+                        bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.3,
+                        f"{val:.1f}", ha="center", va="bottom", fontsize=7,
                     )
-
         ax.set_xticks(x)
-        ax.set_xticklabels([f"{lvl}\n(DR {DR_SCALE[lvl]}%)" for lvl in levels], fontsize=9)
+        ax.set_xticklabels([f"{lvl}\n(DR {dr_pct[lvl]}%)" for lvl in levels], fontsize=9)
         ax.set_ylabel(ylabel)
         ax.grid(True, alpha=0.3, axis="y")
         if ylim:
@@ -177,12 +178,11 @@ def main():
 
     fig2.tight_layout()
 
-    # ---- Figure 3: Actual tracking (roll/pitch) per DR level ----
+    # ---- Figure 3: Actual tracking per DR level ----
     fig3, axes3 = plt.subplots(len(levels), 2, figsize=(18, 3.5 * len(levels)), sharex=True)
     fig3.suptitle("Actual Tracking: Policy Comparison across DR Levels", fontsize=14, y=0.99)
 
     for row, lvl in enumerate(levels):
-        dr_pct = DR_SCALE[lvl]
         for pid, label in enumerate(labels):
             d = all_policy_data[label][lvl]
             color = POLICY_COLORS[pid % len(POLICY_COLORS)]
@@ -198,7 +198,6 @@ def main():
                 vals = np.where(alive, d[actual_key], np.nan)
                 mean = np.nanmean(vals, axis=1)
                 std = np.nanstd(vals, axis=1)
-
                 ax.plot(time_s, mean, color=color, linestyle=ls, linewidth=1.2, label=label)
                 ax.fill_between(time_s, mean - std, mean + std, color=color, alpha=0.08)
 
@@ -208,9 +207,8 @@ def main():
                 ax.set_ylabel(axis_name, fontsize=9)
                 ax.yaxis.set_major_locator(MultipleLocator(15))
                 ax.grid(True, alpha=0.3)
-
                 if col == 0:
-                    ax.set_title(f"DR {dr_pct}% ({lvl})", fontsize=11, fontweight="bold")
+                    ax.set_title(f"DR {dr_pct[lvl]}% ({lvl})", fontsize=11, fontweight="bold")
                 if row == len(levels) - 1:
                     ax.set_xlabel("Time (s)")
 
@@ -236,7 +234,7 @@ def main():
     # ---- Console table ----
     print(f"\n{'':>20} ", end="")
     for lvl in levels:
-        print(f"{'DR ' + str(DR_SCALE[lvl]) + '%':>14}", end="")
+        print(f"{'DR ' + str(dr_pct[lvl]) + '%':>14}", end="")
     print()
 
     for metric_key, metric_label in [("total_mean", "Mean Error (deg)"), ("ss_mean", "SS Error (deg)"), ("survival", "Survival (%)")]:
