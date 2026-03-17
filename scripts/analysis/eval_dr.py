@@ -113,12 +113,15 @@ MAX_ANGLE_DEG = 15.0
 # DR Configuration
 # ============================================================================
 
-def build_dr_config(scale: float, is_tdc: bool) -> DomainRandomizationCfg:
+def build_dr_config(scale: float) -> DomainRandomizationCfg:
     """Build a DomainRandomizationCfg by interpolating between nominal and full DR.
+
+    All tasks (RL, TDC, Encoder) use identical DR conditions for fair comparison.
+    Joint gains, action latency, and all other DR parameters are interpolated
+    uniformly from nominal (scale=0) to full training DR (scale=1).
 
     Args:
         scale: 0.0 = nominal physics (fixed_pose), 1.0 = full training DR.
-        is_tdc: If True, use TDC-specific joint gains and disable action latency.
 
     Returns:
         A DomainRandomizationCfg with interpolated values.
@@ -126,9 +129,6 @@ def build_dr_config(scale: float, is_tdc: bool) -> DomainRandomizationCfg:
     if scale <= 0.0:
         cfg = DomainRandomizationCfg.fixed_pose()
         cfg.enable = True
-        if is_tdc:
-            cfg.joint_stiffness_range = (160.0, 240.0)
-            cfg.joint_damping_range = (8.0, 12.0)
         return cfg
 
     nominal = DomainRandomizationCfg.fixed_pose()
@@ -182,18 +182,12 @@ def build_dr_config(scale: float, is_tdc: bool) -> DomainRandomizationCfg:
     cfg.roll_range = (0.0, 0.0)
     cfg.pitch_range = (0.0, 0.0)
 
-    # TDC-specific overrides
-    if is_tdc:
-        cfg.joint_stiffness_range = (160.0, 240.0)
-        cfg.joint_damping_range = (8.0, 12.0)
-        cfg.action_latency_range = (0, 0)
-
     return cfg
 
 
-def apply_dr_config(env_cfg, scale: float, is_tdc: bool) -> None:
+def apply_dr_config(env_cfg, scale: float) -> None:
     """Apply interpolated DR config to the environment config."""
-    env_cfg.randomization = build_dr_config(scale, is_tdc)
+    env_cfg.randomization = build_dr_config(scale)
 
 
 # ============================================================================
@@ -541,7 +535,7 @@ def run_evaluation(
 def main(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     """Main evaluation function."""
     task_name = args_cli.task.split(":")[-1]
-    is_tdc = "TDC" in task_name
+    is_tdc = "TDC" in task_name  # used for checkpoint loading (pure TDC = no checkpoint)
     is_pure_tdc = task_name == "Isaac-HeroAgent-TDC-v0"
     use_checkpoint = args_cli.checkpoint != "none" if args_cli.checkpoint else True
 
@@ -579,23 +573,46 @@ def main(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
                 resume_path = best_model_path
         print(f"[INFO] Checkpoint: {resume_path}")
 
+    # ---- Load agent params from run directory if available ----
+    # This ensures eval uses the exact same architecture as training
+    # (e.g. ConstraintEncoderRunner vs EncoderRunner, policy_obs_dim, etc.)
+    run_agent_dict = None
+    if resume_path:
+        import yaml
+
+        run_params_path = os.path.join(os.path.dirname(resume_path), "params", "agent.yaml")
+        if os.path.isfile(run_params_path):
+            try:
+                with open(run_params_path) as f:
+                    run_agent_dict = yaml.full_load(f)
+                print(f"[INFO] Loaded agent params from run directory: {run_params_path}")
+            except yaml.YAMLError as e:
+                print(f"[WARN] Could not load run agent params, using task registry: {e}")
+                run_agent_dict = None
+
     # ---- Output directory ----
     if args_cli.output_dir:
         output_dir = args_cli.output_dir
+    elif resume_path:
+        # Save eval_dr results alongside the training run checkpoint
+        output_dir = os.path.join(os.path.dirname(resume_path), "eval_dr")
     else:
-        if resume_path:
-            ts = os.path.basename(os.path.dirname(resume_path))
-        else:
-            ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         folder_name = task_name.removeprefix("Isaac-").lower().replace("-", "_").removesuffix("_v0")
         output_dir = os.path.join("logs", "eval_dr", folder_name, ts)
     os.makedirs(output_dir, exist_ok=True)
     print(f"[INFO] Output directory: {output_dir}")
 
-    # ---- Create env (initial DR = none) ----
-    apply_dr_config(env_cfg, DR_SCALE["none"], is_tdc)
+    # ---- Create env (initial DR = none, but pre-allocate latency buffers) ----
+    # Apply none DR first, then override action_latency_range to full DR max
+    # so that latency ring buffers are allocated during env.__init__.
+    # Without this, buffers stay None and latency is never applied at any DR level.
+    apply_dr_config(env_cfg, DR_SCALE["none"])
+    full_dr = DomainRandomizationCfg()
+    env_cfg.randomization.action_latency_range = full_dr.action_latency_range
     env = gym.make(args_cli.task, cfg=env_cfg)
-    env = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
+    clip_actions = run_agent_dict.get("clip_actions") if run_agent_dict else agent_cfg.clip_actions
+    env = RslRlVecEnvWrapper(env, clip_actions=clip_actions)
 
     raw_env = unwrap_env(env)
     step_dt = raw_env.step_dt
@@ -607,22 +624,26 @@ def main(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     print(f"[INFO] DR scales: {DR_SCALE}")
 
     # ---- Create runner + load policy ----
-    runner_cls_name = getattr(agent_cfg, "class_name", "OnPolicyRunner")
+    # Prefer run-specific agent params (correct architecture dims) over task registry
+    agent_dict = run_agent_dict if run_agent_dict else agent_cfg.to_dict()
+    runner_cls_name = agent_dict.get("class_name", getattr(agent_cfg, "class_name", "OnPolicyRunner"))
+    runner_device = agent_dict.get("device", agent_cfg.device)
 
     if use_checkpoint and resume_path:
-        if runner_cls_name in ("EncoderRunner", "ConstraintEncoderRunner"):
-            runner_cls = ConstraintEncoderRunner if runner_cls_name == "ConstraintEncoderRunner" else EncoderRunner
-            runner = runner_cls(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
-            runner.load(resume_path, load_optimizer=False)
-            policy = runner.get_inference_policy(device=device)
-            policy_nn = runner.alg.policy
-        elif runner_cls_name == "BaseRunner":
-            runner = BaseRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
+        runner_cls_map = {
+            "ConstraintEncoderRunner": ConstraintEncoderRunner,
+            "EncoderRunner": EncoderRunner,
+            "BaseRunner": BaseRunner,
+        }
+        runner_cls = runner_cls_map.get(runner_cls_name)
+
+        if runner_cls:
+            runner = runner_cls(env, agent_dict, log_dir=None, device=runner_device)
             runner.load(resume_path, load_optimizer=False)
             policy = runner.get_inference_policy(device=device)
             policy_nn = runner.alg.policy
         else:
-            runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
+            runner = OnPolicyRunner(env, agent_dict, log_dir=None, device=runner_device)
             runner.load(resume_path, load_optimizer=False)
             policy = runner.get_inference_policy(device=device)
             try:
@@ -660,7 +681,7 @@ def main(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         )
         print(f"  Trajectory: {len(segment_names)} segs x {args_cli.segment_duration}s = {len(time_s)} steps")
 
-        apply_dr_config(raw_env.cfg, DR_SCALE[level], is_tdc)
+        apply_dr_config(raw_env.cfg, DR_SCALE[level])
 
         data = run_evaluation(
             env=env, policy=policy, policy_nn=policy_nn, raw_env=raw_env,
