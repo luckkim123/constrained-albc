@@ -110,20 +110,27 @@ def get_encoder_architecture_from_checkpoint(ckpt_path: str) -> EncoderArchitect
     # Detect output activation: count total named modules
     # With tanh: ..., Linear, Tanh (extra module at end)
     # Without:  ..., Linear (no extra module)
-    max_idx = max(
-        int(k.split(".")[1]) for k in enc_keys if len(k.split(".")) >= 3 and k.split(".")[1].isdigit()
-    )
+    max_idx = max(int(k.split(".")[1]) for k in enc_keys if len(k.split(".")) >= 3 and k.split(".")[1].isdigit())
     # Expected without output activation: (n_hidden + 1) Linears * 2 - 1
     # (each Linear except last has an activation after it)
     n_linears = len(linear_weights)
     expected_max_without_act = (n_linears - 1) * 2  # last Linear index
     has_output_act = max_idx > expected_max_without_act
 
+    if has_output_act:
+        activation = "tanh"
+    elif input_dim >= 28:
+        # Constrained ALBC encoder: softsign is applied functionally in _encode(),
+        # not as a module in the MLP. Infer from input dimension.
+        activation = "softsign"
+    else:
+        activation = "none"
+
     return EncoderArchitecture(
         hidden_dims=hidden_dims,
         latent_dim=latent_dim,
         input_dim=input_dim,
-        output_activation="tanh" if has_output_act else "none",
+        output_activation=activation,
     )
 
 
@@ -157,10 +164,7 @@ def build_nominal_obs() -> np.ndarray:
     Raises RuntimeError if Isaac Lab is not importable.
     """
     if not _ISAAC_AVAILABLE:
-        raise RuntimeError(
-            "Isaac Lab modules not importable. "
-            "Cannot build nominal obs without physics configs."
-        )
+        raise RuntimeError("Isaac Lab modules not importable. Cannot build nominal obs without physics configs.")
     main = HeroAgentHydrodynamicsCfg()
     buoy = HeroAgentBuoyHydrodynamicsCfg()
     cfg = _RslRlPpoEncoderBaseCfg()
@@ -200,65 +204,221 @@ def build_sweep_params() -> list[SweepParam]:
     Raises RuntimeError if Isaac Lab is not importable.
     """
     if not _ISAAC_AVAILABLE:
-        raise RuntimeError(
-            "Isaac Lab modules not importable. "
-            "Cannot build sweep params without DR config."
-        )
+        raise RuntimeError("Isaac Lab modules not importable. Cannot build sweep params without DR config.")
     dr = DomainRandomizationCfg()
     main = HeroAgentHydrodynamicsCfg()
     buoy = HeroAgentBuoyHydrodynamicsCfg()
 
     return [
         SweepParam(
-            "Main Volume", 0,
+            "Main Volume",
+            0,
             main.volume * dr.volume_scale[0],
-            main.volume * dr.volume_scale[1], "m^3",
+            main.volume * dr.volume_scale[1],
+            "m^3",
         ),
         SweepParam(
-            "Buoy Volume", 5,
+            "Buoy Volume",
+            5,
             buoy.volume * dr.volume_scale[0],
-            buoy.volume * dr.volume_scale[1], "m^3",
+            buoy.volume * dr.volume_scale[1],
+            "m^3",
         ),
         SweepParam(
-            "Main CoG Z", 3,
+            "Main CoG Z",
+            3,
             main.center_of_gravity[2] + dr.cog_offset_z[0],
-            main.center_of_gravity[2] + dr.cog_offset_z[1], "m",
+            main.center_of_gravity[2] + dr.cog_offset_z[1],
+            "m",
         ),
         SweepParam(
-            "Main Inertia Ixx", 10,
+            "Main Inertia Ixx",
+            10,
             main.rigid_body_inertia[0] * dr.inertia_scale[0],
-            main.rigid_body_inertia[0] * dr.inertia_scale[1], "kg*m^2",
+            main.rigid_body_inertia[0] * dr.inertia_scale[1],
+            "kg*m^2",
         ),
         SweepParam(
-            "Main Inertia Iyy", 11,
+            "Main Inertia Iyy",
+            11,
             main.rigid_body_inertia[1] * dr.inertia_scale[0],
-            main.rigid_body_inertia[1] * dr.inertia_scale[1], "kg*m^2",
+            main.rigid_body_inertia[1] * dr.inertia_scale[1],
+            "kg*m^2",
         ),
         SweepParam(
-            "Buoy Inertia Ixx", 12,
+            "Buoy Inertia Ixx",
+            12,
             buoy.rigid_body_inertia[0] * dr.inertia_scale[0],
-            buoy.rigid_body_inertia[0] * dr.inertia_scale[1], "kg*m^2",
+            buoy.rigid_body_inertia[0] * dr.inertia_scale[1],
+            "kg*m^2",
         ),
         SweepParam(
-            "Buoy Inertia Iyy", 13,
+            "Buoy Inertia Iyy",
+            13,
             buoy.rigid_body_inertia[1] * dr.inertia_scale[0],
-            buoy.rigid_body_inertia[1] * dr.inertia_scale[1], "kg*m^2",
+            buoy.rigid_body_inertia[1] * dr.inertia_scale[1],
+            "kg*m^2",
         ),
         SweepParam(
-            "Payload Mass", 14,
+            "Payload Mass",
+            14,
             dr.payload_mass_range[0],
-            dr.payload_mass_range[1], "kg",
+            dr.payload_mass_range[1],
+            "kg",
         ),
         SweepParam(
-            "Payload CoG Z", 17,
+            "Payload CoG Z",
+            17,
             dr.payload_cog_offset_z[0],
-            dr.payload_cog_offset_z[1], "m",
+            dr.payload_cog_offset_z[1],
+            "m",
         ),
         SweepParam(
-            "Main Added Mass Surge", 18,
+            "Main Added Mass Surge",
+            18,
             main.added_mass[0] * dr.added_mass_scale[0],
-            main.added_mass[0] * dr.added_mass_scale[1], "kg",
+            main.added_mass[0] * dr.added_mass_scale[1],
+            "kg",
         ),
+    ]
+
+
+def _build_constrained_albc_27d_sweep(
+    nm_priv: np.ndarray, offset: int = 0,
+) -> list[SweepParam]:
+    """Build sweep params for constrained ALBC 27D privileged obs.
+
+    27D structure (indices relative to privileged start):
+         0: Main volume, 1: Main CoG_z, 2: Main CoB_z
+         3: Buoy volume, 4: Buoy CoG_z, 5: Buoy CoB_z
+         6: Main Ixx, 7: Main Iyy, 8: Buoy Ixx, 9: Buoy Iyy
+        10: Payload mass, 11-13: Payload CoG xyz
+        14: Main added mass surge
+        15: Joint Kp, 16: Joint Kd, 17: Joint effort limit
+        18-19: Lin damping roll/pitch, 20-21: Quad damping roll/pitch
+        22: Body mass, 23: Action latency
+        24: Static friction, 25: Viscous friction
+        26: Water density
+
+    Args:
+        nm_priv: (27,) normalizer mean for the privileged portion.
+        offset: Index offset to add (253 for full 280D input, 0 for standalone).
+    """
+    p = nm_priv
+    o = offset
+    return [
+        SweepParam("Main Volume", o + 0, p[0] * 0.9, p[0] * 1.1, "m^3"),
+        SweepParam("Main CoG Z", o + 1, p[1] - 0.02, p[1] + 0.02, "m"),
+        SweepParam("Main CoB Z", o + 2, p[2] - 0.02, p[2] + 0.02, "m"),
+        SweepParam("Buoy Volume", o + 3, p[3] * 0.9, p[3] * 1.1, "m^3"),
+        SweepParam("Buoy CoG Z", o + 4, p[4] - 0.02, p[4] + 0.02, "m"),
+        SweepParam("Buoy CoB Z", o + 5, p[5] - 0.02, p[5] + 0.02, "m"),
+        SweepParam("Main Ixx", o + 6, p[6] * 0.75, p[6] * 1.3, "kg*m^2"),
+        SweepParam("Main Iyy", o + 7, p[7] * 0.75, p[7] * 1.3, "kg*m^2"),
+        SweepParam("Buoy Ixx", o + 8, p[8] * 0.75, p[8] * 1.3, "kg*m^2"),
+        SweepParam("Buoy Iyy", o + 9, p[9] * 0.75, p[9] * 1.3, "kg*m^2"),
+        SweepParam("Payload Mass", o + 10, 0.0, 1.0, "kg"),
+        SweepParam("Payload CoG X", o + 11, -0.10, 0.10, "m"),
+        SweepParam("Payload CoG Y", o + 12, -0.10, 0.10, "m"),
+        SweepParam("Payload CoG Z", o + 13, -0.03, 0.0, "m"),
+        SweepParam("Added Mass Surge", o + 14, p[14] * 0.85, p[14] * 1.15, "kg"),
+        SweepParam("Joint Stiffness", o + 15, 40.0, 120.0, "Nm/rad"),
+        SweepParam("Joint Damping", o + 16, 0.5, 5.0, "Nm*s/rad"),
+        SweepParam("Effort Limit", o + 17, 0.7 * 9.5, 1.0 * 9.5, "Nm"),
+        SweepParam("Lin Damp Roll", o + 18, p[18] * 0.5, p[18] * 1.5, ""),
+        SweepParam("Lin Damp Pitch", o + 19, p[19] * 0.5, p[19] * 1.5, ""),
+        SweepParam("Quad Damp Roll", o + 20, p[20] * 0.5, p[20] * 1.5, ""),
+        SweepParam("Quad Damp Pitch", o + 21, p[21] * 0.5, p[21] * 1.5, ""),
+        SweepParam("Body Mass", o + 22, p[22] * 0.9, p[22] * 1.1, "kg"),
+        SweepParam("Action Latency", o + 23, 0.0, 4.0, "steps"),
+        SweepParam("Static Friction", o + 24, 0.0, 0.03, ""),
+        SweepParam("Viscous Friction", o + 25, 0.0, 0.2, ""),
+        SweepParam("Water Density", o + 26, 995.0, 1025.0, "kg/m^3"),
+    ]
+
+
+def _build_constrained_albc_28d_sweep(
+    nm_priv: np.ndarray, offset: int = 0,
+) -> list[SweepParam]:
+    """Build sweep params for constrained ALBC 28D privileged obs (legacy).
+
+    Same as 27D but with yaw quad damping at index 26, water density at 27.
+    """
+    p = nm_priv
+    o = offset
+    params = _build_constrained_albc_27d_sweep(p, o)
+    # Replace last entry (Water Density at 26) with Yaw Quad Damp, then add Water Density at 27
+    params[-1] = SweepParam("Yaw Quad Damp", o + 26, p[26] * 0.5, p[26] * 1.5, "")
+    params.append(SweepParam("Water Density", o + 27, 995.0, 1025.0, "kg/m^3"))
+    return params
+
+
+def build_sweep_params_from_checkpoint(
+    input_dim: int,
+    norm_mean: np.ndarray,
+) -> list[SweepParam]:
+    """Build sweep params using checkpoint normalizer mean as nominal center.
+
+    Supports:
+      - hero_agent 19D privileged-only encoder input
+      - constrained_albc 27D or 28D privileged-only encoder input
+      - constrained_albc 280D full concatenated encoder input
+        (policy_obs(13) + history(240) + privileged(27))
+
+    DR ranges are hardcoded from the respective DomainRandomizationCfg defaults.
+
+    Args:
+        input_dim: Encoder input dimension.
+        norm_mean: (D,) normalizer running mean from checkpoint.
+    """
+    nm = norm_mean.flatten()
+
+    # --- Full concatenated input (policy_obs + history + privileged) ---
+    # Detect by input_dim >> 28. Privileged portion is at the end.
+    if input_dim >= 100:
+        # Detect privileged dim: water density (~1010) at end -> constrained ALBC 27D
+        if nm[-1] > 500:
+            priv_dim = 27
+        else:
+            priv_dim = 19
+        offset = input_dim - priv_dim
+        nm_priv = nm[offset:]
+        if priv_dim == 27:
+            return _build_constrained_albc_27d_sweep(nm_priv, offset)
+        # Hero agent with full input (19D priv at end)
+        return [
+            SweepParam("Main Volume", offset + 0, nm_priv[0] * 0.9, nm_priv[0] * 1.1, "m^3"),
+            SweepParam("Buoy Volume", offset + 5, nm_priv[5] * 0.9, nm_priv[5] * 1.1, "m^3"),
+            SweepParam("Main CoG Z", offset + 3, nm_priv[3] - 0.06, nm_priv[3] + 0.06, "m"),
+            SweepParam("Main Ixx", offset + 10, nm_priv[10] * 0.75, nm_priv[10] * 1.3, "kg*m^2"),
+            SweepParam("Main Iyy", offset + 11, nm_priv[11] * 0.75, nm_priv[11] * 1.3, "kg*m^2"),
+            SweepParam("Buoy Ixx", offset + 12, nm_priv[12] * 0.75, nm_priv[12] * 1.3, "kg*m^2"),
+            SweepParam("Buoy Iyy", offset + 13, nm_priv[13] * 0.75, nm_priv[13] * 1.3, "kg*m^2"),
+            SweepParam("Payload Mass", offset + 14, 0.0, 2.0, "kg"),
+            SweepParam("Payload CoG Z", offset + 17, -0.03, 0.0, "m"),
+            SweepParam("Added Mass Surge", offset + 18, nm_priv[18] * 0.85, nm_priv[18] * 1.15, "kg"),
+        ]
+
+    if input_dim in (27, 28):
+        return _build_constrained_albc_27d_sweep(nm, offset=0) if input_dim == 27 \
+            else _build_constrained_albc_28d_sweep(nm, offset=0)
+
+    # Hero agent 19D (existing structure):
+    #  0-4: Main hydro (volume, CoG_xyz, CoB_z)
+    #  5-9: Buoy hydro (volume, CoG_xyz, CoB_z)
+    # 10-11: Main Ixx, Iyy, 12-13: Buoy Ixx, Iyy
+    # 14-17: Payload (mass, CoG xyz), 18: Added mass surge
+    return [
+        SweepParam("Main Volume", 0, nm[0] * 0.9, nm[0] * 1.1, "m^3"),
+        SweepParam("Buoy Volume", 5, nm[5] * 0.9, nm[5] * 1.1, "m^3"),
+        SweepParam("Main CoG Z", 3, nm[3] - 0.06, nm[3] + 0.06, "m"),
+        SweepParam("Main Ixx", 10, nm[10] * 0.75, nm[10] * 1.3, "kg*m^2"),
+        SweepParam("Main Iyy", 11, nm[11] * 0.75, nm[11] * 1.3, "kg*m^2"),
+        SweepParam("Buoy Ixx", 12, nm[12] * 0.75, nm[12] * 1.3, "kg*m^2"),
+        SweepParam("Buoy Iyy", 13, nm[13] * 0.75, nm[13] * 1.3, "kg*m^2"),
+        SweepParam("Payload Mass", 14, 0.0, 2.0, "kg"),
+        SweepParam("Payload CoG Z", 17, -0.03, 0.0, "m"),
+        SweepParam("Added Mass Surge", 18, nm[18] * 0.85, nm[18] * 1.15, "kg"),
     ]
 
 
@@ -301,7 +461,7 @@ def find_hero_agent_runs(
         return []
     runs: list[Path] = []
     for exp_dir in sorted(root.iterdir()):
-        if not exp_dir.is_dir() or not exp_dir.name.startswith("hero_agent"):
+        if not exp_dir.is_dir():
             continue
         for run_dir in sorted(exp_dir.iterdir(), reverse=True):
             if run_dir.is_dir() and list(run_dir.glob("events.out.tfevents.*")):
