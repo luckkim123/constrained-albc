@@ -62,6 +62,7 @@ def build_encoder_mlp(
     latent_dim: int,
     input_dim: int,
     output_activation: str = "tanh",
+    output_norm: bool = False,
 ) -> nn.Sequential:
     """Reconstruct the encoder MLP from architecture parameters.
 
@@ -70,6 +71,7 @@ def build_encoder_mlp(
         latent_dim: Output dimension (e.g., 13).
         input_dim: Input dimension (e.g., 19).
         output_activation: "tanh", "softsign", or "none".
+        output_norm: If True, insert LayerNorm before the output activation.
     """
     layers: list[nn.Module] = []
     prev_dim = input_dim
@@ -78,6 +80,8 @@ def build_encoder_mlp(
         layers.append(nn.ELU())
         prev_dim = dim
     layers.append(nn.Linear(prev_dim, latent_dim))
+    if output_norm:
+        layers.append(nn.LayerNorm(latent_dim))
     if output_activation == "tanh":
         layers.append(nn.Tanh())
     elif output_activation == "softsign":
@@ -126,9 +130,18 @@ def load_encoder(
         if k.startswith("encoder.")
     }
 
+    # Detect pre-softsign LayerNorm from checkpoint
+    has_output_norm = "_encoder_output_norm.weight" in state_dict
     encoder = build_encoder_mlp(
         arch.hidden_dims, arch.latent_dim, arch.input_dim, arch.output_activation,
+        output_norm=has_output_norm,
     )
+    if has_output_norm:
+        # LayerNorm sits after last Linear, before activation in the Sequential
+        ln_idx = len(arch.hidden_dims) * 2 + 1
+        encoder_state[f"{ln_idx}.weight"] = state_dict["_encoder_output_norm.weight"]
+        encoder_state[f"{ln_idx}.bias"] = state_dict["_encoder_output_norm.bias"]
+        print("[INFO] Detected pre-softsign LayerNorm in checkpoint.")
     encoder.load_state_dict(encoder_state)
     encoder.eval()
 
