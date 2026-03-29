@@ -119,9 +119,9 @@ def get_encoder_architecture_from_checkpoint(ckpt_path: str) -> EncoderArchitect
 
     if has_output_act:
         activation = "tanh"
-    elif input_dim >= 28:
-        # Constrained ALBC encoder: softsign is applied functionally in _encode(),
-        # not as a module in the MLP. Infer from input dimension.
+    elif input_dim >= 23:
+        # Constrained ALBC encoder (23D/27D/28D): softsign is applied functionally
+        # in _encode(), not as a module in the MLP. Infer from input dimension.
         activation = "softsign"
     else:
         activation = "none"
@@ -353,9 +353,49 @@ def _build_constrained_albc_28d_sweep(
     return params
 
 
+def _build_constrained_albc_23d_sweep(
+    lower: np.ndarray, upper: np.ndarray, offset: int = 0,
+) -> list[SweepParam]:
+    """Build sweep params for constrained ALBC 23D privileged obs.
+
+    23D structure:
+         0-5:  Hydrodynamics (main vol, CoG_z, CoB_z, buoy vol, CoG_z, CoB_z)
+         6-9:  Inertia (main Ixx, Iyy, buoy Ixx, Iyy)
+        10-13: Damping (lin roll, lin pitch, quad roll, quad pitch)
+        14-15: Body (mass, added_mass_surge)
+        16-19: Payload (mass, cog_x, cog_y, cog_z)
+        20-22: Actuator+Env (stiffness, damping, water_density)
+
+    Uses static min-max bounds (lower/upper) from checkpoint as sweep ranges.
+    """
+    o = offset
+    names = [
+        "Main Volume", "Main CoG Z", "Main CoB Z", "Buoy Volume", "Buoy CoG Z", "Buoy CoB Z",
+        "Main Ixx", "Main Iyy", "Buoy Ixx", "Buoy Iyy",
+        "Lin Damp Roll", "Lin Damp Pitch", "Quad Damp Roll", "Quad Damp Pitch",
+        "Body Mass", "Added Mass Surge",
+        "Payload Mass", "Payload CoG X", "Payload CoG Y", "Payload CoG Z",
+        "Joint Stiffness", "Joint Damping", "Water Density",
+    ]
+    units = [
+        "m^3", "m", "m", "m^3", "m", "m",
+        "kg*m^2", "kg*m^2", "kg*m^2", "kg*m^2",
+        "", "", "", "",
+        "kg", "kg",
+        "kg", "m", "m", "m",
+        "Nm/rad", "Nm*s/rad", "kg/m^3",
+    ]
+    return [
+        SweepParam(names[i], o + i, float(lower[i]), float(upper[i]), units[i])
+        for i in range(23)
+    ]
+
+
 def build_sweep_params_from_checkpoint(
     input_dim: int,
     norm_mean: np.ndarray,
+    enc_obs_lower: np.ndarray | None = None,
+    enc_obs_upper: np.ndarray | None = None,
 ) -> list[SweepParam]:
     """Build sweep params using checkpoint normalizer mean as nominal center.
 
@@ -370,7 +410,13 @@ def build_sweep_params_from_checkpoint(
     Args:
         input_dim: Encoder input dimension.
         norm_mean: (D,) normalizer running mean from checkpoint.
+        enc_obs_lower: Static min-max lower bounds (for 23D constrained ALBC).
+        enc_obs_upper: Static min-max upper bounds (for 23D constrained ALBC).
     """
+    # --- 23D constrained ALBC with static min-max bounds ---
+    if input_dim == 23 and enc_obs_lower is not None and enc_obs_upper is not None:
+        return _build_constrained_albc_23d_sweep(enc_obs_lower, enc_obs_upper)
+
     nm = norm_mean.flatten()
 
     # --- Full concatenated input (policy_obs + history + privileged) ---

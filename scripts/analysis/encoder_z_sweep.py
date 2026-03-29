@@ -5,8 +5,14 @@
 
 """Encoder Latent Z Sensitivity Analysis.
 
-Loads a trained Phase 1 encoder checkpoint and sweeps individual DR parameters
+Loads a trained encoder checkpoint and sweeps individual DR parameters
 to verify that z responds continuously and meaningfully to physical parameter changes.
+
+Supports:
+    - Hero Agent 19D encoder (EmpiricalNormalization)
+    - Constrained ALBC 23D/27D/28D encoder (EmpiricalNorm or static min-max)
+    - Offline encoder checkpoints (enc_obs_lower/upper at top level)
+    - Online encoder checkpoints (_enc_obs_lower/_enc_obs_upper in model_state_dict)
 
 Architecture and sweep ranges are imported from hero_agent modules via common.py
 -- no hardcoded constants.
@@ -20,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import os
+from dataclasses import dataclass
 
 import matplotlib
 
@@ -33,6 +40,7 @@ from common import (
     SweepParam,
     build_nominal_obs,
     build_sweep_params,
+    build_sweep_params_from_checkpoint,
     get_encoder_architecture_from_checkpoint,
 )
 
@@ -40,6 +48,13 @@ from common import (
 # ---------------------------------------------------------------------------
 # Encoder reconstruction (pure PyTorch, no Isaac Sim)
 # ---------------------------------------------------------------------------
+
+
+class _Softsign(nn.Module):
+    """Softsign activation: x / (1 + |x|). Output in (-1, 1)."""
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return torch.nn.functional.softsign(x)
 
 
 def build_encoder_mlp(
@@ -54,7 +69,7 @@ def build_encoder_mlp(
         hidden_dims: List of hidden layer sizes (e.g., [256, 128, 64]).
         latent_dim: Output dimension (e.g., 13).
         input_dim: Input dimension (e.g., 19).
-        output_activation: "tanh" or "none".
+        output_activation: "tanh", "softsign", or "none".
     """
     layers: list[nn.Module] = []
     prev_dim = input_dim
@@ -65,20 +80,39 @@ def build_encoder_mlp(
     layers.append(nn.Linear(prev_dim, latent_dim))
     if output_activation == "tanh":
         layers.append(nn.Tanh())
+    elif output_activation == "softsign":
+        layers.append(_Softsign())
     return nn.Sequential(*layers)
+
+
+# ---------------------------------------------------------------------------
+# Normalization
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class NormMode:
+    """Normalization mode for the encoder."""
+
+    mode: str  # "empirical" or "static_minmax"
+    mean: torch.Tensor  # (1, D) for empirical
+    std: torch.Tensor  # (1, D) for empirical
+    lower: torch.Tensor | None = None  # (D,) for static_minmax
+    upper: torch.Tensor | None = None  # (D,) for static_minmax
 
 
 def load_encoder(
     ckpt_path: str,
-) -> tuple[nn.Sequential, torch.Tensor, torch.Tensor, int]:
-    """Load encoder MLP and normalizer statistics from checkpoint.
+) -> tuple[nn.Sequential, NormMode, int]:
+    """Load encoder MLP and normalizer from checkpoint.
 
-    Architecture is inferred from checkpoint weights.
+    Architecture is inferred from checkpoint weight shapes.
+    Detects static min-max normalization (constrained ALBC 23D) vs
+    EmpiricalNormalization (hero_agent) from checkpoint keys.
 
     Returns:
         encoder: The encoder MLP in eval mode.
-        norm_mean: (1, D) running mean from EmpiricalNormalization.
-        norm_std: (1, D) running std from EmpiricalNormalization.
+        norm: Normalization mode with bounds or running stats.
         latent_dim: Encoder output dimension.
     """
     arch = get_encoder_architecture_from_checkpoint(ckpt_path)
@@ -98,21 +132,41 @@ def load_encoder(
     encoder.load_state_dict(encoder_state)
     encoder.eval()
 
-    norm_mean = state_dict.get(
-        "encoder_obs_normalizer._mean", torch.zeros(1, arch.input_dim),
-    )
-    norm_std = state_dict.get(
-        "encoder_obs_normalizer._std", torch.ones(1, arch.input_dim),
-    )
+    # Detect normalization mode: static min-max or EmpiricalNorm
+    # Static bounds can be in model_state_dict (online) or top-level (offline)
+    lower_key = "_enc_obs_lower"
+    upper_key = "_enc_obs_upper"
+    lower = state_dict.get(lower_key, ckpt.get("enc_obs_lower"))
+    upper = state_dict.get(upper_key, ckpt.get("enc_obs_upper"))
 
-    return encoder, norm_mean, norm_std, arch.latent_dim
+    if lower is not None and upper is not None:
+        norm = NormMode(
+            mode="static_minmax",
+            mean=torch.zeros(1, arch.input_dim),
+            std=torch.ones(1, arch.input_dim),
+            lower=lower.float(),
+            upper=upper.float(),
+        )
+    else:
+        norm = NormMode(
+            mode="empirical",
+            mean=state_dict.get(
+                "encoder_obs_normalizer._mean", torch.zeros(1, arch.input_dim),
+            ),
+            std=state_dict.get(
+                "encoder_obs_normalizer._std", torch.ones(1, arch.input_dim),
+            ),
+        )
+
+    return encoder, norm, arch.latent_dim
 
 
-def normalize_obs(
-    x: torch.Tensor, mean: torch.Tensor, std: torch.Tensor,
-) -> torch.Tensor:
-    """Apply EmpiricalNormalization: (x - mean) / (std + eps), clamped to [-5, 5]."""
-    return ((x - mean) / (std + 1e-8)).clamp(-5.0, 5.0)
+def normalize_obs(x: torch.Tensor, norm: NormMode) -> torch.Tensor:
+    """Apply normalization based on mode."""
+    if norm.mode == "static_minmax":
+        assert norm.lower is not None and norm.upper is not None
+        return (2.0 * x - norm.upper - norm.lower) / (norm.upper - norm.lower)
+    return ((x - norm.mean) / (norm.std + 1e-8)).clamp(-5.0, 5.0)
 
 
 # ---------------------------------------------------------------------------
@@ -122,8 +176,7 @@ def normalize_obs(
 
 def sweep_parameter(
     encoder: nn.Sequential,
-    norm_mean: torch.Tensor,
-    norm_std: torch.Tensor,
+    norm: NormMode,
     nominal: torch.Tensor,
     param: SweepParam,
     num_points: int = 100,
@@ -139,10 +192,10 @@ def sweep_parameter(
     batch[:, param.dim_idx] = values
 
     with torch.no_grad():
-        normed = normalize_obs(batch, norm_mean, norm_std)
+        normed = normalize_obs(batch, norm)
         z = encoder(normed)  # activation is built into MLP
 
-    return values.numpy(), z.numpy()
+    return values.numpy(), z.detach().numpy()
 
 
 # ---------------------------------------------------------------------------
@@ -161,7 +214,7 @@ def plot_per_parameter(
     n_cols = 4
     n_rows = (latent_dim + n_cols - 1) // n_cols
 
-    y_lo, y_hi = (-1.1, 1.1) if activation == "tanh" else (-0.1, 2.1)
+    y_lo, y_hi = (-1.1, 1.1) if activation in ("tanh", "softsign") else (-0.1, 2.1)
 
     for param, values, z in all_results:
         fig, axes = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 3 * n_rows))
@@ -271,7 +324,7 @@ def main() -> None:
     # Prefer best_model.pt in same directory
     best_path = os.path.join(os.path.dirname(ckpt_path), "best_model.pt")
     if os.path.isfile(best_path) and not ckpt_path.endswith("best_model.pt"):
-        print(f"[INFO] Found best_model.pt, using it instead.")
+        print("[INFO] Found best_model.pt, using it instead.")
         ckpt_path = best_path
 
     output_dir = args.output_dir or os.path.join(os.path.dirname(ckpt_path), "encoder_analysis")
@@ -279,46 +332,66 @@ def main() -> None:
 
     # Load encoder (architecture inferred from checkpoint)
     print(f"Loading encoder from: {ckpt_path}")
-    encoder, norm_mean, norm_std, latent_dim = load_encoder(ckpt_path)
-    ckpt_dim = norm_mean.shape[-1]
+    encoder, norm, latent_dim = load_encoder(ckpt_path)
 
     # Get architecture info for activation type
     arch = get_encoder_architecture_from_checkpoint(ckpt_path)
+    ckpt_dim = arch.input_dim
     activation = arch.output_activation
-    z_range_str = "[-1, 1] (tanh)" if activation == "tanh" else "unbounded (no output activation)"
+    if activation in ("tanh", "softsign"):
+        z_range_str = f"[-1, 1] ({activation})"
+    else:
+        z_range_str = "unbounded (no output activation)"
 
-    # Get nominal obs and sweep params from hero_agent modules
+    # Report normalization mode
+    print(f"Normalization: {norm.mode}")
+    if norm.mode == "static_minmax":
+        assert norm.lower is not None and norm.upper is not None
+        print(f"  lower[:5]: {norm.lower[:5].tolist()}")
+        print(f"  upper[:5]: {norm.upper[:5].tolist()}")
+
+    # Get nominal obs and sweep params
+    enc_lower_np = norm.lower.numpy() if norm.lower is not None else None
+    enc_upper_np = norm.upper.numpy() if norm.upper is not None else None
+
     try:
         nominal_np = build_nominal_obs()
         sweep_params = build_sweep_params()
-        # Adjust for checkpoint dim if different from config
         if len(nominal_np) != ckpt_dim:
-            print(f"[WARN] Config dim ({len(nominal_np)}) != checkpoint dim ({ckpt_dim}). "
-                  f"Padding/truncating nominal obs.")
-            if ckpt_dim > len(nominal_np):
-                nominal_np = np.pad(nominal_np, (0, ckpt_dim - len(nominal_np)))
+            print(f"[WARN] Config dim ({len(nominal_np)}) != checkpoint dim ({ckpt_dim}).")
+            if norm.mode == "static_minmax":
+                assert norm.lower is not None and norm.upper is not None
+                nominal_np = ((norm.lower + norm.upper) / 2.0).numpy()
+                print(f"  Using static bounds midpoint as nominal.")
             else:
-                nominal_np = nominal_np[:ckpt_dim]
-            sweep_params = [p for p in sweep_params if p.dim_idx < ckpt_dim]
+                nominal_np = norm.mean.squeeze().numpy()
+                print(f"  Using normalizer mean as nominal.")
+            sweep_params = build_sweep_params_from_checkpoint(
+                ckpt_dim, nominal_np, enc_lower_np, enc_upper_np,
+            )
     except RuntimeError:
-        raise RuntimeError(
-            "Cannot build nominal obs without Isaac Lab. "
-            "Run via: ./isaaclab.sh -p scripts/analysis/encoder_z_sweep.py --checkpoint <path>"
+        print(f"[INFO] Isaac Lab not available.")
+        if norm.mode == "static_minmax":
+            assert norm.lower is not None and norm.upper is not None
+            nominal_np = ((norm.lower + norm.upper) / 2.0).numpy()
+            print(f"  Using static bounds midpoint as nominal.")
+        else:
+            nominal_np = norm.mean.squeeze().numpy()
+            print(f"  Using normalizer mean as nominal.")
+        sweep_params = build_sweep_params_from_checkpoint(
+            ckpt_dim, nominal_np, enc_lower_np, enc_upper_np,
         )
 
     nominal = torch.tensor(nominal_np, dtype=torch.float32)
 
     print(f"Checkpoint dim: {ckpt_dim}D, Latent dim: {latent_dim}D")
-    print(f"Nominal obs: {nominal_np}")
-    print(f"Normalizer mean: {norm_mean.squeeze().numpy()}")
-    print(f"Normalizer std:  {norm_std.squeeze().numpy()}")
     print(f"z range: {z_range_str}")
     print(f"Sweeping {len(sweep_params)} parameters with {args.num_points} points each...\n")
 
     all_results: list[tuple[SweepParam, np.ndarray, np.ndarray]] = []
     for param in sweep_params:
         values, z = sweep_parameter(
-            encoder, norm_mean, norm_std, nominal, param, args.num_points,
+            encoder, norm, nominal, param, args.num_points,
         )
 
         z_ranges = z.max(axis=0) - z.min(axis=0)
