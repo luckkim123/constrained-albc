@@ -37,14 +37,15 @@ DR_COLORS: dict[str, str] = {
 _ISAAC_AVAILABLE = False
 
 try:
-    from isaaclab_assets.robots.uuv import (
-        HeroAgentBuoyHydrodynamicsCfg,
-        HeroAgentHydrodynamicsCfg,
-    )
     from isaaclab_tasks.direct.hero_agent.agents.rsl_rl_ppo_cfg import (
         _RslRlPpoEncoderBaseCfg,
     )
     from isaaclab_tasks.direct.hero_agent.config import DomainRandomizationCfg
+
+    from isaaclab_assets.robots.uuv import (
+        HeroAgentBuoyHydrodynamicsCfg,
+        HeroAgentHydrodynamicsCfg,
+    )
 
     _ISAAC_AVAILABLE = True
 except ImportError:
@@ -119,9 +120,12 @@ def get_encoder_architecture_from_checkpoint(ckpt_path: str) -> EncoderArchitect
 
     if has_output_act:
         activation = "tanh"
-    elif input_dim >= 23:
-        # Constrained ALBC encoder (23D/27D/28D): softsign is applied functionally
-        # in _encode(), not as a module in the MLP. Infer from input dimension.
+    elif input_dim >= 15 and (
+        "_enc_obs_lower" in sd or "_enc_obs_upper" in sd or input_dim >= 23
+    ):
+        # Constrained ALBC encoder: softsign is applied functionally in _encode(),
+        # not as a module in the MLP. Detect via static bounds or input dim >= 23.
+        # 15D reduced encoder also uses softsign (has _enc_obs_lower/upper buffers).
         activation = "softsign"
     else:
         activation = "none"
@@ -391,6 +395,50 @@ def _build_constrained_albc_23d_sweep(
     ]
 
 
+def _build_reduced_encoder_sweep(
+    input_dim: int,
+    lower: np.ndarray,
+    upper: np.ndarray,
+) -> list[SweepParam]:
+    """Build sweep params for reduced encoder input using bounds directly.
+
+    Parameter names are mapped from the full 23D naming table via _enc_obs_indices
+    stored in the checkpoint. Falls back to generic dim_N names if no mapping.
+    """
+    # Full 23D parameter name/unit table
+    _NAMES_23D = [
+        "Main Volume", "Main CoG Z", "Main CoB Z", "Buoy Volume", "Buoy CoG Z", "Buoy CoB Z",
+        "Main Ixx", "Main Iyy", "Buoy Ixx", "Buoy Iyy",
+        "Lin Damp Roll", "Lin Damp Pitch", "Quad Damp Roll", "Quad Damp Pitch",
+        "Body Mass", "Added Mass Surge",
+        "Payload Mass", "Payload CoG X", "Payload CoG Y", "Payload CoG Z",
+        "Joint Stiffness", "Joint Damping", "Water Density",
+    ]
+    _UNITS_23D = [
+        "m^3", "m", "m", "m^3", "m", "m",
+        "kg*m^2", "kg*m^2", "kg*m^2", "kg*m^2",
+        "", "", "", "",
+        "kg", "kg",
+        "kg", "m", "m", "m",
+        "Nm/rad", "Nm*s/rad", "kg/m^3",
+    ]
+    # Known index mappings (from rsl_rl_ppo_cfg.py _ENC_OBS_INDICES_15D)
+    _KNOWN_INDICES = {
+        15: [0, 1, 2, 3, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 21],
+    }
+    indices = _KNOWN_INDICES.get(input_dim)
+    params = []
+    for i in range(input_dim):
+        if indices is not None and indices[i] < len(_NAMES_23D):
+            name = _NAMES_23D[indices[i]]
+            unit = _UNITS_23D[indices[i]]
+        else:
+            name = f"dim_{i}"
+            unit = ""
+        params.append(SweepParam(name, i, float(lower[i]), float(upper[i]), unit))
+    return params
+
+
 def build_sweep_params_from_checkpoint(
     input_dim: int,
     norm_mean: np.ndarray,
@@ -413,9 +461,12 @@ def build_sweep_params_from_checkpoint(
         enc_obs_lower: Static min-max lower bounds (for 23D constrained ALBC).
         enc_obs_upper: Static min-max upper bounds (for 23D constrained ALBC).
     """
-    # --- 23D constrained ALBC with static min-max bounds ---
-    if input_dim == 23 and enc_obs_lower is not None and enc_obs_upper is not None:
-        return _build_constrained_albc_23d_sweep(enc_obs_lower, enc_obs_upper)
+    # --- Constrained ALBC with static min-max bounds ---
+    if enc_obs_lower is not None and enc_obs_upper is not None:
+        if input_dim == 23:
+            return _build_constrained_albc_23d_sweep(enc_obs_lower, enc_obs_upper)
+        # Reduced encoder (e.g. 15D): build sweep from bounds directly
+        return _build_reduced_encoder_sweep(input_dim, enc_obs_lower, enc_obs_upper)
 
     nm = norm_mean.flatten()
 

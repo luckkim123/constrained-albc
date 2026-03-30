@@ -35,7 +35,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
-
 from common import (
     SweepParam,
     build_nominal_obs,
@@ -43,7 +42,6 @@ from common import (
     build_sweep_params_from_checkpoint,
     get_encoder_architecture_from_checkpoint,
 )
-
 
 # ---------------------------------------------------------------------------
 # Encoder reconstruction (pure PyTorch, no Isaac Sim)
@@ -375,22 +373,22 @@ def main() -> None:
             if norm.mode == "static_minmax":
                 assert norm.lower is not None and norm.upper is not None
                 nominal_np = ((norm.lower + norm.upper) / 2.0).numpy()
-                print(f"  Using static bounds midpoint as nominal.")
+                print("  Using static bounds midpoint as nominal.")
             else:
                 nominal_np = norm.mean.squeeze().numpy()
-                print(f"  Using normalizer mean as nominal.")
+                print("  Using normalizer mean as nominal.")
             sweep_params = build_sweep_params_from_checkpoint(
                 ckpt_dim, nominal_np, enc_lower_np, enc_upper_np,
             )
     except RuntimeError:
-        print(f"[INFO] Isaac Lab not available.")
+        print("[INFO] Isaac Lab not available.")
         if norm.mode == "static_minmax":
             assert norm.lower is not None and norm.upper is not None
             nominal_np = ((norm.lower + norm.upper) / 2.0).numpy()
-            print(f"  Using static bounds midpoint as nominal.")
+            print("  Using static bounds midpoint as nominal.")
         else:
             nominal_np = norm.mean.squeeze().numpy()
-            print(f"  Using normalizer mean as nominal.")
+            print("  Using normalizer mean as nominal.")
         sweep_params = build_sweep_params_from_checkpoint(
             ckpt_dim, nominal_np, enc_lower_np, enc_upper_np,
         )
