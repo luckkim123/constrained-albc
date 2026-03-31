@@ -197,19 +197,25 @@ class ALBCEnv(DirectRLEnv):
         )
 
     def _init_state_buffers(self) -> None:
-        """Initialize action and force/torque buffers."""
-        # Action buffers (3-deep history for smoothness penalty)
+        """Initialize all runtime state buffers."""
+        self._init_action_buffers()
+        self._init_history_buffers()
+        self._init_velocity_buffers()
+        self._init_tracking_buffers()
+        self._init_force_buffers()
+
+    def _init_action_buffers(self) -> None:
+        """Action history (3-deep for smoothness penalty) and joint PD targets."""
         self._actions = torch.zeros(self.num_envs, self.cfg.action_space, device=self.device)
         self._prev_actions = torch.zeros(self.num_envs, self.cfg.action_space, device=self.device)
         self._prev_prev_actions = torch.zeros(self.num_envs, self.cfg.action_space, device=self.device)
-
-        # Joint PD target: delta accumulation q_des += delta_scale * a_t
         self._nominal_joint_pos = torch.tensor(self.cfg.nominal_joint_pos, device=self.device)
         self._delta_scale = self.cfg.delta_scale
         self._joint_pos_targets = self._nominal_joint_pos.expand(self.num_envs, -1).clone()
         self._control_step_counter = 0
 
-        # Temporal history ring buffer: 21D per step (joint 4D + body 9D + action 8D)
+    def _init_history_buffers(self) -> None:
+        """Temporal history ring buffer: 21D per step (joint 4D + body 9D + action 8D)."""
         self._hist_len = self.cfg.hist_len
         self._hist_stride = self.cfg.hist_stride
         self._hist_action_len = self.cfg.hist_action_len
@@ -225,32 +231,31 @@ class ALBCEnv(DirectRLEnv):
             self._hist_buf = None
             self._hist_step_counter = None
 
-        # Velocity command tracking buffers
+    def _init_velocity_buffers(self) -> None:
+        """Velocity command tracking and error buffers."""
         self._vel_cmd_lin = torch.zeros(self.num_envs, 3, device=self.device)
         self._vel_cmd_ang = torch.zeros(self.num_envs, 3, device=self.device)
         self._lin_vel_err = torch.zeros(self.num_envs, 3, device=self.device)
         self._ang_vel_err = torch.zeros(self.num_envs, 3, device=self.device)
         self._vel_cmd_step_counter = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
 
-        # Arm manipulability index (Yoshikawa)
+    def _init_tracking_buffers(self) -> None:
+        """Manipulability, cumulative yaw, mid-episode dynamics, and OU process buffers."""
         self._manipulability = torch.zeros(self.num_envs, device=self.device)
-
-        # Cumulative yaw tracking for tether wrapping constraint
         self._cumulative_yaw = torch.zeros(self.num_envs, device=self.device)
         self._prev_yaw = torch.zeros(self.num_envs, device=self.device)
-
-        # Mid-episode payload toggle buffers
+        # Mid-episode payload toggle
         self._payload_toggle_counter = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
         self._payload_has_payload_at_reset = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
         self._payload_no_toggle_mask = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
         self._payload_toggled = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
         self._stashed_payload_mass = torch.zeros(self.num_envs, device=self.device)
         self._stashed_payload_cog_offset = torch.zeros(self.num_envs, 3, device=self.device)
-
         # OU process base current (mean-reversion target, set at reset)
         self._ou_base_current = torch.zeros(self.num_envs, 3, device=self.device)
 
-        # Force/torque buffers
+    def _init_force_buffers(self) -> None:
+        """Hydrodynamic force/torque accumulation buffers."""
         self._hydro_forces = torch.zeros(self.num_envs, 3, device=self.device)
         self._hydro_torques = torch.zeros(self.num_envs, 3, device=self.device)
         self._buoy_hydro_forces = torch.zeros(self.num_envs, 3, device=self.device)
@@ -403,9 +408,7 @@ class ALBCEnv(DirectRLEnv):
             actual_steps = self.max_episode_length // 2 if toggle_steps == -1 else toggle_steps
             self._payload_toggle_counter += 1
             toggle_mask = (
-                (self._payload_toggle_counter >= actual_steps)
-                & ~self._payload_no_toggle_mask
-                & ~self._payload_toggled
+                (self._payload_toggle_counter >= actual_steps) & ~self._payload_no_toggle_mask & ~self._payload_toggled
             )
             if toggle_mask.any():
                 toggle_ids = toggle_mask.nonzero(as_tuple=True)[0]
@@ -516,9 +519,7 @@ class ALBCEnv(DirectRLEnv):
         self._payload_has_payload_at_reset[env_ids] = start_with
 
         # Decide which envs skip toggle entirely (constant payload)
-        self._payload_no_toggle_mask[env_ids] = (
-            torch.rand(n, device=self.device) < self.cfg.payload_no_toggle_prob
-        )
+        self._payload_no_toggle_mask[env_ids] = torch.rand(n, device=self.device) < self.cfg.payload_no_toggle_prob
 
         # Start-without-payload envs: zero mass and CoG offset
         no_payload_ids = env_ids[~start_with]
@@ -532,9 +533,7 @@ class ALBCEnv(DirectRLEnv):
                 fix_ids = no_payload_ids[stash_too_small]
                 lo = max(0.1, self.cfg.randomization.payload_mass_range[0])
                 hi = self.cfg.randomization.payload_mass_range[1]
-                self._stashed_payload_mass[fix_ids] = torch.empty(
-                    len(fix_ids), device=self.device
-                ).uniform_(lo, hi)
+                self._stashed_payload_mass[fix_ids] = torch.empty(len(fix_ids), device=self.device).uniform_(lo, hi)
                 self._sample_stashed_cog_offset(fix_ids)
 
         # If episode jitter placed this env past the toggle point, skip toggle
@@ -604,9 +603,7 @@ class ALBCEnv(DirectRLEnv):
 
         # Z: uniform range
         lo, hi = cfg.payload_cog_offset_z
-        self._stashed_payload_cog_offset[env_ids, 2] = torch.empty(
-            n, device=self.device
-        ).uniform_(lo, hi)
+        self._stashed_payload_cog_offset[env_ids, 2] = torch.empty(n, device=self.device).uniform_(lo, hi)
 
     def _step_ocean_current_ou(self) -> None:
         """Advance OU process one step for ocean current drift.
@@ -777,24 +774,13 @@ class ALBCEnv(DirectRLEnv):
     ) -> dict[str, float | torch.Tensor]:
         """Collect episode metrics for TensorBoard/WandB logging.
 
-        Called from ``_reset_idx()`` before resetting state.  Replaces the former
-        standalone ``log_episode_metrics()`` function so that all env-internal
-        attribute access goes through ``self``.
-
-        Args:
-            env_ids: Environment indices being reset.
-            reward_sums: Accumulated rewards per term from RewardManager.
-
-        Returns:
-            Dict of metric tag -> value, written to ``self.extras["log"]``.
+        Called from ``_reset_idx()`` before resetting state.
         """
         log: dict[str, float | torch.Tensor] = {}
         n = len(env_ids)
-
-        # Weight for downstream weighted averaging (SAC runner uses this)
         log["_num_resets"] = float(n)
 
-        # Reward sums (normalized by max episode duration for episode-length-independent metrics)
+        # Reward sums (normalized by episode duration for length-independent metrics)
         total = 0.0
         for name, value in reward_sums.items():
             normalized = value / self.max_episode_length_s
@@ -802,33 +788,42 @@ class ALBCEnv(DirectRLEnv):
             total += normalized
         log["Episode_Reward/total"] = total
 
-        # Termination rates
         self._collect_termination_metrics(log, env_ids, n)
-
         if n == 0:
             return log
 
-        # Absolute attitude (monitoring: deviation from upright)
+        self._log_tracking_metrics(log, env_ids)
+        self._log_action_metrics(log, env_ids)
+        self._log_dynamics_metrics(log, env_ids)
+        self._log_midep_metrics(log, env_ids)
+
+        if hasattr(self.cfg, "randomization") and self.cfg.randomization.enable:
+            log_dr_metrics({"log": log}, self)
+
+        return log
+
+    def _log_tracking_metrics(self, log: dict, env_ids: torch.Tensor) -> None:
+        """Attitude, velocity tracking, and manipulability metrics."""
         roll, pitch, _ = euler_xyz_from_quat(self._robot.data.root_quat_w[env_ids])
         log["Attitude/roll_deg"] = torch.rad2deg(roll).abs().mean().item()
         log["Attitude/pitch_deg"] = torch.rad2deg(pitch).abs().mean().item()
 
-        # Velocity tracking errors
         log["Vel_Tracking/lin_vel_err_norm"] = self._lin_vel_err[env_ids].norm(dim=-1).mean().item()
         log["Vel_Tracking/ang_vel_err_norm"] = self._ang_vel_err[env_ids].norm(dim=-1).mean().item()
         log["Vel_Tracking/lin_vel_cmd_norm"] = self._vel_cmd_lin[env_ids].norm(dim=-1).mean().item()
         log["Vel_Tracking/ang_vel_cmd_norm"] = self._vel_cmd_ang[env_ids].norm(dim=-1).mean().item()
 
-        # Manipulability
         log["Arm/manipulability_mean"] = self._manipulability[env_ids].mean().item()
         log["Arm/manipulability_min"] = self._manipulability[env_ids].min().item()
 
-        # --- Action diagnostics ---
+    def _log_action_metrics(self, log: dict, env_ids: torch.Tensor) -> None:
+        """Action magnitude and rate diagnostics."""
         log["Action/size_mean"] = torch.linalg.norm(self._actions[env_ids], dim=-1).mean().item()
         da = self._actions[env_ids] - self._prev_actions[env_ids]
         log["Action/rate_mean"] = torch.linalg.norm(da, dim=-1).mean().item()
 
-        # --- Dynamics & actuator diagnostics ---
+    def _log_dynamics_metrics(self, log: dict, env_ids: torch.Tensor) -> None:
+        """Angular velocity, joint state, and actuator saturation diagnostics."""
         ang_vel = self._robot.data.root_ang_vel_b[env_ids]
         log["Dynamics/angular_velocity_rp_rms"] = ang_vel[:, :2].pow(2).mean().sqrt().item()
         log["Dynamics/angular_velocity_yaw_rms"] = ang_vel[:, 2].pow(2).mean().sqrt().item()
@@ -850,7 +845,8 @@ class ALBCEnv(DirectRLEnv):
         vel_lim = self._robot.data.joint_vel_limits[env_ids][:, jids]
         log["Dynamics/vel_saturation_frac"] = (joint_vel.abs() >= vel_lim.clamp(min=1e-6) * 0.95).float().mean().item()
 
-        # Mid-episode dynamics diagnostics
+    def _log_midep_metrics(self, log: dict, env_ids: torch.Tensor) -> None:
+        """Mid-episode dynamics diagnostics (payload toggle, OU current drift)."""
         if self.cfg.payload_toggle_steps != 0:
             log["MidEp/payload_toggled_frac"] = self._payload_toggled[env_ids].float().mean().item()
             log["MidEp/payload_mass_final"] = self._payload_mass[env_ids].mean().item()
@@ -859,14 +855,6 @@ class ALBCEnv(DirectRLEnv):
             base = self._ou_base_current[env_ids]
             log["MidEp/current_drift_norm"] = (current - base).norm(dim=-1).mean().item()
             log["MidEp/current_mag_final"] = current.norm(dim=-1).mean().item()
-
-        # DR parameters (when randomization is enabled)
-        if hasattr(self.cfg, "randomization") and self.cfg.randomization.enable:
-            # log_dr_metrics expects extras["log"] dict -- pass a wrapper
-            extras_wrapper: dict = {"log": log}
-            log_dr_metrics(extras_wrapper, self)
-
-        return log
 
     def _collect_termination_metrics(self, log: dict[str, float | torch.Tensor], env_ids: torch.Tensor, n: int) -> None:
         """Collect termination rate metrics (0.0~1.0, scale-invariant)."""
