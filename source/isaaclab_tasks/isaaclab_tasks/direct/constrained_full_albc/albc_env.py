@@ -3,11 +3,10 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Velocity Tracking ALBC Environment.
+"""Velocity + Attitude Tracking ALBC Environment.
 
-8D action (2D arm + 6D thruster) for velocity command tracking.
-Joint PD target for arm (q_des += delta_scale * a_t), thruster commands for body motion.
-Cascaded control: outer PID (position -> vel_cmd) -> RL policy (vel_cmd -> action).
+8D action (2D arm + 6D thruster). Roll/pitch: attitude command (+-45 deg, exp kernel).
+Yaw: rate command. Linear: velocity command. Joint PD for arm, thruster for body.
 """
 
 from __future__ import annotations
@@ -44,11 +43,11 @@ from .utils import log_dr_metrics
 
 
 class ALBCEnv(DirectRLEnv):
-    """Velocity tracking ALBC environment: arm + thruster control with constrained RL.
+    """Velocity + attitude tracking ALBC environment with constrained RL.
 
     Obs (81D): current_proprio(26D) + temporal_history(55D).
-        Current: vel_cmd(6), euler(3), ang_vel(3), lin_vel(3), jpos(2), jvel(2),
-                 manipulability(1), thr_state(6).
+        Current: cmd(6) [lin_vel(3) + att_rp(2) + yaw_rate(1)], euler(3),
+                 ang_vel(3), lin_vel(3), jpos(2), jvel(2), manipulability(1), thr(6).
         History: joint_tracking(12D) + body_tracking(27D) + action(16D).
     Action (8D): Delta arm targets (2D) + thruster commands (6D).
     """
@@ -232,11 +231,15 @@ class ALBCEnv(DirectRLEnv):
             self._hist_step_counter = None
 
     def _init_velocity_buffers(self) -> None:
-        """Velocity command tracking and error buffers."""
+        """Command tracking buffers (mixed attitude + velocity)."""
         self._vel_cmd_lin = torch.zeros(self.num_envs, 3, device=self.device)
-        self._vel_cmd_ang = torch.zeros(self.num_envs, 3, device=self.device)
+        # [0:2] = roll/pitch attitude (rad), [2] = yaw rate (rad/s)
+        self._ang_cmd = torch.zeros(self.num_envs, 3, device=self.device)
         self._lin_vel_err = torch.zeros(self.num_envs, 3, device=self.device)
-        self._ang_vel_err = torch.zeros(self.num_envs, 3, device=self.device)
+        self._att_rp_err = torch.zeros(self.num_envs, 2, device=self.device)
+        self._yaw_rate_err = torch.zeros(self.num_envs, device=self.device)
+        # 3D mixed error for history buffer: [att_rp_err(2), yaw_rate_err(1)]
+        self._ang_err = torch.zeros(self.num_envs, 3, device=self.device)
         self._vel_cmd_step_counter = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
 
     def _init_tracking_buffers(self) -> None:
@@ -337,7 +340,8 @@ class ALBCEnv(DirectRLEnv):
 
         Body tracking (9D) -- system response:
             [4:7]   linear velocity tracking error: vel_cmd - lin_vel
-            [7:10]  angular velocity tracking error: vel_cmd - ang_vel
+            [7:9]   roll/pitch attitude error (radians, wrapped)
+            [9]     yaw rate error (rad/s)
             [10:13] euler angles (roll, pitch, yaw)
 
         Action (8D) -- recent control input:
@@ -348,15 +352,21 @@ class ALBCEnv(DirectRLEnv):
         joint_vel = self._robot.data.joint_vel[:, self._albc_joint_ids]
 
         lin_vel_err = self._vel_cmd_lin - self._robot.data.root_lin_vel_b
-        ang_vel_err = self._vel_cmd_ang - self._robot.data.root_ang_vel_b
         roll, pitch, yaw = euler_xyz_from_quat(self._robot.data.root_quat_w)
+
+        # Roll/pitch: attitude error (wrapped to [-pi, pi])
+        att_raw = self._ang_cmd[:, :2] - torch.stack([roll, pitch], dim=-1)
+        att_rp_err = torch.atan2(torch.sin(att_raw), torch.cos(att_raw))
+        # Yaw: rate error
+        yaw_rate_err = self._ang_cmd[:, 2] - self._robot.data.root_ang_vel_b[:, 2]
+        ang_err = torch.cat([att_rp_err, yaw_rate_err.unsqueeze(-1)], dim=-1)
 
         return torch.cat(
             [
                 joint_pos_error,  # 2D: q_des_{t-1} - q_actual_t
                 joint_vel,  # 2D: joint velocities
                 lin_vel_err,  # 3D: lin vel tracking error
-                ang_vel_err,  # 3D: ang vel tracking error
+                ang_err,  # 3D: [att_rp_err(2), yaw_rate_err(1)]
                 torch.stack([roll, pitch, yaw], dim=-1),  # 3D: euler angles
                 self._prev_actions,  # 8D: action that produced current state
             ],
@@ -475,22 +485,26 @@ class ALBCEnv(DirectRLEnv):
         self._prev_yaw = yaw.clone()
 
     def _sample_velocity_command(self, env_ids: torch.Tensor) -> None:
-        """Sample random velocity commands for specified environments.
+        """Sample random commands for specified environments.
 
-        With probability ``vel_cmd_zero_prob``, an env receives a zero command
-        (hovering / station-keeping behaviour).
+        Roll/pitch: attitude command (radians) from att_cmd_rp_range.
+        Yaw: rate command (rad/s) from yaw_rate_cmd_range.
+        Linear: velocity command (m/s) from vel_cmd_lin_range.
+        With probability ``vel_cmd_zero_prob``, an env receives a zero command.
         """
         n = len(env_ids)
         lin_range = self.cfg.vel_cmd_lin_range
-        ang_range = self.cfg.vel_cmd_ang_range
+        att_range = self.cfg.att_cmd_rp_range
+        yaw_range = self.cfg.yaw_rate_cmd_range
         self._vel_cmd_lin[env_ids] = torch.empty(n, 3, device=self.device).uniform_(lin_range[0], lin_range[1])
-        self._vel_cmd_ang[env_ids] = torch.empty(n, 3, device=self.device).uniform_(ang_range[0], ang_range[1])
-        # Zero-command envs: hovering training
+        self._ang_cmd[env_ids, :2] = torch.empty(n, 2, device=self.device).uniform_(att_range[0], att_range[1])
+        self._ang_cmd[env_ids, 2] = torch.empty(n, device=self.device).uniform_(yaw_range[0], yaw_range[1])
+        # Zero-command envs: hovering / station-keeping
         zero_mask = torch.rand(n, device=self.device) < self.cfg.vel_cmd_zero_prob
         if zero_mask.any():
             zero_ids = env_ids[zero_mask]
             self._vel_cmd_lin[zero_ids] = 0.0
-            self._vel_cmd_ang[zero_ids] = 0.0
+            self._ang_cmd[zero_ids] = 0.0
         self._vel_cmd_step_counter[env_ids] = 0
 
     # ------------------------------------------------------------------
@@ -733,15 +747,25 @@ class ALBCEnv(DirectRLEnv):
             observations["privileged"] = compute_privileged_obs(self)
         return observations
 
+    def _compute_ang_errors(self) -> None:
+        """Compute roll/pitch attitude error + yaw rate error from current state."""
+        roll, pitch, _ = euler_xyz_from_quat(self._robot.data.root_quat_w)
+        raw = self._ang_cmd[:, :2] - torch.stack([roll, pitch], dim=-1)
+        self._att_rp_err = torch.atan2(torch.sin(raw), torch.cos(raw))
+        self._yaw_rate_err = self._ang_cmd[:, 2] - self._robot.data.root_ang_vel_b[:, 2]
+        self._ang_err[:, :2] = self._att_rp_err
+        self._ang_err[:, 2] = self._yaw_rate_err
+
     def _get_rewards(self) -> torch.Tensor:
-        """Compute velocity tracking rewards and constraint costs.
+        """Compute tracking rewards and constraint costs.
 
         Returns:
             Reward tensor. Shape: (num_envs,).
         """
-        # Compute velocity tracking errors
+        # Linear velocity error
         self._lin_vel_err = self._vel_cmd_lin - self._robot.data.root_lin_vel_b
-        self._ang_vel_err = self._vel_cmd_ang - self._robot.data.root_ang_vel_b
+        # Roll/pitch attitude error + yaw rate error
+        self._compute_ang_errors()
 
         reward = self._reward_manager.compute(
             robot=self._robot,
@@ -760,9 +784,15 @@ class ALBCEnv(DirectRLEnv):
         # DORAEMON: accumulate episode return and settling error
         if self._doraemon is not None:
             self._episode_return_accum += reward
-            err = self._lin_vel_err.pow(2).sum(dim=-1).sqrt()
+            # Normalize each error by its command range to get dimensionless [0, ~2] metric.
+            # 0.0 = perfect tracking, 1.0 = error equals full command range.
+            lin_range = max(abs(self.cfg.vel_cmd_lin_range[0]), abs(self.cfg.vel_cmd_lin_range[1]))
+            att_range = max(abs(self.cfg.att_cmd_rp_range[0]), abs(self.cfg.att_cmd_rp_range[1]))
+            lin_err_norm = self._lin_vel_err.pow(2).sum(dim=-1).sqrt() / max(lin_range, 1e-6)
+            att_err_norm = self._att_rp_err.pow(2).sum(dim=-1).sqrt() / max(att_range, 1e-6)
+            err = (0.5 * (lin_err_norm + att_err_norm)).unsqueeze(1)
             idx = self._settling_idx % self._settling_window
-            self._settling_errors.scatter_(1, idx.unsqueeze(1), err.unsqueeze(1))
+            self._settling_errors.scatter_(1, idx.unsqueeze(1), err)
             self._settling_idx += 1
 
         return reward
@@ -803,24 +833,31 @@ class ALBCEnv(DirectRLEnv):
         return log
 
     def _log_tracking_metrics(self, log: dict, env_ids: torch.Tensor) -> None:
-        """Attitude, velocity tracking (aggregate + per-axis), and manipulability."""
+        """Attitude, velocity tracking, command diagnostics, and manipulability."""
         roll, pitch, _ = euler_xyz_from_quat(self._robot.data.root_quat_w[env_ids])
         log["Attitude/roll_deg"] = torch.rad2deg(roll).abs().mean().item()
         log["Attitude/pitch_deg"] = torch.rad2deg(pitch).abs().mean().item()
 
-        # Velocity tracking: aggregate norms
-        lin_err = self._lin_vel_err[env_ids]  # (N, 3): surge, sway, heave
-        ang_err = self._ang_vel_err[env_ids]  # (N, 3): roll_rate, pitch_rate, yaw_rate
+        # Linear velocity tracking
+        lin_err = self._lin_vel_err[env_ids]
         log["Vel_Tracking/lin_vel_err_norm"] = lin_err.norm(dim=-1).mean().item()
-        log["Vel_Tracking/ang_vel_err_norm"] = ang_err.norm(dim=-1).mean().item()
-
-        # Per-axis breakdown (mean absolute error)
         log["Vel_Tracking/lin_err_x"] = lin_err[:, 0].abs().mean().item()
         log["Vel_Tracking/lin_err_y"] = lin_err[:, 1].abs().mean().item()
         log["Vel_Tracking/lin_err_z"] = lin_err[:, 2].abs().mean().item()
-        log["Vel_Tracking/ang_err_roll"] = ang_err[:, 0].abs().mean().item()
-        log["Vel_Tracking/ang_err_pitch"] = ang_err[:, 1].abs().mean().item()
-        log["Vel_Tracking/ang_err_yaw"] = ang_err[:, 2].abs().mean().item()
+
+        # Roll/pitch attitude tracking (radians -> degrees)
+        att_err = self._att_rp_err[env_ids]
+        log["Att_Tracking/err_roll_deg"] = torch.rad2deg(att_err[:, 0]).abs().mean().item()
+        log["Att_Tracking/err_pitch_deg"] = torch.rad2deg(att_err[:, 1]).abs().mean().item()
+        log["Att_Tracking/err_rp_norm_deg"] = torch.rad2deg(att_err.norm(dim=-1)).mean().item()
+
+        # Yaw rate tracking
+        log["Vel_Tracking/yaw_rate_err"] = self._yaw_rate_err[env_ids].abs().mean().item()
+
+        # Command diagnostics
+        log["Command/att_roll_deg"] = torch.rad2deg(self._ang_cmd[env_ids, 0]).abs().mean().item()
+        log["Command/att_pitch_deg"] = torch.rad2deg(self._ang_cmd[env_ids, 1]).abs().mean().item()
+        log["Command/yaw_rate"] = self._ang_cmd[env_ids, 2].abs().mean().item()
 
         log["Arm/manipulability_mean"] = self._manipulability[env_ids].mean().item()
         log["Arm/manipulability_min"] = self._manipulability[env_ids].min().item()
@@ -906,7 +943,7 @@ class ALBCEnv(DirectRLEnv):
             2. Attitude angle exceeds max_attitude_angle (upside-down, buoyancy reversal)
 
         Velocity violations (angular > pi, linear > 2 m/s) are NOT terminated here.
-        They are handled by soft constraints (ang_vel_cost, body_lin_vel_cost) which
+        They are handled by soft constraints (angular_velocity_cost, body_linear_velocity_cost) which
         provide per-step gradient. PhysX rigid body max_angular_velocity (4*pi) provides
         the hard physical clamp. Removing velocity termination eliminates the death
         spiral where early death was optimal under all-negative rewards.
@@ -1107,9 +1144,14 @@ class ALBCEnv(DirectRLEnv):
             randomize_joint_effort_limit(env=self, env_ids=env_ids, dr=dr)
             randomize_joint_friction(env=self, env_ids=env_ids, dr=dr)
 
-        # Sample velocity command
+        # Sample commands
         self._sample_velocity_command(env_ids)
 
-        # Initialize velocity errors
+        # Initialize errors
         self._lin_vel_err[env_ids] = self._vel_cmd_lin[env_ids] - self._robot.data.root_lin_vel_b[env_ids]
-        self._ang_vel_err[env_ids] = self._vel_cmd_ang[env_ids] - self._robot.data.root_ang_vel_b[env_ids]
+        roll_r, pitch_r, _ = euler_xyz_from_quat(self._robot.data.root_quat_w[env_ids])
+        raw = self._ang_cmd[env_ids, :2] - torch.stack([roll_r, pitch_r], dim=-1)
+        self._att_rp_err[env_ids] = torch.atan2(torch.sin(raw), torch.cos(raw))
+        self._yaw_rate_err[env_ids] = self._ang_cmd[env_ids, 2] - self._robot.data.root_ang_vel_b[env_ids, 2]
+        self._ang_err[env_ids, :2] = self._att_rp_err[env_ids]
+        self._ang_err[env_ids, 2] = self._yaw_rate_err[env_ids]

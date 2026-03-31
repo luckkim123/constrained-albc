@@ -37,12 +37,12 @@ class DoraemonCfg:
     alpha: float = 0.5  # Success rate threshold for distribution expansion
     kl_ub: float = 0.0015  # Trust region KL upper bound per step
     init_concentration: float = 30.0  # Initial Beta(a,b) concentration (a+b)
-    success_threshold: float = 0.25  # Velocity error threshold (m/s)
+    success_threshold: float = 0.25  # Normalized tracking error threshold (dimensionless, 0=perfect, 1=full-range error)
     success_threshold_final: float = 0.25  # Final threshold (no annealing if same)
     success_threshold_anneal_steps: int = 0  # 0 = immediate final threshold
     buffer_size: int = 2000  # Maximum episode buffer capacity
     min_episodes: int = 200  # Minimum episodes before first update
-    traversability_tau: float = 0.035  # Sigmoid temperature (m/s)
+    traversability_tau: float = 0.035  # Sigmoid temperature (dimensionless, same scale as threshold)
     min_ess_ratio: float = 0.05  # Minimum ESS/buffer_size to accept update
     param_overrides: dict[str, tuple[float, float]] = {}  # Per-param bound overrides {name: (lo, hi)}
 

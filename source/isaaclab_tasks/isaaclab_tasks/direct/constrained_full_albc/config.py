@@ -3,11 +3,10 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Configuration for velocity tracking ALBC environment.
+"""Configuration for velocity + attitude tracking ALBC environment.
 
-8D action (2D arm + 6D thruster) for velocity command tracking.
-Cascaded control: outer PID (position -> vel_cmd) -> RL policy (vel_cmd -> action).
-Single registered task: Isaac-FullDOF-TRPO-v0
+8D action (2D arm + 6D thruster). Roll/pitch: attitude command, yaw: rate command,
+linear: velocity command. Single registered task: Isaac-FullDOF-TRPO-v0
 """
 
 from __future__ import annotations
@@ -168,20 +167,20 @@ class HardDomainRandomizationCfg(DomainRandomizationCfg):
 # 81D Observation Noise Model (26D current proprio + 55D temporal history)
 #
 # Current Proprioception (26D):
-#   Command (6D): vel_cmd_lin(3), vel_cmd_ang(3)
+#   Command (6D): vel_cmd_lin(3), ang_cmd(3) [att_rp(2) + yaw_rate(1)]
 #   Body State (9D): euler(3), ang_vel(3), lin_vel(3)
 #   Arm State (5D): joint_pos(2), joint_vel(2), manipulability(1)
 #   Thruster (6D): filtered output (ESC feedback)
 #
 # Temporal History (55D, stride=3):
 #   Joint tracking x3 steps (12D): joint_pos_error(2), joint_vel(2)
-#   Body tracking x3 steps (27D): lin_vel_err(3), ang_vel_err(3), rpy(3)
+#   Body tracking x3 steps (27D): lin_vel_err(3), ang_err(3) [att_rp(2)+yaw_rate(1)], rpy(3)
 #   Action x2 steps (16D): full_action(8)
 # ==========================================================================
 _OBS_NOISE_STD = tuple(
     # --- Current Proprioception (26D) ---
     [0.0] * 3  # vel_cmd_lin (our command, no noise)
-    + [0.0] * 3  # vel_cmd_ang
+    + [0.0] * 3  # ang_cmd [att_rp(2) + yaw_rate(1)] (our command, no noise)
     + [0.02] * 3  # euler
     + [0.04] * 3  # ang_vel
     + [0.04] * 3  # lin_vel
@@ -192,7 +191,7 @@ _OBS_NOISE_STD = tuple(
     # --- Joint Tracking History (12D = 4D x 3 steps) ---
     + ([0.02] * 2 + [0.04] * 2) * 3  # joint_pos_error + joint_vel
     # --- Body Tracking History (27D = 9D x 3 steps) ---
-    + ([0.04] * 3 + [0.04] * 3 + [0.02] * 3) * 3  # lin_vel_err + ang_vel_err + rpy
+    + ([0.04] * 3 + [0.04] * 3 + [0.02] * 3) * 3  # lin_vel_err + ang_err [att_rp+yaw_rate] + rpy
     # --- Action History (16D = 8D x 2 steps) ---
     + [0.0] * 16  # actions (our command, no noise)
 )
@@ -200,7 +199,7 @@ _OBS_NOISE_STD = tuple(
 _OBS_BIAS_MIN = tuple(
     # --- Current Proprioception (26D) ---
     [0] * 3  # vel_cmd_lin
-    + [0] * 3  # vel_cmd_ang
+    + [0] * 3  # ang_cmd
     + [-0.02] * 3  # euler
     + [-0.03] * 3  # ang_vel
     + [-0.02] * 3  # lin_vel
@@ -211,7 +210,7 @@ _OBS_BIAS_MIN = tuple(
     # --- Joint Tracking History (12D) ---
     + ([-0.02] * 2 + [-0.03] * 2) * 3
     # --- Body Tracking History (27D) ---
-    + ([-0.02] * 3 + [-0.03] * 3 + [-0.02] * 3) * 3
+    + ([-0.02] * 3 + [-0.04] * 3 + [-0.02] * 3) * 3  # lin_vel_err + ang_err [att_rp+yaw_rate] + rpy
     # --- Action History (16D) ---
     + [0] * 16
 )
@@ -219,7 +218,7 @@ _OBS_BIAS_MIN = tuple(
 _OBS_BIAS_MAX = tuple(
     # --- Current Proprioception (26D) ---
     [0] * 3  # vel_cmd_lin
-    + [0] * 3  # vel_cmd_ang
+    + [0] * 3  # ang_cmd
     + [0.02] * 3  # euler
     + [0.03] * 3  # ang_vel
     + [0.02] * 3  # lin_vel
@@ -230,7 +229,7 @@ _OBS_BIAS_MAX = tuple(
     # --- Joint Tracking History (12D) ---
     + ([0.02] * 2 + [0.03] * 2) * 3
     # --- Body Tracking History (27D) ---
-    + ([0.02] * 3 + [0.03] * 3 + [0.02] * 3) * 3
+    + ([0.02] * 3 + [0.04] * 3 + [0.02] * 3) * 3  # lin_vel_err + ang_err [att_rp+yaw_rate] + rpy
     # --- Action History (16D) ---
     + [0] * 16
 )
@@ -238,13 +237,14 @@ _OBS_BIAS_MAX = tuple(
 
 @configclass
 class ALBCEnvCfg(DirectRLEnvCfg):
-    """Velocity tracking ALBC environment configuration.
+    """Velocity + attitude tracking ALBC environment configuration.
 
     8D action (2D arm delta + 6D thruster), 81D observation (26D current + 55D history),
     24D privileged. TRPO + IPO + Asymmetric Encoder with 10 constraints (5 prob + 5 avg).
 
-    Wrench-space actions: policy outputs normalized force/torque commands.
-    TAM inverse (per subsystem) converts to individual thruster commands internally.
+    Roll/pitch: attitude command (+-45 deg, exp kernel reward).
+    Yaw: rate command (+-0.5 rad/s, quadratic penalty).
+    Linear: velocity command (+-0.5 m/s, quadratic penalty).
     """
 
     # ==========================================================================
@@ -317,12 +317,14 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     """Number of action history steps to include in observation (newest N of hist_len)."""
 
     # ==========================================================================
-    # Task: Velocity Command Tracking
+    # Task: Command Tracking (velocity + attitude)
     # ==========================================================================
     vel_cmd_lin_range: tuple[float, float] = (-0.5, 0.5)
     """Linear velocity command range per axis (m/s, body frame)."""
-    vel_cmd_ang_range: tuple[float, float] = (-0.5, 0.5)
-    """Angular velocity command range per axis (rad/s, body frame)."""
+    att_cmd_rp_range: tuple[float, float] = (-math.pi / 4.0, math.pi / 4.0)
+    """Roll/pitch attitude command range (radians). +-45 degrees."""
+    yaw_rate_cmd_range: tuple[float, float] = (-0.5, 0.5)
+    """Yaw rate command range (rad/s, body frame)."""
     vel_cmd_resample_steps: int = 250
     """Resample velocity command every N steps (250 = 5s at 50Hz)."""
     vel_cmd_zero_prob: float = 0.1
@@ -359,7 +361,7 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # Domain Randomization
     # ==========================================================================
     randomization: DomainRandomizationCfg = DomainRandomizationCfg(enable=True)
-    doraemon: DoraemonCfg = DoraemonCfg(enable=False)
+    doraemon: DoraemonCfg = DoraemonCfg(enable=True)
 
     # ==========================================================================
     # Payload

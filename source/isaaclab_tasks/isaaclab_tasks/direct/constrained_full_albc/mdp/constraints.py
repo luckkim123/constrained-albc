@@ -178,7 +178,7 @@ def yaw_rate_cost(
     """max(0, |w_z| - threshold). Penalizes excessive yaw rate only.
 
     ReLU-style: zero cost below threshold, linear penalty above.
-    Threshold > vel_cmd_ang_range (0.5) so normal yaw tracking is unaffected.
+    Threshold > yaw_rate_cmd_range (0.5) so normal yaw tracking is unaffected.
     Replaces the old yaw_velocity_cost which conflicted with yaw commands.
     """
     return (_robot.data.root_ang_vel_b[:, 2].abs() - soft_threshold).clamp(min=0.0)

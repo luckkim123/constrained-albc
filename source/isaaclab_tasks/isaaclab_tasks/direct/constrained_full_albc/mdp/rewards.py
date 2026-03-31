@@ -3,13 +3,14 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Velocity tracking reward: r = r_lin + r_ang + r_tau + r_thr + r_s.
+"""Tracking reward: r = r_lin + r_att + r_yaw + r_tau + r_thr + r_s.
 
-r_lin: -k_lin * ||lin_vel_err||^2   (linear velocity command tracking)
-r_ang: -k_ang * ||ang_vel_err||^2   (angular velocity command tracking)
-r_tau: -k_tau * mean(tau^2)          (joint energy efficiency)
-r_thr: -k_thr * mean(thruster_cmd^2) (thruster energy)
-r_s:   -k_s   * (mean(da^2) + mean(d2a^2))  (action smoothness)
+r_lin: -k_lin * ||lin_vel_err||^2           (linear velocity command tracking)
+r_att:  k_att * exp(-||att_err||^2/(2*s^2)) (roll/pitch attitude tracking, positive)
+r_yaw: -k_yaw * yaw_rate_err^2             (yaw rate command tracking)
+r_tau: -k_tau * mean(tau^2)                 (joint energy efficiency)
+r_thr: -k_thr * mean(thruster_cmd^2)        (thruster energy)
+r_s:   -k_s   * (mean(da^2) + mean(d2a^2)) (action smoothness)
 """
 
 from __future__ import annotations
@@ -31,14 +32,14 @@ if TYPE_CHECKING:
 
 @configclass
 class ALBCRewardCfg:
-    """Velocity tracking reward weights (all dt-scaled, negative weights = penalties)."""
+    """Tracking reward weights (dt-scaled). Positive weight = reward, negative = penalty."""
 
-    k_lin: float = -4.0  # linear velocity tracking
-    k_ang: float = -8.0  # angular velocity tracking
-    ang_vel_axis_weights: tuple[float, float, float] = (2.0, 2.0, 1.0)
-    """Per-axis weights for angular velocity tracking (roll_rate, pitch_rate, yaw_rate)."""
-    k_tau: float = -0.005  # joint torque
-    k_thr: float = -0.01  # thruster energy
+    k_lin: float = -4.0  # linear velocity tracking (quadratic penalty)
+    k_att_rp: float = 4.0  # roll/pitch attitude (exp kernel, positive reward)
+    att_rp_sigma: float = 0.4  # exp kernel sigma (radians, ~23 deg)
+    k_yaw: float = -1.0  # yaw rate tracking (quadratic penalty)
+    k_tau: float = -0.01  # joint torque (was -0.005)
+    k_thr: float = -0.5  # thruster energy (was -0.01)
     k_s: float = -0.1  # action smoothness
     termination_penalty: float = 0.0
 
@@ -51,11 +52,19 @@ def lin_vel_tracking(env: ALBCEnv) -> torch.Tensor:
     return env._lin_vel_err.pow(2).sum(dim=-1)
 
 
-def ang_vel_tracking(env: ALBCEnv) -> torch.Tensor:
-    """r_ang = w_p*ep^2 + w_q*eq^2 + w_r*er^2. Weighted angular velocity tracking."""
-    err_sq = env._ang_vel_err.pow(2)
-    w = env.cfg.reward.ang_vel_axis_weights
-    return err_sq[:, 0] * w[0] + err_sq[:, 1] * w[1] + err_sq[:, 2] * w[2]
+def att_rp_tracking(env: ALBCEnv) -> torch.Tensor:
+    """r_att = exp(-||err||^2 / (2*sigma^2)). Roll/pitch attitude tracking.
+
+    Returns positive reward in [0, 1]. Perfect tracking = 1.0.
+    """
+    sigma = env.cfg.reward.att_rp_sigma
+    err_sq = env._att_rp_err.pow(2).sum(dim=-1)
+    return torch.exp(-err_sq / (2.0 * sigma * sigma))
+
+
+def yaw_vel_tracking(env: ALBCEnv) -> torch.Tensor:
+    """r_yaw = yaw_rate_err^2. Quadratic yaw rate tracking penalty."""
+    return env._yaw_rate_err.pow(2)
 
 
 def joint_torque(robot: Articulation, env: ALBCEnv) -> torch.Tensor:
@@ -79,9 +88,9 @@ def action_smoothness(env: ALBCEnv) -> torch.Tensor:
 
 
 class RewardManager:
-    """Computes 5-term velocity tracking reward with dt-scaling and episode tracking."""
+    """Computes 6-term tracking reward with dt-scaling and episode tracking."""
 
-    _NAMES = ["lin_vel", "ang_vel", "torque", "thruster", "smoothness"]
+    _NAMES = ["lin_vel", "att_rp", "yaw_vel", "torque", "thruster", "smoothness"]
 
     def __init__(self, cfg: ALBCRewardCfg, num_envs: int, device: str) -> None:
         self._cfg = cfg
@@ -95,7 +104,8 @@ class RewardManager:
 
         terms = [
             ("lin_vel", cfg.k_lin, lin_vel_tracking(env)),
-            ("ang_vel", cfg.k_ang, ang_vel_tracking(env)),
+            ("att_rp", cfg.k_att_rp, att_rp_tracking(env)),
+            ("yaw_vel", cfg.k_yaw, yaw_vel_tracking(env)),
             ("torque", cfg.k_tau, joint_torque(robot, env)),
             ("thruster", cfg.k_thr, thruster_energy(env)),
             ("smoothness", cfg.k_s, action_smoothness(env)),

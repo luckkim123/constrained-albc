@@ -110,7 +110,7 @@ _PRIV_OBS_UPPER: list[float] = [
 class _EncoderPolicyCfg(RslRlPpoActorCriticCfg):
     """Base encoder policy configuration."""
 
-    init_noise_std: float = 0.5
+    init_noise_std: float = 0.7
     actor_obs_normalization: bool = True
     critic_obs_normalization: bool = False
     actor_hidden_dims: list[int] = [256, 128, 64]
