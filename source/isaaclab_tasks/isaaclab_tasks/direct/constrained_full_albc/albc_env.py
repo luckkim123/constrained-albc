@@ -803,24 +803,42 @@ class ALBCEnv(DirectRLEnv):
         return log
 
     def _log_tracking_metrics(self, log: dict, env_ids: torch.Tensor) -> None:
-        """Attitude, velocity tracking, and manipulability metrics."""
+        """Attitude, velocity tracking (aggregate + per-axis), and manipulability."""
         roll, pitch, _ = euler_xyz_from_quat(self._robot.data.root_quat_w[env_ids])
         log["Attitude/roll_deg"] = torch.rad2deg(roll).abs().mean().item()
         log["Attitude/pitch_deg"] = torch.rad2deg(pitch).abs().mean().item()
 
-        log["Vel_Tracking/lin_vel_err_norm"] = self._lin_vel_err[env_ids].norm(dim=-1).mean().item()
-        log["Vel_Tracking/ang_vel_err_norm"] = self._ang_vel_err[env_ids].norm(dim=-1).mean().item()
-        log["Vel_Tracking/lin_vel_cmd_norm"] = self._vel_cmd_lin[env_ids].norm(dim=-1).mean().item()
-        log["Vel_Tracking/ang_vel_cmd_norm"] = self._vel_cmd_ang[env_ids].norm(dim=-1).mean().item()
+        # Velocity tracking: aggregate norms
+        lin_err = self._lin_vel_err[env_ids]  # (N, 3): surge, sway, heave
+        ang_err = self._ang_vel_err[env_ids]  # (N, 3): roll_rate, pitch_rate, yaw_rate
+        log["Vel_Tracking/lin_vel_err_norm"] = lin_err.norm(dim=-1).mean().item()
+        log["Vel_Tracking/ang_vel_err_norm"] = ang_err.norm(dim=-1).mean().item()
+
+        # Per-axis breakdown (mean absolute error)
+        log["Vel_Tracking/lin_err_x"] = lin_err[:, 0].abs().mean().item()
+        log["Vel_Tracking/lin_err_y"] = lin_err[:, 1].abs().mean().item()
+        log["Vel_Tracking/lin_err_z"] = lin_err[:, 2].abs().mean().item()
+        log["Vel_Tracking/ang_err_roll"] = ang_err[:, 0].abs().mean().item()
+        log["Vel_Tracking/ang_err_pitch"] = ang_err[:, 1].abs().mean().item()
+        log["Vel_Tracking/ang_err_yaw"] = ang_err[:, 2].abs().mean().item()
 
         log["Arm/manipulability_mean"] = self._manipulability[env_ids].mean().item()
         log["Arm/manipulability_min"] = self._manipulability[env_ids].min().item()
 
     def _log_action_metrics(self, log: dict, env_ids: torch.Tensor) -> None:
-        """Action magnitude and rate diagnostics."""
-        log["Action/size_mean"] = torch.linalg.norm(self._actions[env_ids], dim=-1).mean().item()
-        da = self._actions[env_ids] - self._prev_actions[env_ids]
-        log["Action/rate_mean"] = torch.linalg.norm(da, dim=-1).mean().item()
+        """Per-subsystem action diagnostics (arm 2D vs thruster 6D)."""
+        actions = self._actions[env_ids]
+        prev = self._prev_actions[env_ids]
+
+        # Arm delta targets (actions[:, :2])
+        arm, arm_prev = actions[:, :2], prev[:, :2]
+        log["Action/arm_norm"] = torch.linalg.norm(arm, dim=-1).mean().item()
+        log["Action/arm_rate"] = torch.linalg.norm(arm - arm_prev, dim=-1).mean().item()
+
+        # Thruster commands (actions[:, 2:])
+        thr, thr_prev = actions[:, 2:], prev[:, 2:]
+        log["Action/thruster_norm"] = torch.linalg.norm(thr, dim=-1).mean().item()
+        log["Action/thruster_rate"] = torch.linalg.norm(thr - thr_prev, dim=-1).mean().item()
 
     def _log_dynamics_metrics(self, log: dict, env_ids: torch.Tensor) -> None:
         """Angular velocity, joint state, and actuator saturation diagnostics."""
@@ -845,8 +863,16 @@ class ALBCEnv(DirectRLEnv):
         vel_lim = self._robot.data.joint_vel_limits[env_ids][:, jids]
         log["Dynamics/vel_saturation_frac"] = (joint_vel.abs() >= vel_lim.clamp(min=1e-6) * 0.95).float().mean().item()
 
+        # Thruster diagnostics (6 thrusters, state in [-1, 1])
+        if self._thruster is not None:
+            thr_state = self._thruster.state[env_ids]
+            thr_abs = thr_state.abs()
+            log["Thruster/utilization_mean"] = thr_abs.mean().item()
+            log["Thruster/utilization_max"] = thr_abs.max().item()
+            log["Thruster/utilization_std"] = thr_abs.std().item()
+
     def _log_midep_metrics(self, log: dict, env_ids: torch.Tensor) -> None:
-        """Mid-episode dynamics diagnostics (payload toggle, OU current drift)."""
+        """Mid-episode dynamics diagnostics (payload, OU current, cumulative yaw)."""
         if self.cfg.payload_toggle_steps != 0:
             log["MidEp/payload_toggled_frac"] = self._payload_toggled[env_ids].float().mean().item()
             log["MidEp/payload_mass_final"] = self._payload_mass[env_ids].mean().item()
@@ -855,6 +881,9 @@ class ALBCEnv(DirectRLEnv):
             base = self._ou_base_current[env_ids]
             log["MidEp/current_drift_norm"] = (current - base).norm(dim=-1).mean().item()
             log["MidEp/current_mag_final"] = current.norm(dim=-1).mean().item()
+
+        # Cumulative yaw (tether wrapping indicator, see cumulative_yaw_cost constraint)
+        log["Control/cumulative_yaw_deg"] = torch.rad2deg(self._cumulative_yaw[env_ids].abs()).mean().item()
 
     def _collect_termination_metrics(self, log: dict[str, float | torch.Tensor], env_ids: torch.Tensor, n: int) -> None:
         """Collect termination rate metrics (0.0~1.0, scale-invariant)."""

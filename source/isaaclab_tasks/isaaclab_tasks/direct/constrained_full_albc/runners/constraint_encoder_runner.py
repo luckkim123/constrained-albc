@@ -202,7 +202,7 @@ class ConstraintEncoderRunner(OnPolicyRunner):
 
         iteration = locs["it"]
 
-        # Encoder metrics (z latent stats, gradient norms, etc.)
+        # Encoder metrics (z latent health: z_mean, z_std, z_min, z_max)
         if self._has_encoder and self._should_log:
             log_encoder_metrics(
                 writer=self.writer,
@@ -211,7 +211,6 @@ class ConstraintEncoderRunner(OnPolicyRunner):
                 iteration=iteration,
                 device=self.device,
                 logger_type=self.logger_type,
-                alg=self.alg,
             )
 
         # Constraint metrics
@@ -285,6 +284,7 @@ class ConstraintEncoderRunner(OnPolicyRunner):
         metrics["Policy/line_search_success"] = alg._last_line_search_success
         metrics["Policy/entropy"] = alg._last_mean_entropy
         metrics["Policy/encoder_grad_norm"] = alg._last_encoder_grad_norm
+        metrics["Policy/surrogate_loss"] = alg._last_surrogate_loss
 
         # Gradient decomposition: vanilla vs natural gradient
         metrics["GradDecomp/enc_vanilla_norm"] = alg._last_enc_vanilla_norm
