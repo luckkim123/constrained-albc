@@ -36,9 +36,9 @@ class ALBCRewardCfg:
 
     k_lin: float = 4.0  # linear velocity tracking (exp kernel)
     lin_sigma: float = 0.3  # exp kernel sigma (m/s, ~60% of 0.5 m/s command range)
-    k_att_rp: float = 4.0  # roll/pitch attitude (exp kernel)
+    k_att_rp: float = 6.0  # roll/pitch attitude (exp kernel)
     att_rp_sigma: float = 0.4  # exp kernel sigma (radians, ~23 deg)
-    k_yaw: float = 1.0  # yaw rate tracking (exp kernel)
+    k_yaw: float = 4.0  # yaw rate tracking (exp kernel)
     yaw_sigma: float = 0.3  # exp kernel sigma (rad/s, ~60% of 0.5 rad/s command range)
     k_tau: float = -0.01  # joint torque penalty
     k_thr: float = -0.5  # thruster energy penalty
