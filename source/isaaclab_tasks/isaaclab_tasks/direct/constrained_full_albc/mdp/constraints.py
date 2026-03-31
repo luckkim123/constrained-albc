@@ -17,7 +17,7 @@ Constraint layout (5 Probabilistic + 5 Average = 10 total):
     [2] arm_joint_vel  (prob)  I(any |q_dot_j| > limit)
     [3] joint1_pos     (prob)  I(|theta1| > limit)
     [4] cumul_yaw      (prob)  I(|yaw_accumulated| > limit)
-    [5] ang_vel        (avg)   max(0, max(|p|,|q|,|r|) - threshold)
+    [5] rp_rate        (avg)   max(0, max(|p|,|q|) - threshold)
     [6] yaw_rate       (avg)   max(0, |w_z| - threshold)
     [7] body_lin_vel   (avg)   max(0, ||v_body|| - threshold)
     [8] thruster_util  (avg)   max(|T_i|) peak utilization
@@ -148,26 +148,24 @@ def cumulative_yaw_cost(
 # =============================================================================
 
 
-def angular_velocity_cost(
+def rp_rate_cost(
     _robot: Articulation,
     _env: ALBCEnv,
-    soft_threshold: float = 1.5,
+    soft_threshold: float = 1.0,
 ) -> torch.Tensor:
-    """max(0, max(|p|,|q|,|r|) - threshold). All-axis angular velocity limit.
+    """max(0, max(|p|,|q|) - threshold). Roll/pitch angular velocity limit.
 
     Type: Average
-    Formula: max(0, max_axis(|omega|) - threshold)
+    Formula: max(0, max(|p|, |q|) - threshold)
     Budget: 0.10
 
-    Mirrors the hard termination (max_angular_velocity = pi) with a soft
-    threshold well below it, giving the IPO barrier gradient to steer the
-    policy away from spin-out before hitting the hard wall.
-
-    Uses max (not mean) to match the termination condition: if ANY single
-    axis exceeds the threshold, cost is incurred.
+    With attitude commands for roll/pitch, angular velocity is a byproduct of
+    tracking, not the command itself. Threshold=1.0 rad/s (57 deg/s) is generous
+    for smooth attitude transitions (+-45 deg command range, 5s resample interval
+    needs only ~0.3 rad/s average). Yaw rate has its own dedicated constraint.
     """
-    omega_max = _robot.data.root_ang_vel_b.abs().max(dim=-1).values
-    return (omega_max - soft_threshold).clamp(min=0.0)
+    rp_omega = _robot.data.root_ang_vel_b[:, :2].abs().max(dim=-1).values
+    return (rp_omega - soft_threshold).clamp(min=0.0)
 
 
 def yaw_rate_cost(

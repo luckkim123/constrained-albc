@@ -35,7 +35,7 @@ from .doraemon import DoraemonCfg
 from .mdp.constraints import (
     ALBCConstraintCfg,
     ConstraintTermCfg,
-    angular_velocity_cost,
+    rp_rate_cost,
     attitude_limit_cost,
     body_linear_velocity_cost,
     cumulative_yaw_cost,
@@ -57,8 +57,8 @@ _FULL_DOF_CONSTRAINT_TERMS: list[ConstraintTermCfg] = [
     ConstraintTermCfg(func=velocity_limit_cost, params={"limit_rad_per_s": 4.189}, budget=0.02, name="arm_joint_vel"),
     ConstraintTermCfg(func=joint1_position_cost, params={"limit_rad": 4 * math.pi}, budget=0.01, name="joint1_pos"),
     ConstraintTermCfg(func=cumulative_yaw_cost, params={"limit_rad": 8 * math.pi}, budget=0.01, name="cumul_yaw"),
-    # --- Average (5): continuous cost, soft threshold for velocity tracking compatibility ---
-    ConstraintTermCfg(func=angular_velocity_cost, params={"soft_threshold": 1.5}, budget=0.10, name="ang_vel"),
+    # --- Average (5): continuous cost, soft threshold for attitude/velocity tracking ---
+    ConstraintTermCfg(func=rp_rate_cost, params={"soft_threshold": 1.0}, budget=0.10, name="rp_rate"),
     ConstraintTermCfg(func=yaw_rate_cost, params={"soft_threshold": 1.0}, budget=0.10, name="yaw_rate"),
     ConstraintTermCfg(func=body_linear_velocity_cost, params={"soft_threshold": 1.0}, budget=0.10, name="body_lin_vel"),
     ConstraintTermCfg(func=thruster_utilization_cost, budget=0.40, name="thruster_util"),
