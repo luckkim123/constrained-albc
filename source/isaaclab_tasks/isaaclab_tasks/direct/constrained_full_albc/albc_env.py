@@ -274,6 +274,57 @@ class ALBCEnv(DirectRLEnv):
             device=self.device,
             enable_randomization=self.cfg.randomization.enable,
         )
+        self._init_wrench_transform()
+
+    def _init_wrench_transform(self) -> None:
+        """Precompute wrench-to-thruster transformation matrix.
+
+        Builds a single 6x6 matrix mapping wrench commands to thruster commands:
+            [surge, sway, heave, roll, pitch, yaw] -> [T0, T1, T2, T3, T4, T5]
+
+        Horizontal (T0-T3): surge(Fx), sway(Fy), roll(Mx), yaw(Mz) via pseudo-inverse.
+            Roll (Mx) is nearly linearly dependent on sway (Fy) for co-planar thrusters,
+            so the 4x4 sub-TAM is rank-deficient. pinv handles this gracefully.
+        Vertical (T4-T5): heave(Fz), pitch(My) via exact inverse.
+
+        Per-axis scaling normalizes so that policy output +/-1 maps to max achievable
+        wrench on that axis (max thruster command = 1.0 for single-axis unit input).
+        """
+        tam = torch.tensor(self.cfg.thrusters.allocation_matrix, dtype=torch.float32, device=self.device)
+
+        # Horizontal subsystem: T0-T3 -> surge(Fx), sway(Fy), roll(Mx), yaw(Mz)
+        tam_horiz = tam[[0, 1, 3, 5], :4]  # (4, 4): rank 3 (Mx ~ Fy for co-planar)
+        pinv_horiz = torch.linalg.pinv(tam_horiz)  # (4, 4)
+
+        # Vertical subsystem: T4-T5 -> heave(Fz), pitch(My)
+        tam_vert = tam[[2, 4], 4:]  # (2, 2)
+        inv_vert = torch.linalg.inv(tam_vert)  # (2, 2)
+
+        # Build combined 6x6 matrix: wrench [surge,sway,heave,roll,pitch,yaw] -> thruster [T0-T5]
+        # Wrench indices: surge=0, sway=1, heave=2, roll=3, pitch=4, yaw=5
+        combined = torch.zeros(6, 6, device=self.device)
+        horiz_wrench_idx = [0, 1, 3, 5]  # surge, sway, roll, yaw
+        for i, wi in enumerate(horiz_wrench_idx):
+            combined[:4, wi] = pinv_horiz[:, i]
+        vert_wrench_idx = [2, 4]  # heave, pitch
+        for i, wi in enumerate(vert_wrench_idx):
+            combined[4:, wi] = inv_vert[:, i]
+
+        # Per-axis scale: unit wrench on axis j -> max |thruster_cmd| = 1.0
+        scales = 1.0 / combined.abs().max(dim=0).values.clamp(min=1e-6)  # (6,)
+        self._wrench_to_thrust = combined * scales.unsqueeze(0)  # (6, 6)
+
+    def _wrench_to_thruster(self, wrench_cmd: torch.Tensor) -> torch.Tensor:
+        """Convert 6D wrench-space commands to 6D thruster commands.
+
+        Args:
+            wrench_cmd: Normalized wrench commands [-1, 1]. Shape: (num_envs, 6).
+                Layout: [surge, sway, heave, roll, pitch, yaw]
+
+        Returns:
+            Thruster commands [-1, 1] after saturation clamping. Shape: (num_envs, 6).
+        """
+        return (wrench_cmd @ self._wrench_to_thrust.T).clamp(-1.0, 1.0)
 
     def _init_doraemon(self) -> None:
         """Initialize DORAEMON adaptive DR scheduler if enabled."""
@@ -429,7 +480,8 @@ class ALBCEnv(DirectRLEnv):
             self._apply_joint_pd_action(arm_actions)
 
         if self._thruster is not None:
-            self._thruster.apply_dynamics(self._actions[:, 2:], self.physics_dt)
+            thruster_cmd = self._wrench_to_thruster(self._actions[:, 2:])
+            self._thruster.apply_dynamics(thruster_cmd, self.physics_dt)
 
     def _apply_joint_pd_action(self, actions: torch.Tensor) -> None:
         """Accumulate delta joint targets: q_des += delta_scale * a_t.
@@ -826,7 +878,7 @@ class ALBCEnv(DirectRLEnv):
         log["Arm/manipulability_min"] = self._manipulability[env_ids].min().item()
 
     def _log_action_metrics(self, log: dict, env_ids: torch.Tensor) -> None:
-        """Per-subsystem action diagnostics (arm 2D vs thruster 6D)."""
+        """Per-subsystem action diagnostics (arm 2D vs wrench 6D)."""
         actions = self._actions[env_ids]
         prev = self._prev_actions[env_ids]
 
@@ -835,10 +887,10 @@ class ALBCEnv(DirectRLEnv):
         log["Action/arm_norm"] = torch.linalg.norm(arm, dim=-1).mean().item()
         log["Action/arm_rate"] = torch.linalg.norm(arm - arm_prev, dim=-1).mean().item()
 
-        # Thruster commands (actions[:, 2:])
-        thr, thr_prev = actions[:, 2:], prev[:, 2:]
-        log["Action/thruster_norm"] = torch.linalg.norm(thr, dim=-1).mean().item()
-        log["Action/thruster_rate"] = torch.linalg.norm(thr - thr_prev, dim=-1).mean().item()
+        # Wrench commands (actions[:, 2:]): [surge, sway, roll, yaw, heave, pitch]
+        wrench, wrench_prev = actions[:, 2:], prev[:, 2:]
+        log["Action/wrench_norm"] = torch.linalg.norm(wrench, dim=-1).mean().item()
+        log["Action/wrench_rate"] = torch.linalg.norm(wrench - wrench_prev, dim=-1).mean().item()
 
     def _log_dynamics_metrics(self, log: dict, env_ids: torch.Tensor) -> None:
         """Angular velocity, joint state, and actuator saturation diagnostics."""

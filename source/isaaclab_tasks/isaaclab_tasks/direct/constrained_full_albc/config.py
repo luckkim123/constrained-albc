@@ -240,8 +240,12 @@ _OBS_BIAS_MAX = tuple(
 class ALBCEnvCfg(DirectRLEnvCfg):
     """Velocity tracking ALBC environment configuration.
 
-    8D action (2D arm delta + 6D thruster), 81D observation (26D current + 55D history),
-    24D privileged. TRPO + IPO + Asymmetric Encoder with 9 constraints (5 prob + 4 avg).
+    8D action (2D arm delta + 6D wrench [surge, sway, roll, yaw, heave, pitch]),
+    81D observation (26D current + 55D history), 24D privileged.
+    TRPO + IPO + Asymmetric Encoder with 10 constraints (5 prob + 5 avg).
+
+    Wrench-space actions: policy outputs normalized force/torque commands.
+    TAM inverse (per subsystem) converts to individual thruster commands internally.
     """
 
     # ==========================================================================
@@ -249,7 +253,7 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # ==========================================================================
     episode_length_s: float = 30.0
     decimation: int = 4
-    action_space: int = 8  # 2D arm delta + 6D thruster
+    action_space: int = 8  # 2D arm delta + 6D wrench [surge, sway, heave, roll, pitch, yaw]
     observation_space: int = 81  # 26D current proprio + 55D history (see observations.py)
     # Breakdown: cmd(6) + body(9) + arm(5) + thruster(6) = 26D current
     #            + joint_hist(12) + body_hist(27) + action_hist(16) = 55D history
