@@ -274,57 +274,6 @@ class ALBCEnv(DirectRLEnv):
             device=self.device,
             enable_randomization=self.cfg.randomization.enable,
         )
-        self._init_wrench_transform()
-
-    def _init_wrench_transform(self) -> None:
-        """Precompute wrench-to-thruster transformation matrix.
-
-        Builds a single 6x6 matrix mapping wrench commands to thruster commands:
-            [surge, sway, heave, roll, pitch, yaw] -> [T0, T1, T2, T3, T4, T5]
-
-        Horizontal (T0-T3): surge(Fx), sway(Fy), roll(Mx), yaw(Mz) via pseudo-inverse.
-            Roll (Mx) is nearly linearly dependent on sway (Fy) for co-planar thrusters,
-            so the 4x4 sub-TAM is rank-deficient. pinv handles this gracefully.
-        Vertical (T4-T5): heave(Fz), pitch(My) via exact inverse.
-
-        Per-axis scaling normalizes so that policy output +/-1 maps to max achievable
-        wrench on that axis (max thruster command = 1.0 for single-axis unit input).
-        """
-        tam = torch.tensor(self.cfg.thrusters.allocation_matrix, dtype=torch.float32, device=self.device)
-
-        # Horizontal subsystem: T0-T3 -> surge(Fx), sway(Fy), roll(Mx), yaw(Mz)
-        tam_horiz = tam[[0, 1, 3, 5], :4]  # (4, 4): rank 3 (Mx ~ Fy for co-planar)
-        pinv_horiz = torch.linalg.pinv(tam_horiz)  # (4, 4)
-
-        # Vertical subsystem: T4-T5 -> heave(Fz), pitch(My)
-        tam_vert = tam[[2, 4], 4:]  # (2, 2)
-        inv_vert = torch.linalg.inv(tam_vert)  # (2, 2)
-
-        # Build combined 6x6 matrix: wrench [surge,sway,heave,roll,pitch,yaw] -> thruster [T0-T5]
-        # Wrench indices: surge=0, sway=1, heave=2, roll=3, pitch=4, yaw=5
-        combined = torch.zeros(6, 6, device=self.device)
-        horiz_wrench_idx = [0, 1, 3, 5]  # surge, sway, roll, yaw
-        for i, wi in enumerate(horiz_wrench_idx):
-            combined[:4, wi] = pinv_horiz[:, i]
-        vert_wrench_idx = [2, 4]  # heave, pitch
-        for i, wi in enumerate(vert_wrench_idx):
-            combined[4:, wi] = inv_vert[:, i]
-
-        # Per-axis scale: unit wrench on axis j -> max |thruster_cmd| = 1.0
-        scales = 1.0 / combined.abs().max(dim=0).values.clamp(min=1e-6)  # (6,)
-        self._wrench_to_thrust = combined * scales.unsqueeze(0)  # (6, 6)
-
-    def _wrench_to_thruster(self, wrench_cmd: torch.Tensor) -> torch.Tensor:
-        """Convert 6D wrench-space commands to 6D thruster commands.
-
-        Args:
-            wrench_cmd: Normalized wrench commands [-1, 1]. Shape: (num_envs, 6).
-                Layout: [surge, sway, heave, roll, pitch, yaw]
-
-        Returns:
-            Thruster commands [-1, 1] after saturation clamping. Shape: (num_envs, 6).
-        """
-        return (wrench_cmd @ self._wrench_to_thrust.T).clamp(-1.0, 1.0)
 
     def _init_doraemon(self) -> None:
         """Initialize DORAEMON adaptive DR scheduler if enabled."""
@@ -480,8 +429,7 @@ class ALBCEnv(DirectRLEnv):
             self._apply_joint_pd_action(arm_actions)
 
         if self._thruster is not None:
-            thruster_cmd = self._wrench_to_thruster(self._actions[:, 2:])
-            self._thruster.apply_dynamics(thruster_cmd, self.physics_dt)
+            self._thruster.apply_dynamics(self._actions[:, 2:], self.physics_dt)
 
     def _apply_joint_pd_action(self, actions: torch.Tensor) -> None:
         """Accumulate delta joint targets: q_des += delta_scale * a_t.
@@ -878,7 +826,7 @@ class ALBCEnv(DirectRLEnv):
         log["Arm/manipulability_min"] = self._manipulability[env_ids].min().item()
 
     def _log_action_metrics(self, log: dict, env_ids: torch.Tensor) -> None:
-        """Per-subsystem action diagnostics (arm 2D vs wrench 6D)."""
+        """Per-subsystem action diagnostics (arm 2D vs thruster 6D)."""
         actions = self._actions[env_ids]
         prev = self._prev_actions[env_ids]
 
@@ -887,10 +835,10 @@ class ALBCEnv(DirectRLEnv):
         log["Action/arm_norm"] = torch.linalg.norm(arm, dim=-1).mean().item()
         log["Action/arm_rate"] = torch.linalg.norm(arm - arm_prev, dim=-1).mean().item()
 
-        # Wrench commands (actions[:, 2:]): [surge, sway, roll, yaw, heave, pitch]
-        wrench, wrench_prev = actions[:, 2:], prev[:, 2:]
-        log["Action/wrench_norm"] = torch.linalg.norm(wrench, dim=-1).mean().item()
-        log["Action/wrench_rate"] = torch.linalg.norm(wrench - wrench_prev, dim=-1).mean().item()
+        # Thruster commands (actions[:, 2:])
+        thr, thr_prev = actions[:, 2:], prev[:, 2:]
+        log["Action/thruster_norm"] = torch.linalg.norm(thr, dim=-1).mean().item()
+        log["Action/thruster_rate"] = torch.linalg.norm(thr - thr_prev, dim=-1).mean().item()
 
     def _log_dynamics_metrics(self, log: dict, env_ids: torch.Tensor) -> None:
         """Angular velocity, joint state, and actuator saturation diagnostics."""
@@ -953,18 +901,19 @@ class ALBCEnv(DirectRLEnv):
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
         """Compute termination conditions.
 
-        Termination triggers:
-            1. Angular velocity exceeds max_angular_velocity on ANY axis (simulation instability)
-            2. NaN/Inf detected in root state (PhysX failure)
-            3. Attitude angle exceeds max_attitude_angle (prevents Lambda sign reversal)
-            4. Linear velocity exceeds max_linear_velocity (simulation instability)
+        Only non-recoverable conditions trigger termination:
+            1. NaN/Inf detected in root state (PhysX failure)
+            2. Attitude angle exceeds max_attitude_angle (upside-down, buoyancy reversal)
+
+        Velocity violations (angular > pi, linear > 2 m/s) are NOT terminated here.
+        They are handled by soft constraints (ang_vel_cost, body_lin_vel_cost) which
+        provide per-step gradient. PhysX rigid body max_angular_velocity (4*pi) provides
+        the hard physical clamp. Removing velocity termination eliminates the death
+        spiral where early death was optimal under all-negative rewards.
 
         Per-condition flags are stored for diagnostics logging.
         """
         time_out = self.episode_length_buf >= self.max_episode_length - 1
-
-        # Angular velocity check (all 3 axes: p, q, r)
-        too_fast_ang = self._robot.data.root_ang_vel_b.abs().max(dim=1).values > self.cfg.max_angular_velocity
 
         # NaN/Inf check on root state (position, quaternion, linear vel, angular vel)
         bad_state = (
@@ -979,7 +928,9 @@ class ALBCEnv(DirectRLEnv):
         roll, pitch, _ = euler_xyz_from_quat(self._robot.data.root_quat_w)
         excessive_tilt = (roll.abs() > self.cfg.max_attitude_angle) | (pitch.abs() > self.cfg.max_attitude_angle)
 
-        # Linear velocity check (all axes)
+        # Velocity flags: computed for diagnostics only, NOT used for termination.
+        # Soft constraints provide per-step gradient instead.
+        too_fast_ang = self._robot.data.root_ang_vel_b.abs().max(dim=1).values > self.cfg.max_angular_velocity
         too_fast_lin = self._robot.data.root_lin_vel_w.norm(dim=-1) > self.cfg.max_linear_velocity
 
         # Store per-condition flags for diagnostics
@@ -988,7 +939,7 @@ class ALBCEnv(DirectRLEnv):
         self._term_excessive_tilt = excessive_tilt
         self._term_too_fast_lin = too_fast_lin
 
-        terminated = too_fast_ang | bad_state | excessive_tilt | too_fast_lin
+        terminated = bad_state | excessive_tilt
         return terminated, time_out
 
     def _coerce_env_ids(self, env_ids: torch.Tensor | None) -> torch.Tensor:

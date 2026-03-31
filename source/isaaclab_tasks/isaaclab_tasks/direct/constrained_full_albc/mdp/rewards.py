@@ -40,7 +40,7 @@ class ALBCRewardCfg:
     k_tau: float = -0.005  # joint torque
     k_thr: float = -0.01  # thruster energy
     k_s: float = -0.1  # action smoothness
-    termination_penalty: float = -50.0
+    termination_penalty: float = 0.0
 
 
 # --- Reward Functions ---
