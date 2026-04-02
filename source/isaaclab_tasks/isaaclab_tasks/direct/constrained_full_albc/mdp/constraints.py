@@ -11,17 +11,18 @@ Two types following the paper's framework:
 
 All constraints satisfy: J_Ck(pi) = E[sum gamma^t C_k] <= d_k
 
-Constraint layout (5 Probabilistic + 5 Average = 10 total):
-    [0] attitude       (prob)  I(max(|roll|,|pitch|) > limit)
-    [1] arm_torque     (prob)  I(any |tau_j| > limit)
-    [2] arm_joint_vel  (prob)  I(any |q_dot_j| > limit)
-    [3] joint1_pos     (prob)  I(|theta1| > limit)
-    [4] cumul_yaw      (prob)  I(|yaw_accumulated| > limit)
-    [5] rp_rate        (avg)   max(0, max(|p|,|q|) - threshold)
-    [6] yaw_rate       (avg)   max(0, |w_z| - threshold)
-    [7] body_lin_vel   (avg)   max(0, ||v_body|| - threshold)
-    [8] thruster_util  (avg)   max(|T_i|) peak utilization
-    [9] manipulability (avg)   max(0, threshold - w)
+Constraint layout (5 Probabilistic + 6 Average = 11 total):
+    [0]  attitude        (prob)  I(max(|roll|,|pitch|) > limit)
+    [1]  arm_torque      (prob)  I(any |tau_j| > limit)
+    [2]  arm_joint_vel   (prob)  I(any |q_dot_j| > limit)
+    [3]  joint1_pos      (prob)  I(|theta1| > limit)
+    [4]  cumul_yaw       (prob)  I(|yaw_accumulated| > limit)
+    [5]  rp_rate         (avg)   max(0, max(|p|,|q|) - threshold)
+    [6]  yaw_rate        (avg)   max(0, |w_z| - threshold)
+    [7]  body_lin_vel    (avg)   max(0, ||v_body|| - threshold)
+    [8]  thruster_util   (avg)   max(|T_i|) peak utilization
+    [9]  rp_vel_settling (avg)   (|p| + |q|) / 2
+    [10] manipulability  (avg)   max(0, threshold - w)
 """
 
 from __future__ import annotations
@@ -209,6 +210,23 @@ def thruster_utilization_cost(
     if env._thruster is None:
         return torch.zeros(_robot.data.root_pos_w.shape[0], device=_robot.device)
     return env._thruster.state.abs().max(dim=-1).values
+
+
+def rp_vel_settling_cost(
+    _robot: Articulation,
+    _env: ALBCEnv,
+) -> torch.Tensor:
+    """(|p| + |q|) / 2. Average roll/pitch angular velocity settling.
+
+    Type: Average
+    Budget: 0.05
+
+    Roll/pitch are attitude (position) targets, not velocity targets.
+    This constraint forces angular velocity to average near zero,
+    encouraging fast settling after reaching the target attitude.
+    Complements rp_rate_cost which only penalizes >1.0 rad/s.
+    """
+    return _robot.data.root_ang_vel_b[:, :2].abs().mean(dim=-1)
 
 
 def manipulability_cost(

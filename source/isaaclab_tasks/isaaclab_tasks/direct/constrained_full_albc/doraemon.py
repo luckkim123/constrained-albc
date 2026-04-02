@@ -423,7 +423,6 @@ class DoraemonScheduler:
         for k, v in self.dist.get_stats().items():
             metrics[k] = v
 
-        self.buffer.clear()
         self._step_count += 1
         return metrics
 

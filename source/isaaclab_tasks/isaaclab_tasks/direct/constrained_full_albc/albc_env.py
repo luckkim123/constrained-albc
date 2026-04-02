@@ -870,6 +870,9 @@ class ALBCEnv(DirectRLEnv):
         log["Command/att_roll_deg"] = torch.rad2deg(self._ang_cmd[env_ids, 0]).abs().mean().item()
         log["Command/att_pitch_deg"] = torch.rad2deg(self._ang_cmd[env_ids, 1]).abs().mean().item()
         log["Command/yaw_rate"] = self._ang_cmd[env_ids, 2].abs().mean().item()
+        log["Command/lin_vel_x"] = self._vel_cmd_lin[env_ids, 0].abs().mean().item()
+        log["Command/lin_vel_y"] = self._vel_cmd_lin[env_ids, 1].abs().mean().item()
+        log["Command/lin_vel_z"] = self._vel_cmd_lin[env_ids, 2].abs().mean().item()
 
         log["Arm/manipulability_mean"] = self._manipulability[env_ids].mean().item()
         log["Arm/manipulability_min"] = self._manipulability[env_ids].min().item()

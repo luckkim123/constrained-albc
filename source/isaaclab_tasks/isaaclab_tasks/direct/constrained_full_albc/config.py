@@ -41,6 +41,7 @@ from .mdp.constraints import (
     joint1_position_cost,
     manipulability_cost,
     rp_rate_cost,
+    rp_vel_settling_cost,
     thruster_utilization_cost,
     torque_limit_cost,
     velocity_limit_cost,
@@ -48,7 +49,7 @@ from .mdp.constraints import (
 )
 from .mdp.rewards import ALBCRewardCfg
 
-# 10 constraint terms: 5 Probabilistic + 5 Average (ReLU-style).
+# 11 constraint terms: 5 Probabilistic + 6 Average.
 # Layout follows paper's framework: hard physical limits (prob) + operational style (avg).
 _FULL_DOF_CONSTRAINT_TERMS: list[ConstraintTermCfg] = [
     # --- Probabilistic (5): binary indicator, budget = violation probability ---
@@ -57,11 +58,12 @@ _FULL_DOF_CONSTRAINT_TERMS: list[ConstraintTermCfg] = [
     ConstraintTermCfg(func=velocity_limit_cost, params={"limit_rad_per_s": 4.189}, budget=0.02, name="arm_joint_vel"),
     ConstraintTermCfg(func=joint1_position_cost, params={"limit_rad": 4 * math.pi}, budget=0.01, name="joint1_pos"),
     ConstraintTermCfg(func=cumulative_yaw_cost, params={"limit_rad": 8 * math.pi}, budget=0.01, name="cumul_yaw"),
-    # --- Average (5): continuous cost, soft threshold for attitude/velocity tracking ---
+    # --- Average (6): continuous cost, soft threshold for attitude/velocity tracking ---
     ConstraintTermCfg(func=rp_rate_cost, params={"soft_threshold": 1.0}, budget=0.10, name="rp_rate"),
     ConstraintTermCfg(func=yaw_rate_cost, params={"soft_threshold": 1.0}, budget=0.10, name="yaw_rate"),
     ConstraintTermCfg(func=body_linear_velocity_cost, params={"soft_threshold": 1.0}, budget=0.10, name="body_lin_vel"),
     ConstraintTermCfg(func=thruster_utilization_cost, budget=0.40, name="thruster_util"),
+    ConstraintTermCfg(func=rp_vel_settling_cost, budget=0.05, name="rp_vel_settling"),
     ConstraintTermCfg(func=manipulability_cost, params={"w_threshold": 0.3}, budget=0.05, name="manipulability"),
 ]
 
@@ -361,7 +363,7 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # Domain Randomization
     # ==========================================================================
     randomization: DomainRandomizationCfg = DomainRandomizationCfg(enable=True)
-    doraemon: DoraemonCfg = DoraemonCfg(enable=True, kl_ub=0.01)
+    doraemon: DoraemonCfg = DoraemonCfg(enable=True, kl_ub=0.18)
 
     # ==========================================================================
     # Payload
