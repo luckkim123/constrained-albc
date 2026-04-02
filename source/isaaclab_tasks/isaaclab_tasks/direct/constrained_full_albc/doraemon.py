@@ -37,7 +37,9 @@ class DoraemonCfg:
     alpha: float = 0.5  # Success rate threshold for distribution expansion
     kl_ub: float = 0.0015  # Trust region KL upper bound per step
     init_concentration: float = 30.0  # Initial Beta(a,b) concentration (a+b)
-    success_threshold: float = 0.25  # Normalized tracking error threshold (dimensionless, 0=perfect, 1=full-range error)
+    success_threshold: float = (
+        0.25  # Normalized tracking error threshold (dimensionless, 0=perfect, 1=full-range error)
+    )
     success_threshold_final: float = 0.25  # Final threshold (no annealing if same)
     success_threshold_anneal_steps: int = 0  # 0 = immediate final threshold
     buffer_size: int = 2000  # Maximum episode buffer capacity
@@ -60,11 +62,12 @@ class ParamSpec(NamedTuple):
     nominal: float
 
 
-# 15 DORAEMON-managed DR parameters for constrained ALBC.
+# 18 DORAEMON-managed parameters for constrained ALBC.
 # Order matches BetaDistribution dimension indices.
-# SYNC: Bounds must match DomainRandomizationCfg in config.py.
+# SYNC: Physics bounds must match DomainRandomizationCfg in config.py.
 #       Use DoraemonCfg.param_overrides to widen bounds for Hard DR.
 PARAM_SPECS: list[ParamSpec] = [
+    # -- Physics DR parameters (15) --
     # name                    min     max     nominal
     ParamSpec("payload_mass", 0.0, 1.0, 0.5),
     ParamSpec("added_mass_scale", 0.85, 1.15, 1.0),
@@ -81,6 +84,12 @@ PARAM_SPECS: list[ParamSpec] = [
     ParamSpec("inertia_scale", 0.75, 1.3, 1.0),
     ParamSpec("body_mass_scale", 0.9, 1.1, 1.0),
     ParamSpec("payload_cog_offset_z", -0.03, 0.0, -0.015),
+    # -- Command difficulty scales (3) --
+    # Multiply config command ranges per-env. DORAEMON adapts difficulty:
+    # success high -> entropy max expands toward 1.2, success low -> backup contracts toward 0.1.
+    ParamSpec("cmd_lin_scale", 0.1, 1.2, 0.3),
+    ParamSpec("cmd_att_scale", 0.1, 1.2, 0.3),
+    ParamSpec("cmd_yaw_scale", 0.1, 1.2, 0.3),
 ]
 
 NDIMS = len(PARAM_SPECS)

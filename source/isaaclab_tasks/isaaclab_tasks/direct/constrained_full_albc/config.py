@@ -35,12 +35,12 @@ from .doraemon import DoraemonCfg
 from .mdp.constraints import (
     ALBCConstraintCfg,
     ConstraintTermCfg,
-    rp_rate_cost,
     attitude_limit_cost,
     body_linear_velocity_cost,
     cumulative_yaw_cost,
     joint1_position_cost,
     manipulability_cost,
+    rp_rate_cost,
     thruster_utilization_cost,
     torque_limit_cost,
     velocity_limit_cost,
@@ -361,7 +361,7 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # Domain Randomization
     # ==========================================================================
     randomization: DomainRandomizationCfg = DomainRandomizationCfg(enable=True)
-    doraemon: DoraemonCfg = DoraemonCfg(enable=True)
+    doraemon: DoraemonCfg = DoraemonCfg(enable=True, kl_ub=0.01)
 
     # ==========================================================================
     # Payload

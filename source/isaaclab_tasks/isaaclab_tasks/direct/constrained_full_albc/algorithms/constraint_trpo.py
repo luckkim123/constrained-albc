@@ -66,6 +66,7 @@ class ConstraintTRPO:
         # Sigma (decoupled from TRPO trust region)
         min_std: float = 0.01,
         std_lr: float = 1e-3,
+        entropy_coef: float = 0.005,
         # Device
         device: str = "cpu",
         **_kwargs,
@@ -102,6 +103,7 @@ class ConstraintTRPO:
         self._barrier_t = barrier_t
         self._barrier_alpha = barrier_alpha
         self.min_std = min_std
+        self.entropy_coef = entropy_coef
 
         # Monitoring (read by ConstraintEncoderRunner)
         self._last_cost_returns = [0.0] * num_constraints
@@ -172,10 +174,11 @@ class ConstraintTRPO:
 
         logger.info(
             "ConstraintTRPO: %d policy params (TRPO), %d value params (Adam), "
-            "log_std decoupled (Adam, lr=%.4f), encoder slice [%d:%d] (%d params)",
+            "log_std decoupled (Adam, lr=%.4f, entropy_coef=%.4f), encoder slice [%d:%d] (%d params)",
             sum(p.numel() for p in self._policy_params),
             sum(p.numel() for p in value_params),
             std_lr,
+            entropy_coef,
             self._encoder_param_offset,
             self._encoder_param_offset + self._encoder_param_count,
             self._encoder_param_count,
@@ -448,7 +451,7 @@ class ConstraintTRPO:
         self.policy.act(obs_flat)
         sigma_log_prob = self.policy.get_actions_log_prob(actions_flat)
         sigma_ratio = torch.exp(sigma_log_prob - post_trpo_lp)
-        sigma_surrogate = -(adv * sigma_ratio).mean()
+        sigma_surrogate = -(adv * sigma_ratio).mean() - self.entropy_coef * self.policy.log_std.sum()
 
         self.std_optimizer.zero_grad()
         sigma_grad = torch.autograd.grad(sigma_surrogate, self.policy.log_std)[0]

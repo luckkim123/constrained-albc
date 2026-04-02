@@ -241,6 +241,10 @@ class ALBCEnv(DirectRLEnv):
         # 3D mixed error for history buffer: [att_rp_err(2), yaw_rate_err(1)]
         self._ang_err = torch.zeros(self.num_envs, 3, device=self.device)
         self._vel_cmd_step_counter = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
+        # Per-env command range scales (DORAEMON-managed, default 1.0 if disabled)
+        self._cmd_lin_scale = torch.ones(self.num_envs, device=self.device)
+        self._cmd_att_scale = torch.ones(self.num_envs, device=self.device)
+        self._cmd_yaw_scale = torch.ones(self.num_envs, device=self.device)
 
     def _init_tracking_buffers(self) -> None:
         """Manipulability, cumulative yaw, mid-episode dynamics, and OU process buffers."""
@@ -490,15 +494,23 @@ class ALBCEnv(DirectRLEnv):
         Roll/pitch: attitude command (radians) from att_cmd_rp_range.
         Yaw: rate command (rad/s) from yaw_rate_cmd_range.
         Linear: velocity command (m/s) from vel_cmd_lin_range.
+        Ranges are scaled per-env by DORAEMON cmd_*_scale (default 1.0).
         With probability ``vel_cmd_zero_prob``, an env receives a zero command.
         """
         n = len(env_ids)
-        lin_range = self.cfg.vel_cmd_lin_range
-        att_range = self.cfg.att_cmd_rp_range
-        yaw_range = self.cfg.yaw_rate_cmd_range
-        self._vel_cmd_lin[env_ids] = torch.empty(n, 3, device=self.device).uniform_(lin_range[0], lin_range[1])
-        self._ang_cmd[env_ids, :2] = torch.empty(n, 2, device=self.device).uniform_(att_range[0], att_range[1])
-        self._ang_cmd[env_ids, 2] = torch.empty(n, device=self.device).uniform_(yaw_range[0], yaw_range[1])
+        lin_max = abs(self.cfg.vel_cmd_lin_range[1])
+        att_max = abs(self.cfg.att_cmd_rp_range[1])
+        yaw_max = abs(self.cfg.yaw_rate_cmd_range[1])
+
+        # Per-env DORAEMON scales (1.0 when DORAEMON disabled)
+        lin_s = self._cmd_lin_scale[env_ids].unsqueeze(1)  # (n, 1)
+        att_s = self._cmd_att_scale[env_ids].unsqueeze(1)  # (n, 1)
+        yaw_s = self._cmd_yaw_scale[env_ids]  # (n,)
+
+        self._vel_cmd_lin[env_ids] = torch.empty(n, 3, device=self.device).uniform_(-1, 1) * (lin_max * lin_s)
+        self._ang_cmd[env_ids, :2] = torch.empty(n, 2, device=self.device).uniform_(-1, 1) * (att_max * att_s)
+        self._ang_cmd[env_ids, 2] = torch.empty(n, device=self.device).uniform_(-1, 1) * (yaw_max * yaw_s)
+
         # Zero-command envs: hovering / station-keeping
         zero_mask = torch.rand(n, device=self.device) < self.cfg.vel_cmd_zero_prob
         if zero_mask.any():
@@ -1101,6 +1113,12 @@ class ALBCEnv(DirectRLEnv):
             self._episode_return_accum[env_ids] = 0.0
             self._settling_errors[env_ids] = 0.0
             self._settling_idx[env_ids] = 0
+
+            # Store per-env command range scales for _sample_velocity_command
+            if "cmd_lin_scale" in sampled:
+                self._cmd_lin_scale[env_ids] = sampled["cmd_lin_scale"]
+                self._cmd_att_scale[env_ids] = sampled["cmd_att_scale"]
+                self._cmd_yaw_scale[env_ids] = sampled["cmd_yaw_scale"]
 
         randomize_hydrodynamics(env=self, env_ids=env_ids, dr=dr, sampled=sampled)
         randomize_body_mass(env=self, env_ids=env_ids, dr=dr, sampled=sampled)
