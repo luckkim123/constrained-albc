@@ -392,8 +392,12 @@ class DoraemonScheduler:
             self._step_count += 1
             return metrics
 
+        prev_dist = self.dist.clone()
+
         # Estimate success rate under current distribution (unnormalized IS)
-        current_success_rate = self._estimate_success_rate(xi, success, log_probs)
+        # Use prev_dist as IS denominator: ring buffer data is mostly from recent
+        # distributions close to prev_dist, matching reference's fresh-data approach.
+        current_success_rate = self._estimate_success_rate(xi, success, prev_dist)
         metrics["success_rate"] = current_success_rate
         metrics["entropy_before"] = self.dist.entropy()
 
@@ -401,21 +405,19 @@ class DoraemonScheduler:
         for k, v in self.dist.get_stats().items():
             metrics[k] = v
 
-        prev_dist = self.dist.clone()
-
         if self.cfg.hard_performance_constraint and current_success_rate < self.cfg.alpha:
             # Infeasible: inverted problem to find feasible starting point
             feasible_flat, inv_kl, inv_ok = self._find_feasible_start(
-                prev_dist, xi, success, log_probs
+                prev_dist, xi, success
             )
 
             if inv_ok:
                 self.dist.set_flat_params(feasible_flat)
-                new_sr = self._estimate_success_rate(xi, success, log_probs)
+                new_sr = self._estimate_success_rate(xi, success, prev_dist)
 
                 if new_sr >= self.cfg.alpha:
                     # Feasible point found -> run main optimization from here
-                    self._optimize_entropy(self.dist.clone(), xi, success, log_probs)
+                    self._optimize_entropy(self.dist.clone(), xi, success)
                     metrics["mode"] = 1.0  # inverted + optimize
                 else:
                     # Max-success point still infeasible -> keep it, skip main opt
@@ -426,14 +428,14 @@ class DoraemonScheduler:
                 metrics["mode"] = -3.0  # optimization error
         else:
             # Feasible (or soft constraint): main optimization directly
-            self._optimize_entropy(prev_dist, xi, success, log_probs)
+            self._optimize_entropy(prev_dist, xi, success)
             metrics["mode"] = 0.0  # normal
 
         metrics["entropy_after"] = self.dist.entropy()
         metrics["kl_step"] = self.dist.kl_divergence(prev_dist)
 
         # ESS validation: revert if IS estimator quality is too low
-        ess, ess_ratio = self._compute_ess(xi, log_probs, n)
+        ess, ess_ratio = self._compute_ess(xi, prev_dist, n)
         metrics["ess"] = ess
         metrics["ess_ratio"] = ess_ratio
         if ess < self.cfg.min_ess_ratio * n:
@@ -454,23 +456,32 @@ class DoraemonScheduler:
         self,
         xi: torch.Tensor,
         success: torch.Tensor,
-        log_probs: torch.Tensor,
+        ref_dist: BetaDistribution,
     ) -> float:
-        """Unnormalized IS estimate: (1/K) sum [p_current(xi_k) / p_sampling_k(xi_k)] * sigma_k."""
+        """Unnormalized IS estimate: (1/K) sum [p_current(xi_k) / p_ref(xi_k)] * sigma_k.
+
+        Uses ref_dist (typically prev_dist / current dist) as IS denominator instead
+        of stored per-episode log_probs.  Ring buffer data is mostly from recent
+        distributions close to ref_dist, so this is a good approximation and keeps
+        IS weights near 1.0 -- matching the reference implementation which always
+        uses current_distr as denominator with fresh data.
+        """
         current_lp = self.dist.log_prob(xi)
-        log_ratio = (current_lp - log_probs).clamp(-20.0, 20.0)
+        ref_lp = ref_dist.log_prob(xi)
+        log_ratio = (current_lp - ref_lp).clamp(-20.0, 20.0)
         IS_weights = torch.exp(log_ratio)
         return torch.mean(IS_weights * success).item()
 
     def _compute_ess(
         self,
         xi: torch.Tensor,
-        log_probs: torch.Tensor,
+        prev_dist: BetaDistribution,
         n: int,
     ) -> tuple[float, float]:
-        """Effective Sample Size between current distribution and stored sampling distributions."""
+        """Effective Sample Size between current and previous distribution."""
         current_lp = self.dist.log_prob(xi)
-        log_ratio = current_lp - log_probs
+        ref_lp = prev_dist.log_prob(xi)
+        log_ratio = current_lp - ref_lp
         weights = torch.exp(log_ratio - log_ratio.max())
         weights = weights / weights.sum()
         ess = (1.0 / (weights**2).sum()).item()
@@ -485,12 +496,12 @@ class DoraemonScheduler:
         prev_dist: BetaDistribution,
         xi: torch.Tensor,
         success: torch.Tensor,
-        log_probs: torch.Tensor,
     ) -> None:
         """Maximize entropy subject to success >= alpha and KL trust region.
 
         Uses trust-constr with analytical gradients (reference implementation).
         keep_feasible=False on all constraints for main problem.
+        IS denominator: prev_dist (not stored log_probs) for ring buffer stability.
         """
         prev_flat = prev_dist.get_flat_params()
         ranges = self.dist._ranges
@@ -499,7 +510,12 @@ class DoraemonScheduler:
         # Precompute on CPU for scipy
         xi_unit = ((xi.detach().cpu().float() - mins.float()) / ranges.float()).clamp(1e-6, 1 - 1e-6).double()
         success_t = success.detach().cpu().double()
-        stored_lp = log_probs.detach().cpu().double()
+        # IS denominator: prev_dist log_prob (stable for ring buffer)
+        prev_a_b_ref = torch.from_numpy(prev_flat.copy()).reshape(NDIMS, 2).double()
+        prev_dist_ref = torch.distributions.Beta(
+            prev_a_b_ref[:, 0].clamp(min=_MIN_BETA_PARAM), prev_a_b_ref[:, 1].clamp(min=_MIN_BETA_PARAM)
+        )
+        ref_lp = prev_dist_ref.log_prob(xi_unit).sum(dim=-1).detach()
 
         # -- Objective: minimize negative entropy --
         def objective_fn(flat: np.ndarray) -> tuple[float, np.ndarray]:
@@ -519,7 +535,7 @@ class DoraemonScheduler:
             b = a_b[:, 1].clamp(min=_MIN_BETA_PARAM)
             new_dist = torch.distributions.Beta(a, b)
             new_lp = new_dist.log_prob(xi_unit).sum(dim=-1)
-            IS_w = torch.exp((new_lp - stored_lp).clamp(-20.0, 20.0))
+            IS_w = torch.exp((new_lp - ref_lp).clamp(-20.0, 20.0))
             return torch.mean(IS_w * success_t).item()
 
         def perf_jac(flat: np.ndarray) -> np.ndarray:
@@ -528,7 +544,7 @@ class DoraemonScheduler:
             b = a_b[:, 1].clamp(min=_MIN_BETA_PARAM)
             new_dist = torch.distributions.Beta(a, b)
             new_lp = new_dist.log_prob(xi_unit).sum(dim=-1)
-            IS_w = torch.exp((new_lp - stored_lp).clamp(-20.0, 20.0))
+            IS_w = torch.exp((new_lp - ref_lp).clamp(-20.0, 20.0))
             perf = torch.mean(IS_w * success_t)
             perf.backward()
             assert a_b.grad is not None
@@ -579,12 +595,12 @@ class DoraemonScheduler:
         prev_dist: BetaDistribution,
         xi: torch.Tensor,
         success: torch.Tensor,
-        log_probs: torch.Tensor,
     ) -> tuple[np.ndarray | None, float, bool]:
         """Find a feasible starting distribution by maximizing success rate within trust region.
 
         Returns (flat_params, kl_step, success_flag).
         Reference: inverted problem from Tiboni et al. implementation.
+        IS denominator: prev_dist (not stored log_probs) for ring buffer stability.
         """
         if success.sum().item() < 1.0:
             logger.debug("[DORAEMON] Inverted problem skipped: no successful episodes.")
@@ -596,7 +612,12 @@ class DoraemonScheduler:
 
         xi_unit = ((xi.detach().cpu().float() - mins.float()) / ranges.float()).clamp(1e-6, 1 - 1e-6).double()
         success_t = success.detach().cpu().double()
-        stored_lp = log_probs.detach().cpu().double()
+        # IS denominator: prev_dist log_prob (stable for ring buffer)
+        prev_a_b_ref = torch.from_numpy(prev_flat.copy()).reshape(NDIMS, 2).double()
+        prev_dist_ref = torch.distributions.Beta(
+            prev_a_b_ref[:, 0].clamp(min=_MIN_BETA_PARAM), prev_a_b_ref[:, 1].clamp(min=_MIN_BETA_PARAM)
+        )
+        ref_lp = prev_dist_ref.log_prob(xi_unit).sum(dim=-1).detach()
 
         # Objective: maximize IS success rate = minimize negative
         def neg_success_fn(flat: np.ndarray) -> tuple[float, np.ndarray]:
@@ -605,7 +626,7 @@ class DoraemonScheduler:
             b = a_b[:, 1].clamp(min=_MIN_BETA_PARAM)
             new_dist = torch.distributions.Beta(a, b)
             new_lp = new_dist.log_prob(xi_unit).sum(dim=-1)
-            IS_w = torch.exp((new_lp - stored_lp).clamp(-20.0, 20.0))
+            IS_w = torch.exp((new_lp - ref_lp).clamp(-20.0, 20.0))
             neg_sr = -torch.mean(IS_w * success_t)
             neg_sr.backward()
             assert a_b.grad is not None
