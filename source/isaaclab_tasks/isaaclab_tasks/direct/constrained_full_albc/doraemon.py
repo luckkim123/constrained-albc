@@ -46,6 +46,7 @@ class DoraemonCfg:
     min_episodes: int = 200  # Minimum episodes before first update
     traversability_tau: float = 0.035  # Sigmoid temperature (dimensionless, same scale as threshold)
     min_ess_ratio: float = 0.05  # Minimum ESS/buffer_size to accept update
+    step_interval: int = 50  # Run optimization every N RL iterations (policy needs time to adapt)
     param_overrides: dict[str, tuple[float, float]] = {}  # Per-param bound overrides {name: (lo, hi)}
 
 
@@ -523,18 +524,32 @@ class DoraemonScheduler:
         constraints: list,
         label: str,
     ) -> None:
-        """Run a single trust-constr optimization step on the Beta distribution."""
+        """Run a single SLSQP optimization step on the Beta distribution.
+
+        Converts NonlinearConstraint objects to SLSQP dict format.
+        SLSQP avoids the keep_feasible overhead of trust-constr that causes
+        optimizer stall in high-dimensional Beta parameter spaces (36+ params).
+        """
         bounds = [(float(_MIN_BETA_PARAM), float(_MAX_BETA_PARAM))] * (2 * NDIMS)
         x0 = self.dist.get_flat_params()
+
+        # Convert NonlinearConstraint(fun, lb, ub) -> SLSQP ineq dicts
+        slsqp_cons: list[dict] = []
+        for con in constraints:
+            if hasattr(con, "lb") and np.isfinite(con.lb):
+                slsqp_cons.append({"type": "ineq", "fun": lambda x, c=con: c.fun(x) - c.lb})
+            if hasattr(con, "ub") and np.isfinite(con.ub):
+                slsqp_cons.append({"type": "ineq", "fun": lambda x, c=con: c.ub - c.fun(x)})
+
         try:
             result = minimize(
                 objective_fn,
                 x0,
-                method="trust-constr",
+                method="SLSQP",
                 jac=True,
                 bounds=bounds,
-                constraints=constraints,
-                options={"maxiter": 50, "gtol": 1e-8},
+                constraints=slsqp_cons,
+                options={"maxiter": 200, "ftol": 1e-8},
             )
             if result.success or result.fun < objective_fn(x0)[0]:
                 self.dist.set_flat_params(result.x)
