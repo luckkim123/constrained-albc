@@ -38,8 +38,9 @@ class DoraemonCfg:
     enable: bool = True
     performance_lb: float = 80.0  # J_LB: episode return threshold for binary success
     alpha: float = 0.5  # Desired IS-estimated success rate for constraint (Ĝ >= alpha)
-    kl_ub: float = 0.0015  # Trust region KL upper bound per step
+    kl_ub: float = 0.5  # Trust region KL upper bound per step (ref default=1.0)
     init_concentration: float = 30.0  # Initial Beta(a,b) concentration (a+b)
+    step_interval: int = 250  # RL iterations between DORAEMON updates (ref: train_until_converged)
     buffer_size: int = 2000  # Maximum episode buffer capacity
     min_episodes: int = 200  # Minimum episodes before first update
     min_ess_ratio: float = 0.05  # Minimum ESS/buffer_size to accept update
@@ -392,6 +393,22 @@ class DoraemonScheduler:
             self._step_count += 1
             return metrics
 
+        # Always report metrics; only optimize every step_interval iterations.
+        # Between updates the policy trains on the current DR distribution,
+        # matching the reference's "train for N steps then update" structure.
+        metrics["success_rate"] = success.mean().item()
+        metrics["entropy_before"] = self.dist.entropy()
+
+        # Per-parameter distribution stats (always logged)
+        for k, v in self.dist.get_stats().items():
+            metrics[k] = v
+
+        if self._step_count % self.cfg.step_interval != 0:
+            metrics["entropy_after"] = self.dist.entropy()
+            metrics["kl_step"] = 0.0
+            self._step_count += 1
+            return metrics
+
         prev_dist = self.dist.clone()
 
         # Estimate success rate under current distribution (unnormalized IS)
@@ -399,11 +416,6 @@ class DoraemonScheduler:
         # distributions close to prev_dist, matching reference's fresh-data approach.
         current_success_rate = self._estimate_success_rate(xi, success, prev_dist)
         metrics["success_rate"] = current_success_rate
-        metrics["entropy_before"] = self.dist.entropy()
-
-        # Per-parameter distribution stats
-        for k, v in self.dist.get_stats().items():
-            metrics[k] = v
 
         if self.cfg.hard_performance_constraint and current_success_rate < self.cfg.alpha:
             # Infeasible: inverted problem to find feasible starting point
