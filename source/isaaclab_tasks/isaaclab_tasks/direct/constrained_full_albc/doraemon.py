@@ -37,14 +37,12 @@ class DoraemonCfg:
     alpha: float = 0.5  # Success rate threshold for distribution expansion
     kl_ub: float = 0.0015  # Trust region KL upper bound per step
     init_concentration: float = 30.0  # Initial Beta(a,b) concentration (a+b)
-    success_threshold: float = (
-        0.25  # Normalized tracking error threshold (dimensionless, 0=perfect, 1=full-range error)
-    )
-    success_threshold_final: float = 0.25  # Final threshold (no annealing if same)
+    success_threshold: float = 0.4  # Weighted tracking error threshold (att*0.5 + ang*0.3 + lin*0.2)
+    success_threshold_final: float = 0.4  # Final threshold (no annealing if same)
     success_threshold_anneal_steps: int = 0  # 0 = immediate final threshold
     buffer_size: int = 2000  # Maximum episode buffer capacity
     min_episodes: int = 200  # Minimum episodes before first update
-    traversability_tau: float = 0.035  # Sigmoid temperature (dimensionless, same scale as threshold)
+    traversability_tau: float = 0.08  # Sigmoid temperature (dimensionless, same scale as threshold)
     min_ess_ratio: float = 0.05  # Minimum ESS/buffer_size to accept update
     step_interval: int = 50  # Run optimization every N RL iterations (policy needs time to adapt)
     param_overrides: dict[str, tuple[float, float]] = {}  # Per-param bound overrides {name: (lo, hi)}
@@ -367,7 +365,7 @@ class DoraemonScheduler:
         self._total_episodes += xi.shape[0]
 
     def step(self) -> dict[str, float]:
-        """Run one DORAEMON optimization step. Returns metrics dict."""
+        """Run one DORAEMON step. Always returns metrics; optimizes every step_interval."""
         xi, _returns, success, _log_probs = self.buffer.get_all()
         n = xi.shape[0]
 
@@ -383,12 +381,23 @@ class DoraemonScheduler:
 
         success_rate = success.mean().item()
         metrics["success_rate"] = success_rate
+        metrics["success_threshold"] = self._current_threshold
+        metrics["entropy_before"] = self.dist.entropy()
+
+        # Per-parameter distribution stats (always logged)
+        for k, v in self.dist.get_stats().items():
+            metrics[k] = v
+
+        # Only run optimization every step_interval steps
+        if self._step_count % self.cfg.step_interval != 0:
+            metrics["entropy_after"] = self.dist.entropy()
+            metrics["kl_step"] = 0.0
+            self._step_count += 1
+            return metrics
 
         if success_rate >= self.cfg.alpha:
             self._anneal_threshold()
         metrics["success_threshold"] = self._current_threshold
-
-        metrics["entropy_before"] = self.dist.entropy()
 
         prev_dist = self.dist.clone()
 
@@ -419,10 +428,6 @@ class DoraemonScheduler:
             metrics["entropy_after"] = self.dist.entropy()
             metrics["kl_step"] = 0.0
             logger.warning("[DORAEMON] Reverted: ESS=%.0f (%.1f%% of %d)", ess, 100 * ess_ratio, n)
-
-        # Per-parameter distribution stats
-        for k, v in self.dist.get_stats().items():
-            metrics[k] = v
 
         self._step_count += 1
         return metrics
