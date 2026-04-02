@@ -12,13 +12,12 @@ Reference: Tiboni et al., "Domain Randomization via Entropy Maximization", ICLR 
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import NamedTuple
 
 import numpy as np
 import torch
-from scipy.optimize import NonlinearConstraint, minimize
+from scipy.optimize import Bounds, NonlinearConstraint, minimize
 
 from isaaclab.utils import configclass
 
@@ -31,20 +30,20 @@ logger = logging.getLogger(__name__)
 
 @configclass
 class DoraemonCfg:
-    """DORAEMON scheduler configuration."""
+    """DORAEMON scheduler configuration.
+
+    Reference: Tiboni et al., "Domain Randomization via Entropy Maximization", ICLR 2024.
+    """
 
     enable: bool = True
-    alpha: float = 0.5  # Success rate threshold for distribution expansion
+    performance_lb: float = 80.0  # J_LB: episode return threshold for binary success
+    alpha: float = 0.5  # Desired IS-estimated success rate for constraint (Ĝ >= alpha)
     kl_ub: float = 0.0015  # Trust region KL upper bound per step
     init_concentration: float = 30.0  # Initial Beta(a,b) concentration (a+b)
-    success_threshold: float = 0.4  # Weighted tracking error threshold (att*0.5 + ang*0.3 + lin*0.2)
-    success_threshold_final: float = 0.4  # Final threshold (no annealing if same)
-    success_threshold_anneal_steps: int = 0  # 0 = immediate final threshold
     buffer_size: int = 2000  # Maximum episode buffer capacity
     min_episodes: int = 200  # Minimum episodes before first update
-    traversability_tau: float = 0.08  # Sigmoid temperature (dimensionless, same scale as threshold)
     min_ess_ratio: float = 0.05  # Minimum ESS/buffer_size to accept update
-    step_interval: int = 50  # Run optimization every N RL iterations (policy needs time to adapt)
+    hard_performance_constraint: bool = True  # Use inverted problem when infeasible
     param_overrides: dict[str, tuple[float, float]] = {}  # Per-param bound overrides {name: (lo, hi)}
 
 
@@ -302,7 +301,14 @@ class EpisodeBuffer:
 
 
 class DoraemonScheduler:
-    """DORAEMON DR distribution scheduler."""
+    """DORAEMON DR distribution scheduler.
+
+    Aligned with Tiboni et al., ICLR 2024 reference implementation.
+    Single constrained optimization: max H(phi) s.t. Ghat >= alpha, KL <= eps.
+    When infeasible (hard_performance_constraint): inverted problem first.
+    Binary success: episode_return >= performance_lb.
+    Unnormalized IS with stored per-episode log probs.
+    """
 
     def __init__(self, cfg: DoraemonCfg, device: torch.device) -> None:
         self.cfg = cfg
@@ -332,21 +338,17 @@ class DoraemonScheduler:
         self.buffer = EpisodeBuffer(cfg.buffer_size, NDIMS, device)
 
         self._step_count = 0
-        self._backup_count = 0
         self._total_episodes = 0
-        self._current_threshold = cfg.success_threshold
-        self._threshold_anneal_count = 0
 
         logger.info(
-            "[DORAEMON] Initialized: alpha=%.2f, kl_ub=%.4f, %d parameters, "
-            "concentration=%.0f, threshold=%.3f->%.3f m/s over %d steps",
+            "[DORAEMON] Initialized: alpha=%.2f, kl_ub=%.4f, performance_lb=%.1f, "
+            "%d parameters, concentration=%.0f, hard_constraint=%s",
             cfg.alpha,
             cfg.kl_ub,
+            cfg.performance_lb,
             NDIMS,
             cfg.init_concentration,
-            cfg.success_threshold,
-            cfg.success_threshold_final,
-            cfg.success_threshold_anneal_steps,
+            cfg.hard_performance_constraint,
         )
 
     def sample(self, n: int) -> tuple[torch.Tensor, torch.Tensor]:
@@ -364,9 +366,19 @@ class DoraemonScheduler:
         self.buffer.add(xi, returns, success, log_probs)
         self._total_episodes += xi.shape[0]
 
+    # ------------------------------------------------------------------
+    # Main step
+    # ------------------------------------------------------------------
+
     def step(self) -> dict[str, float]:
-        """Run one DORAEMON step. Always returns metrics; optimizes every step_interval."""
-        xi, _returns, success, _log_probs = self.buffer.get_all()
+        """Run one DORAEMON distribution optimization step.
+
+        Reference structure (Tiboni et al., ICLR 2024):
+        1. Estimate success rate under current distribution via unnormalized IS
+        2. If feasible (Ghat >= alpha): main optimization
+        3. If infeasible + hard_constraint: inverted problem -> main optimization
+        """
+        xi, _returns, success, log_probs = self.buffer.get_all()
         n = xi.shape[0]
 
         metrics: dict[str, float] = {}
@@ -377,49 +389,51 @@ class DoraemonScheduler:
             metrics["skipped"] = 1.0
             metrics["entropy"] = self.dist.entropy()
             metrics["success_rate"] = success.mean().item() if n > 0 else 0.0
-            return metrics
-
-        success_rate = success.mean().item()
-        metrics["success_rate"] = success_rate
-        metrics["success_threshold"] = self._current_threshold
-        metrics["entropy_before"] = self.dist.entropy()
-
-        # Per-parameter distribution stats (always logged)
-        for k, v in self.dist.get_stats().items():
-            metrics[k] = v
-
-        # Only run optimization every step_interval steps
-        if self._step_count % self.cfg.step_interval != 0:
-            metrics["entropy_after"] = self.dist.entropy()
-            metrics["kl_step"] = 0.0
             self._step_count += 1
             return metrics
 
-        if success_rate >= self.cfg.alpha:
-            self._anneal_threshold()
-        metrics["success_threshold"] = self._current_threshold
+        # Estimate success rate under current distribution (unnormalized IS)
+        current_success_rate = self._estimate_success_rate(xi, success, log_probs)
+        metrics["success_rate"] = current_success_rate
+        metrics["entropy_before"] = self.dist.entropy()
+
+        # Per-parameter distribution stats
+        for k, v in self.dist.get_stats().items():
+            metrics[k] = v
 
         prev_dist = self.dist.clone()
 
-        if success_rate < self.cfg.alpha:
-            self._backup(prev_dist, xi, success)
-            backup_success = self._estimate_success_rate(xi, success, prev_dist)
-            if backup_success >= self.cfg.alpha:
-                self._maximize_entropy(self.dist.clone(), xi, success)
-                metrics["mode"] = 0.5  # backup-then-expand
+        if self.cfg.hard_performance_constraint and current_success_rate < self.cfg.alpha:
+            # Infeasible: inverted problem to find feasible starting point
+            feasible_flat, inv_kl, inv_ok = self._find_feasible_start(
+                prev_dist, xi, success, log_probs
+            )
+
+            if inv_ok:
+                self.dist.set_flat_params(feasible_flat)
+                new_sr = self._estimate_success_rate(xi, success, log_probs)
+
+                if new_sr >= self.cfg.alpha:
+                    # Feasible point found -> run main optimization from here
+                    self._optimize_entropy(self.dist.clone(), xi, success, log_probs)
+                    metrics["mode"] = 1.0  # inverted + optimize
+                else:
+                    # Max-success point still infeasible -> keep it, skip main opt
+                    metrics["mode"] = -2.0  # kept max-success dist
             else:
-                metrics["mode"] = 0.0  # backup only
-            self._backup_count += 1
+                # Inverted problem failed -> revert
+                self.dist = prev_dist
+                metrics["mode"] = -3.0  # optimization error
         else:
-            self._maximize_entropy(prev_dist, xi, success)
-            metrics["mode"] = 1.0  # expand
+            # Feasible (or soft constraint): main optimization directly
+            self._optimize_entropy(prev_dist, xi, success, log_probs)
+            metrics["mode"] = 0.0  # normal
 
         metrics["entropy_after"] = self.dist.entropy()
         metrics["kl_step"] = self.dist.kl_divergence(prev_dist)
-        metrics["backup_count"] = float(self._backup_count)
 
         # ESS validation: revert if IS estimator quality is too low
-        ess, ess_ratio = self._compute_ess(xi, prev_dist, n)
+        ess, ess_ratio = self._compute_ess(xi, log_probs, n)
         metrics["ess"] = ess
         metrics["ess_ratio"] = ess_ratio
         if ess < self.cfg.min_ess_ratio * n:
@@ -432,185 +446,216 @@ class DoraemonScheduler:
         self._step_count += 1
         return metrics
 
-    def _anneal_threshold(self) -> None:
-        """Anneal success threshold by one step."""
-        cfg = self.cfg
-        self._threshold_anneal_count += 1
-        if cfg.success_threshold_anneal_steps <= 0:
-            self._current_threshold = cfg.success_threshold_final
-            return
-        t = min(1.0, self._threshold_anneal_count / cfg.success_threshold_anneal_steps)
-        self._current_threshold = cfg.success_threshold + t * (cfg.success_threshold_final - cfg.success_threshold)
-
-    def _compute_ess(
-        self,
-        xi: torch.Tensor,
-        prev_dist: BetaDistribution,
-        n: int,
-    ) -> tuple[float, float]:
-        """Compute Effective Sample Size between current and previous distribution."""
-        new_lp = self.dist.log_prob(xi)
-        old_lp = prev_dist.log_prob(xi)
-        log_ratio = new_lp - old_lp
-        weights = torch.exp(log_ratio - log_ratio.max())
-        weights = weights / weights.sum()
-        ess = (1.0 / (weights**2).sum()).item()
-        return ess, ess / max(n, 1)
+    # ------------------------------------------------------------------
+    # IS estimation (unnormalized, using stored per-episode log probs)
+    # ------------------------------------------------------------------
 
     def _estimate_success_rate(
         self,
         xi: torch.Tensor,
         success: torch.Tensor,
-        ref_dist: BetaDistribution,
+        log_probs: torch.Tensor,
     ) -> float:
-        """Estimate success rate under current dist via IS from ref_dist."""
-        new_lp = self.dist.log_prob(xi)
-        old_lp = ref_dist.log_prob(xi)
-        log_ratio = new_lp - old_lp
+        """Unnormalized IS estimate: (1/K) sum [p_current(xi_k) / p_sampling_k(xi_k)] * sigma_k."""
+        current_lp = self.dist.log_prob(xi)
+        log_ratio = (current_lp - log_probs).clamp(-20.0, 20.0)
+        IS_weights = torch.exp(log_ratio)
+        return torch.mean(IS_weights * success).item()
+
+    def _compute_ess(
+        self,
+        xi: torch.Tensor,
+        log_probs: torch.Tensor,
+        n: int,
+    ) -> tuple[float, float]:
+        """Effective Sample Size between current distribution and stored sampling distributions."""
+        current_lp = self.dist.log_prob(xi)
+        log_ratio = current_lp - log_probs
         weights = torch.exp(log_ratio - log_ratio.max())
         weights = weights / weights.sum()
-        return (weights * success).sum().item()
+        ess = (1.0 / (weights**2).sum()).item()
+        return ess, ess / max(n, 1)
 
-    def _maximize_entropy(
+    # ------------------------------------------------------------------
+    # Main optimization: max H(phi) s.t. Ghat >= alpha, KL <= eps
+    # ------------------------------------------------------------------
+
+    def _optimize_entropy(
         self,
         prev_dist: BetaDistribution,
         xi: torch.Tensor,
         success: torch.Tensor,
+        log_probs: torch.Tensor,
     ) -> None:
-        """Maximize entropy subject to success >= alpha and KL trust region."""
+        """Maximize entropy subject to success >= alpha and KL trust region.
+
+        Uses trust-constr with analytical gradients (reference implementation).
+        keep_feasible=False on all constraints for main problem.
+        """
         prev_flat = prev_dist.get_flat_params()
         ranges = self.dist._ranges
         mins = self.dist._mins
 
-        xi_cpu = xi.detach().cpu().numpy().astype(np.float64)
-        success_cpu = success.detach().cpu().numpy().astype(np.float64)
+        # Precompute on CPU for scipy
+        xi_unit = ((xi.detach().cpu().float() - mins.float()) / ranges.float()).clamp(1e-6, 1 - 1e-6).double()
+        success_t = success.detach().cpu().double()
+        stored_lp = log_probs.detach().cpu().double()
 
-        def objective_and_grad(flat: np.ndarray) -> tuple[float, np.ndarray]:
+        # -- Objective: minimize negative entropy --
+        def objective_fn(flat: np.ndarray) -> tuple[float, np.ndarray]:
             a_b = torch.from_numpy(flat.copy()).reshape(NDIMS, 2).double().requires_grad_(True)
             a = a_b[:, 0].clamp(min=_MIN_BETA_PARAM)
             b = a_b[:, 1].clamp(min=_MIN_BETA_PARAM)
             dist = torch.distributions.Beta(a, b)
-            neg_entropy = -(dist.entropy() + ranges.log()).sum()
+            neg_entropy = -(dist.entropy() + ranges.double().log()).sum()
             neg_entropy.backward()
             assert a_b.grad is not None
             return neg_entropy.item(), a_b.grad.flatten().numpy().copy()
 
-        def success_constraint_fun(flat: np.ndarray) -> float:
+        # -- Performance constraint: IS success rate >= alpha --
+        def perf_fn(flat: np.ndarray) -> float:
             a_b = torch.from_numpy(flat.copy()).reshape(NDIMS, 2).double()
-            a_new = a_b[:, 0].clamp(min=_MIN_BETA_PARAM)
-            b_new = a_b[:, 1].clamp(min=_MIN_BETA_PARAM)
-
-            xi_t = torch.from_numpy(xi_cpu).double()
-            xi_unit = ((xi_t - mins) / ranges).clamp(1e-6, 1 - 1e-6)
-            new_dist = torch.distributions.Beta(a_new, b_new)
+            a = a_b[:, 0].clamp(min=_MIN_BETA_PARAM)
+            b = a_b[:, 1].clamp(min=_MIN_BETA_PARAM)
+            new_dist = torch.distributions.Beta(a, b)
             new_lp = new_dist.log_prob(xi_unit).sum(dim=-1)
+            IS_w = torch.exp((new_lp - stored_lp).clamp(-20.0, 20.0))
+            return torch.mean(IS_w * success_t).item()
 
-            old_a_b = torch.from_numpy(prev_flat.copy()).reshape(NDIMS, 2).double()
-            old_dist = torch.distributions.Beta(old_a_b[:, 0].clamp(min=1.0), old_a_b[:, 1].clamp(min=1.0))
-            old_lp = old_dist.log_prob(xi_unit).sum(dim=-1)
+        def perf_jac(flat: np.ndarray) -> np.ndarray:
+            a_b = torch.from_numpy(flat.copy()).reshape(NDIMS, 2).double().requires_grad_(True)
+            a = a_b[:, 0].clamp(min=_MIN_BETA_PARAM)
+            b = a_b[:, 1].clamp(min=_MIN_BETA_PARAM)
+            new_dist = torch.distributions.Beta(a, b)
+            new_lp = new_dist.log_prob(xi_unit).sum(dim=-1)
+            IS_w = torch.exp((new_lp - stored_lp).clamp(-20.0, 20.0))
+            perf = torch.mean(IS_w * success_t)
+            perf.backward()
+            assert a_b.grad is not None
+            return a_b.grad.flatten().numpy().copy()
 
-            log_ratio = new_lp - old_lp
-            weights = torch.exp(log_ratio - log_ratio.max())
-            weights = weights / weights.sum()
-            success_t = torch.from_numpy(success_cpu).double()
-            return (weights * success_t).sum().item()
-
-        def kl_constraint_fun(flat: np.ndarray) -> float:
+        # -- KL constraint: KL(new || prev) <= kl_ub --
+        def kl_fn(flat: np.ndarray) -> float:
             return _compute_kl(flat, prev_flat)
 
-        success_con = NonlinearConstraint(success_constraint_fun, lb=self.cfg.alpha, ub=np.inf)
-        kl_con = NonlinearConstraint(kl_constraint_fun, lb=0.0, ub=self.cfg.kl_ub, keep_feasible=True)
+        def kl_jac(flat: np.ndarray) -> np.ndarray:
+            a_b = torch.from_numpy(flat.copy()).reshape(NDIMS, 2).double().requires_grad_(True)
+            a = a_b[:, 0].clamp(min=_MIN_BETA_PARAM)
+            b = a_b[:, 1].clamp(min=_MIN_BETA_PARAM)
+            new_d = torch.distributions.Beta(a, b)
+            prev_a_b = torch.from_numpy(prev_flat.copy()).reshape(NDIMS, 2).double()
+            prev_d = torch.distributions.Beta(
+                prev_a_b[:, 0].clamp(min=_MIN_BETA_PARAM), prev_a_b[:, 1].clamp(min=_MIN_BETA_PARAM)
+            )
+            kl = torch.distributions.kl_divergence(new_d, prev_d).sum()
+            kl.backward()
+            assert a_b.grad is not None
+            return a_b.grad.flatten().numpy().copy()
 
-        self._run_scipy_step(objective_and_grad, [success_con, kl_con], "Entropy maximization")
-
-    def _run_scipy_step(
-        self,
-        objective_fn: Callable[[np.ndarray], tuple[float, np.ndarray]],
-        constraints: list,
-        label: str,
-    ) -> None:
-        """Run a single SLSQP optimization step on the Beta distribution.
-
-        Converts NonlinearConstraint objects to SLSQP dict format.
-        SLSQP avoids the keep_feasible overhead of trust-constr that causes
-        optimizer stall in high-dimensional Beta parameter spaces (36+ params).
-        """
-        bounds = [(float(_MIN_BETA_PARAM), float(_MAX_BETA_PARAM))] * (2 * NDIMS)
+        constraints = [
+            NonlinearConstraint(perf_fn, lb=self.cfg.alpha - 1e-4, ub=np.inf, jac=perf_jac, keep_feasible=False),
+            NonlinearConstraint(kl_fn, lb=0.0, ub=self.cfg.kl_ub, jac=kl_jac, keep_feasible=False),
+        ]
+        bounds = Bounds(lb=_MIN_BETA_PARAM, ub=_MAX_BETA_PARAM)
         x0 = self.dist.get_flat_params()
-
-        # Convert NonlinearConstraint(fun, lb, ub) -> SLSQP ineq dicts
-        slsqp_cons: list[dict] = []
-        for con in constraints:
-            if hasattr(con, "lb") and np.isfinite(con.lb):
-                slsqp_cons.append({"type": "ineq", "fun": lambda x, c=con: c.fun(x) - c.lb})
-            if hasattr(con, "ub") and np.isfinite(con.ub):
-                slsqp_cons.append({"type": "ineq", "fun": lambda x, c=con: c.ub - c.fun(x)})
 
         try:
             result = minimize(
-                objective_fn,
-                x0,
-                method="SLSQP",
-                jac=True,
-                bounds=bounds,
-                constraints=slsqp_cons,
-                options={"maxiter": 200, "ftol": 1e-8},
+                objective_fn, x0, method="trust-constr", jac=True,
+                constraints=constraints, bounds=bounds,
+                options={"gtol": 1e-4, "xtol": 1e-6},
             )
             if result.success or result.fun < objective_fn(x0)[0]:
                 self.dist.set_flat_params(result.x)
         except Exception as e:
-            logger.warning("[DORAEMON] %s failed: %s", label, e)
+            logger.warning("[DORAEMON] Entropy optimization failed: %s", e)
 
-    def _backup(
+    # ------------------------------------------------------------------
+    # Inverted problem: max Ghat(phi) s.t. KL <= eps
+    # ------------------------------------------------------------------
+
+    def _find_feasible_start(
         self,
         prev_dist: BetaDistribution,
         xi: torch.Tensor,
         success: torch.Tensor,
-    ) -> None:
-        """Maximize IS-weighted success rate within KL trust region."""
-        # Skip if no successful episodes (optimizer would drift within trust region)
+        log_probs: torch.Tensor,
+    ) -> tuple[np.ndarray | None, float, bool]:
+        """Find a feasible starting distribution by maximizing success rate within trust region.
+
+        Returns (flat_params, kl_step, success_flag).
+        Reference: inverted problem from Tiboni et al. implementation.
+        """
         if success.sum().item() < 1.0:
-            logger.debug("[DORAEMON] Backup skipped: no successful episodes in buffer.")
-            return
+            logger.debug("[DORAEMON] Inverted problem skipped: no successful episodes.")
+            return None, 0.0, False
 
         prev_flat = prev_dist.get_flat_params()
         mins = self.dist._mins
         ranges = self.dist._ranges
 
-        xi_cpu = xi.detach().cpu().numpy().astype(np.float64)
-        success_cpu = success.detach().cpu().numpy().astype(np.float64)
+        xi_unit = ((xi.detach().cpu().float() - mins.float()) / ranges.float()).clamp(1e-6, 1 - 1e-6).double()
+        success_t = success.detach().cpu().double()
+        stored_lp = log_probs.detach().cpu().double()
 
-        def neg_success_and_grad(flat: np.ndarray) -> tuple[float, np.ndarray]:
+        # Objective: maximize IS success rate = minimize negative
+        def neg_success_fn(flat: np.ndarray) -> tuple[float, np.ndarray]:
             a_b = torch.from_numpy(flat.copy()).reshape(NDIMS, 2).double().requires_grad_(True)
             a = a_b[:, 0].clamp(min=_MIN_BETA_PARAM)
             b = a_b[:, 1].clamp(min=_MIN_BETA_PARAM)
-
-            xi_t = torch.from_numpy(xi_cpu).double()
-            xi_unit = ((xi_t - mins) / ranges).clamp(1e-6, 1 - 1e-6)
-
             new_dist = torch.distributions.Beta(a, b)
             new_lp = new_dist.log_prob(xi_unit).sum(dim=-1)
-
-            old_a_b = torch.from_numpy(prev_flat.copy()).reshape(NDIMS, 2).double()
-            old_dist = torch.distributions.Beta(old_a_b[:, 0].clamp(min=1.0), old_a_b[:, 1].clamp(min=1.0))
-            old_lp = old_dist.log_prob(xi_unit).sum(dim=-1)
-
-            log_ratio = new_lp - old_lp
-            weights = torch.exp(log_ratio - log_ratio.max().detach())
-            weights = weights / weights.sum().detach()
-
-            success_t = torch.from_numpy(success_cpu).double()
-            neg_success = -(weights * success_t).sum()
-
-            neg_success.backward()
+            IS_w = torch.exp((new_lp - stored_lp).clamp(-20.0, 20.0))
+            neg_sr = -torch.mean(IS_w * success_t)
+            neg_sr.backward()
             assert a_b.grad is not None
-            return neg_success.item(), a_b.grad.flatten().numpy().copy()
+            return neg_sr.item(), a_b.grad.flatten().numpy().copy()
 
-        def kl_constraint_fun(flat: np.ndarray) -> float:
+        # KL constraint with keep_feasible=True (must stay in trust region)
+        def kl_fn(flat: np.ndarray) -> float:
             return _compute_kl(flat, prev_flat)
 
-        kl_con = NonlinearConstraint(kl_constraint_fun, lb=0.0, ub=self.cfg.kl_ub, keep_feasible=True)
-        self._run_scipy_step(neg_success_and_grad, [kl_con], "Backup step")
+        def kl_jac(flat: np.ndarray) -> np.ndarray:
+            a_b = torch.from_numpy(flat.copy()).reshape(NDIMS, 2).double().requires_grad_(True)
+            a = a_b[:, 0].clamp(min=_MIN_BETA_PARAM)
+            b = a_b[:, 1].clamp(min=_MIN_BETA_PARAM)
+            new_d = torch.distributions.Beta(a, b)
+            prev_a_b = torch.from_numpy(prev_flat.copy()).reshape(NDIMS, 2).double()
+            prev_d = torch.distributions.Beta(
+                prev_a_b[:, 0].clamp(min=_MIN_BETA_PARAM), prev_a_b[:, 1].clamp(min=_MIN_BETA_PARAM)
+            )
+            kl = torch.distributions.kl_divergence(new_d, prev_d).sum()
+            kl.backward()
+            assert a_b.grad is not None
+            return a_b.grad.flatten().numpy().copy()
+
+        constraints = [
+            NonlinearConstraint(
+                kl_fn, lb=0.0, ub=self.cfg.kl_ub - 1e-5,
+                jac=kl_jac, keep_feasible=True,
+            ),
+        ]
+        bounds = Bounds(lb=_MIN_BETA_PARAM, ub=_MAX_BETA_PARAM)
+        x0 = self.dist.get_flat_params()
+
+        try:
+            result = minimize(
+                neg_success_fn, x0, method="trust-constr", jac=True,
+                constraints=constraints, bounds=bounds,
+                options={"gtol": 1e-4, "xtol": 1e-6},
+            )
+            if result.success:
+                return result.x, kl_fn(result.x), True
+            else:
+                logger.warning("[DORAEMON] Inverted problem not successful.")
+                return None, 0.0, False
+        except Exception as e:
+            logger.warning("[DORAEMON] Inverted problem failed: %s", e)
+            return None, 0.0, False
+
+    # ------------------------------------------------------------------
+    # State persistence
+    # ------------------------------------------------------------------
 
     def state_dict(self) -> dict:
         """Serialize scheduler state for checkpoint persistence."""
@@ -618,10 +663,7 @@ class DoraemonScheduler:
             "dist_a": self.dist._a.clone(),
             "dist_b": self.dist._b.clone(),
             "step_count": self._step_count,
-            "backup_count": self._backup_count,
             "total_episodes": self._total_episodes,
-            "current_threshold": self._current_threshold,
-            "threshold_anneal_count": self._threshold_anneal_count,
             "buffer_xi": self.buffer.xi[: self.buffer._count].clone(),
             "buffer_returns": self.buffer.returns[: self.buffer._count].clone(),
             "buffer_success": self.buffer.success[: self.buffer._count].clone(),
@@ -640,10 +682,7 @@ class DoraemonScheduler:
         self.dist._b = state["dist_b"].double()
 
         self._step_count = state["step_count"]
-        self._backup_count = state["backup_count"]
         self._total_episodes = state["total_episodes"]
-        self._threshold_anneal_count = state["threshold_anneal_count"]
-        self._current_threshold = state["current_threshold"]
 
         # Restore buffer
         n = state["buffer_xi"].shape[0]

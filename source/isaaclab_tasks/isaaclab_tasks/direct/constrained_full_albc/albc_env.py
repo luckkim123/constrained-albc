@@ -299,9 +299,6 @@ class ALBCEnv(DirectRLEnv):
             self._episode_dr_xi = torch.zeros(self.num_envs, ndims, device=self.device)
             self._episode_dr_log_probs = torch.zeros(self.num_envs, device=self.device)
             self._episode_return_accum = torch.zeros(self.num_envs, device=self.device)
-            self._settling_window = 50  # 1 second at 50Hz control
-            self._settling_errors = torch.zeros(self.num_envs, self._settling_window, device=self.device)
-            self._settling_idx = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
 
     def _setup_scene(self):
         """Setup simulation scene with robot and underwater lighting."""
@@ -793,21 +790,9 @@ class ALBCEnv(DirectRLEnv):
         if self._constraints_cfg is not None and self._constraints_cfg.num_constraints > 0:
             self.extras["costs"] = compute_all_costs(self._robot, self, self._constraints_cfg)
 
-        # DORAEMON: accumulate episode return and settling error
+        # DORAEMON: accumulate episode return for binary success criterion
         if self._doraemon is not None:
             self._episode_return_accum += reward
-            # Weighted settling error: att (0.5) > ang (0.3) > lin (0.2).
-            # All components normalized by their command range (dimensionless).
-            att_range = max(abs(self.cfg.att_cmd_rp_range[0]), abs(self.cfg.att_cmd_rp_range[1]))
-            lin_range = max(abs(self.cfg.vel_cmd_lin_range[0]), abs(self.cfg.vel_cmd_lin_range[1]))
-            yaw_range = max(abs(self.cfg.yaw_rate_cmd_range[0]), abs(self.cfg.yaw_rate_cmd_range[1]))
-            att_err_norm = self._att_rp_err.pow(2).sum(dim=-1).sqrt() / max(att_range, 1e-6)
-            lin_err_norm = self._lin_vel_err.pow(2).sum(dim=-1).sqrt() / max(lin_range, 1e-6)
-            ang_err_norm = self._yaw_rate_err.abs() / max(yaw_range, 1e-6)
-            err = (0.5 * att_err_norm + 0.3 * ang_err_norm + 0.2 * lin_err_norm).unsqueeze(1)
-            idx = self._settling_idx % self._settling_window
-            self._settling_errors.scatter_(1, idx.unsqueeze(1), err)
-            self._settling_idx += 1
 
         return reward
 
@@ -1022,23 +1007,19 @@ class ALBCEnv(DirectRLEnv):
 
     def _log_and_reset_rewards(self, env_ids: torch.Tensor) -> None:
         """Collect episode metrics, record DORAEMON episodes, and reset accumulators."""
-        # Record completed episodes to DORAEMON buffer before resetting.
-        # Only record episodes where the settling window is fully filled --
-        # the initial env.reset() produces episodes with settling_idx=0,
-        # giving fake success=1.0 that pollutes the buffer.
+        # Record completed episodes to DORAEMON buffer.
+        # Skip episodes with no steps (initial env.reset() produces return=0).
+        # With binary success (return >= J_LB), these are naturally failures (0),
+        # not fake successes, but filtering them avoids wasting buffer space.
         if self._doraemon is not None and len(env_ids) > 0:
-            valid = self._settling_idx[env_ids] >= self._settling_window
+            valid = self.episode_length_buf[env_ids] > 0
             valid_ids = env_ids[valid]
             if valid_ids.numel() > 0:
-                threshold = self._doraemon._current_threshold
-                filled = self._settling_idx[valid_ids].clamp(max=self._settling_window).float()
-                mean_settling_err = self._settling_errors[valid_ids].sum(dim=-1) / filled
-                tau = self._doraemon.cfg.traversability_tau
-                success = torch.sigmoid(-(mean_settling_err - threshold) / tau)
-
+                returns = self._episode_return_accum[valid_ids]
+                success = (returns >= self._doraemon.cfg.performance_lb).float()
                 self._doraemon.record_episodes(
                     xi=self._episode_dr_xi[valid_ids],
-                    returns=self._episode_return_accum[valid_ids],
+                    returns=returns,
                     success=success,
                     log_probs=self._episode_dr_log_probs[valid_ids],
                 )
@@ -1120,8 +1101,6 @@ class ALBCEnv(DirectRLEnv):
             self._episode_dr_xi[env_ids] = xi_physical
             self._episode_dr_log_probs[env_ids] = log_probs
             self._episode_return_accum[env_ids] = 0.0
-            self._settling_errors[env_ids] = 0.0
-            self._settling_idx[env_ids] = 0
 
             # Store per-env command range scales for _sample_velocity_command
             if "cmd_lin_scale" in sampled:
