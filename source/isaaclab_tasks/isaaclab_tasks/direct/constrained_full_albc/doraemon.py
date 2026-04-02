@@ -652,8 +652,8 @@ class DoraemonScheduler:
 
         constraints = [
             NonlinearConstraint(
-                kl_fn, lb=0.0, ub=self.cfg.kl_ub - 1e-5,
-                jac=kl_jac, keep_feasible=True,
+                kl_fn, lb=0.0, ub=self.cfg.kl_ub,
+                jac=kl_jac, keep_feasible=False,
             ),
         ]
         bounds = Bounds(lb=_MIN_BETA_PARAM, ub=_MAX_BETA_PARAM)
