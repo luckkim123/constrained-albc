@@ -17,7 +17,7 @@ from typing import NamedTuple
 
 import numpy as np
 import torch
-from scipy.optimize import Bounds, NonlinearConstraint, minimize
+from scipy.optimize import minimize
 
 from isaaclab.utils import configclass
 
@@ -135,6 +135,7 @@ NDIMS = len(PARAM_SPECS)
 
 _MIN_BETA_PARAM = 1.0
 _MAX_BETA_PARAM = 500.0
+_IS_LOG_CLAMP = 5.0  # IS log-weight clamp: exp(5) ~ 148. Prevents weight explosion in ring buffer.
 
 
 def _compute_kl(flat_new: np.ndarray, flat_prev: np.ndarray) -> float:
@@ -526,7 +527,7 @@ class DoraemonScheduler:
         """
         current_lp = self.dist.log_prob(xi)
         ref_lp = ref_dist.log_prob(xi)
-        log_ratio = (current_lp - ref_lp).clamp(-20.0, 20.0)
+        log_ratio = (current_lp - ref_lp).clamp(-_IS_LOG_CLAMP, _IS_LOG_CLAMP)
         IS_weights = torch.exp(log_ratio)
         return torch.mean(IS_weights * success).item()
 
@@ -557,8 +558,10 @@ class DoraemonScheduler:
     ) -> None:
         """Maximize entropy subject to success >= alpha and KL trust region.
 
-        Uses trust-constr with analytical gradients (reference implementation).
-        keep_feasible=False on all constraints for main problem.
+        Uses SLSQP with analytical gradients in log-space parameterization.
+        Reference uses trust-constr in sigmoid-inverse space, but trust-constr fails
+        when KL gradient is zero at x0 (KL divergence has zero gradient at identity).
+        SLSQP handles this correctly via sequential quadratic programming.
         IS denominator: prev_dist (not stored log_probs) for ring buffer stability.
         """
         prev_flat = prev_dist.get_flat_params()
@@ -568,52 +571,60 @@ class DoraemonScheduler:
         # Precompute on CPU for scipy
         xi_unit = ((xi.detach().cpu().float() - mins.float()) / ranges.float()).clamp(1e-6, 1 - 1e-6).double()
         success_t = success.detach().cpu().double()
-        # IS denominator: prev_dist log_prob (stable for ring buffer)
         prev_a_b_ref = torch.from_numpy(prev_flat.copy()).reshape(NDIMS, 2).double()
         prev_dist_ref = torch.distributions.Beta(
             prev_a_b_ref[:, 0].clamp(min=_MIN_BETA_PARAM), prev_a_b_ref[:, 1].clamp(min=_MIN_BETA_PARAM)
         )
         ref_lp = prev_dist_ref.log_prob(xi_unit).sum(dim=-1).detach()
 
-        # -- Objective: minimize negative entropy --
-        def objective_fn(flat: np.ndarray) -> tuple[float, np.ndarray]:
-            a_b = torch.from_numpy(flat.copy()).reshape(NDIMS, 2).double().requires_grad_(True)
+        x0_flat = self.dist.get_flat_params()
+        log_x0 = np.log(x0_flat.clip(min=_MIN_BETA_PARAM))
+
+        # -- Objective: minimize negative entropy (log-space) --
+        def objective_fn(log_flat: np.ndarray) -> tuple[float, np.ndarray]:
+            log_t = torch.from_numpy(log_flat.copy()).double().requires_grad_(True)
+            a_b = torch.exp(log_t).reshape(NDIMS, 2)
             a = a_b[:, 0].clamp(min=_MIN_BETA_PARAM)
             b = a_b[:, 1].clamp(min=_MIN_BETA_PARAM)
             dist = torch.distributions.Beta(a, b)
             neg_entropy = -(dist.entropy() + ranges.double().log()).sum()
             neg_entropy.backward()
-            assert a_b.grad is not None
-            return neg_entropy.item(), a_b.grad.flatten().numpy().copy()
+            assert log_t.grad is not None
+            return neg_entropy.item(), log_t.grad.numpy().copy()
 
-        # -- Performance constraint: IS success rate >= alpha --
-        def perf_fn(flat: np.ndarray) -> float:
-            a_b = torch.from_numpy(flat.copy()).reshape(NDIMS, 2).double()
+        # -- Performance constraint: Ghat >= alpha (SLSQP 'ineq' = g(x) >= 0) --
+        def perf_ineq(log_flat: np.ndarray) -> float:
+            log_t = torch.from_numpy(log_flat.copy()).double()
+            a_b = torch.exp(log_t).reshape(NDIMS, 2)
             a = a_b[:, 0].clamp(min=_MIN_BETA_PARAM)
             b = a_b[:, 1].clamp(min=_MIN_BETA_PARAM)
             new_dist = torch.distributions.Beta(a, b)
             new_lp = new_dist.log_prob(xi_unit).sum(dim=-1)
-            IS_w = torch.exp((new_lp - ref_lp).clamp(-20.0, 20.0))
-            return torch.mean(IS_w * success_t).item()
+            IS_w = torch.exp((new_lp - ref_lp).clamp(-_IS_LOG_CLAMP, _IS_LOG_CLAMP))
+            ghat = torch.mean(IS_w * success_t).item()
+            return ghat - self.cfg.alpha
 
-        def perf_jac(flat: np.ndarray) -> np.ndarray:
-            a_b = torch.from_numpy(flat.copy()).reshape(NDIMS, 2).double().requires_grad_(True)
+        def perf_ineq_jac(log_flat: np.ndarray) -> np.ndarray:
+            log_t = torch.from_numpy(log_flat.copy()).double().requires_grad_(True)
+            a_b = torch.exp(log_t).reshape(NDIMS, 2)
             a = a_b[:, 0].clamp(min=_MIN_BETA_PARAM)
             b = a_b[:, 1].clamp(min=_MIN_BETA_PARAM)
             new_dist = torch.distributions.Beta(a, b)
             new_lp = new_dist.log_prob(xi_unit).sum(dim=-1)
-            IS_w = torch.exp((new_lp - ref_lp).clamp(-20.0, 20.0))
-            perf = torch.mean(IS_w * success_t)
-            perf.backward()
-            assert a_b.grad is not None
-            return a_b.grad.flatten().numpy().copy()
+            IS_w = torch.exp((new_lp - ref_lp).clamp(-_IS_LOG_CLAMP, _IS_LOG_CLAMP))
+            ghat = torch.mean(IS_w * success_t)
+            ghat.backward()
+            assert log_t.grad is not None
+            return log_t.grad.numpy().copy()
 
-        # -- KL constraint: KL(new || prev) <= kl_ub  (reverse KL, matching paper Alg. 1) --
-        def kl_fn(flat: np.ndarray) -> float:
-            return _compute_kl(flat, prev_flat)
+        # -- KL constraint: kl_ub - KL(new || prev) >= 0 --
+        def kl_ineq(log_flat: np.ndarray) -> float:
+            flat = np.exp(log_flat).clip(min=_MIN_BETA_PARAM, max=_MAX_BETA_PARAM)
+            return self.cfg.kl_ub - _compute_kl(flat, prev_flat)
 
-        def kl_jac(flat: np.ndarray) -> np.ndarray:
-            a_b = torch.from_numpy(flat.copy()).reshape(NDIMS, 2).double().requires_grad_(True)
+        def kl_ineq_jac(log_flat: np.ndarray) -> np.ndarray:
+            log_t = torch.from_numpy(log_flat.copy()).double().requires_grad_(True)
+            a_b = torch.exp(log_t).reshape(NDIMS, 2)
             a = a_b[:, 0].clamp(min=_MIN_BETA_PARAM)
             b = a_b[:, 1].clamp(min=_MIN_BETA_PARAM)
             new_d = torch.distributions.Beta(a, b)
@@ -623,24 +634,34 @@ class DoraemonScheduler:
             )
             kl = torch.distributions.kl_divergence(new_d, prev_d).sum()
             kl.backward()
-            assert a_b.grad is not None
-            return a_b.grad.flatten().numpy().copy()
+            assert log_t.grad is not None
+            return -log_t.grad.numpy().copy()  # negative: d(kl_ub - KL)/d(log_flat)
 
         constraints = [
-            NonlinearConstraint(perf_fn, lb=self.cfg.alpha - 1e-4, ub=np.inf, jac=perf_jac, keep_feasible=False),
-            NonlinearConstraint(kl_fn, lb=-np.inf, ub=self.cfg.kl_ub, jac=kl_jac, keep_feasible=True),
+            {"type": "ineq", "fun": perf_ineq, "jac": perf_ineq_jac},
+            {"type": "ineq", "fun": kl_ineq, "jac": kl_ineq_jac},
         ]
-        bounds = Bounds(lb=_MIN_BETA_PARAM, ub=_MAX_BETA_PARAM)
-        x0 = self.dist.get_flat_params()
 
         try:
             result = minimize(
-                objective_fn, x0, method="trust-constr", jac=True,
-                constraints=constraints, bounds=bounds,
-                options={"gtol": 1e-4, "xtol": 1e-6},
+                objective_fn, log_x0, method="SLSQP", jac=True,
+                constraints=constraints,
+                options={"maxiter": 300, "ftol": 1e-8},
             )
-            if result.success or result.fun < objective_fn(x0)[0]:
-                self.dist.set_flat_params(result.x)
+            flat_result = np.exp(result.x).clip(min=_MIN_BETA_PARAM, max=_MAX_BETA_PARAM)
+            init_obj = objective_fn(log_x0)[0]
+            kl_val = self.cfg.kl_ub - kl_ineq(result.x)
+            if result.success or (result.fun < init_obj and kl_val <= self.cfg.kl_ub):
+                self.dist.set_flat_params(flat_result)
+                logger.info(
+                    "[DORAEMON] Entropy opt: neg_H %.4f -> %.4f, KL=%.4f, success=%s",
+                    init_obj, result.fun, kl_val, result.success,
+                )
+            else:
+                logger.warning(
+                    "[DORAEMON] Entropy opt rejected: %s (neg_H %.4f -> %.4f, KL=%.4f)",
+                    result.message, init_obj, result.fun, kl_val,
+                )
         except Exception as e:
             logger.warning("[DORAEMON] Entropy optimization failed: %s", e)
 
@@ -657,8 +678,7 @@ class DoraemonScheduler:
         """Find a feasible starting distribution by maximizing success rate within trust region.
 
         Returns (flat_params, kl_step, success_flag).
-        Reference: inverted problem from Tiboni et al. implementation.
-        IS denominator: prev_dist (not stored log_probs) for ring buffer stability.
+        Uses SLSQP in log-space (same rationale as _optimize_entropy).
         """
         if success.sum().item() < 1.0:
             logger.debug("[DORAEMON] Inverted problem skipped: no successful episodes.")
@@ -670,32 +690,36 @@ class DoraemonScheduler:
 
         xi_unit = ((xi.detach().cpu().float() - mins.float()) / ranges.float()).clamp(1e-6, 1 - 1e-6).double()
         success_t = success.detach().cpu().double()
-        # IS denominator: prev_dist log_prob (stable for ring buffer)
         prev_a_b_ref = torch.from_numpy(prev_flat.copy()).reshape(NDIMS, 2).double()
         prev_dist_ref = torch.distributions.Beta(
             prev_a_b_ref[:, 0].clamp(min=_MIN_BETA_PARAM), prev_a_b_ref[:, 1].clamp(min=_MIN_BETA_PARAM)
         )
         ref_lp = prev_dist_ref.log_prob(xi_unit).sum(dim=-1).detach()
 
-        # Objective: maximize IS success rate = minimize negative
-        def neg_success_fn(flat: np.ndarray) -> tuple[float, np.ndarray]:
-            a_b = torch.from_numpy(flat.copy()).reshape(NDIMS, 2).double().requires_grad_(True)
+        log_x0 = np.log(prev_flat.clip(min=_MIN_BETA_PARAM))
+
+        # Objective: minimize -Ghat (maximize success rate)
+        def neg_success_fn(log_flat: np.ndarray) -> tuple[float, np.ndarray]:
+            log_t = torch.from_numpy(log_flat.copy()).double().requires_grad_(True)
+            a_b = torch.exp(log_t).reshape(NDIMS, 2)
             a = a_b[:, 0].clamp(min=_MIN_BETA_PARAM)
             b = a_b[:, 1].clamp(min=_MIN_BETA_PARAM)
             new_dist = torch.distributions.Beta(a, b)
             new_lp = new_dist.log_prob(xi_unit).sum(dim=-1)
-            IS_w = torch.exp((new_lp - ref_lp).clamp(-20.0, 20.0))
+            IS_w = torch.exp((new_lp - ref_lp).clamp(-_IS_LOG_CLAMP, _IS_LOG_CLAMP))
             neg_sr = -torch.mean(IS_w * success_t)
             neg_sr.backward()
-            assert a_b.grad is not None
-            return neg_sr.item(), a_b.grad.flatten().numpy().copy()
+            assert log_t.grad is not None
+            return neg_sr.item(), log_t.grad.numpy().copy()
 
-        # KL constraint: KL(new || prev) <= kl_ub - 1e-5  (reverse KL, tighter bound)
-        def kl_fn(flat: np.ndarray) -> float:
-            return _compute_kl(flat, prev_flat)
+        # KL constraint: kl_ub - 1e-5 - KL(new || prev) >= 0
+        def kl_ineq(log_flat: np.ndarray) -> float:
+            flat = np.exp(log_flat).clip(min=_MIN_BETA_PARAM, max=_MAX_BETA_PARAM)
+            return self.cfg.kl_ub - 1e-5 - _compute_kl(flat, prev_flat)
 
-        def kl_jac(flat: np.ndarray) -> np.ndarray:
-            a_b = torch.from_numpy(flat.copy()).reshape(NDIMS, 2).double().requires_grad_(True)
+        def kl_ineq_jac(log_flat: np.ndarray) -> np.ndarray:
+            log_t = torch.from_numpy(log_flat.copy()).double().requires_grad_(True)
+            a_b = torch.exp(log_t).reshape(NDIMS, 2)
             a = a_b[:, 0].clamp(min=_MIN_BETA_PARAM)
             b = a_b[:, 1].clamp(min=_MIN_BETA_PARAM)
             new_d = torch.distributions.Beta(a, b)
@@ -705,31 +729,44 @@ class DoraemonScheduler:
             )
             kl = torch.distributions.kl_divergence(new_d, prev_d).sum()
             kl.backward()
-            assert a_b.grad is not None
-            return a_b.grad.flatten().numpy().copy()
+            assert log_t.grad is not None
+            return -log_t.grad.numpy().copy()
 
-        constraints = [
-            NonlinearConstraint(
-                kl_fn, lb=-np.inf, ub=self.cfg.kl_ub - 1e-5,
-                jac=kl_jac, keep_feasible=True,
-            ),
-        ]
-        bounds = Bounds(lb=_MIN_BETA_PARAM, ub=_MAX_BETA_PARAM)
-        x0 = self.dist.get_flat_params()
+        constraints = [{"type": "ineq", "fun": kl_ineq, "jac": kl_ineq_jac}]
 
         try:
             result = minimize(
-                neg_success_fn, x0, method="trust-constr", jac=True,
-                constraints=constraints, bounds=bounds,
-                options={"gtol": 1e-4, "xtol": 1e-6},
+                neg_success_fn, log_x0, method="SLSQP", jac=True,
+                constraints=constraints,
+                options={"maxiter": 300, "ftol": 1e-8},
             )
+            flat_result = np.exp(result.x).clip(min=_MIN_BETA_PARAM, max=_MAX_BETA_PARAM)
+            kl_val = self.cfg.kl_ub - 1e-5 - kl_ineq(result.x)
+
             if result.success:
-                return result.x, kl_fn(result.x), True
+                logger.info(
+                    "[DORAEMON] Inverted problem converged: sr=%.4f, KL=%.4f",
+                    -result.fun, kl_val,
+                )
+                return flat_result, kl_val, True
             else:
-                logger.warning("[DORAEMON] Inverted problem not successful.")
+                # Accept if objective improved and KL constraint satisfied
+                init_obj = neg_success_fn(log_x0)[0]
+                if result.fun < init_obj and kl_val <= self.cfg.kl_ub:
+                    logger.info(
+                        "[DORAEMON] Inverted: not converged but improved "
+                        "(sr %.4f -> %.4f, KL=%.4f). Accepting.",
+                        -init_obj, -result.fun, kl_val,
+                    )
+                    return flat_result, kl_val, True
+                logger.warning(
+                    "[DORAEMON] Inverted problem failed: %s "
+                    "(sr %.4f -> %.4f, KL=%.4f)",
+                    result.message, -init_obj, -result.fun, kl_val,
+                )
                 return None, 0.0, False
         except Exception as e:
-            logger.warning("[DORAEMON] Inverted problem failed: %s", e)
+            logger.warning("[DORAEMON] Inverted problem exception: %s", e)
             return None, 0.0, False
 
     # ------------------------------------------------------------------
