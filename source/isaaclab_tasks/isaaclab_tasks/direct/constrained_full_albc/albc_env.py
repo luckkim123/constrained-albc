@@ -288,7 +288,7 @@ class ALBCEnv(DirectRLEnv):
         if doraemon_cfg is not None and doraemon_cfg.enable:
             from .doraemon import NDIMS, DoraemonScheduler
 
-            self._doraemon = DoraemonScheduler(doraemon_cfg, self.device)
+            self._doraemon = DoraemonScheduler(doraemon_cfg, self.device, dr_cfg=self.cfg.randomization)
             self._doraemon_ndims = NDIMS
         else:
             self._doraemon = None
@@ -493,7 +493,15 @@ class ALBCEnv(DirectRLEnv):
         Linear: velocity command (m/s) from vel_cmd_lin_range.
         Ranges are scaled per-env by DORAEMON cmd_*_scale (default 1.0).
         With probability ``vel_cmd_zero_prob``, an env receives a zero command.
+
+        In play_mode, all commands are fixed to zero (hovering/station-keeping).
         """
+        if self.cfg.play_mode:
+            self._vel_cmd_lin[env_ids] = 0.0
+            self._ang_cmd[env_ids] = 0.0
+            self._vel_cmd_step_counter[env_ids] = 0
+            return
+
         n = len(env_ids)
         lin_max = abs(self.cfg.vel_cmd_lin_range[1])
         att_max = abs(self.cfg.att_cmd_rp_range[1])
@@ -1161,3 +1169,31 @@ class ALBCEnv(DirectRLEnv):
         self._yaw_rate_err[env_ids] = self._ang_cmd[env_ids, 2] - self._robot.data.root_ang_vel_b[env_ids, 2]
         self._ang_err[env_ids, :2] = self._att_rp_err[env_ids]
         self._ang_err[env_ids, 2] = self._yaw_rate_err[env_ids]
+
+    # ------------------------------------------------------------------
+    # Play-mode evaluation
+    # ------------------------------------------------------------------
+
+    def get_eval_snapshot(self) -> dict[str, float]:
+        """Return current evaluation metrics for play-mode diagnostics.
+
+        Provides instantaneous per-env averages of key quantities for
+        periodic printing during play.py inference.
+
+        Returns:
+            Dict with keys: attitude_error_deg, lin_vel_error, action_rate,
+            angular_velocity_rp_rms, angular_velocity_yaw_rms,
+            thruster_utilization, joint_pos_mean_abs.
+        """
+        da = self._actions - self._prev_actions
+        thr_util = self._thruster.state.abs().mean().item() if self._thruster is not None else 0.0
+
+        return {
+            "attitude_error_deg": torch.rad2deg(torch.linalg.norm(self._att_rp_err, dim=-1)).mean().item(),
+            "lin_vel_error": self._lin_vel_err.norm(dim=-1).mean().item(),
+            "action_rate": torch.linalg.norm(da, dim=-1).mean().item(),
+            "angular_velocity_rp_rms": self._robot.data.root_ang_vel_b[:, :2].pow(2).mean().sqrt().item(),
+            "angular_velocity_yaw_rms": self._robot.data.root_ang_vel_b[:, 2].pow(2).mean().sqrt().item(),
+            "thruster_utilization": thr_util,
+            "joint_pos_mean_abs": self._robot.data.joint_pos[:, self._albc_joint_ids].abs().mean().item(),
+        }

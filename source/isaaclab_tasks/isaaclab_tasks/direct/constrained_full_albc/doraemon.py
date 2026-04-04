@@ -63,34 +63,74 @@ class ParamSpec(NamedTuple):
 
 # 18 DORAEMON-managed parameters for constrained ALBC.
 # Order matches BetaDistribution dimension indices.
-# SYNC: Physics bounds must match DomainRandomizationCfg in config.py.
-#       Use DoraemonCfg.param_overrides to widen bounds for Hard DR.
-PARAM_SPECS: list[ParamSpec] = [
-    # -- Physics DR parameters (15) --
-    # name                    min     max     nominal
-    ParamSpec("payload_mass", 0.0, 1.0, 0.5),
-    ParamSpec("added_mass_scale", 0.85, 1.15, 1.0),
-    ParamSpec("linear_damping_scale", 0.5, 1.5, 1.0),
-    ParamSpec("quadratic_damping_scale", 0.5, 1.5, 1.0),
-    ParamSpec("water_density", 995.0, 1025.0, 1010.0),
-    ParamSpec("cog_offset_z", -0.02, 0.02, 0.0),
-    ParamSpec("cob_offset_z", -0.02, 0.02, 0.0),
-    ParamSpec("volume_scale", 0.9, 1.1, 1.0),
-    ParamSpec("cob_offset_x", -0.01, 0.01, 0.0),
-    ParamSpec("cob_offset_y", -0.01, 0.01, 0.0),
-    ParamSpec("cog_offset_x", -0.01, 0.01, 0.0),
-    ParamSpec("cog_offset_y", -0.01, 0.01, 0.0),
-    ParamSpec("inertia_scale", 0.75, 1.3, 1.0),
-    ParamSpec("body_mass_scale", 0.9, 1.1, 1.0),
-    ParamSpec("payload_cog_offset_z", -0.03, 0.0, -0.015),
-    # -- Command difficulty scales (3) --
-    # Multiply config command ranges per-env. DORAEMON adapts difficulty:
-    # success high -> entropy max expands toward 1.2, success low -> backup contracts toward 0.1.
+# Physics bounds are auto-synced from DomainRandomizationCfg at init time.
+
+# Mapping: DORAEMON param name -> DomainRandomizationCfg field name.
+# Fields with different names (e.g. payload_mass -> payload_mass_range) are explicit.
+_PHYSICS_PARAM_DR_FIELDS: list[tuple[str, str]] = [
+    ("payload_mass", "payload_mass_range"),
+    ("added_mass_scale", "added_mass_scale"),
+    ("linear_damping_scale", "linear_damping_scale"),
+    ("quadratic_damping_scale", "quadratic_damping_scale"),
+    ("water_density", "water_density_range"),
+    ("cog_offset_z", "cog_offset_z"),
+    ("cob_offset_z", "cob_offset_z"),
+    ("volume_scale", "volume_scale"),
+    ("cob_offset_x", "cob_offset_x"),
+    ("cob_offset_y", "cob_offset_y"),
+    ("cog_offset_x", "cog_offset_x"),
+    ("cog_offset_y", "cog_offset_y"),
+    ("inertia_scale", "inertia_scale"),
+    ("body_mass_scale", "body_mass_scale"),
+    ("payload_cog_offset_z", "payload_cog_offset_z"),
+]
+
+# Command scales: not in DomainRandomizationCfg, fixed bounds.
+_CMD_SCALE_SPECS: list[ParamSpec] = [
     ParamSpec("cmd_lin_scale", 0.1, 1.2, 0.3),
     ParamSpec("cmd_att_scale", 0.1, 1.2, 0.3),
     ParamSpec("cmd_yaw_scale", 0.1, 1.2, 0.3),
 ]
 
+
+def build_param_specs(dr_cfg) -> list[ParamSpec]:
+    """Build PARAM_SPECS from DomainRandomizationCfg, auto-syncing physics bounds.
+
+    Physics param bounds are read directly from the DR config tuple fields.
+    Command scale bounds are fixed (not in DR config).
+    """
+    specs: list[ParamSpec] = []
+    for param_name, field_name in _PHYSICS_PARAM_DR_FIELDS:
+        lo, hi = getattr(dr_cfg, field_name)
+        nominal = (lo + hi) / 2.0
+        specs.append(ParamSpec(param_name, lo, hi, nominal))
+    specs.extend(_CMD_SCALE_SPECS)
+    return specs
+
+
+# Default specs for backward compatibility and eval scripts.
+# Uses hardcoded defaults matching base DomainRandomizationCfg.
+# At runtime, DoraemonScheduler uses build_param_specs(dr_cfg) for actual bounds.
+PARAM_SPECS: list[ParamSpec] = [
+    ParamSpec(n, lo, hi, (lo + hi) / 2.0)
+    for n, _, lo, hi in [
+        ("payload_mass", "payload_mass_range", 0.0, 1.0),
+        ("added_mass_scale", "added_mass_scale", 0.85, 1.15),
+        ("linear_damping_scale", "linear_damping_scale", 0.5, 1.5),
+        ("quadratic_damping_scale", "quadratic_damping_scale", 0.5, 1.5),
+        ("water_density", "water_density_range", 995.0, 1025.0),
+        ("cog_offset_z", "cog_offset_z", -0.02, 0.02),
+        ("cob_offset_z", "cob_offset_z", -0.02, 0.02),
+        ("volume_scale", "volume_scale", 0.9, 1.1),
+        ("cob_offset_x", "cob_offset_x", -0.01, 0.01),
+        ("cob_offset_y", "cob_offset_y", -0.01, 0.01),
+        ("cog_offset_x", "cog_offset_x", -0.01, 0.01),
+        ("cog_offset_y", "cog_offset_y", -0.01, 0.01),
+        ("inertia_scale", "inertia_scale", 0.75, 1.3),
+        ("body_mass_scale", "body_mass_scale", 0.9, 1.1),
+        ("payload_cog_offset_z", "payload_cog_offset_z", -0.03, 0.0),
+    ]
+] + list(_CMD_SCALE_SPECS)
 NDIMS = len(PARAM_SPECS)
 
 _MIN_BETA_PARAM = 1.0
@@ -316,12 +356,12 @@ class DoraemonScheduler:
     Unnormalized IS with stored per-episode log probs.
     """
 
-    def __init__(self, cfg: DoraemonCfg, device: torch.device) -> None:
+    def __init__(self, cfg: DoraemonCfg, device: torch.device, dr_cfg=None) -> None:
         self.cfg = cfg
         self.device = device
 
-        # Apply per-parameter bound overrides
-        specs = list(PARAM_SPECS)
+        # Build specs from DR config (auto-sync bounds) or use defaults
+        specs = build_param_specs(dr_cfg) if dr_cfg is not None else list(PARAM_SPECS)
         if cfg.param_overrides:
             name_to_idx = {s.name: i for i, s in enumerate(specs)}
             for name, (lo, hi) in cfg.param_overrides.items():
