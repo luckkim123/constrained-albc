@@ -13,7 +13,7 @@ from .constraints import (
     cumulative_yaw_cost,
     joint1_position_cost,
     manipulability_cost,
-    thruster_saturation_cost,
+    thruster_utilization_cost,
     torque_limit_cost,
     velocity_limit_cost,
     yaw_rate_cost,

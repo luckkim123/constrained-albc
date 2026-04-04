@@ -11,13 +11,13 @@ Two types following the paper's framework:
 
 All constraints satisfy: J_Ck(pi) = E[sum gamma^t C_k] <= d_k
 
-Constraint layout (6 Probabilistic + 4 Average = 10 total):
+Constraint layout (5 Probabilistic + 5 Average = 10 total):
     [0]  attitude        (prob)  I(max(|roll|,|pitch|) > limit)
     [1]  arm_torque      (prob)  I(any |tau_j| > limit)
     [2]  arm_joint_vel   (prob)  I(any |q_dot_j| > limit)
     [3]  joint1_pos      (prob)  I(|theta1| > limit)
     [4]  cumul_yaw       (prob)  I(|yaw_accumulated| > limit)
-    [5]  thruster_sat    (prob)  I(max(|state_i|) > limit)
+    [5]  thruster_util   (avg)   max(|state_i|) over thrusters
     [6]  rp_rate         (avg)   max(0, max(|p|,|q|) - threshold)
     [7]  yaw_rate        (avg)   max(0, |w_z| - threshold)
     [8]  rp_vel_settling (avg)   (|p| + |q|) / 2
@@ -196,23 +196,22 @@ def body_linear_velocity_cost(
     return (_robot.data.root_lin_vel_b.norm(dim=-1) - soft_threshold).clamp(min=0.0)
 
 
-def thruster_saturation_cost(
+def thruster_utilization_cost(
     _robot: Articulation,
     env: ALBCEnv,
-    limit: float = 0.95,
 ) -> torch.Tensor:
-    """I(max(|state|) > limit). Thruster saturation safety bound.
+    """max(|state_i|) over all thrusters. Peak thruster utilization.
 
-    Type: Probabilistic
-    Budget: 0.05
+    Type: Average
+    Budget: 0.40
 
-    Binary indicator: fires when any thruster is near-saturated (>95% output).
-    Energy efficiency is handled by the reward (k_thr), not this constraint.
-    Analogous to arm_torque/arm_joint_vel: only penalizes limit violation.
+    Keeps peak thruster utilization below budget to preserve control authority
+    reserve and battery life. Reward (k_thr) handles mean energy; this constraint
+    limits the worst-case single-thruster output.
     """
     if env._thruster is None:
         return torch.zeros(_robot.data.root_pos_w.shape[0], device=_robot.device)
-    return (env._thruster.state.abs().max(dim=-1).values > limit).float()
+    return env._thruster.state.abs().max(dim=-1).values
 
 
 def thruster_rate_cost(
