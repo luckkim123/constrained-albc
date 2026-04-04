@@ -11,7 +11,7 @@ Two types following the paper's framework:
 
 All constraints satisfy: J_Ck(pi) = E[sum gamma^t C_k] <= d_k
 
-Constraint layout (5 Probabilistic + 6 Average = 11 total):
+Constraint layout (5 Probabilistic + 7 Average = 12 total):
     [0]  attitude        (prob)  I(max(|roll|,|pitch|) > limit)
     [1]  arm_torque      (prob)  I(any |tau_j| > limit)
     [2]  arm_joint_vel   (prob)  I(any |q_dot_j| > limit)
@@ -21,8 +21,9 @@ Constraint layout (5 Probabilistic + 6 Average = 11 total):
     [6]  yaw_rate        (avg)   max(0, |w_z| - threshold)
     [7]  body_lin_vel    (avg)   max(0, ||v_body|| - threshold)
     [8]  thruster_util   (avg)   max(|T_i|) peak utilization
-    [9]  rp_vel_settling (avg)   (|p| + |q|) / 2
-    [10] manipulability  (avg)   max(0, threshold - w)
+    [9]  thruster_rate   (avg)   max(0, max(|dT_i|) - threshold)
+    [10] rp_vel_settling (avg)   (|p| + |q|) / 2
+    [11] manipulability  (avg)   max(0, threshold - w)
 """
 
 from __future__ import annotations
@@ -210,6 +211,25 @@ def thruster_utilization_cost(
     if env._thruster is None:
         return torch.zeros(_robot.data.root_pos_w.shape[0], device=_robot.device)
     return env._thruster.state.abs().max(dim=-1).values
+
+
+def thruster_rate_cost(
+    _robot: Articulation,
+    env: ALBCEnv,
+    soft_threshold: float = 0.5,
+) -> torch.Tensor:
+    """max(0, max(|dT_i|) - threshold). Penalizes rapid thruster command changes.
+
+    Type: Average
+    Budget: 0.10
+
+    Protects thruster motors from rapid command changes that cause
+    mechanical wear and electrical stress. Threshold=0.5 means a 50% range
+    change per control step (50Hz) is tolerated; anything faster is penalized.
+    Complements action_smoothness reward (which covers all 8D equally).
+    """
+    da_thr = env._actions[:, 2:] - env._prev_actions[:, 2:]
+    return (da_thr.abs().max(dim=-1).values - soft_threshold).clamp(min=0.0)
 
 
 def rp_vel_settling_cost(

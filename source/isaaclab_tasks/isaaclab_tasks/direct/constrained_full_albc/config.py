@@ -42,6 +42,7 @@ from .mdp.constraints import (
     manipulability_cost,
     rp_rate_cost,
     rp_vel_settling_cost,
+    thruster_rate_cost,
     thruster_utilization_cost,
     torque_limit_cost,
     velocity_limit_cost,
@@ -49,7 +50,7 @@ from .mdp.constraints import (
 )
 from .mdp.rewards import ALBCRewardCfg
 
-# 11 constraint terms: 5 Probabilistic + 6 Average.
+# 12 constraint terms: 5 Probabilistic + 7 Average.
 # Layout follows paper's framework: hard physical limits (prob) + operational style (avg).
 _FULL_DOF_CONSTRAINT_TERMS: list[ConstraintTermCfg] = [
     # --- Probabilistic (5): binary indicator, budget = violation probability ---
@@ -63,6 +64,7 @@ _FULL_DOF_CONSTRAINT_TERMS: list[ConstraintTermCfg] = [
     ConstraintTermCfg(func=yaw_rate_cost, params={"soft_threshold": 1.0}, budget=0.10, name="yaw_rate"),
     ConstraintTermCfg(func=body_linear_velocity_cost, params={"soft_threshold": 1.0}, budget=0.10, name="body_lin_vel"),
     ConstraintTermCfg(func=thruster_utilization_cost, budget=0.40, name="thruster_util"),
+    ConstraintTermCfg(func=thruster_rate_cost, params={"soft_threshold": 0.5}, budget=0.10, name="thruster_rate"),
     ConstraintTermCfg(func=rp_vel_settling_cost, budget=0.20, name="rp_vel_settling"),
     ConstraintTermCfg(func=manipulability_cost, params={"w_threshold": 0.3}, budget=0.05, name="manipulability"),
 ]
