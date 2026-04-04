@@ -11,19 +11,18 @@ Two types following the paper's framework:
 
 All constraints satisfy: J_Ck(pi) = E[sum gamma^t C_k] <= d_k
 
-Constraint layout (5 Probabilistic + 7 Average = 12 total):
+Constraint layout (6 Probabilistic + 5 Average = 11 total):
     [0]  attitude        (prob)  I(max(|roll|,|pitch|) > limit)
     [1]  arm_torque      (prob)  I(any |tau_j| > limit)
     [2]  arm_joint_vel   (prob)  I(any |q_dot_j| > limit)
     [3]  joint1_pos      (prob)  I(|theta1| > limit)
     [4]  cumul_yaw       (prob)  I(|yaw_accumulated| > limit)
-    [5]  rp_rate         (avg)   max(0, max(|p|,|q|) - threshold)
-    [6]  yaw_rate        (avg)   max(0, |w_z| - threshold)
-    [7]  body_lin_vel    (avg)   max(0, ||v_body|| - threshold)
-    [8]  thruster_util   (avg)   max(|T_i|) peak utilization
-    [9]  thruster_rate   (avg)   max(0, max(|dT_i|) - threshold)
-    [10] rp_vel_settling (avg)   (|p| + |q|) / 2
-    [11] manipulability  (avg)   max(0, threshold - w)
+    [5]  thruster_sat    (prob)  I(max(|state_i|) > limit)
+    [6]  rp_rate         (avg)   max(0, max(|p|,|q|) - threshold)
+    [7]  yaw_rate        (avg)   max(0, |w_z| - threshold)
+    [8]  thruster_rate   (avg)   max(0, max(|dT_i|) - threshold)
+    [9]  rp_vel_settling (avg)   (|p| + |q|) / 2
+    [10] manipulability  (avg)   max(0, threshold - w)
 """
 
 from __future__ import annotations
@@ -198,19 +197,23 @@ def body_linear_velocity_cost(
     return (_robot.data.root_lin_vel_b.norm(dim=-1) - soft_threshold).clamp(min=0.0)
 
 
-def thruster_utilization_cost(
+def thruster_saturation_cost(
     _robot: Articulation,
     env: ALBCEnv,
+    limit: float = 0.95,
 ) -> torch.Tensor:
-    """Peak thruster utilization ratio across all 6 thrusters.
+    """I(max(|state|) > limit). Thruster saturation safety bound.
 
-    |state| in [0, 1] where 1.0 = full command. Higher utilization means
-    less control authority reserve and more power consumption.
-    No ReLU threshold: always preferable to use less thrust (battery life).
+    Type: Probabilistic
+    Budget: 0.05
+
+    Binary indicator: fires when any thruster is near-saturated (>95% output).
+    Energy efficiency is handled by the reward (k_thr), not this constraint.
+    Analogous to arm_torque/arm_joint_vel: only penalizes limit violation.
     """
     if env._thruster is None:
         return torch.zeros(_robot.data.root_pos_w.shape[0], device=_robot.device)
-    return env._thruster.state.abs().max(dim=-1).values
+    return (env._thruster.state.abs().max(dim=-1).values > limit).float()
 
 
 def thruster_rate_cost(

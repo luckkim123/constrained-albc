@@ -953,7 +953,7 @@ class ALBCEnv(DirectRLEnv):
             2. Attitude angle exceeds max_attitude_angle (upside-down, buoyancy reversal)
 
         Velocity violations (angular > pi, linear > 2 m/s) are NOT terminated here.
-        They are handled by soft constraints (rp_rate_cost, yaw_rate_cost, body_linear_velocity_cost) which
+        They are handled by soft constraints (rp_rate_cost, yaw_rate_cost) which
         provide per-step gradient. PhysX rigid body max_angular_velocity (4*pi) provides
         the hard physical clamp. Removing velocity termination eliminates the death
         spiral where early death was optimal under all-negative rewards.
