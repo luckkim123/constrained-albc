@@ -332,6 +332,9 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     vel_cmd_zero_prob: float = 0.1
     """Probability of zeroing velocity command per env on each resample."""
 
+    play_mode: bool = False
+    """Play/eval mode: disable command resampling, fix all commands to zero (hovering)."""
+
     reward: ALBCRewardCfg = ALBCRewardCfg()
 
     # ==========================================================================
@@ -363,7 +366,7 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # Domain Randomization
     # ==========================================================================
     randomization: DomainRandomizationCfg = DomainRandomizationCfg(enable=True)
-    doraemon: DoraemonCfg = DoraemonCfg(enable=True, kl_ub=0.5, performance_lb=120.0, step_interval=250)
+    doraemon: DoraemonCfg = DoraemonCfg(enable=True, kl_ub=1.0, performance_lb=120.0, step_interval=250)
 
     # ==========================================================================
     # Payload
