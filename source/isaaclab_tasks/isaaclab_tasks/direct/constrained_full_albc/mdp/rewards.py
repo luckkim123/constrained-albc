@@ -3,15 +3,14 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Tracking reward: r = r_lin + r_att + r_att_q + r_yaw + r_tau + r_thr + r_s.
+"""Tracking reward: r = r_att + r_lin + r_yaw + r_tau + r_thr + r_s.
 
-r_lin:   -k_lin * ||lin_vel_err||^2               (linear velocity, quadratic penalty)
-r_att:    k_att * exp(-||att_err||^2/(2*s^2))      (roll/pitch attitude, exp kernel)
-r_att_q: -k_att_q * ||att_err||^2                  (roll/pitch attitude, quadratic SS pressure)
-r_yaw:   -k_yaw * yaw_rate_err^2                   (yaw rate, quadratic penalty)
-r_tau:   -k_tau * mean(tau^2)                       (joint energy efficiency)
-r_thr:   -k_thr * mean(thruster_cmd^2)              (thruster energy)
-r_s:     -k_s   * (mean(da^2) + mean(d2a^2))       (action smoothness)
+r_att:   k_att * (exp(-e^2/2s^2) - q*e^2)         (roll/pitch: exp kernel + quadratic SS pressure)
+r_lin:  -k_lin * ||lin_vel_err||^2                  (linear velocity, quadratic penalty)
+r_yaw:  -k_yaw * yaw_rate_err^2                    (yaw rate, quadratic penalty)
+r_tau:  -k_tau * mean(tau^2)                        (joint energy efficiency)
+r_thr:  -k_thr * mean(thruster_cmd^2)              (thruster energy)
+r_s:    -k_s   * (mean(da^2) + mean(d2a^2))        (action smoothness)
 """
 
 from __future__ import annotations
@@ -33,14 +32,14 @@ if TYPE_CHECKING:
 
 @configclass
 class ALBCRewardCfg:
-    """Tracking reward weights (dt-scaled). att_rp uses exp kernel, others quadratic."""
+    """Tracking reward weights (dt-scaled). att_rp uses exp kernel + quadratic, others quadratic."""
 
     k_lin: float = -4.0  # linear velocity tracking (quadratic penalty)
     k_att_rp: float = 6.0  # roll/pitch attitude (exp kernel, positive)
     att_rp_sigma: float = 0.4  # exp kernel sigma (radians, ~23 deg)
+    att_rp_quad_ratio: float = 0.833  # quadratic/exp weight ratio (0.833 = 5.0/6.0)
     k_yaw: float = -2.0  # yaw rate tracking (quadratic penalty)
     k_tau: float = -0.01  # joint torque penalty
-    k_att_rp_quad: float = -5.0  # quadratic attitude penalty (SS error pressure)
     k_thr: float = -0.35  # thruster energy penalty (reduced from -0.5 for lin_vel_z tracking)
     k_s: float = -0.1  # action smoothness penalty
     termination_penalty: float = 0.0
@@ -55,24 +54,17 @@ def lin_vel_tracking(env: ALBCEnv) -> torch.Tensor:
 
 
 def att_rp_tracking(env: ALBCEnv) -> torch.Tensor:
-    """r_att = exp(-||err||^2 / (2*sigma^2)). Roll/pitch attitude tracking.
+    """r_att = exp(-e^2/2s^2) - q*e^2. Combined exp kernel + quadratic penalty.
 
-    Returns positive reward in [0, 1]. Perfect tracking = 1.0.
+    Exp kernel: positive reward in [0, 1], strong gradient for large errors.
+    Quadratic: persistent gradient at small errors where exp kernel saturates.
+    At err=3 deg, exp kernel alone gives 0.9915 (99.15%) -- quadratic adds ~27%
+    more gradient pressure at all error magnitudes for SS error convergence.
     """
-    sigma = env.cfg.reward.att_rp_sigma
+    cfg = env.cfg.reward
     err_sq = env._att_rp_err.pow(2).sum(dim=-1)
-    return torch.exp(-err_sq / (2.0 * sigma * sigma))
-
-
-def att_rp_quadratic(env: ALBCEnv) -> torch.Tensor:
-    """r_att_q = ||att_err||^2. Quadratic attitude penalty for steady-state error.
-
-    Complements exp kernel (att_rp_tracking) which has weak gradient near zero error.
-    At err=3 deg, exp kernel gives reward=0.9915 (99.15%) -- almost no incentive to
-    improve further. This quadratic term provides persistent gradient pressure at all
-    error magnitudes, improving SS error convergence.
-    """
-    return env._att_rp_err.pow(2).sum(dim=-1)
+    exp_term = torch.exp(-err_sq / (2.0 * cfg.att_rp_sigma * cfg.att_rp_sigma))
+    return exp_term - cfg.att_rp_quad_ratio * err_sq
 
 
 def yaw_vel_tracking(env: ALBCEnv) -> torch.Tensor:
@@ -101,9 +93,9 @@ def action_smoothness(env: ALBCEnv) -> torch.Tensor:
 
 
 class RewardManager:
-    """Computes 7-term tracking reward with dt-scaling and episode tracking."""
+    """Computes 6-term tracking reward with dt-scaling and episode tracking."""
 
-    _NAMES = ["lin_vel", "att_rp", "att_rp_quad", "yaw_vel", "torque", "thruster", "smoothness"]
+    _NAMES = ["lin_vel", "att_rp", "yaw_vel", "torque", "thruster", "smoothness"]
 
     def __init__(self, cfg: ALBCRewardCfg, num_envs: int, device: str) -> None:
         self._cfg = cfg
@@ -118,7 +110,6 @@ class RewardManager:
         terms = [
             ("lin_vel", cfg.k_lin, lin_vel_tracking(env)),
             ("att_rp", cfg.k_att_rp, att_rp_tracking(env)),
-            ("att_rp_quad", cfg.k_att_rp_quad, att_rp_quadratic(env)),
             ("yaw_vel", cfg.k_yaw, yaw_vel_tracking(env)),
             ("torque", cfg.k_tau, joint_torque(robot, env)),
             ("thruster", cfg.k_thr, thruster_energy(env)),
