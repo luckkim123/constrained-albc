@@ -43,7 +43,7 @@ class DoraemonCfg:
     step_interval: int = 250  # RL iterations between DORAEMON updates (ref: train_until_converged)
     buffer_size: int = 2000  # Maximum episode buffer capacity
     min_episodes: int = 200  # Minimum episodes before first update
-    min_ess_ratio: float = 0.05  # Minimum ESS/buffer_size to accept update
+    min_ess_ratio: float = 0.01  # Minimum ESS/buffer_size to accept update (relaxed for kl_ub=2.0)
     hard_performance_constraint: bool = True  # Use inverted problem when infeasible
     param_overrides: dict[str, tuple[float, float]] = {}  # Per-param bound overrides {name: (lo, hi)}
 
