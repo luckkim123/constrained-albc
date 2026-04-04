@@ -41,7 +41,6 @@ from .mdp.constraints import (
     manipulability_cost,
     rp_rate_cost,
     rp_vel_settling_cost,
-    thruster_rate_cost,
     thruster_saturation_cost,
     torque_limit_cost,
     velocity_limit_cost,
@@ -49,8 +48,10 @@ from .mdp.constraints import (
 )
 from .mdp.rewards import ALBCRewardCfg
 
-# 11 constraint terms: 6 Probabilistic + 5 Average.
+# 10 constraint terms: 6 Probabilistic + 4 Average.
 # Layout follows paper's framework: hard physical limits (prob) + operational style (avg).
+# thruster_rate removed: structurally incompatible with entropy_coef>0 (noise alone violates 5x).
+# Thruster smoothness handled by action_smoothness reward (k_s) + first-order dynamics (tau_up=0.1s).
 _FULL_DOF_CONSTRAINT_TERMS: list[ConstraintTermCfg] = [
     # --- Probabilistic (6): binary indicator, budget = violation probability ---
     ConstraintTermCfg(func=attitude_limit_cost, params={"limit": 1.396}, budget=0.01, name="attitude"),
@@ -59,10 +60,9 @@ _FULL_DOF_CONSTRAINT_TERMS: list[ConstraintTermCfg] = [
     ConstraintTermCfg(func=joint1_position_cost, params={"limit_rad": 4 * math.pi}, budget=0.01, name="joint1_pos"),
     ConstraintTermCfg(func=cumulative_yaw_cost, params={"limit_rad": 8 * math.pi}, budget=0.01, name="cumul_yaw"),
     ConstraintTermCfg(func=thruster_saturation_cost, params={"limit": 0.95}, budget=0.05, name="thruster_sat"),
-    # --- Average (5): continuous cost, soft threshold for attitude/velocity tracking ---
+    # --- Average (4): continuous cost, soft threshold for attitude/velocity tracking ---
     ConstraintTermCfg(func=rp_rate_cost, params={"soft_threshold": 1.0}, budget=0.10, name="rp_rate"),
     ConstraintTermCfg(func=yaw_rate_cost, params={"soft_threshold": 1.0}, budget=0.10, name="yaw_rate"),
-    ConstraintTermCfg(func=thruster_rate_cost, params={"soft_threshold": 0.5}, budget=0.10, name="thruster_rate"),
     ConstraintTermCfg(func=rp_vel_settling_cost, budget=0.20, name="rp_vel_settling"),
     ConstraintTermCfg(func=manipulability_cost, params={"w_threshold": 0.3}, budget=0.05, name="manipulability"),
 ]
@@ -365,8 +365,8 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # ==========================================================================
     # Domain Randomization
     # ==========================================================================
-    randomization: DomainRandomizationCfg = DomainRandomizationCfg(enable=True)
-    doraemon: DoraemonCfg = DoraemonCfg(enable=True, kl_ub=1.0, performance_lb=120.0, step_interval=250)
+    randomization: HardDomainRandomizationCfg = HardDomainRandomizationCfg()
+    doraemon: DoraemonCfg = DoraemonCfg(enable=True, kl_ub=1.0, performance_lb=100.0, step_interval=250)
 
     # ==========================================================================
     # Payload

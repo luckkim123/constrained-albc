@@ -11,7 +11,7 @@ Two types following the paper's framework:
 
 All constraints satisfy: J_Ck(pi) = E[sum gamma^t C_k] <= d_k
 
-Constraint layout (6 Probabilistic + 5 Average = 11 total):
+Constraint layout (6 Probabilistic + 4 Average = 10 total):
     [0]  attitude        (prob)  I(max(|roll|,|pitch|) > limit)
     [1]  arm_torque      (prob)  I(any |tau_j| > limit)
     [2]  arm_joint_vel   (prob)  I(any |q_dot_j| > limit)
@@ -20,9 +20,8 @@ Constraint layout (6 Probabilistic + 5 Average = 11 total):
     [5]  thruster_sat    (prob)  I(max(|state_i|) > limit)
     [6]  rp_rate         (avg)   max(0, max(|p|,|q|) - threshold)
     [7]  yaw_rate        (avg)   max(0, |w_z| - threshold)
-    [8]  thruster_rate   (avg)   max(0, max(|dT_i|) - threshold)
-    [9]  rp_vel_settling (avg)   (|p| + |q|) / 2
-    [10] manipulability  (avg)   max(0, threshold - w)
+    [8]  rp_vel_settling (avg)   (|p| + |q|) / 2
+    [9]  manipulability  (avg)   max(0, threshold - w)
 """
 
 from __future__ import annotations
