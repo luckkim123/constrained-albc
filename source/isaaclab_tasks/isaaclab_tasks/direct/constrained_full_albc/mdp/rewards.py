@@ -42,11 +42,11 @@ class ALBCRewardCfg:
     k_att_rp: float = 6.0  # roll/pitch attitude (exp + quad)
     att_rp_sigma: float = 0.15  # exp kernel sigma (radians, ~8.6 deg; target 5 deg)
     att_rp_quad_ratio: float = 0.833  # quadratic/exp weight ratio
-    k_lin: float = 4.0  # linear velocity (exp + quad)
+    k_lin: float = 2.7  # linear velocity (exp + quad, reduced: reward 3.0->2.0 target)
     lin_vel_sigma: float = 0.15  # exp kernel sigma (m/s; target 0.05 m/s/axis)
     lin_vel_quad_ratio: float = 1.0  # quadratic/exp weight ratio
-    k_yaw: float = 2.0  # yaw rate (exp + quad)
-    yaw_vel_sigma: float = 0.20  # exp kernel sigma (rad/s; target 0.1 rad/s)
+    k_yaw: float = 3.5  # yaw rate (exp + quad, increased: reward 1.15->2.0 target)
+    yaw_vel_sigma: float = 0.17  # exp kernel sigma (rad/s; target 0.1, tightened from 0.20)
     yaw_vel_quad_ratio: float = 1.0  # quadratic/exp weight ratio
     k_tau: float = -0.01  # joint torque penalty
     k_thr: float = -0.35  # thruster energy penalty
