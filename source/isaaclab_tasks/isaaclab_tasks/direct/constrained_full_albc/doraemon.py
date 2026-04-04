@@ -98,7 +98,12 @@ _MAX_BETA_PARAM = 500.0
 
 
 def _compute_kl(flat_new: np.ndarray, flat_prev: np.ndarray) -> float:
-    """Compute KL(new || prev) for independent Beta distributions."""
+    """Compute KL(new || prev) for independent Beta distributions.
+
+    Uses reverse KL matching Algorithm 1: KL(phi || phi_i) < epsilon.
+    Reverse KL penalizes expansion more heavily, providing conservative
+    trust region suitable for slow-adapting TRPO policy.
+    """
     a_b_new = torch.from_numpy(flat_new.copy()).reshape(-1, 2).double()
     a_b_prev = torch.from_numpy(flat_prev.copy()).reshape(-1, 2).double()
     new = torch.distributions.Beta(
@@ -429,7 +434,8 @@ class DoraemonScheduler:
 
                 if new_sr >= self.cfg.alpha:
                     # Feasible point found -> run main optimization from here
-                    self._optimize_entropy(self.dist.clone(), xi, success)
+                    # Use original prev_dist as IS/KL reference (matches reference impl)
+                    self._optimize_entropy(prev_dist, xi, success)
                     metrics["mode"] = 1.0  # inverted + optimize
                 else:
                     # Max-success point still infeasible -> keep it, skip main opt
@@ -562,7 +568,7 @@ class DoraemonScheduler:
             assert a_b.grad is not None
             return a_b.grad.flatten().numpy().copy()
 
-        # -- KL constraint: KL(new || prev) <= kl_ub --
+        # -- KL constraint: KL(new || prev) <= kl_ub  (reverse KL, matching paper Alg. 1) --
         def kl_fn(flat: np.ndarray) -> float:
             return _compute_kl(flat, prev_flat)
 
@@ -582,7 +588,7 @@ class DoraemonScheduler:
 
         constraints = [
             NonlinearConstraint(perf_fn, lb=self.cfg.alpha - 1e-4, ub=np.inf, jac=perf_jac, keep_feasible=False),
-            NonlinearConstraint(kl_fn, lb=0.0, ub=self.cfg.kl_ub, jac=kl_jac, keep_feasible=False),
+            NonlinearConstraint(kl_fn, lb=-np.inf, ub=self.cfg.kl_ub, jac=kl_jac, keep_feasible=True),
         ]
         bounds = Bounds(lb=_MIN_BETA_PARAM, ub=_MAX_BETA_PARAM)
         x0 = self.dist.get_flat_params()
@@ -644,7 +650,7 @@ class DoraemonScheduler:
             assert a_b.grad is not None
             return neg_sr.item(), a_b.grad.flatten().numpy().copy()
 
-        # KL constraint with keep_feasible=True (must stay in trust region)
+        # KL constraint: KL(new || prev) <= kl_ub - 1e-5  (reverse KL, tighter bound)
         def kl_fn(flat: np.ndarray) -> float:
             return _compute_kl(flat, prev_flat)
 
@@ -664,8 +670,8 @@ class DoraemonScheduler:
 
         constraints = [
             NonlinearConstraint(
-                kl_fn, lb=0.0, ub=self.cfg.kl_ub,
-                jac=kl_jac, keep_feasible=False,
+                kl_fn, lb=-np.inf, ub=self.cfg.kl_ub - 1e-5,
+                jac=kl_jac, keep_feasible=True,
             ),
         ]
         bounds = Bounds(lb=_MIN_BETA_PARAM, ub=_MAX_BETA_PARAM)

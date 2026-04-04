@@ -363,7 +363,7 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # Domain Randomization
     # ==========================================================================
     randomization: DomainRandomizationCfg = DomainRandomizationCfg(enable=True)
-    doraemon: DoraemonCfg = DoraemonCfg(enable=True, kl_ub=0.5, performance_lb=80.0, step_interval=250)
+    doraemon: DoraemonCfg = DoraemonCfg(enable=True, kl_ub=0.5, performance_lb=120.0, step_interval=250)
 
     # ==========================================================================
     # Payload
