@@ -5,12 +5,17 @@
 
 """Tracking reward: r = r_att + r_lin + r_yaw + r_tau + r_thr + r_s.
 
-r_att:   k_att * (exp(-e^2/2s^2) - q*e^2)         (roll/pitch: exp kernel + quadratic SS pressure)
-r_lin:  -k_lin * ||lin_vel_err||^2                  (linear velocity, quadratic penalty)
-r_yaw:  -k_yaw * yaw_rate_err^2                    (yaw rate, quadratic penalty)
-r_tau:  -k_tau * mean(tau^2)                        (joint energy efficiency)
-r_thr:  -k_thr * mean(thruster_cmd^2)              (thruster energy)
-r_s:    -k_s   * (mean(da^2) + mean(d2a^2))        (action smoothness)
+All tracking terms use exp kernel + quadratic penalty:
+    r = k * (exp(-e^2/2s^2) - q*e^2)
+    exp kernel: positive reward in [0,1], gradient peaks at err=sigma
+    quadratic: persistent gradient at small errors where exp saturates
+
+r_att:  k_att * (exp(-e^2/2s^2) - q*e^2)   (roll/pitch attitude, s=0.15 rad)
+r_lin:  k_lin * (exp(-e^2/2s^2) - q*e^2)   (linear velocity, s=0.15 m/s)
+r_yaw:  k_yaw * (exp(-e^2/2s^2) - q*e^2)   (yaw rate, s=0.20 rad/s)
+r_tau:  -k_tau * mean(tau^2)                 (joint energy efficiency)
+r_thr:  -k_thr * mean(thruster_cmd^2)       (thruster energy)
+r_s:    -k_s   * (mean(da^2) + mean(d2a^2)) (action smoothness)
 """
 
 from __future__ import annotations
@@ -32,15 +37,19 @@ if TYPE_CHECKING:
 
 @configclass
 class ALBCRewardCfg:
-    """Tracking reward weights (dt-scaled). att_rp uses exp kernel + quadratic, others quadratic."""
+    """Tracking reward weights (dt-scaled). All tracking terms use exp + quadratic."""
 
-    k_lin: float = -4.0  # linear velocity tracking (quadratic penalty)
-    k_att_rp: float = 6.0  # roll/pitch attitude (exp kernel, positive)
-    att_rp_sigma: float = 0.4  # exp kernel sigma (radians, ~23 deg)
-    att_rp_quad_ratio: float = 0.833  # quadratic/exp weight ratio (0.833 = 5.0/6.0)
-    k_yaw: float = -2.0  # yaw rate tracking (quadratic penalty)
+    k_att_rp: float = 6.0  # roll/pitch attitude (exp + quad)
+    att_rp_sigma: float = 0.15  # exp kernel sigma (radians, ~8.6 deg; target 5 deg)
+    att_rp_quad_ratio: float = 0.833  # quadratic/exp weight ratio
+    k_lin: float = 4.0  # linear velocity (exp + quad)
+    lin_vel_sigma: float = 0.15  # exp kernel sigma (m/s; target 0.05 m/s/axis)
+    lin_vel_quad_ratio: float = 1.0  # quadratic/exp weight ratio
+    k_yaw: float = 2.0  # yaw rate (exp + quad)
+    yaw_vel_sigma: float = 0.20  # exp kernel sigma (rad/s; target 0.1 rad/s)
+    yaw_vel_quad_ratio: float = 1.0  # quadratic/exp weight ratio
     k_tau: float = -0.01  # joint torque penalty
-    k_thr: float = -0.35  # thruster energy penalty (reduced from -0.5 for lin_vel_z tracking)
+    k_thr: float = -0.35  # thruster energy penalty
     k_s: float = -0.1  # action smoothness penalty
     termination_penalty: float = 0.0
 
@@ -49,8 +58,11 @@ class ALBCRewardCfg:
 
 
 def lin_vel_tracking(env: ALBCEnv) -> torch.Tensor:
-    """r_lin = ||lin_vel_err||^2. Linear velocity command tracking."""
-    return env._lin_vel_err.pow(2).sum(dim=-1)
+    """r_lin = exp(-||e||^2/2s^2) - q*||e||^2. Linear velocity tracking (exp + quad)."""
+    cfg = env.cfg.reward
+    err_sq = env._lin_vel_err.pow(2).sum(dim=-1)
+    exp_term = torch.exp(-err_sq / (2.0 * cfg.lin_vel_sigma ** 2))
+    return exp_term - cfg.lin_vel_quad_ratio * err_sq
 
 
 def att_rp_tracking(env: ALBCEnv) -> torch.Tensor:
@@ -68,8 +80,11 @@ def att_rp_tracking(env: ALBCEnv) -> torch.Tensor:
 
 
 def yaw_vel_tracking(env: ALBCEnv) -> torch.Tensor:
-    """r_yaw = yaw_rate_err^2. Quadratic yaw rate tracking penalty."""
-    return env._yaw_rate_err.pow(2)
+    """r_yaw = exp(-e^2/2s^2) - q*e^2. Yaw rate tracking (exp + quad)."""
+    cfg = env.cfg.reward
+    err_sq = env._yaw_rate_err.pow(2)
+    exp_term = torch.exp(-err_sq / (2.0 * cfg.yaw_vel_sigma ** 2))
+    return exp_term - cfg.yaw_vel_quad_ratio * err_sq
 
 
 def joint_torque(robot: Articulation, env: ALBCEnv) -> torch.Tensor:
