@@ -253,23 +253,24 @@ def apply_dr_config(env_cfg, scale: float) -> None:
 ATT_AMP_DEG = 15.0  # Attitude step amplitude (degrees)
 LIN_VEL_AMP = 0.25  # Linear velocity step amplitude (m/s)
 YAW_RATE_AMP = 0.25  # Yaw rate step amplitude (rad/s)
+WARMUP_SEGMENTS = 1  # Number of neutral warmup segments (excluded from metrics/plots)
 
 
 def build_step_trajectory(
     segment_duration: float,
     step_dt: float,
-) -> tuple[np.ndarray, dict[str, np.ndarray], list[str]]:
-    """Build 6-DOF step-change target trajectory.
+) -> tuple[np.ndarray, dict[str, np.ndarray], list[str], int]:
+    """Build 6-DOF step-change target trajectory with warmup.
 
-    Tests each command channel with step changes:
-    - Roll/Pitch attitude (deg): +-ATT_AMP_DEG
-    - Linear velocity x/y/z (m/s): +-LIN_VEL_AMP
-    - Yaw rate (rad/s): +-YAW_RATE_AMP
+    Structure: [warmup] + attitude block + lin_vel block + yaw block + [tail neutral]
+    Warmup and tail neutral segments are included in the trajectory but excluded
+    from metrics and plots by the caller.
 
     Returns:
         time_s: 1D time array (seconds).
         targets: dict of 1D target arrays keyed by channel name.
         seg_names: list of segment labels.
+        warmup_steps: number of warmup steps to skip in metrics/plots.
     """
     a = ATT_AMP_DEG
     v = LIN_VEL_AMP
@@ -277,25 +278,31 @@ def build_step_trajectory(
 
     # (roll_deg, pitch_deg, vx, vy, vz, yaw_rate, name)
     waypoints: list[tuple[float, float, float, float, float, float, str]] = [
-        (0, 0, 0, 0, 0, 0, "neutral"),
+        # Warmup (1 seg, excluded from analysis)
+        (0, 0, 0, 0, 0, 0, "warmup"),
+        # Attitude block (4 segs, 20s)
         (a, 0, 0, 0, 0, 0, f"roll +{a:.0f}"),
         (0, a, 0, 0, 0, 0, f"pitch +{a:.0f}"),
         (-a, -a, 0, 0, 0, 0, f"({-a:.0f}, {-a:.0f})"),
         (a, -a, 0, 0, 0, 0, f"({a:.0f}, {-a:.0f})"),
+        # Linear velocity block (6 segs, 30s)
         (0, 0, v, 0, 0, 0, f"vx +{v}"),
         (0, 0, -v, 0, 0, 0, f"vx {-v}"),
         (0, 0, 0, v, 0, 0, f"vy +{v}"),
         (0, 0, 0, -v, 0, 0, f"vy {-v}"),
         (0, 0, 0, 0, v, 0, f"vz +{v}"),
         (0, 0, 0, 0, -v, 0, f"vz {-v}"),
+        # Yaw rate block (2 segs, 10s)
         (0, 0, 0, 0, 0, w, f"yaw +{w}"),
         (0, 0, 0, 0, 0, -w, f"yaw {-w}"),
-        (0, 0, 0, 0, 0, 0, "return neutral"),
+        # Tail neutral (1 seg, excluded from analysis)
+        (0, 0, 0, 0, 0, 0, "tail neutral"),
     ]
 
     steps_per_seg = int(segment_duration / step_dt)
     n_segs = len(waypoints)
     total_steps = steps_per_seg * n_segs
+    warmup_steps = WARMUP_SEGMENTS * steps_per_seg
 
     time_s = np.arange(total_steps) * step_dt
     keys = ["roll_deg", "pitch_deg", "vx", "vy", "vz", "yaw_rate"]
@@ -309,7 +316,7 @@ def build_step_trajectory(
             targets[k][s:e] = wp[j]
         seg_names.append(wp[6])
 
-    return time_s, targets, seg_names
+    return time_s, targets, seg_names, warmup_steps
 
 
 # ============================================================================
@@ -846,6 +853,7 @@ def run_evaluation(
         "steps_per_segment": steps_per_seg,
         "segment_duration": segment_duration,
         "segment_names": segment_names,
+        "warmup_steps": WARMUP_SEGMENTS * steps_per_seg,
     }
 
 
@@ -974,13 +982,14 @@ def main(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         print("[INFO] No checkpoint mode (zero-action policy).")
 
     # ---- Build trajectory (same for all DR levels) ----
-    time_s, targets, segment_names = build_step_trajectory(
+    time_s, targets, segment_names, warmup_steps = build_step_trajectory(
         segment_duration=args_cli.segment_duration,
         step_dt=step_dt,
     )
     print(
         f"[INFO] Trajectory: {len(segment_names)} segs x {args_cli.segment_duration}s"
         f" = {len(time_s)} steps ({time_s[-1]:.0f}s)"
+        f", warmup={WARMUP_SEGMENTS} segs ({warmup_steps} steps)"
     )
     print(f"[INFO] Targets: att +-{ATT_AMP_DEG}deg, lin +-{LIN_VEL_AMP}m/s, yaw +-{YAW_RATE_AMP}rad/s")
 

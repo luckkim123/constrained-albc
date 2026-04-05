@@ -40,13 +40,14 @@ class ALBCRewardCfg:
     """Tracking reward weights (dt-scaled). All tracking terms use exp + quadratic."""
 
     k_att_rp: float = 6.0  # roll/pitch attitude (exp + quad)
-    att_rp_sigma: float = 0.15  # exp kernel sigma (radians, ~8.6 deg; target 5 deg)
+    att_rp_sigma: float = 0.10  # exp kernel sigma (radians, ~5.7 deg; tightened from 0.15 for SS error pressure)
     att_rp_quad_ratio: float = 0.833  # quadratic/exp weight ratio
-    k_lin: float = 2.7  # linear velocity (exp + quad, reduced: reward 3.0->2.0 target)
-    lin_vel_sigma: float = 0.15  # exp kernel sigma (m/s; target 0.05 m/s/axis)
+    att_roll_weight: float = 1.5  # roll weight in err_sq (roll has weaker TAM actuation: 0.007m vs pitch 0.145m)
+    k_lin: float = 4.0  # linear velocity (exp + quad, raised from 2.7 for stronger lin_vel gradient)
+    lin_vel_sigma: float = 0.10  # exp kernel sigma (m/s; tightened from 0.15 for SS error pressure)
     lin_vel_quad_ratio: float = 1.0  # quadratic/exp weight ratio
-    k_yaw: float = 3.5  # yaw rate (exp + quad, increased: reward 1.15->2.0 target)
-    yaw_vel_sigma: float = 0.17  # exp kernel sigma (rad/s; target 0.1, tightened from 0.20)
+    k_yaw: float = 3.5  # yaw rate (exp + quad)
+    yaw_vel_sigma: float = 0.10  # exp kernel sigma (rad/s; tightened from 0.17 for SS error pressure)
     yaw_vel_quad_ratio: float = 1.0  # quadratic/exp weight ratio
     k_tau: float = -0.01  # joint torque penalty
     k_thr: float = -0.35  # thruster energy penalty
@@ -66,15 +67,13 @@ def lin_vel_tracking(env: ALBCEnv) -> torch.Tensor:
 
 
 def att_rp_tracking(env: ALBCEnv) -> torch.Tensor:
-    """r_att = exp(-e^2/2s^2) - q*e^2. Combined exp kernel + quadratic penalty.
+    """r_att = exp(-e_w^2/2s^2) - q*e_w^2. Combined exp kernel + quadratic penalty.
 
-    Exp kernel: positive reward in [0, 1], strong gradient for large errors.
-    Quadratic: persistent gradient at small errors where exp kernel saturates.
-    At err=3 deg, exp kernel alone gives 0.9915 (99.15%) -- quadratic adds ~27%
-    more gradient pressure at all error magnitudes for SS error convergence.
+    e_w^2 = w_roll * roll_err^2 + pitch_err^2 (roll weighted for weak TAM actuation).
     """
     cfg = env.cfg.reward
-    err_sq = env._att_rp_err.pow(2).sum(dim=-1)
+    rp_err = env._att_rp_err  # (num_envs, 2): [roll_err, pitch_err]
+    err_sq = cfg.att_roll_weight * rp_err[:, 0].pow(2) + rp_err[:, 1].pow(2)
     exp_term = torch.exp(-err_sq / (2.0 * cfg.att_rp_sigma * cfg.att_rp_sigma))
     return exp_term - cfg.att_rp_quad_ratio * err_sq
 
