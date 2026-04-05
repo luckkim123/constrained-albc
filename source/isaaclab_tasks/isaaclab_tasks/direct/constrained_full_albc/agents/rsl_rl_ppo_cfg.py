@@ -197,8 +197,9 @@ class RslRlConstraintTRPOAlgorithmCfg:
 
     # Sigma (decoupled from TRPO)
     min_std: float = 0.05
+    max_std: float = 2.0
     std_lr: float = 1e-3
-    entropy_coef: float = 0.003
+    entropy_coef: float = 0.005
 
 
 # =============================================================================

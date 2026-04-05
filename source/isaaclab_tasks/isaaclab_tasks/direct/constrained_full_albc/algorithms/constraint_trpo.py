@@ -65,6 +65,7 @@ class ConstraintTRPO:
         barrier_alpha: float = 0.02,
         # Sigma (decoupled from TRPO trust region)
         min_std: float = 0.01,
+        max_std: float = 2.0,
         std_lr: float = 1e-3,
         entropy_coef: float = 0.005,
         # Device
@@ -103,6 +104,7 @@ class ConstraintTRPO:
         self._barrier_t = barrier_t
         self._barrier_alpha = barrier_alpha
         self.min_std = min_std
+        self.max_std = max_std
         self.entropy_coef = entropy_coef
 
         # Monitoring (read by ConstraintEncoderRunner)
@@ -174,11 +176,13 @@ class ConstraintTRPO:
 
         logger.info(
             "ConstraintTRPO: %d policy params (TRPO), %d value params (Adam), "
-            "log_std decoupled (Adam, lr=%.4f, entropy_coef=%.4f), encoder slice [%d:%d] (%d params)",
+            "log_std decoupled (Adam, lr=%.4f, entropy_coef=%.4f, std_range=[%.3f, %.3f]), encoder slice [%d:%d] (%d params)",
             sum(p.numel() for p in self._policy_params),
             sum(p.numel() for p in value_params),
             std_lr,
             entropy_coef,
+            min_std,
+            max_std,
             self._encoder_param_offset,
             self._encoder_param_offset + self._encoder_param_count,
             self._encoder_param_count,
@@ -459,7 +463,7 @@ class ConstraintTRPO:
         self.std_optimizer.step()
 
         with torch.no_grad():
-            self.policy.log_std.data.clamp_(min=math.log(self.min_std))
+            self.policy.log_std.data.clamp_(min=math.log(self.min_std), max=math.log(self.max_std))
 
         # --- 4. KL after joint update ---
         with torch.no_grad():
