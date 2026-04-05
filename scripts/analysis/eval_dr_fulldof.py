@@ -317,6 +317,67 @@ def build_step_trajectory(
 # ============================================================================
 
 
+def _step_response_one_segment(
+    actual_roll: np.ndarray,
+    actual_pitch: np.ndarray,
+    alive: np.ndarray,
+    prev_roll: float,
+    prev_pitch: float,
+    cur_roll: float,
+    cur_pitch: float,
+    seg_time: np.ndarray,
+) -> tuple[float, float, float]:
+    """Compute step-response metrics for one attitude segment.
+
+    Returns (rise_time, overshoot_pct, peak_time) averaged across roll/pitch
+    axes with meaningful step changes (>1 deg).
+    """
+    axis_results: list[tuple[float, float, float]] = []
+
+    for actual, prev_val, cur_val in [
+        (actual_roll, prev_roll, cur_roll),
+        (actual_pitch, prev_pitch, cur_pitch),
+    ]:
+        step_mag = abs(cur_val - prev_val)
+        if step_mag < 1.0:
+            continue
+
+        mean_val = np.nanmean(np.where(alive, actual, np.nan), axis=1)
+        sign = 1.0 if cur_val > prev_val else -1.0
+
+        # Rise time: 10% -> 90% of step
+        thresh_10 = prev_val + sign * 0.1 * step_mag
+        thresh_90 = prev_val + sign * 0.9 * step_mag
+        t_10 = None
+        t_90 = None
+        for i, v in enumerate(mean_val):
+            if np.isnan(v):
+                continue
+            if t_10 is None and sign * (v - thresh_10) >= 0:
+                t_10 = seg_time[i] - seg_time[0]
+            if t_90 is None and sign * (v - thresh_90) >= 0:
+                t_90 = seg_time[i] - seg_time[0]
+        rise_time = (t_90 - t_10) if (t_10 is not None and t_90 is not None) else float("nan")
+
+        # Overshoot: actual exceeding target / step magnitude * 100
+        overshoot_val = (np.nanmax(mean_val) - cur_val) if sign > 0 else (cur_val - np.nanmin(mean_val))
+        overshoot_pct = max(0.0, overshoot_val) / step_mag * 100.0
+
+        # Peak time
+        peak_idx = np.nanargmax(mean_val) if sign > 0 else np.nanargmin(mean_val)
+        peak_time = seg_time[peak_idx] - seg_time[0]
+
+        axis_results.append((rise_time, overshoot_pct, peak_time))
+
+    if not axis_results:
+        return float("nan"), float("nan"), float("nan")
+
+    rt = float(np.nanmean([r[0] for r in axis_results]))
+    os_pct = float(np.nanmean([r[1] for r in axis_results]))
+    pt = float(np.nanmean([r[2] for r in axis_results]))
+    return rt, os_pct, pt
+
+
 def compute_metrics(data: dict) -> dict:
     """Compute summary metrics from collected data."""
     time_s = data["time"]
@@ -335,11 +396,13 @@ def compute_metrics(data: dict) -> dict:
 
     survival_rate = float(alive[-1].sum()) / num_envs * 100.0
 
-    # Attitude: per-segment steady-state error and settling time
+    # Attitude: per-segment steady-state error, settling time, rise time, overshoot
     seg_steps = data["steps_per_segment"]
     num_segments = len(data["segment_names"])
     steady_state_errors = []
     settling_times = []
+    rise_times = []
+    overshoot_pcts = []
 
     max_target_amp = max(
         float(np.max(np.abs(data["target_roll_deg"]))),
@@ -347,6 +410,9 @@ def compute_metrics(data: dict) -> dict:
         1.0,
     )
     settling_threshold = max(2.0, max_target_amp * 0.33)
+
+    target_roll = data["target_roll_deg"]
+    target_pitch = data["target_pitch_deg"]
 
     for seg_idx in range(num_segments):
         s = seg_idx * seg_steps
@@ -369,6 +435,25 @@ def compute_metrics(data: dict) -> dict:
             settling_times.append(float(seg_time[np.argmax(settled)] - seg_time[0]))
         else:
             settling_times.append(float(data["segment_duration"]))
+
+        # Step-response metrics (rise time, overshoot) for attitude segments
+        cur_roll_target = float(target_roll[s])
+        cur_pitch_target = float(target_pitch[s])
+        prev_roll_target = float(target_roll[s - 1]) if s > 0 else 0.0
+        prev_pitch_target = float(target_pitch[s - 1]) if s > 0 else 0.0
+
+        seg_rt, seg_os, _seg_pt = _step_response_one_segment(
+            data["actual_roll_deg"][s:e],
+            data["actual_pitch_deg"][s:e],
+            seg_alive,
+            prev_roll_target,
+            prev_pitch_target,
+            cur_roll_target,
+            cur_pitch_target,
+            seg_time,
+        )
+        rise_times.append(seg_rt)
+        overshoot_pcts.append(seg_os)
 
     # Linear velocity: overall mean magnitude (should be near 0)
     lin_vel_norm = data["lin_vel_norm"]
@@ -394,6 +479,8 @@ def compute_metrics(data: dict) -> dict:
         "survival_rate": survival_rate,
         "steady_state_errors": steady_state_errors,
         "settling_times": settling_times,
+        "rise_times": rise_times,
+        "overshoot_pcts": overshoot_pcts,
     }
 
 
@@ -545,8 +632,8 @@ def _plot_yaw_rate(all_data: dict, levels: list[str], output_dir: str) -> None:
 
 
 def _plot_summary(all_data: dict, all_metrics: dict, levels: list[str], output_dir: str) -> None:
-    """Figure 4: Summary bar charts (2x2)."""
-    fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+    """Figure 4: Summary bar charts (3x2)."""
+    fig, axes = plt.subplots(3, 2, figsize=(12, 12))
     fig.suptitle("DR Robustness Summary", fontsize=14)
     x = np.arange(len(levels))
     bar_colors = [DR_COLORS[lvl] for lvl in levels]
@@ -568,6 +655,16 @@ def _plot_summary(all_data: dict, all_metrics: dict, levels: list[str], output_d
     # (1,1): Yaw rate error
     yaw_errs = [all_metrics[lvl]["total_yaw_rate_error"] for lvl in levels]
     _bar_subplot(axes[1, 1], x, yaw_errs, bar_colors, xlabels, "Rate (rad/s)", "Yaw Rate Error (mean)")
+
+    # (2,0): Rise time (10% -> 90%)
+    rise_means = [float(np.nanmean(all_metrics[lvl]["rise_times"])) for lvl in levels]
+    rise_stds = [float(np.nanstd(all_metrics[lvl]["rise_times"])) for lvl in levels]
+    _bar_subplot(axes[2, 0], x, rise_means, bar_colors, xlabels, "Time (s)", "Rise Time (10%->90%)", yerr=rise_stds)
+
+    # (2,1): Overshoot
+    os_means = [float(np.nanmean(all_metrics[lvl]["overshoot_pcts"])) for lvl in levels]
+    os_stds = [float(np.nanstd(all_metrics[lvl]["overshoot_pcts"])) for lvl in levels]
+    _bar_subplot(axes[2, 1], x, os_means, bar_colors, xlabels, "Overshoot (%)", "Step-Response Overshoot", yerr=os_stds)
 
     fig.tight_layout()
     fig.savefig(os.path.join(output_dir, "summary.png"), dpi=150)
@@ -929,6 +1026,8 @@ def main(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         print(f"    Survival rate:   {metrics['survival_rate']:.0f}%")
         print(f"    SS error (avg):  {np.nanmean(metrics['steady_state_errors']):.1f} deg")
         print(f"    Settling (avg):  {np.nanmean(metrics['settling_times']):.2f} s")
+        print(f"    Rise time (avg): {np.nanmean(metrics['rise_times']):.3f} s")
+        print(f"    Overshoot (avg): {np.nanmean(metrics['overshoot_pcts']):.1f}%")
 
     # ---- Generate plots ----
     print("\n[INFO] Generating plots...")
@@ -940,9 +1039,9 @@ def main(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     print(f"{'=' * 90}")
     print(
         f"{'Level':<10} {'DR%':>5} {'AttErr':>10} {'LinVel':>8} "
-        f"{'YawRate':>8} {'SS Err':>8} {'Settle':>8} {'Survival':>10}"
+        f"{'YawRate':>8} {'SS Err':>8} {'Settle':>8} {'Rise':>8} {'Overshoot':>10} {'Survival':>10}"
     )
-    print(f"{'-' * 10} {'-' * 5} {'-' * 10} {'-' * 8} {'-' * 8} {'-' * 8} {'-' * 8} {'-' * 10}")
+    print(f"{'-' * 10} {'-' * 5} {'-' * 10} {'-' * 8} {'-' * 8} {'-' * 8} {'-' * 8} {'-' * 8} {'-' * 10} {'-' * 10}")
     for lvl in DR_LEVELS:
         m = all_metrics[lvl]
         print(
@@ -953,6 +1052,8 @@ def main(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
             f"{m['total_yaw_rate_error']:7.4f} "
             f"{np.nanmean(m['steady_state_errors']):7.1f}d "
             f"{np.nanmean(m['settling_times']):7.2f}s "
+            f"{np.nanmean(m['rise_times']):7.3f}s "
+            f"{np.nanmean(m['overshoot_pcts']):9.1f}% "
             f"{m['survival_rate']:9.0f}%"
         )
     print(f"{'=' * 90}")
