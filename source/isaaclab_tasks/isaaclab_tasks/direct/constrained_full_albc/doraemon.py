@@ -85,26 +85,18 @@ _PHYSICS_PARAM_DR_FIELDS: list[tuple[str, str]] = [
     ("payload_cog_offset_z", "payload_cog_offset_z"),
 ]
 
-# Command scales: not in DomainRandomizationCfg, fixed bounds.
-_CMD_SCALE_SPECS: list[ParamSpec] = [
-    ParamSpec("cmd_lin_scale", 0.1, 1.2, 0.3),
-    ParamSpec("cmd_att_scale", 0.1, 1.2, 0.3),
-    ParamSpec("cmd_yaw_scale", 0.1, 1.2, 0.3),
-]
-
-
 def build_param_specs(dr_cfg) -> list[ParamSpec]:
     """Build PARAM_SPECS from DomainRandomizationCfg, auto-syncing physics bounds.
 
     Physics param bounds are read directly from the DR config tuple fields.
-    Command scale bounds are fixed (not in DR config).
+    Command scales are excluded -- they are task difficulty knobs, not physics
+    parameters that vary between sim and real. DORAEMON optimizes physics DR only.
     """
     specs: list[ParamSpec] = []
     for param_name, field_name in _PHYSICS_PARAM_DR_FIELDS:
         lo, hi = getattr(dr_cfg, field_name)
         nominal = (lo + hi) / 2.0
         specs.append(ParamSpec(param_name, lo, hi, nominal))
-    specs.extend(_CMD_SCALE_SPECS)
     return specs
 
 
@@ -130,7 +122,7 @@ PARAM_SPECS: list[ParamSpec] = [
         ("body_mass_scale", "body_mass_scale", 0.9, 1.1),
         ("payload_cog_offset_z", "payload_cog_offset_z", -0.03, 0.0),
     ]
-] + list(_CMD_SCALE_SPECS)
+]
 NDIMS = len(PARAM_SPECS)
 
 _MIN_BETA_PARAM = 1.0

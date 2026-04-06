@@ -243,7 +243,7 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     8D action (2D arm delta + 6D thruster), 81D observation (26D current + 55D history),
     24D privileged. TRPO + IPO + Asymmetric Encoder with 10 constraints (5 prob + 5 avg).
 
-    Roll/pitch: attitude command (+-45 deg, exp kernel reward).
+    Roll/pitch: attitude command (+-30 deg, exp kernel reward).
     Yaw: rate command (+-0.5 rad/s, quadratic penalty).
     Linear: velocity command (+-0.5 m/s, quadratic penalty).
     """
@@ -322,8 +322,8 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # ==========================================================================
     vel_cmd_lin_range: tuple[float, float] = (-0.5, 0.5)
     """Linear velocity command range per axis (m/s, body frame)."""
-    att_cmd_rp_range: tuple[float, float] = (-math.pi / 4.0, math.pi / 4.0)
-    """Roll/pitch attitude command range (radians). +-45 degrees."""
+    att_cmd_rp_range: tuple[float, float] = (-math.pi / 6.0, math.pi / 6.0)
+    """Roll/pitch attitude command range (radians). +-30 degrees."""
     yaw_rate_cmd_range: tuple[float, float] = (-0.5, 0.5)
     """Yaw rate command range (rad/s, body frame)."""
     vel_cmd_resample_steps: int = 250

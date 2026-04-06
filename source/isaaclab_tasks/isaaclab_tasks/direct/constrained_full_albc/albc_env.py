@@ -1110,11 +1110,8 @@ class ALBCEnv(DirectRLEnv):
             self._episode_dr_log_probs[env_ids] = log_probs
             self._episode_return_accum[env_ids] = 0.0
 
-            # Store per-env command range scales for _sample_velocity_command
-            if "cmd_lin_scale" in sampled:
-                self._cmd_lin_scale[env_ids] = sampled["cmd_lin_scale"]
-                self._cmd_att_scale[env_ids] = sampled["cmd_att_scale"]
-                self._cmd_yaw_scale[env_ids] = sampled["cmd_yaw_scale"]
+            # Command scales fixed at 1.0 (not DORAEMON-managed).
+            # DORAEMON optimizes physics DR only; command difficulty is a task knob.
 
         randomize_hydrodynamics(env=self, env_ids=env_ids, dr=dr, sampled=sampled)
         randomize_body_mass(env=self, env_ids=env_ids, dr=dr, sampled=sampled)
