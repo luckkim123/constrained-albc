@@ -61,8 +61,8 @@ _FULL_DOF_CONSTRAINT_TERMS: list[ConstraintTermCfg] = [
     # --- Average (5): continuous cost, soft threshold for attitude/velocity tracking ---
     ConstraintTermCfg(func=thruster_utilization_cost, budget=0.40, name="thruster_util"),
     ConstraintTermCfg(func=rp_rate_cost, params={"soft_threshold": 1.0}, budget=0.10, name="rp_rate"),
-    ConstraintTermCfg(func=yaw_rate_cost, params={"soft_threshold": 1.0}, budget=0.10, name="yaw_rate"),
-    ConstraintTermCfg(func=rp_vel_settling_cost, budget=0.20, name="rp_vel_settling"),
+    ConstraintTermCfg(func=yaw_rate_cost, params={"soft_threshold": 0.7}, budget=0.10, name="yaw_rate"),
+    ConstraintTermCfg(func=rp_vel_settling_cost, budget=0.12, name="rp_vel_settling"),
     ConstraintTermCfg(func=manipulability_cost, params={"w_threshold": 0.3}, budget=0.05, name="manipulability"),
 ]
 
@@ -140,10 +140,19 @@ class DomainRandomizationCfg:
 
 @configclass
 class HardDomainRandomizationCfg(DomainRandomizationCfg):
-    """Aggressive DR for encoder training. Widens all ranges significantly."""
+    """Aggressive DR for encoder training. Widens all ranges significantly.
+
+    Expanded 2026-04-07 (5 fields) after eval_dr_fulldof showed DORAEMON
+    pushing against the prior HardDR boundaries: added_mass, inertia,
+    payload_mass, linear/quadratic damping. Other fields (body_mass, volume,
+    offsets, water_density) kept unchanged due to physics stability constraints
+    (PhysX added-mass/inertia ratio, buoyancy balance).
+    """
 
     enable: bool = True
-    added_mass_scale: tuple[float, float] = (0.6, 1.4)
+    added_mass_scale: tuple[float, float] = (0.5, 1.5)  # was (0.6, 1.4); DORAEMON used full prior range
+    linear_damping_scale: tuple[float, float] = (0.4, 1.7)  # was (0.5, 1.5); upper boundary push
+    quadratic_damping_scale: tuple[float, float] = (0.4, 1.7)  # was (0.5, 1.5); same reason
     volume_scale: tuple[float, float] = (0.75, 1.25)
     cob_offset_x: tuple[float, float] = (-0.02, 0.02)
     cob_offset_y: tuple[float, float] = (-0.02, 0.02)
@@ -151,9 +160,9 @@ class HardDomainRandomizationCfg(DomainRandomizationCfg):
     cog_offset_x: tuple[float, float] = (-0.02, 0.02)
     cog_offset_y: tuple[float, float] = (-0.02, 0.02)
     cog_offset_z: tuple[float, float] = (-0.04, 0.04)
-    inertia_scale: tuple[float, float] = (0.5, 1.8)
+    inertia_scale: tuple[float, float] = (0.4, 2.0)  # was (0.5, 1.8); DORAEMON pushed lower bound
     body_mass_scale: tuple[float, float] = (0.75, 1.25)
-    payload_mass_range: tuple[float, float] = (0.0, 2.0)
+    payload_mass_range: tuple[float, float] = (0.0, 3.0)  # was (0.0, 2.0); 3kg = ~30% body weight
     payload_cog_offset_xy_radius: float = 0.15
     payload_cog_offset_z: tuple[float, float] = (-0.05, 0.0)
     # -- Joint Actuator (widened for hard DR) --
@@ -365,7 +374,7 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # Domain Randomization
     # ==========================================================================
     randomization: HardDomainRandomizationCfg = HardDomainRandomizationCfg()
-    doraemon: DoraemonCfg = DoraemonCfg(enable=True, kl_ub=0.3, performance_lb=110.0, step_interval=250)
+    doraemon: DoraemonCfg = DoraemonCfg(enable=True, kl_ub=0.15, performance_lb=80.0, step_interval=250)
 
     # ==========================================================================
     # Payload

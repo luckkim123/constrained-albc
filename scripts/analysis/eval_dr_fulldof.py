@@ -119,11 +119,21 @@ _runner_module.FullDOFConstraintTRPO = ConstraintTRPO
 
 MAX_ANGLE_DEG = 15.0  # kept for backward compat (episode_length_s calc)
 
-# Total number of waypoints in build_step_trajectory(): 1 init warmup + 10 att
-# + 1 pre-lin_vel warmup + 10 lin_vel + 1 pre-yaw warmup + 4 yaw = 27.
+# Total number of waypoints in build_step_trajectory():
+#   1 init warmup
+#   + 1 att zero (post-warmup, logged)
+#   + 10 att (last is "att return (0, 0) 1")
+#   + 1 "att return (0, 0) 2" (doubled)
+#   + 1 pre-lin_vel warmup
+#   + 1 vxyz zero (post-warmup, logged)
+#   + 10 lin_vel (last two are "vxyz return (0, 0, 0) 1/2")
+#   + 1 pre-yaw warmup
+#   + 1 yaw zero (post-warmup, logged)
+#   + 4 yaw (last two are "yaw return 0 (1)/(2)")
+#   = 31 segments.
 # Used by main() to set env_cfg.episode_length_s. Keep in sync with waypoints
 # list inside build_step_trajectory().
-TRAJECTORY_N_SEGMENTS = 27
+TRAJECTORY_N_SEGMENTS = 31
 
 # Mapping from DORAEMON param names to DomainRandomizationCfg field names.
 # Most share the same name except payload_mass and water_density.
@@ -382,10 +392,17 @@ def build_step_trajectory(
     w = YAW_RATE_AMP
 
     # (roll_deg, pitch_deg, vx, vy, vz, yaw_rate, name)
+    # NOTE: every block now starts with a logged zero-command segment so the
+    # first plotted step shows the policy at zero command (rather than the
+    # raw post-warmup state mid-transition). The attitude block also has its
+    # final (0, 0) return doubled so all blocks end with at least 2 segments
+    # of zero command for clean steady-state visualization.
     waypoints: list[tuple[float, float, float, float, float, float, str]] = [
         # Initial warmup (1 seg, excluded)
         (0, 0, 0, 0, 0, 0, "warmup (init)"),
-        # Attitude block (10 segs, 50s): 3x3 grid + final (0,0) return-to-neutral.
+        # Logged zero-command pre-attitude (1 seg)
+        (0, 0, 0, 0, 0, 0, "att zero (post-warmup)"),
+        # Attitude block (10 segs): 3x3 grid + final (0,0) return-to-neutral.
         # Row-major order (roll outer, pitch inner).
         (-a, -a, 0, 0, 0, 0, f"att ({-a:.0f}, {-a:.0f})"),
         (-a,  0, 0, 0, 0, 0, f"att ({-a:.0f}, 0)"),
@@ -396,10 +413,14 @@ def build_step_trajectory(
         ( a, -a, 0, 0, 0, 0, f"att ({a:.0f}, {-a:.0f})"),
         ( a,  0, 0, 0, 0, 0, f"att ({a:.0f}, 0)"),
         ( a,  a, 0, 0, 0, 0, f"att ({a:.0f}, {a:.0f})"),
-        ( 0,  0, 0, 0, 0, 0, "att return (0, 0)"),
+        ( 0,  0, 0, 0, 0, 0, "att return (0, 0) 1"),
+        # Doubling att return so it ends with 2 zero-command segs (matches lin_vel/yaw)
+        ( 0,  0, 0, 0, 0, 0, "att return (0, 0) 2"),
         # Inter-block warmup before lin_vel (excluded)
         (0, 0, 0, 0, 0, 0, "warmup (pre-lin_vel)"),
-        # Linear velocity block (10 segs, 50s): 2x2x2 corners + (0,0,0) twice.
+        # Logged zero-command pre-lin_vel (1 seg)
+        (0, 0, 0, 0, 0, 0, "vxyz zero (post-warmup)"),
+        # Linear velocity block (10 segs): 2x2x2 corners + (0,0,0) twice.
         (0, 0,  v,  v,  v, 0, f"vxyz (+, +, +)"),
         (0, 0,  v,  v, -v, 0, f"vxyz (+, +, -)"),
         (0, 0,  v, -v,  v, 0, f"vxyz (+, -, +)"),
@@ -412,7 +433,9 @@ def build_step_trajectory(
         (0, 0,  0,  0,  0, 0, "vxyz return (0, 0, 0) 2"),
         # Inter-block warmup before yaw (excluded)
         (0, 0, 0, 0, 0, 0, "warmup (pre-yaw)"),
-        # Yaw rate block (4 segs, 20s): +/- + zero twice.
+        # Logged zero-command pre-yaw (1 seg)
+        (0, 0, 0, 0, 0, 0, "yaw zero (post-warmup)"),
+        # Yaw rate block (4 segs): +/- + zero twice.
         (0, 0, 0, 0, 0,  w, f"yaw +{w}"),
         (0, 0, 0, 0, 0, -w, f"yaw {-w}"),
         (0, 0, 0, 0, 0,  0, "yaw return 0 (1)"),

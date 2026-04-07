@@ -5,14 +5,20 @@
 
 """Tracking reward: r = r_att + r_lin + r_yaw + r_tau + r_thr + r_s.
 
-All tracking terms use exp kernel + quadratic penalty:
-    r = k * (exp(-e^2/2s^2) - q*e^2)
+All tracking terms use exp kernel + quadratic + linear penalty:
+    r = k * (exp(-e^2/2s^2) - q_quad*e^2 - q_lin*|e|)
     exp kernel: positive reward in [0,1], gradient peaks at err=sigma
-    quadratic: persistent gradient at small errors where exp saturates
+    quadratic: gradient grows with error magnitude
+    linear: constant gradient at all error magnitudes (kills SS error tolerance)
 
-r_att:  k_att * (exp(-e^2/2s^2) - q*e^2)   (roll/pitch attitude, s=0.15 rad)
-r_lin:  k_lin * (exp(-e^2/2s^2) - q*e^2)   (linear velocity, s=0.15 m/s)
-r_yaw:  k_yaw * (exp(-e^2/2s^2) - q*e^2)   (yaw rate, s=0.20 rad/s)
+The linear term is the critical fix for "SS error tolerance" -- both exp and
+quadratic gradients vanish as err -> 0, so the policy has no incentive to push
+small errors below ~5% of sigma. The linear term provides a constant downward
+force on |e|, ensuring the policy keeps reducing SS error all the way to zero.
+
+r_att:  k_att * (exp(-e^2/2s^2) - q_quad*e^2 - q_lin*|e|)
+r_lin:  k_lin * (exp(-e^2/2s^2) - q_quad*e^2 - q_lin*|e|)
+r_yaw:  k_yaw * (exp(-e^2/2s^2) - q_quad*e^2 - q_lin*|e|)
 r_tau:  -k_tau * mean(tau^2)                 (joint energy efficiency)
 r_thr:  -k_thr * mean(thruster_cmd^2)       (thruster energy)
 r_s:    -k_s   * (mean(da^2) + mean(d2a^2)) (action smoothness)
@@ -39,16 +45,19 @@ if TYPE_CHECKING:
 class ALBCRewardCfg:
     """Tracking reward weights (dt-scaled). All tracking terms use exp + quadratic."""
 
-    k_att_rp: float = 6.0  # roll/pitch attitude (exp + quad)
+    k_att_rp: float = 6.0  # roll/pitch attitude (exp + quad + linear)
     att_rp_sigma: float = 0.10  # exp kernel sigma (radians, ~5.7 deg; tightened from 0.15 for SS error pressure)
     att_rp_quad_ratio: float = 0.833  # quadratic/exp weight ratio
+    att_rp_lin_ratio: float = 0.5  # linear/exp weight ratio (constant SS error pressure)
     att_roll_weight: float = 1.5  # roll weight in err_sq (roll has weaker TAM actuation: 0.007m vs pitch 0.145m)
-    k_lin: float = 4.0  # linear velocity (exp + quad, raised from 2.7 for stronger lin_vel gradient)
+    k_lin: float = 4.0  # linear velocity (exp + quad + linear, raised from 2.7 for stronger lin_vel gradient)
     lin_vel_sigma: float = 0.10  # exp kernel sigma (m/s; tightened from 0.15 for SS error pressure)
     lin_vel_quad_ratio: float = 1.0  # quadratic/exp weight ratio
-    k_yaw: float = 3.5  # yaw rate (exp + quad)
+    lin_vel_lin_ratio: float = 0.8  # linear/exp weight ratio (constant SS error pressure)
+    k_yaw: float = 3.5  # yaw rate (exp + quad + linear)
     yaw_vel_sigma: float = 0.10  # exp kernel sigma (rad/s; tightened from 0.17 for SS error pressure)
     yaw_vel_quad_ratio: float = 1.0  # quadratic/exp weight ratio
+    yaw_vel_lin_ratio: float = 0.8  # linear/exp weight ratio (constant SS error pressure)
     k_tau: float = -0.01  # joint torque penalty
     k_thr: float = -0.35  # thruster energy penalty
     k_s: float = -0.1  # action smoothness penalty
@@ -59,31 +68,41 @@ class ALBCRewardCfg:
 
 
 def lin_vel_tracking(env: ALBCEnv) -> torch.Tensor:
-    """r_lin = exp(-||e||^2/2s^2) - q*||e||^2. Linear velocity tracking (exp + quad)."""
+    """r_lin = exp(-||e||^2/2s^2) - q_quad*||e||^2 - q_lin*||e||.
+
+    Linear velocity tracking (exp + quad + linear). The linear term ensures
+    constant SS error pressure -- without it, both exp and quadratic gradients
+    vanish as err -> 0 and the policy stops reducing small SS errors.
+    """
     cfg = env.cfg.reward
     err_sq = env._lin_vel_err.pow(2).sum(dim=-1)
+    err_norm = err_sq.clamp(min=1e-12).sqrt()  # ||e|| = sqrt(sum e_i^2)
     exp_term = torch.exp(-err_sq / (2.0 * cfg.lin_vel_sigma ** 2))
-    return exp_term - cfg.lin_vel_quad_ratio * err_sq
+    return exp_term - cfg.lin_vel_quad_ratio * err_sq - cfg.lin_vel_lin_ratio * err_norm
 
 
 def att_rp_tracking(env: ALBCEnv) -> torch.Tensor:
-    """r_att = exp(-e_w^2/2s^2) - q*e_w^2. Combined exp kernel + quadratic penalty.
+    """r_att = exp(-e_w^2/2s^2) - q_quad*e_w^2 - q_lin*|e_w|. Exp + quad + linear.
 
     e_w^2 = w_roll * roll_err^2 + pitch_err^2 (roll weighted for weak TAM actuation).
+    The L1 |e_w| term uses the same roll weighting for consistency.
     """
     cfg = env.cfg.reward
     rp_err = env._att_rp_err  # (num_envs, 2): [roll_err, pitch_err]
     err_sq = cfg.att_roll_weight * rp_err[:, 0].pow(2) + rp_err[:, 1].pow(2)
+    err_abs_w = cfg.att_roll_weight * rp_err[:, 0].abs() + rp_err[:, 1].abs()
     exp_term = torch.exp(-err_sq / (2.0 * cfg.att_rp_sigma * cfg.att_rp_sigma))
-    return exp_term - cfg.att_rp_quad_ratio * err_sq
+    return exp_term - cfg.att_rp_quad_ratio * err_sq - cfg.att_rp_lin_ratio * err_abs_w
 
 
 def yaw_vel_tracking(env: ALBCEnv) -> torch.Tensor:
-    """r_yaw = exp(-e^2/2s^2) - q*e^2. Yaw rate tracking (exp + quad)."""
+    """r_yaw = exp(-e^2/2s^2) - q_quad*e^2 - q_lin*|e|. Exp + quad + linear."""
     cfg = env.cfg.reward
-    err_sq = env._yaw_rate_err.pow(2)
+    err = env._yaw_rate_err
+    err_sq = err.pow(2)
+    err_abs = err.abs()
     exp_term = torch.exp(-err_sq / (2.0 * cfg.yaw_vel_sigma ** 2))
-    return exp_term - cfg.yaw_vel_quad_ratio * err_sq
+    return exp_term - cfg.yaw_vel_quad_ratio * err_sq - cfg.yaw_vel_lin_ratio * err_abs
 
 
 def joint_torque(robot: Articulation, env: ALBCEnv) -> torch.Tensor:
