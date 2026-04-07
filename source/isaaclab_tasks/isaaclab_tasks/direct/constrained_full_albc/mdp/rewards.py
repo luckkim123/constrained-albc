@@ -45,19 +45,19 @@ if TYPE_CHECKING:
 class ALBCRewardCfg:
     """Tracking reward weights (dt-scaled). All tracking terms use exp + quadratic."""
 
-    k_att_rp: float = 6.0  # roll/pitch attitude (exp + quad + linear)
-    att_rp_sigma: float = 0.10  # exp kernel sigma (radians, ~5.7 deg; tightened from 0.15 for SS error pressure)
+    k_att_rp: float = 6.0  # roll/pitch attitude (exp + quad)
+    att_rp_sigma: float = 0.10  # exp kernel sigma (radians, ~5.7 deg) -- matches OLD run 2026-04-06_21-24-43
     att_rp_quad_ratio: float = 0.833  # quadratic/exp weight ratio
-    att_rp_lin_ratio: float = 0.5  # linear/exp weight ratio (constant SS error pressure)
+    att_rp_lin_ratio: float = 0.0  # linear penalty disabled (caused dead zone at moderate errors)
     att_roll_weight: float = 1.5  # roll weight in err_sq (roll has weaker TAM actuation: 0.007m vs pitch 0.145m)
-    k_lin: float = 4.0  # linear velocity (exp + quad + linear, raised from 2.7 for stronger lin_vel gradient)
-    lin_vel_sigma: float = 0.10  # exp kernel sigma (m/s; tightened from 0.15 for SS error pressure)
+    k_lin: float = 4.0  # linear velocity (exp + quad) -- matches OLD run 2026-04-06_21-24-43
+    lin_vel_sigma: float = 0.10  # exp kernel sigma (m/s) -- matches OLD run 2026-04-06_21-24-43
     lin_vel_quad_ratio: float = 1.0  # quadratic/exp weight ratio
-    lin_vel_lin_ratio: float = 0.8  # linear/exp weight ratio (constant SS error pressure)
-    k_yaw: float = 3.5  # yaw rate (exp + quad + linear)
-    yaw_vel_sigma: float = 0.10  # exp kernel sigma (rad/s; tightened from 0.17 for SS error pressure)
+    lin_vel_lin_ratio: float = 0.0  # linear penalty disabled (caused dead zone at moderate errors)
+    k_yaw: float = 3.5  # yaw rate (exp + quad)
+    yaw_vel_sigma: float = 0.10  # exp kernel sigma (rad/s) -- matches OLD run 2026-04-06_21-24-43
     yaw_vel_quad_ratio: float = 1.0  # quadratic/exp weight ratio
-    yaw_vel_lin_ratio: float = 0.8  # linear/exp weight ratio (constant SS error pressure)
+    yaw_vel_lin_ratio: float = 0.0  # linear penalty disabled (caused dead zone at moderate errors)
     k_tau: float = -0.01  # joint torque penalty
     k_thr: float = -0.35  # thruster energy penalty
     k_s: float = -0.1  # action smoothness penalty
