@@ -9,7 +9,10 @@ Forked from constrained_albc. Uses 8D action space (2D arm + 6D thruster)
 for full position + attitude tracking with constrained RL.
 
 Registered tasks:
-    Isaac-FullDOF-TRPO-v0: TRPO + IPO + Asymmetric Encoder (8D action, 81D obs)
+    Isaac-FullDOF-TRPO-v0:      TRPO + IPO + Asymmetric Encoder (production)
+    Isaac-FullDOF-NoEncoder-v0: TRPO + IPO without encoder (ablation baseline 1)
+    Isaac-FullDOF-PPO-v0:       Standard PPO + asymmetric critic, no encoder,
+                                no constraint (ablation baseline 2)
 """
 
 import gymnasium as gym
@@ -28,5 +31,25 @@ gym.register(
     kwargs={
         "env_cfg_entry_point": f"{__name__}.config:ALBCEnvCfg",
         "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:FullDOFTRPORunnerCfg",
+    },
+)
+
+gym.register(
+    id="Isaac-FullDOF-NoEncoder-v0",
+    entry_point="isaaclab_tasks.direct.constrained_full_albc:ALBCEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.config:ALBCEnvCfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:FullDOFNoEncoderRunnerCfg",
+    },
+)
+
+gym.register(
+    id="Isaac-FullDOF-PPO-v0",
+    entry_point="isaaclab_tasks.direct.constrained_full_albc:ALBCEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.config:ALBCEnvCfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:FullDOFPPORunnerCfg",
     },
 )

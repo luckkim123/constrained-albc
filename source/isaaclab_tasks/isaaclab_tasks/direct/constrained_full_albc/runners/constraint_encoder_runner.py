@@ -220,12 +220,10 @@ class ConstraintEncoderRunner(OnPolicyRunner):
         # DORAEMON: update DR distribution based on episode statistics
         raw_env = self.env.unwrapped
         if hasattr(raw_env, "_doraemon") and raw_env._doraemon is not None:
-            doraemon = raw_env._doraemon
-            if iteration % doraemon.cfg.step_interval == 0:
-                metrics = doraemon.step()
-                if self._should_log:
-                    prefixed = {f"DORAEMON/{k}": v for k, v in metrics.items()}
-                    flush_metrics(self.writer, prefixed, iteration, self.logger_type)
+            metrics = raw_env._doraemon.step()
+            if self._should_log:
+                prefixed = {f"DORAEMON/{k}": v for k, v in metrics.items()}
+                flush_metrics(self.writer, prefixed, iteration, self.logger_type)
 
     # ------------------------------------------------------------------
     # Checkpoint save/load

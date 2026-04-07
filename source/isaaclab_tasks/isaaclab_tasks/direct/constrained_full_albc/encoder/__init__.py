@@ -5,8 +5,10 @@
 
 """Encoder networks for full DOF ALBC environments."""
 
+from .actor_critic_asym_constrained import ActorCriticAsymConstrained
 from .actor_critic_encoder import ActorCriticEncoder
 
 __all__ = [
+    "ActorCriticAsymConstrained",
     "ActorCriticEncoder",
 ]

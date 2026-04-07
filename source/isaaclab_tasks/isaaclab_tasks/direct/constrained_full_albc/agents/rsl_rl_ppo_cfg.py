@@ -12,14 +12,15 @@ import rsl_rl.runners.on_policy_runner as _runner_module
 
 from isaaclab.utils import configclass
 
-from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg
+from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, RslRlPpoAlgorithmCfg
 
 # Register custom classes in RSL-RL runner module namespace.
 from ..algorithms import ConstraintTRPO
-from ..encoder import ActorCriticEncoder
+from ..encoder import ActorCriticAsymConstrained, ActorCriticEncoder
 from ..runners import ConstraintEncoderRunner
 
 _runner_module.FullDOFActorCriticEncoder = ActorCriticEncoder
+_runner_module.FullDOFActorCriticAsymConstrained = ActorCriticAsymConstrained
 _runner_module.FullDOFConstraintEncoderRunner = ConstraintEncoderRunner
 _runner_module.FullDOFConstraintTRPO = ConstraintTRPO
 
@@ -199,7 +200,7 @@ class RslRlConstraintTRPOAlgorithmCfg:
     min_std: float = 0.05
     max_std: float = 2.0
     std_lr: float = 1e-3
-    entropy_coef: float = 0.005
+    entropy_coef: float = 0.003
 
 
 # =============================================================================
@@ -227,3 +228,137 @@ class FullDOFTRPORunnerCfg(RslRlOnPolicyRunnerCfg):
 
     algorithm = RslRlConstraintTRPOAlgorithmCfg()
     policy = _FullDOFPolicyCfg()
+
+
+# =============================================================================
+# Baseline 1: NoEncoder + TRPO + IPO (ablation)
+# =============================================================================
+
+
+@configclass
+class _FullDOFNoEncoderPolicyCfg(RslRlPpoActorCriticCfg):
+    """Asymmetric actor-critic without encoder (Baseline 1).
+
+    Architecture (no encoder, 8D action):
+        Actor:       o_t(81D) -> MLP[256,128,64] -> 8D
+        Critic:      cat([o_t(81D), p_t(24D)]) = 105D -> MLP[512,256,128] -> 1D
+        Cost Critic: cat([o_t(81D), p_t(24D)]) = 105D -> MLP[512,256,128] -> K
+    """
+
+    class_name: str = "FullDOFActorCriticAsymConstrained"
+    init_noise_std: float = 0.7
+    actor_obs_normalization: bool = True
+    critic_obs_normalization: bool = False
+    actor_hidden_dims: list[int] = [256, 128, 64]
+    critic_hidden_dims: list[int] = [512, 256, 128]
+    activation: str = "elu"
+    # Observation dimensions
+    policy_obs_dim: int = 81
+    privileged_dim: int = 24
+    # Cost critic for IPO
+    num_constraints: int = 0  # Auto-synced from env config
+    cost_critic_hidden_dims: list[int] = [512, 256, 128]
+
+
+@configclass
+class FullDOFNoEncoderRunnerCfg(RslRlOnPolicyRunnerCfg):
+    """NoEncoder ablation baseline: TRPO + IPO without encoder.
+
+    Removes encoder only. DR, reward, constraints, action space, and DORAEMON
+    are identical to Isaac-FullDOF-TRPO-v0. The actor uses o_t only while the
+    critic and cost critic use asymmetric cat([o_t, p_t]).
+    """
+
+    class_name: str = "FullDOFConstraintEncoderRunner"
+    seed = 30
+    num_steps_per_env = 64
+    max_iterations = 2500
+    save_interval = 50
+    experiment_name = "full_dof_trpo_no_encoder"
+    obs_groups: dict[str, list[str]] = {
+        "policy": ["policy", "privileged"],
+        "critic": ["policy", "privileged"],
+    }
+
+    algorithm = RslRlConstraintTRPOAlgorithmCfg()
+    policy = _FullDOFNoEncoderPolicyCfg()
+
+
+# =============================================================================
+# Baseline 2: Standard PPO (no encoder, no constraint)
+# =============================================================================
+
+
+@configclass
+class _FullDOFPPOPolicyCfg(RslRlPpoActorCriticCfg):
+    """Standard rsl-rl ActorCritic with asymmetric obs (Baseline 2).
+
+    Architecture (8D action):
+        Actor:  o_t(81D)           -> MLP[256,128,64] -> 8D
+        Critic: cat(o_t, p_t)=105D -> MLP[512,256,128] -> 1D
+
+    Asymmetric routing is done via Runner.obs_groups -- no custom policy
+    class required because rsl-rl ActorCritic auto-computes num_actor_obs
+    and num_critic_obs by summing the dims of each obs group in
+    obs_groups["policy"] and obs_groups["critic"] respectively.
+    """
+
+    class_name: str = "ActorCritic"
+    init_noise_std: float = 0.7
+    noise_std_type: str = "log"
+    actor_obs_normalization: bool = True
+    critic_obs_normalization: bool = False
+    actor_hidden_dims: list[int] = [256, 128, 64]
+    critic_hidden_dims: list[int] = [512, 256, 128]
+    activation: str = "elu"
+
+
+@configclass
+class _FullDOFPPOAlgorithmCfg(RslRlPpoAlgorithmCfg):
+    """Standard PPO with adaptive KL schedule (Baseline 2).
+
+    No constraint / cost critic -- env still computes constraint costs for
+    diagnostics but rsl-rl OnPolicyRunner/PPO silently ignores cost extras.
+    """
+
+    class_name: str = "PPO"
+    num_learning_epochs: int = 5
+    num_mini_batches: int = 4
+    learning_rate: float = 3e-4
+    schedule: str = "adaptive"
+    gamma: float = 0.99
+    lam: float = 0.95
+    entropy_coef: float = 0.003
+    desired_kl: float = 0.01
+    max_grad_norm: float = 1.0
+    value_loss_coef: float = 1.0
+    use_clipped_value_loss: bool = True
+    clip_param: float = 0.2
+
+
+@configclass
+class FullDOFPPORunnerCfg(RslRlOnPolicyRunnerCfg):
+    """PPO baseline: standard PPO + asymmetric critic, no encoder, no constraint.
+
+    Uses rsl-rl's default OnPolicyRunner (class_name inherited as
+    "OnPolicyRunner"). Asymmetric actor/critic observation routing is
+    expressed purely through obs_groups: actor receives "policy" (81D)
+    only while critic receives cat(["policy", "privileged"]) = 105D.
+
+    DR, reward weights, action space, and DORAEMON are identical to
+    Isaac-FullDOF-TRPO-v0. Constraint costs are still computed by the env
+    for diagnostics but do not influence the PPO objective.
+    """
+
+    seed = 30
+    num_steps_per_env = 64
+    max_iterations = 2500
+    save_interval = 50
+    experiment_name = "full_dof_ppo"
+    obs_groups: dict[str, list[str]] = {
+        "policy": ["policy"],
+        "critic": ["policy", "privileged"],
+    }
+
+    algorithm = _FullDOFPPOAlgorithmCfg()
+    policy = _FullDOFPPOPolicyCfg()
