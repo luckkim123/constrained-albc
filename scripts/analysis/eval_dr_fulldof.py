@@ -45,7 +45,13 @@ parser.add_argument("--output_dir", type=str, default=None, help="Output directo
 parser.add_argument("--segment_duration", type=float, default=5.0, help="Duration per segment in seconds.")
 parser.add_argument("--seed", type=int, default=42, help="Random seed.")
 parser.add_argument("--agent", type=str, default="rsl_rl_cfg_entry_point", help="RSL-RL config entry point.")
-parser.add_argument("--doraemon-dr", action="store_true", help="Use DORAEMON-learned DR as hard level.")
+parser.add_argument(
+    "--doraemon-dr",
+    action=argparse.BooleanOptionalAction,
+    default=True,
+    help="Use DORAEMON-learned DR (mean +/- 2*std) as hard level. Default: auto-load from run dir. "
+         "Use --no-doraemon-dr to fall back to HardDomainRandomizationCfg.",
+)
 cli_args.add_rsl_rl_args(parser)
 AppLauncher.add_app_launcher_args(parser)
 args_cli, hydra_args = parser.parse_known_args()
@@ -63,6 +69,13 @@ from datetime import datetime
 
 import gymnasium as gym
 import matplotlib
+
+try:
+    import plotly.graph_objects as go
+    from plotly.subplots import make_subplots
+    _HAS_PLOTLY = True
+except ImportError:
+    _HAS_PLOTLY = False
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -82,16 +95,22 @@ import isaaclab_tasks  # noqa: F401
 from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
-from isaaclab_tasks.direct.constrained_full_albc.config import DomainRandomizationCfg
+from isaaclab_tasks.direct.constrained_full_albc.config import (
+    DomainRandomizationCfg,
+    HardDomainRandomizationCfg,
+)
 from isaaclab_tasks.direct.constrained_full_albc.encoder import ActorCriticEncoder
 from isaaclab_tasks.direct.constrained_full_albc.algorithms import ConstraintTRPO
 from isaaclab_tasks.direct.constrained_full_albc.runners import ConstraintEncoderRunner
-from isaaclab_tasks.direct.constrained_full_albc.doraemon import PARAM_SPECS
+from isaaclab_tasks.direct.constrained_full_albc.doraemon import build_param_specs
 
 from common import DR_LEVELS, DR_COLORS, DR_SCALE
 
-# Module-level: overridden by --doraemon-dr to use DORAEMON-learned ranges as hard DR.
+# Module-level: DORAEMON-learned distribution as the hard-DR anchor.
+# `_DORAEMON_FULL_DR` is the DR config (mean +/- 2*std clamped to PARAM_SPEC bounds).
+# `_DORAEMON_RAW` is the underlying mean/std per parameter, used by visualization.
 _DORAEMON_FULL_DR: DomainRandomizationCfg | None = None
+_DORAEMON_RAW: dict[str, tuple[float, float]] = {}
 
 # Register custom classes in RSL-RL runner module namespace
 _runner_module.FullDOFActorCriticEncoder = ActorCriticEncoder
@@ -99,6 +118,12 @@ _runner_module.FullDOFConstraintEncoderRunner = ConstraintEncoderRunner
 _runner_module.FullDOFConstraintTRPO = ConstraintTRPO
 
 MAX_ANGLE_DEG = 15.0  # kept for backward compat (episode_length_s calc)
+
+# Total number of waypoints in build_step_trajectory(): 1 init warmup + 10 att
+# + 1 pre-lin_vel warmup + 10 lin_vel + 1 pre-yaw warmup + 4 yaw = 27.
+# Used by main() to set env_cfg.episode_length_s. Keep in sync with waypoints
+# list inside build_step_trajectory().
+TRAJECTORY_N_SEGMENTS = 27
 
 # Mapping from DORAEMON param names to DomainRandomizationCfg field names.
 # Most share the same name except payload_mass and water_density.
@@ -108,52 +133,73 @@ _DORAEMON_TO_DR_FIELD: dict[str, str] = {
 }
 
 
-def load_doraemon_dr(run_dir: str) -> DomainRandomizationCfg:
+def load_doraemon_dr(run_dir: str) -> tuple[DomainRandomizationCfg | None, dict[str, tuple[float, float]]]:
     """Build DomainRandomizationCfg from DORAEMON's learned distribution.
 
     Reads final mean/std from TensorBoard logs. Hard DR range = mean +/- 2*std,
-    clamped to PARAM_SPEC bounds. Parameters not managed by DORAEMON (joint
-    actuator, thruster) are kept at their nominal midpoint (no randomization).
+    clamped to PARAM_SPEC bounds. Non-DORAEMON parameters (joint actuator,
+    thruster) start from HardDomainRandomizationCfg so the eval matches the
+    physics ranges actually seen during training.
+
+    Returns:
+        (cfg, raw): DR config with DORAEMON-learned ranges applied, and a dict
+        mapping DR field name -> (mean, std) for visualization. Returns
+        (None, {}) if no DORAEMON tags are found in the TB log.
     """
     from tensorboard.backend.event_processing import event_accumulator
 
-    ea = event_accumulator.EventAccumulator(run_dir)
-    ea.Reload()
+    if not os.path.isdir(run_dir):
+        return None, {}
 
-    # Read final DORAEMON mean/std for each parameter
-    doraemon_ranges: dict[str, tuple[float, float]] = {}
-    for spec in PARAM_SPECS:
-        if spec.name.startswith("cmd_"):
-            continue  # Skip command scales (not physics DR)
-        mean_tag = f"DORAEMON/mean/{spec.name}"
-        std_tag = f"DORAEMON/std/{spec.name}"
-        try:
-            mean_val = ea.Scalars(mean_tag)[-1].value
-            std_val = ea.Scalars(std_tag)[-1].value
-        except KeyError:
-            print(f"[WARN] DORAEMON tag not found: {mean_tag}, using PARAM_SPEC bounds")
-            doraemon_ranges[spec.name] = (spec.min_bound, spec.max_bound)
-            continue
+    try:
+        ea = event_accumulator.EventAccumulator(run_dir)
+        ea.Reload()
+        all_tags = set(ea.Tags().get("scalars", []))
+    except Exception as e:
+        print(f"[WARN] Could not load TB events from {run_dir}: {e}")
+        return None, {}
 
-        lo = max(spec.min_bound, mean_val - 2.0 * std_val)
-        hi = min(spec.max_bound, mean_val + 2.0 * std_val)
-        doraemon_ranges[spec.name] = (lo, hi)
-        print(f"  DORAEMON DR: {spec.name:30s} [{lo:.4f}, {hi:.4f}]")
+    if not any(t.startswith("DORAEMON/mean/") for t in all_tags):
+        return None, {}
 
-    # Build config: start with nominal (all at midpoint)
-    full = DomainRandomizationCfg()
-    cfg = _make_nominal_dr()
+    # Hard DR is the runtime physics range used during training; use it as the
+    # base config so non-DORAEMON fields (joint, thruster) match training.
+    cfg = HardDomainRandomizationCfg()
     cfg.enable = True
 
-    # Apply DORAEMON-learned ranges
-    for param_name, (lo, hi) in doraemon_ranges.items():
-        field_name = _DORAEMON_TO_DR_FIELD.get(param_name, param_name)
-        if hasattr(cfg, field_name):
-            setattr(cfg, field_name, (lo, hi))
-        else:
-            print(f"[WARN] DomainRandomizationCfg has no field '{field_name}'")
+    # CRITICAL: imported PARAM_SPECS uses base DomainRandomizationCfg bounds, but
+    # the runtime DORAEMON scheduler builds its specs from HardDomainRandomizationCfg
+    # via build_param_specs(). Using the hardcoded PARAM_SPECS would clamp the
+    # learned mean +/- 2*std into the much narrower base DR range, falsely shrinking
+    # the hard-DR anchor. Use HardDR-derived specs to match the actual training bounds.
+    runtime_specs = build_param_specs(cfg)
 
-    return cfg
+    raw: dict[str, tuple[float, float]] = {}
+    for spec in runtime_specs:
+        if spec.name.startswith("cmd_"):
+            continue
+        mean_tag = f"DORAEMON/mean/{spec.name}"
+        std_tag = f"DORAEMON/std/{spec.name}"
+        if mean_tag not in all_tags or std_tag not in all_tags:
+            print(f"[WARN] DORAEMON tag not found: {mean_tag}")
+            continue
+
+        mean_val = ea.Scalars(mean_tag)[-1].value
+        std_val = ea.Scalars(std_tag)[-1].value
+        lo = max(spec.min_bound, mean_val - 2.0 * std_val)
+        hi = min(spec.max_bound, mean_val + 2.0 * std_val)
+
+        mapped = _DORAEMON_TO_DR_FIELD.get(spec.name)
+        field_name: str = mapped if mapped is not None else spec.name
+        if not hasattr(cfg, field_name):
+            print(f"[WARN] DomainRandomizationCfg has no field '{field_name}'")
+            continue
+
+        setattr(cfg, field_name, (lo, hi))
+        raw[field_name] = (mean_val, std_val)
+        print(f"  DORAEMON DR: {field_name:30s} mean={mean_val:.4f}  std={std_val:.4f}  -> [{lo:.4f}, {hi:.4f}]")
+
+    return cfg, raw
 
 
 # ============================================================================
@@ -193,25 +239,79 @@ _DR_FLOAT_FIELDS = [
 ]
 
 
+# True physics-nominal values for the scale=0 ("none") DR anchor.
+# Scale fields -> 1.0 (no modification), offset fields -> 0.0 (centered),
+# payload -> 0.0 (no payload), water -> 1000.0 (pure water).
+# Joint actuator and buoy_moment_arm are asset-specific: omitted here so they
+# fall back to the base cfg midpoint (preserves prior behavior).
+_TRUE_NOMINAL_PHYSICS: dict[str, float] = {
+    # Scale fields
+    "added_mass_scale": 1.0,
+    "linear_damping_scale": 1.0,
+    "quadratic_damping_scale": 1.0,
+    "volume_scale": 1.0,
+    "inertia_scale": 1.0,
+    "body_mass_scale": 1.0,
+    "yaw_damping_scale": 1.0,
+    "joint_effort_limit_range": 1.0,
+    "thrust_coefficient_scale": 1.0,
+    "time_constant_scale": 1.0,
+    # Offset fields (centered)
+    "cob_offset_x": 0.0,
+    "cob_offset_y": 0.0,
+    "cob_offset_z": 0.0,
+    "cog_offset_x": 0.0,
+    "cog_offset_y": 0.0,
+    "cog_offset_z": 0.0,
+    # Absolute physical defaults
+    "water_density_range": 1000.0,
+    "payload_mass_range": 0.0,
+    "payload_cog_offset_z": 0.0,
+    "joint_static_friction_range": 0.0,
+    "joint_viscous_friction_range": 0.0,
+    # Float fields
+    "payload_cog_offset_xy_radius": 0.0,
+}
+
+
 def _make_nominal_dr() -> DomainRandomizationCfg:
-    """Construct nominal DR config with all physics at midpoint values."""
-    full = DomainRandomizationCfg()
+    """Construct true nominal DR config (single-point distribution at physics defaults).
+
+    Fields listed in _TRUE_NOMINAL_PHYSICS use the explicit nominal value.
+    Fields not listed (joint_stiffness/damping, buoy_moment_arm) fall back to
+    the base DomainRandomizationCfg midpoint, since these are asset-specific
+    and have no obvious physics-true value.
+    """
+    base = DomainRandomizationCfg()
     nominal = DomainRandomizationCfg()
 
     for field_name in _DR_TUPLE_FIELDS:
-        lo, hi = getattr(full, field_name)
-        mid = (lo + hi) / 2.0
-        setattr(nominal, field_name, (mid, mid))
+        if field_name in _TRUE_NOMINAL_PHYSICS:
+            val = _TRUE_NOMINAL_PHYSICS[field_name]
+            setattr(nominal, field_name, (val, val))
+        else:
+            lo, hi = getattr(base, field_name)
+            mid = (lo + hi) / 2.0
+            setattr(nominal, field_name, (mid, mid))
 
-    nominal.payload_cog_offset_xy_radius = 0.0
+    for field_name in _DR_FLOAT_FIELDS:
+        if field_name in _TRUE_NOMINAL_PHYSICS:
+            setattr(nominal, field_name, _TRUE_NOMINAL_PHYSICS[field_name])
+        # Otherwise leave at base default (e.g. buoy_moment_arm).
+
     return nominal
 
 
 def build_dr_config(scale: float) -> DomainRandomizationCfg:
-    """Build DR config by interpolating between nominal and full DR.
+    """Build DR config by interpolating between true nominal and the hard anchor.
 
-    When _DORAEMON_FULL_DR is set (via --doraemon-dr), uses DORAEMON-learned
-    ranges as the 100% DR level instead of default DomainRandomizationCfg.
+    Hard anchor priority:
+        1. _DORAEMON_FULL_DR (DORAEMON-learned distribution, if loaded)
+        2. HardDomainRandomizationCfg (matches training-time physics ranges)
+
+    Note: previously the fallback was the base DomainRandomizationCfg, which
+    is far narrower than the actual training DR. That caused all four levels
+    to evaluate near-nominal physics regardless of the requested scale.
     """
     nominal = _make_nominal_dr()
 
@@ -219,7 +319,7 @@ def build_dr_config(scale: float) -> DomainRandomizationCfg:
         nominal.enable = True
         return nominal
 
-    full = _DORAEMON_FULL_DR if _DORAEMON_FULL_DR is not None else DomainRandomizationCfg()
+    full: DomainRandomizationCfg = _DORAEMON_FULL_DR if _DORAEMON_FULL_DR is not None else HardDomainRandomizationCfg()
     f = min(scale, 1.0)
 
     cfg = DomainRandomizationCfg()
@@ -253,18 +353,23 @@ def apply_dr_config(env_cfg, scale: float) -> None:
 ATT_AMP_DEG = 15.0  # Attitude step amplitude (degrees)
 LIN_VEL_AMP = 0.25  # Linear velocity step amplitude (m/s)
 YAW_RATE_AMP = 0.25  # Yaw rate step amplitude (rad/s)
-WARMUP_SEGMENTS = 1  # Number of neutral warmup segments (excluded from metrics/plots)
+WARMUP_SEGMENTS = 1  # Initial warmup segments (inter-block warmups also excluded via _classify_segment)
 
 
 def build_step_trajectory(
     segment_duration: float,
     step_dt: float,
 ) -> tuple[np.ndarray, dict[str, np.ndarray], list[str], int]:
-    """Build 6-DOF step-change target trajectory with warmup.
+    """Build 6-DOF step-change target trajectory with inter-block warmups.
 
-    Structure: [warmup] + attitude block + lin_vel block + yaw block + [tail neutral]
-    Warmup and tail neutral segments are included in the trajectory but excluded
-    from metrics and plots by the caller.
+    Structure: warmup + att(10) + warmup + lin_vel(10) + warmup + yaw(4)
+    Warmup segments (3 total) reset the system state between blocks so each block's
+    dynamics are independent of the previous block. All warmup segs excluded from
+    metrics/plots; any segment classified as "warmup" is skipped.
+
+    Att block (10 segs): 3x3 grid (-a,0,+a) x (-a,0,+a) + final (0,0) return-to-neutral.
+    Lin vel block (10 segs): 2x2x2 corners (+/-v) + (0,0,0) twice.
+    Yaw block (4 segs): (+w, -w, 0, 0).
 
     Returns:
         time_s: 1D time array (seconds).
@@ -278,25 +383,40 @@ def build_step_trajectory(
 
     # (roll_deg, pitch_deg, vx, vy, vz, yaw_rate, name)
     waypoints: list[tuple[float, float, float, float, float, float, str]] = [
-        # Warmup (1 seg, excluded from analysis)
-        (0, 0, 0, 0, 0, 0, "warmup"),
-        # Attitude block (4 segs, 20s)
-        (a, 0, 0, 0, 0, 0, f"roll +{a:.0f}"),
-        (0, a, 0, 0, 0, 0, f"pitch +{a:.0f}"),
-        (-a, -a, 0, 0, 0, 0, f"({-a:.0f}, {-a:.0f})"),
-        (a, -a, 0, 0, 0, 0, f"({a:.0f}, {-a:.0f})"),
-        # Linear velocity block (6 segs, 30s)
-        (0, 0, v, 0, 0, 0, f"vx +{v}"),
-        (0, 0, -v, 0, 0, 0, f"vx {-v}"),
-        (0, 0, 0, v, 0, 0, f"vy +{v}"),
-        (0, 0, 0, -v, 0, 0, f"vy {-v}"),
-        (0, 0, 0, 0, v, 0, f"vz +{v}"),
-        (0, 0, 0, 0, -v, 0, f"vz {-v}"),
-        # Yaw rate block (2 segs, 10s)
-        (0, 0, 0, 0, 0, w, f"yaw +{w}"),
+        # Initial warmup (1 seg, excluded)
+        (0, 0, 0, 0, 0, 0, "warmup (init)"),
+        # Attitude block (10 segs, 50s): 3x3 grid + final (0,0) return-to-neutral.
+        # Row-major order (roll outer, pitch inner).
+        (-a, -a, 0, 0, 0, 0, f"att ({-a:.0f}, {-a:.0f})"),
+        (-a,  0, 0, 0, 0, 0, f"att ({-a:.0f}, 0)"),
+        (-a,  a, 0, 0, 0, 0, f"att ({-a:.0f}, {a:.0f})"),
+        ( 0, -a, 0, 0, 0, 0, f"att (0, {-a:.0f})"),
+        ( 0,  0, 0, 0, 0, 0, "att (0, 0)"),
+        ( 0,  a, 0, 0, 0, 0, f"att (0, {a:.0f})"),
+        ( a, -a, 0, 0, 0, 0, f"att ({a:.0f}, {-a:.0f})"),
+        ( a,  0, 0, 0, 0, 0, f"att ({a:.0f}, 0)"),
+        ( a,  a, 0, 0, 0, 0, f"att ({a:.0f}, {a:.0f})"),
+        ( 0,  0, 0, 0, 0, 0, "att return (0, 0)"),
+        # Inter-block warmup before lin_vel (excluded)
+        (0, 0, 0, 0, 0, 0, "warmup (pre-lin_vel)"),
+        # Linear velocity block (10 segs, 50s): 2x2x2 corners + (0,0,0) twice.
+        (0, 0,  v,  v,  v, 0, f"vxyz (+, +, +)"),
+        (0, 0,  v,  v, -v, 0, f"vxyz (+, +, -)"),
+        (0, 0,  v, -v,  v, 0, f"vxyz (+, -, +)"),
+        (0, 0,  v, -v, -v, 0, f"vxyz (+, -, -)"),
+        (0, 0, -v,  v,  v, 0, f"vxyz (-, +, +)"),
+        (0, 0, -v,  v, -v, 0, f"vxyz (-, +, -)"),
+        (0, 0, -v, -v,  v, 0, f"vxyz (-, -, +)"),
+        (0, 0, -v, -v, -v, 0, f"vxyz (-, -, -)"),
+        (0, 0,  0,  0,  0, 0, "vxyz return (0, 0, 0) 1"),
+        (0, 0,  0,  0,  0, 0, "vxyz return (0, 0, 0) 2"),
+        # Inter-block warmup before yaw (excluded)
+        (0, 0, 0, 0, 0, 0, "warmup (pre-yaw)"),
+        # Yaw rate block (4 segs, 20s): +/- + zero twice.
+        (0, 0, 0, 0, 0,  w, f"yaw +{w}"),
         (0, 0, 0, 0, 0, -w, f"yaw {-w}"),
-        # Tail neutral (1 seg, excluded from analysis)
-        (0, 0, 0, 0, 0, 0, "tail neutral"),
+        (0, 0, 0, 0, 0,  0, "yaw return 0 (1)"),
+        (0, 0, 0, 0, 0,  0, "yaw return 0 (2)"),
     ]
 
     steps_per_seg = int(segment_duration / step_dt)
@@ -388,16 +508,14 @@ def _step_response_one_segment(
 def _classify_segment(name: str) -> str:
     """Classify a segment name into a block type.
 
-    Returns one of: "warmup", "tail", "attitude", "lin_vel", "yaw", "unknown".
+    Returns one of: "warmup", "attitude", "lin_vel", "yaw", "unknown".
     """
     low = name.lower()
     if "warmup" in low:
         return "warmup"
-    if "tail" in low:
-        return "tail"
-    if "roll" in low or "pitch" in low or low.startswith("("):
+    if low.startswith("att") or "roll" in low or "pitch" in low:
         return "attitude"
-    if "vx" in low or "vy" in low or "vz" in low:
+    if low.startswith("vxyz") or "vx" in low or "vy" in low or "vz" in low:
         return "lin_vel"
     if "yaw" in low:
         return "yaw"
@@ -704,14 +822,122 @@ def _bar_subplot(ax, x, values, colors, xlabels, ylabel, title, ylim=None, yerr=
     ax.grid(True, alpha=0.3, axis="y")
 
 
+def _plot_dr_distributions(
+    dr_configs: dict[str, DomainRandomizationCfg],
+    doraemon_raw: dict[str, tuple[float, float]],
+    output_dir: str,
+) -> None:
+    """Visualize DR ranges per level, normalized to HardDomainRandomizationCfg.
+
+    Each row is one DR parameter; each row contains 4 horizontal bars (one per
+    DR level) showing the [lo, hi] range. The HardDomainRandomizationCfg range
+    is the gray background and is normalized to [0, 1]. When DORAEMON state was
+    loaded, the learned mean +/- 2*std is overlaid as a black star with caps.
+    """
+    fields = list(_DR_TUPLE_FIELDS)
+    n_params = len(fields)
+    levels = [lvl for lvl in DR_LEVELS if lvl in dr_configs]
+    n_levels = len(levels)
+    if n_params == 0 or n_levels == 0:
+        return
+
+    hard = HardDomainRandomizationCfg()
+    fig, ax = plt.subplots(figsize=(11, max(8.0, n_params * 0.45)))
+
+    y_pos = np.arange(n_params, dtype=float)
+    bar_h = 0.8 / n_levels
+
+    for i, level in enumerate(levels):
+        cfg = dr_configs[level]
+        offsets = (i - (n_levels - 1) / 2.0) * bar_h
+
+        lows: list[float] = []
+        widths: list[float] = []
+        for field in fields:
+            hard_lo, hard_hi = getattr(hard, field)
+            hard_range = hard_hi - hard_lo
+            cfg_lo, cfg_hi = getattr(cfg, field)
+            if hard_range > 0:
+                n_lo = (cfg_lo - hard_lo) / hard_range
+                n_hi = (cfg_hi - hard_lo) / hard_range
+            else:
+                n_lo = n_hi = 0.5
+            lows.append(n_lo)
+            widths.append(max(n_hi - n_lo, 1e-3))  # tiny min width so single-point shows
+
+        ax.barh(
+            y_pos + offsets,
+            widths,
+            left=lows,
+            height=bar_h * 0.92,
+            color=DR_COLORS[level],
+            label=f"{level} ({int(DR_SCALE[level] * 100)}%)",
+            edgecolor="black",
+            linewidth=0.4,
+            alpha=0.85,
+        )
+
+    # HardDR reference band
+    ax.axvspan(0.0, 1.0, alpha=0.08, color="gray", zorder=-2)
+    ax.axvline(0.0, color="gray", linewidth=0.8, linestyle="--", zorder=-1)
+    ax.axvline(1.0, color="gray", linewidth=0.8, linestyle="--", zorder=-1)
+
+    # DORAEMON mean +/- 2*std markers (if available)
+    if doraemon_raw:
+        for j, field in enumerate(fields):
+            if field not in doraemon_raw:
+                continue
+            mean, std = doraemon_raw[field]
+            hard_lo, hard_hi = getattr(hard, field)
+            hard_range = hard_hi - hard_lo
+            if hard_range <= 0:
+                continue
+            m_norm = (mean - hard_lo) / hard_range
+            s_norm = std / hard_range
+            ax.errorbar(
+                [m_norm],
+                [y_pos[j]],
+                xerr=[[2 * s_norm], [2 * s_norm]],
+                fmt="*",
+                color="black",
+                markersize=11,
+                ecolor="black",
+                elinewidth=1.2,
+                capsize=4,
+                zorder=10,
+            )
+
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(fields, fontsize=8)
+    ax.set_xlabel(
+        "Normalized to HardDomainRandomizationCfg range  [0 = HardDR low, 1 = HardDR high]",
+        fontsize=10,
+    )
+    title = "DR Distribution per Level (normalized to HardDR range)"
+    if doraemon_raw:
+        title += "\nblack star = DORAEMON learned mean +/- 2*std"
+    ax.set_title(title, fontsize=11)
+    ax.legend(loc="lower right", fontsize=9, framealpha=0.92)
+    ax.set_xlim(-0.35, 1.35)
+    ax.invert_yaxis()
+    ax.grid(True, alpha=0.3, axis="x")
+
+    plt.tight_layout()
+    out = os.path.join(output_dir, "dr_distributions.png")
+    plt.savefig(out, dpi=120, bbox_inches="tight")
+    plt.close()
+    print(f"  Saved: {out}")
+
+
 def generate_plots(
     all_data: dict[str, dict],
     all_metrics: dict[str, dict],
     output_dir: str,
 ) -> None:
-    """Generate all evaluation figures and save as PNG."""
+    """Generate all evaluation figures. PNG for all, HTML (interactive) for core plots."""
     levels = [lvl for lvl in DR_LEVELS if lvl in all_data]
 
+    # Static PNG plots
     _plot_attitude_tracking(all_data, levels, output_dir)
     _plot_lin_vel(all_data, levels, output_dir)
     _plot_yaw_rate(all_data, levels, output_dir)
@@ -720,6 +946,315 @@ def generate_plots(
     _plot_summary_lin_vel(all_metrics, levels, output_dir)
     _plot_summary_yaw(all_metrics, levels, output_dir)
     _plot_failure_time(all_data, levels, output_dir)
+
+    # Interactive HTML plots (core tracking plots only) -- skip if plotly missing
+    if _HAS_PLOTLY:
+        _plot_attitude_interactive(all_data, levels, output_dir)
+        _plot_lin_vel_interactive(all_data, levels, output_dir)
+        _plot_yaw_rate_interactive(all_data, levels, output_dir)
+        _plot_error_interactive(all_data, levels, output_dir)
+
+
+# ---------------------------------------------------------------------------
+# Interactive Plotly plots (HTML, hover tooltips)
+# ---------------------------------------------------------------------------
+
+
+def _plotly_color(lvl: str) -> str:
+    """Convert matplotlib color name/hex to CSS color for plotly."""
+    from matplotlib.colors import to_hex
+    return to_hex(DR_COLORS[lvl])
+
+
+def _plot_attitude_interactive(all_data: dict, levels: list[str], output_dir: str) -> None:
+    """Interactive roll/pitch attitude tracking per DR level (rows = DR, cols = roll/pitch)."""
+    ref = all_data[levels[0]]
+    seg_names = ref["segment_names"]
+    seg_steps = ref["steps_per_segment"]
+    step_dt = ref["time"][1] - ref["time"][0] if len(ref["time"]) > 1 else 0.02
+
+    att_start, att_end = _get_block_step_range(seg_names, seg_steps, "attitude")
+    if att_start >= att_end:
+        return
+
+    fig = make_subplots(
+        rows=len(levels), cols=2,
+        shared_xaxes=True, shared_yaxes=False,
+        subplot_titles=[f"{lvl} (DR {int(DR_SCALE[lvl] * 100)}%) - {ax}"
+                        for lvl in levels for ax in ("Roll", "Pitch")],
+        vertical_spacing=0.06, horizontal_spacing=0.08,
+    )
+    block_time = np.arange(att_end - att_start) * step_dt
+
+    for row_idx, lvl in enumerate(levels, start=1):
+        d = all_data[lvl]
+        color = _plotly_color(lvl)
+        alive = ~d["terminated"][att_start:att_end]
+
+        for col_idx, (actual_key, target_key) in enumerate(
+            [("actual_roll_deg", "target_roll_deg"), ("actual_pitch_deg", "target_pitch_deg")],
+            start=1,
+        ):
+            target = d[target_key][att_start:att_end]
+            vals = np.where(alive, d[actual_key][att_start:att_end], np.nan)
+            mean = np.nanmean(vals, axis=1)
+            std = np.nanstd(vals, axis=1)
+
+            # Target line
+            fig.add_trace(
+                go.Scatter(x=block_time, y=target, mode="lines",
+                           line=dict(color="black", width=1.2, dash="dash"),
+                           name="target", legendgroup="target",
+                           showlegend=(row_idx == 1 and col_idx == 1),
+                           hovertemplate="t=%{x:.2f}s<br>target=%{y:.2f} deg<extra></extra>"),
+                row=row_idx, col=col_idx,
+            )
+            # Std band (upper + lower fill)
+            fig.add_trace(
+                go.Scatter(x=np.concatenate([block_time, block_time[::-1]]),
+                           y=np.concatenate([mean + std, (mean - std)[::-1]]),
+                           fill="toself", fillcolor=color, opacity=0.15,
+                           line=dict(color="rgba(0,0,0,0)"),
+                           name=f"{lvl} +/-std", showlegend=False, hoverinfo="skip"),
+                row=row_idx, col=col_idx,
+            )
+            # Mean line
+            fig.add_trace(
+                go.Scatter(x=block_time, y=mean, mode="lines",
+                           line=dict(color=color, width=1.5),
+                           name=f"{lvl}", legendgroup=lvl,
+                           showlegend=(col_idx == 1),
+                           hovertemplate=("t=%{x:.2f}s<br>mean=%{y:.2f} deg"
+                                          f"<br>DR={int(DR_SCALE[lvl] * 100)}%<extra></extra>")),
+                row=row_idx, col=col_idx,
+            )
+
+    fig.update_layout(
+        title="Attitude Tracking per DR Level (attitude block) -- interactive",
+        height=260 * len(levels), hovermode="x unified",
+    )
+    for row in range(1, len(levels) + 1):
+        fig.update_yaxes(title_text="Roll (deg)", row=row, col=1)
+        fig.update_yaxes(title_text="Pitch (deg)", row=row, col=2)
+    fig.update_xaxes(title_text="Time (s)", row=len(levels), col=1)
+    fig.update_xaxes(title_text="Time (s)", row=len(levels), col=2)
+    fig.write_html(os.path.join(output_dir, "attitude.html"), include_plotlyjs="cdn")
+
+
+def _plot_lin_vel_interactive(all_data: dict, levels: list[str], output_dir: str) -> None:
+    """Interactive linear velocity tracking per DR level (rows = DR, cols = vx/vy/vz)."""
+    ref = all_data[levels[0]]
+    seg_names = ref["segment_names"]
+    seg_steps = ref["steps_per_segment"]
+    step_dt = ref["time"][1] - ref["time"][0] if len(ref["time"]) > 1 else 0.02
+
+    lv_start, lv_end = _get_block_step_range(seg_names, seg_steps, "lin_vel")
+    if lv_start >= lv_end:
+        return
+
+    data_keys = ["lin_vel_x", "lin_vel_y", "lin_vel_z"]
+    target_keys = ["target_vx", "target_vy", "target_vz"]
+    axis_labels = ["Vx (m/s)", "Vy (m/s)", "Vz (m/s)"]
+
+    fig = make_subplots(
+        rows=len(levels), cols=3,
+        shared_xaxes=True,
+        subplot_titles=[f"{lvl} (DR {int(DR_SCALE[lvl] * 100)}%) - {ax}"
+                        for lvl in levels for ax in ("Vx", "Vy", "Vz")],
+        vertical_spacing=0.06, horizontal_spacing=0.06,
+    )
+    block_time = np.arange(lv_end - lv_start) * step_dt
+
+    for row_idx, lvl in enumerate(levels, start=1):
+        d = all_data[lvl]
+        color = _plotly_color(lvl)
+        alive = ~d["terminated"][lv_start:lv_end]
+
+        for col_idx, (dkey, tkey, label) in enumerate(zip(data_keys, target_keys, axis_labels), start=1):
+            target = d[tkey][lv_start:lv_end]
+            vals = np.where(alive, d[dkey][lv_start:lv_end], np.nan)
+            mean = np.nanmean(vals, axis=1)
+            std = np.nanstd(vals, axis=1)
+
+            fig.add_trace(
+                go.Scatter(x=block_time, y=target, mode="lines",
+                           line=dict(color="black", width=1.2, dash="dash"),
+                           name="target", legendgroup="target",
+                           showlegend=(row_idx == 1 and col_idx == 1),
+                           hovertemplate="t=%{x:.2f}s<br>target=%{y:.3f} m/s<extra></extra>"),
+                row=row_idx, col=col_idx,
+            )
+            fig.add_trace(
+                go.Scatter(x=np.concatenate([block_time, block_time[::-1]]),
+                           y=np.concatenate([mean + std, (mean - std)[::-1]]),
+                           fill="toself", fillcolor=color, opacity=0.15,
+                           line=dict(color="rgba(0,0,0,0)"),
+                           showlegend=False, hoverinfo="skip"),
+                row=row_idx, col=col_idx,
+            )
+            fig.add_trace(
+                go.Scatter(x=block_time, y=mean, mode="lines",
+                           line=dict(color=color, width=1.5),
+                           name=f"{lvl}", legendgroup=lvl,
+                           showlegend=(col_idx == 1),
+                           hovertemplate=("t=%{x:.2f}s<br>mean=%{y:.3f} m/s"
+                                          f"<br>DR={int(DR_SCALE[lvl] * 100)}%<extra></extra>")),
+                row=row_idx, col=col_idx,
+            )
+
+    fig.update_layout(
+        title="Linear Velocity Tracking per DR Level (lin_vel block) -- interactive",
+        height=240 * len(levels), hovermode="x unified",
+    )
+    for row in range(1, len(levels) + 1):
+        for col_idx, label in enumerate(axis_labels, start=1):
+            fig.update_yaxes(title_text=label, row=row, col=col_idx)
+    for col_idx in range(1, 4):
+        fig.update_xaxes(title_text="Time (s)", row=len(levels), col=col_idx)
+    fig.write_html(os.path.join(output_dir, "lin_vel.html"), include_plotlyjs="cdn")
+
+
+def _plot_yaw_rate_interactive(all_data: dict, levels: list[str], output_dir: str) -> None:
+    """Interactive yaw rate tracking per DR level (rows = DR)."""
+    ref = all_data[levels[0]]
+    seg_names = ref["segment_names"]
+    seg_steps = ref["steps_per_segment"]
+    step_dt = ref["time"][1] - ref["time"][0] if len(ref["time"]) > 1 else 0.02
+
+    yaw_start, yaw_end = _get_block_step_range(seg_names, seg_steps, "yaw")
+    if yaw_start >= yaw_end:
+        return
+
+    fig = make_subplots(
+        rows=len(levels), cols=1, shared_xaxes=True,
+        subplot_titles=[f"{lvl} (DR {int(DR_SCALE[lvl] * 100)}%)" for lvl in levels],
+        vertical_spacing=0.06,
+    )
+    block_time = np.arange(yaw_end - yaw_start) * step_dt
+
+    for row_idx, lvl in enumerate(levels, start=1):
+        d = all_data[lvl]
+        color = _plotly_color(lvl)
+        alive = ~d["terminated"][yaw_start:yaw_end]
+        target = d["target_yaw_rate"][yaw_start:yaw_end]
+        vals = np.where(alive, d["yaw_rate"][yaw_start:yaw_end], np.nan)
+        mean = np.nanmean(vals, axis=1)
+        std = np.nanstd(vals, axis=1)
+
+        fig.add_trace(
+            go.Scatter(x=block_time, y=target, mode="lines",
+                       line=dict(color="black", width=1.2, dash="dash"),
+                       name="target", legendgroup="target", showlegend=(row_idx == 1),
+                       hovertemplate="t=%{x:.2f}s<br>target=%{y:.3f} rad/s<extra></extra>"),
+            row=row_idx, col=1,
+        )
+        fig.add_trace(
+            go.Scatter(x=np.concatenate([block_time, block_time[::-1]]),
+                       y=np.concatenate([mean + std, (mean - std)[::-1]]),
+                       fill="toself", fillcolor=color, opacity=0.15,
+                       line=dict(color="rgba(0,0,0,0)"),
+                       showlegend=False, hoverinfo="skip"),
+            row=row_idx, col=1,
+        )
+        fig.add_trace(
+            go.Scatter(x=block_time, y=mean, mode="lines",
+                       line=dict(color=color, width=1.5),
+                       name=f"{lvl}", legendgroup=lvl, showlegend=True,
+                       hovertemplate=("t=%{x:.2f}s<br>mean=%{y:.3f} rad/s"
+                                      f"<br>DR={int(DR_SCALE[lvl] * 100)}%<extra></extra>")),
+            row=row_idx, col=1,
+        )
+
+    fig.update_layout(
+        title="Yaw Rate Tracking per DR Level (yaw block) -- interactive",
+        height=220 * len(levels), hovermode="x unified",
+    )
+    for row in range(1, len(levels) + 1):
+        fig.update_yaxes(title_text="Yaw Rate (rad/s)", row=row, col=1)
+    fig.update_xaxes(title_text="Time (s)", row=len(levels), col=1)
+    fig.write_html(os.path.join(output_dir, "yaw_rate.html"), include_plotlyjs="cdn")
+
+
+def _plot_error_interactive(all_data: dict, levels: list[str], output_dir: str) -> None:
+    """Interactive tracking error (|roll|, |pitch|, action mag), all DR overlaid, attitude block."""
+    ref = all_data[levels[0]]
+    seg_names = ref["segment_names"]
+    seg_steps = ref["steps_per_segment"]
+    step_dt = ref["time"][1] - ref["time"][0] if len(ref["time"]) > 1 else 0.02
+
+    att_start, att_end = _get_block_step_range(seg_names, seg_steps, "attitude")
+    if att_start >= att_end:
+        return
+
+    has_actions = "action_magnitude" in ref
+    n_rows = 3 if has_actions else 2
+    titles = ["|Roll Error|", "|Pitch Error|"] + (["Action Magnitude"] if has_actions else [])
+    fig = make_subplots(
+        rows=n_rows, cols=1, shared_xaxes=True,
+        subplot_titles=titles, vertical_spacing=0.08,
+    )
+    block_time = np.arange(att_end - att_start) * step_dt
+
+    for lvl in levels:
+        d = all_data[lvl]
+        color = _plotly_color(lvl)
+        alive = ~d["terminated"][att_start:att_end]
+        label = f"{lvl} (DR {int(DR_SCALE[lvl] * 100)}%)"
+
+        for row_idx, key in enumerate([("error_roll", "deg"), ("error_pitch", "deg")], start=1):
+            key_name, unit = key
+            vals = np.where(alive, np.abs(d[key_name][att_start:att_end]), np.nan)
+            mean = np.nanmean(vals, axis=1)
+            std = np.nanstd(vals, axis=1)
+            fig.add_trace(
+                go.Scatter(x=np.concatenate([block_time, block_time[::-1]]),
+                           y=np.concatenate([mean + std, (mean - std)[::-1]]),
+                           fill="toself", fillcolor=color, opacity=0.12,
+                           line=dict(color="rgba(0,0,0,0)"),
+                           showlegend=False, hoverinfo="skip"),
+                row=row_idx, col=1,
+            )
+            fig.add_trace(
+                go.Scatter(x=block_time, y=mean, mode="lines",
+                           line=dict(color=color, width=1.3),
+                           name=label, legendgroup=lvl,
+                           showlegend=(row_idx == 1),
+                           hovertemplate=(f"t=%{{x:.2f}}s<br>|err|=%{{y:.2f}} {unit}"
+                                          f"<br>{label}<extra></extra>")),
+                row=row_idx, col=1,
+            )
+
+        if has_actions:
+            act_vals = np.where(alive, d["action_magnitude"][att_start:att_end], np.nan)
+            act_mean = np.nanmean(act_vals, axis=1)
+            act_std = np.nanstd(act_vals, axis=1)
+            fig.add_trace(
+                go.Scatter(x=np.concatenate([block_time, block_time[::-1]]),
+                           y=np.concatenate([act_mean + act_std, (act_mean - act_std)[::-1]]),
+                           fill="toself", fillcolor=color, opacity=0.12,
+                           line=dict(color="rgba(0,0,0,0)"),
+                           showlegend=False, hoverinfo="skip"),
+                row=3, col=1,
+            )
+            fig.add_trace(
+                go.Scatter(x=block_time, y=act_mean, mode="lines",
+                           line=dict(color=color, width=1.3),
+                           name=label, legendgroup=lvl, showlegend=False,
+                           hovertemplate=(f"t=%{{x:.2f}}s<br>|a|=%{{y:.2f}}"
+                                          f"<br>{label}<extra></extra>")),
+                row=3, col=1,
+            )
+
+    fig.update_layout(
+        title="Tracking Error vs DR Level (attitude block) -- interactive",
+        height=300 * n_rows, hovermode="x unified",
+    )
+    fig.update_yaxes(title_text="|Roll Error| (deg)", row=1, col=1)
+    fig.update_yaxes(title_text="|Pitch Error| (deg)", row=2, col=1)
+    if has_actions:
+        fig.update_yaxes(title_text="Action Magnitude", row=3, col=1)
+    fig.update_xaxes(title_text="Time (s)", row=n_rows, col=1)
+    fig.write_html(os.path.join(output_dir, "error.html"), include_plotlyjs="cdn")
 
 
 # ---------------------------------------------------------------------------
@@ -1287,9 +1822,8 @@ def main(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     if hasattr(env_cfg, "doraemon"):
         env_cfg.doraemon.enable = False
 
-    # Compute episode_length_s from trajectory (14 segments)
-    _n_segs = 14  # 5 att + 6 lin_vel + 2 yaw + 1 neutral
-    env_cfg.episode_length_s = _n_segs * args_cli.segment_duration + 10.0
+    # Compute episode_length_s from trajectory (see TRAJECTORY_N_SEGMENTS).
+    env_cfg.episode_length_s = TRAJECTORY_N_SEGMENTS * args_cli.segment_duration + 10.0
 
     # ---- Load checkpoint ----
     agent_cfg = cli_args.update_rsl_rl_cfg(agent_cfg, args_cli)
@@ -1334,12 +1868,22 @@ def main(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     print(f"[INFO] Output directory: {output_dir}")
 
     # ---- DORAEMON DR override ----
-    global _DORAEMON_FULL_DR
+    # Default behavior: auto-load DORAEMON-learned distribution from the run dir
+    # and use it as the hard-DR anchor. Use --no-doraemon-dr to fall back to
+    # HardDomainRandomizationCfg (the static training-time physics ranges).
+    global _DORAEMON_FULL_DR, _DORAEMON_RAW
     if args_cli.doraemon_dr and resume_path:
         run_dir = os.path.dirname(resume_path)
-        print(f"\n[INFO] Loading DORAEMON-learned DR from: {run_dir}")
-        _DORAEMON_FULL_DR = load_doraemon_dr(run_dir)
-        print("[INFO] Hard DR = DORAEMON-learned ranges (joint/thruster at nominal)\n")
+        print(f"\n[INFO] Attempting to load DORAEMON-learned DR from: {run_dir}")
+        cfg, raw = load_doraemon_dr(run_dir)
+        if cfg is not None:
+            _DORAEMON_FULL_DR = cfg
+            _DORAEMON_RAW = raw
+            print("[INFO] Hard DR = DORAEMON-learned distribution (mean +/- 2*std).\n")
+        else:
+            print("[INFO] No DORAEMON state found in run dir. Falling back to HardDomainRandomizationCfg.\n")
+    else:
+        print("\n[INFO] DORAEMON-DR disabled. Hard DR = HardDomainRandomizationCfg (static).\n")
 
     # ---- Create env (initial DR = none) ----
     apply_dr_config(env_cfg, DR_SCALE["none"])
@@ -1460,6 +2004,10 @@ def main(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     # ---- Generate plots ----
     print("\n[INFO] Generating plots...")
     generate_plots(all_data, all_metrics, output_dir)
+
+    # DR distribution plot: rebuild the per-level configs and visualize.
+    dr_configs_used = {lvl: build_dr_config(DR_SCALE[lvl]) for lvl in DR_LEVELS}
+    _plot_dr_distributions(dr_configs_used, _DORAEMON_RAW, output_dir)
 
     # ---- Print final comparison ----
     print(f"\n{'=' * 100}")
