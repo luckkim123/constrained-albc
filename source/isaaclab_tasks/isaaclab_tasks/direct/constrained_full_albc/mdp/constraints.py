@@ -236,18 +236,26 @@ def thruster_rate_cost(
 def rp_vel_settling_cost(
     _robot: Articulation,
     _env: ALBCEnv,
+    settling_threshold: float = 0.087,
 ) -> torch.Tensor:
-    """(|p| + |q|) / 2. Average roll/pitch angular velocity settling.
+    """Settling-aware (|p| + |q|) / 2. Active only when near target attitude.
 
     Type: Average
-    Budget: 0.05
+    Budget: 0.20
 
-    Roll/pitch are attitude (position) targets, not velocity targets.
-    This constraint forces angular velocity to average near zero,
-    encouraging fast settling after reaching the target attitude.
-    Complements rp_rate_cost which only penalizes >1.0 rad/s.
+    Gated by attitude error: cost is zero during transit (|att_err| > threshold)
+    and active during settling (|att_err| <= threshold). This prevents the
+    constraint from opposing attitude tracking during the transit phase,
+    where angular velocity is needed to reach the target.
+
+    Args:
+        settling_threshold: attitude error below which settling is enforced (rad).
+            Default 0.087 rad = 5.0 deg.
     """
-    return _robot.data.root_ang_vel_b[:, :2].abs().mean(dim=-1)
+    rp_vel = _robot.data.root_ang_vel_b[:, :2].abs().mean(dim=-1)
+    att_err_norm = _env._att_rp_err.abs().max(dim=-1).values
+    settling_mask = (att_err_norm <= settling_threshold).float()
+    return rp_vel * settling_mask
 
 
 def manipulability_cost(

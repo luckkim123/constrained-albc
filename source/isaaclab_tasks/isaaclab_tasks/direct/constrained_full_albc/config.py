@@ -62,7 +62,7 @@ _FULL_DOF_CONSTRAINT_TERMS: list[ConstraintTermCfg] = [
     ConstraintTermCfg(func=thruster_utilization_cost, budget=0.40, name="thruster_util"),
     ConstraintTermCfg(func=rp_rate_cost, params={"soft_threshold": 1.0}, budget=0.10, name="rp_rate"),
     ConstraintTermCfg(func=yaw_rate_cost, params={"soft_threshold": 0.7}, budget=0.10, name="yaw_rate"),
-    ConstraintTermCfg(func=rp_vel_settling_cost, budget=0.20, name="rp_vel_settling"),
+    ConstraintTermCfg(func=rp_vel_settling_cost, params={"settling_threshold": 0.087}, budget=0.20, name="rp_vel_settling"),
     ConstraintTermCfg(func=manipulability_cost, params={"w_threshold": 0.3}, budget=0.05, name="manipulability"),
 ]
 
@@ -374,7 +374,7 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # Domain Randomization
     # ==========================================================================
     randomization: HardDomainRandomizationCfg = HardDomainRandomizationCfg()
-    doraemon: DoraemonCfg = DoraemonCfg(enable=True, kl_ub=0.15, performance_lb=80.0, step_interval=250)
+    doraemon: DoraemonCfg = DoraemonCfg(enable=True, kl_ub=0.08, performance_lb=90.0, step_interval=250)
 
     # ==========================================================================
     # Payload

@@ -45,7 +45,7 @@ if TYPE_CHECKING:
 class ALBCRewardCfg:
     """Tracking reward weights (dt-scaled). All tracking terms use exp + quadratic."""
 
-    k_att_rp: float = 6.0  # roll/pitch attitude (exp + quad)
+    k_att_rp: float = 9.0  # roll/pitch attitude (exp + quad) -- raised from 6.0 to shift SS error equilibrium toward attitude
     att_rp_sigma: float = 0.10  # exp kernel sigma (radians, ~5.7 deg) -- matches OLD run 2026-04-06_21-24-43
     att_rp_quad_ratio: float = 0.833  # quadratic/exp weight ratio
     att_rp_lin_ratio: float = 0.0  # linear penalty disabled (caused dead zone at moderate errors)
