@@ -68,6 +68,10 @@ class ConstraintTRPO:
         max_std: float = 2.0,
         std_lr: float = 1e-3,
         entropy_coef: float = 0.005,
+        # Adaptive entropy (SAC-style dual descent on alpha)
+        entropy_adaptive: bool = False,
+        entropy_target: float = 1.5,
+        entropy_alpha_lr: float = 3e-4,
         # Device
         device: str = "cpu",
         **_kwargs,
@@ -107,6 +111,22 @@ class ConstraintTRPO:
         self.max_std = max_std
         self.entropy_coef = entropy_coef
 
+        # Adaptive entropy: SAC-style dual descent on alpha (Haarnoja et al., 2019)
+        # Learns alpha to maintain target entropy, preventing both entropy collapse
+        # and the entropy-advantage imbalance that causes noise_std divergence.
+        self._entropy_adaptive = entropy_adaptive
+        self._entropy_target = entropy_target
+        if entropy_adaptive:
+            self._log_alpha = torch.tensor(math.log(entropy_coef), device=device, requires_grad=True)
+            self._alpha_optimizer = optim.Adam([self._log_alpha], lr=entropy_alpha_lr)
+            logger.info(
+                "ConstraintTRPO: adaptive entropy enabled (target=%.1f, alpha_lr=%.1e, init_alpha=%.4f)",
+                entropy_target, entropy_alpha_lr, entropy_coef,
+            )
+        else:
+            self._log_alpha = None
+            self._alpha_optimizer = None
+
         # Monitoring (read by ConstraintEncoderRunner)
         self._last_cost_returns = [0.0] * num_constraints
         self._last_violations = [0.0] * num_constraints
@@ -125,6 +145,7 @@ class ConstraintTRPO:
         self._last_actor_step_norm = 0.0
         self._last_enc_cos_vanilla_natgrad = 0.0
         self._last_enc_cos_vanilla_step = 0.0
+        self._last_entropy_alpha = entropy_coef
 
         if cost_gamma >= 1.0:
             raise ValueError(f"cost_gamma must be < 1.0, got {cost_gamma}")
@@ -455,7 +476,13 @@ class ConstraintTRPO:
         self.policy.act(obs_flat)
         sigma_log_prob = self.policy.get_actions_log_prob(actions_flat)
         sigma_ratio = torch.exp(sigma_log_prob - post_trpo_lp)
-        sigma_surrogate = -(adv * sigma_ratio).mean() - self.entropy_coef * self.policy.log_std.sum()
+
+        # Entropy coefficient: adaptive (SAC-style) or fixed
+        if self._entropy_adaptive and self._log_alpha is not None:
+            alpha = self._log_alpha.exp().detach()
+        else:
+            alpha = self.entropy_coef
+        sigma_surrogate = -(adv * sigma_ratio).mean() - alpha * self.policy.log_std.sum()
 
         self.std_optimizer.zero_grad()
         sigma_grad = torch.autograd.grad(sigma_surrogate, self.policy.log_std)[0]
@@ -464,6 +491,18 @@ class ConstraintTRPO:
 
         with torch.no_grad():
             self.policy.log_std.data.clamp_(min=math.log(self.min_std), max=math.log(self.max_std))
+
+        # Adaptive alpha update: SAC dual descent (Haarnoja et al., 2019)
+        # min_alpha  alpha * (H(pi) - H_target)
+        # When H(pi) > H_target: loss > 0, grad descent decreases alpha
+        # When H(pi) < H_target: loss < 0, grad descent increases alpha
+        if self._entropy_adaptive and self._log_alpha is not None and self._alpha_optimizer is not None:
+            current_entropy = self.policy.entropy.mean().detach()
+            alpha_loss = self._log_alpha.exp() * (current_entropy - self._entropy_target)
+            self._alpha_optimizer.zero_grad()
+            alpha_loss.backward()
+            self._alpha_optimizer.step()
+            self._last_entropy_alpha = self._log_alpha.exp().item()
 
         # --- 4. KL after joint update ---
         with torch.no_grad():

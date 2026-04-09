@@ -202,6 +202,11 @@ class RslRlConstraintTRPOAlgorithmCfg:
     std_lr: float = 1e-3
     entropy_coef: float = 0.003
 
+    # Adaptive entropy (SAC-style dual descent)
+    entropy_adaptive: bool = True
+    entropy_target: float = 1.5
+    entropy_alpha_lr: float = 3e-4
+
 
 # =============================================================================
 # Runner Configuration

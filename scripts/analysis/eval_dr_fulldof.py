@@ -649,9 +649,11 @@ def compute_metrics(data: dict) -> dict:
 
     # ---- Attitude metrics (only attitude segments) ----
     att_ss_errors: list[float] = []
+    att_ss_jitters: list[float] = []
     att_settling_times: list[float] = []
     att_rise_times: list[float] = []
     att_overshoot_pcts: list[float] = []
+    att_zero_crossings: list[float] = []
 
     for seg_idx, name in enumerate(seg_names):
         if _classify_segment(name) != "attitude":
@@ -662,22 +664,47 @@ def compute_metrics(data: dict) -> dict:
         seg_alive = alive[s:e]
         seg_time = time_s[s:e]
 
-        # Steady-state error (last 50% of segment)
+        # Steady-state error and jitter (last 50% of segment)
         ss_start = int(seg_steps * 0.5)
         ss_error = seg_error[ss_start:]
         ss_alive = seg_alive[ss_start:]
         if ss_alive.any():
-            att_ss_errors.append(float(np.nanmean(np.where(ss_alive, ss_error, np.nan))))
+            ss_vals = np.where(ss_alive, ss_error, np.nan)
+            att_ss_errors.append(float(np.nanmean(ss_vals)))
+            # SS jitter: std of per-step mean error in SS period
+            ss_per_step = np.nanmean(ss_vals, axis=1)
+            att_ss_jitters.append(float(np.nanstd(ss_per_step[~np.isnan(ss_per_step)])))
         else:
             att_ss_errors.append(float("nan"))
+            att_ss_jitters.append(float("nan"))
 
-        # Settling time
-        mean_per_step = np.nanmean(np.where(seg_alive, seg_error, np.nan), axis=1)
-        settled = mean_per_step < settling_threshold
-        if settled.any():
-            att_settling_times.append(float(seg_time[np.argmax(settled)] - seg_time[0]))
+        # Zero crossing count: number of times the mean error signal crosses
+        # the target (sign changes in error_roll/pitch relative to target).
+        # Use roll axis as representative; count sign changes after rise (first 20% skipped).
+        zc_start = int(seg_steps * 0.2)
+        cur_roll_tgt = float(target_roll[s])
+        roll_mean = np.nanmean(np.where(seg_alive, data["actual_roll_deg"][s:e], np.nan), axis=1)
+        roll_deviation = roll_mean[zc_start:] - cur_roll_tgt
+        valid = ~np.isnan(roll_deviation)
+        if valid.sum() > 2:
+            signs = np.sign(roll_deviation[valid])
+            crossings = np.sum(np.abs(np.diff(signs)) > 0)
+            att_zero_crossings.append(float(crossings))
         else:
-            att_settling_times.append(float(seg_duration))
+            att_zero_crossings.append(float("nan"))
+
+        # Settling time: last time error exceeds threshold, then +1 step.
+        # Standard control definition: time after which error stays within band permanently.
+        mean_per_step = np.nanmean(np.where(seg_alive, seg_error, np.nan), axis=1)
+        above = mean_per_step >= settling_threshold
+        if not above.any():
+            att_settling_times.append(0.0)  # already within band at start
+        else:
+            last_above_idx = np.where(above)[0][-1]
+            if last_above_idx < len(seg_time) - 1:
+                att_settling_times.append(float(seg_time[last_above_idx + 1] - seg_time[0]))
+            else:
+                att_settling_times.append(float(seg_duration))  # never permanently settled
 
         # Step-response (rise time, overshoot) via existing dual-axis helper
         cur_roll_target = float(target_roll[s])
@@ -716,8 +743,10 @@ def compute_metrics(data: dict) -> dict:
     axis_labels = ["vx", "vy", "vz"]
 
     lin_vel_ss_errors: dict[str, list[float]] = {a: [] for a in axis_labels}
+    lin_vel_ss_jitters: dict[str, list[float]] = {a: [] for a in axis_labels}
     lin_vel_rise_times: dict[str, list[float]] = {a: [] for a in axis_labels}
     lin_vel_overshoot_pcts: dict[str, list[float]] = {a: [] for a in axis_labels}
+    lin_vel_zero_crossings: dict[str, list[float]] = {a: [] for a in axis_labels}
 
     for seg_idx, name in enumerate(seg_names):
         if _classify_segment(name) != "lin_vel":
@@ -732,15 +761,30 @@ def compute_metrics(data: dict) -> dict:
             cur_target = float(data[tkey][s])
             prev_target = float(data[tkey][s - 1]) if s > 0 else 0.0
 
-            # SS error: mean |actual - target| in last 50%
+            # SS error and jitter: mean/std of |actual - target| in last 50%
             ss_start = int(seg_steps * 0.5)
             ss_actual = seg_actual[ss_start:]
             ss_alive = seg_alive[ss_start:]
             ss_err = np.abs(ss_actual - cur_target)
             if ss_alive.any():
-                lin_vel_ss_errors[ax_name].append(float(np.nanmean(np.where(ss_alive, ss_err, np.nan))))
+                ss_vals = np.where(ss_alive, ss_err, np.nan)
+                lin_vel_ss_errors[ax_name].append(float(np.nanmean(ss_vals)))
+                ss_per_step = np.nanmean(ss_vals, axis=1)
+                lin_vel_ss_jitters[ax_name].append(float(np.nanstd(ss_per_step[~np.isnan(ss_per_step)])))
             else:
                 lin_vel_ss_errors[ax_name].append(float("nan"))
+                lin_vel_ss_jitters[ax_name].append(float("nan"))
+
+            # Zero crossing count (after initial 20% of segment)
+            zc_start = int(seg_steps * 0.2)
+            mean_val = np.nanmean(np.where(seg_alive, seg_actual, np.nan), axis=1)
+            deviation = mean_val[zc_start:] - cur_target
+            valid = ~np.isnan(deviation)
+            if valid.sum() > 2:
+                signs = np.sign(deviation[valid])
+                lin_vel_zero_crossings[ax_name].append(float(np.sum(np.abs(np.diff(signs)) > 0)))
+            else:
+                lin_vel_zero_crossings[ax_name].append(float("nan"))
 
             # Step-response only if this axis has a step change in this segment
             rt, os_pct = _step_response_scalar_segment(
@@ -762,8 +806,10 @@ def compute_metrics(data: dict) -> dict:
 
     # ---- Yaw rate metrics (only yaw segments) ----
     yaw_ss_errors: list[float] = []
+    yaw_ss_jitters: list[float] = []
     yaw_rise_times: list[float] = []
     yaw_overshoot_pcts: list[float] = []
+    yaw_zero_crossings: list[float] = []
 
     for seg_idx, name in enumerate(seg_names):
         if _classify_segment(name) != "yaw":
@@ -776,15 +822,30 @@ def compute_metrics(data: dict) -> dict:
         cur_target = float(data["target_yaw_rate"][s])
         prev_target = float(data["target_yaw_rate"][s - 1]) if s > 0 else 0.0
 
-        # SS error
+        # SS error and jitter
         ss_start = int(seg_steps * 0.5)
         ss_actual = seg_actual[ss_start:]
         ss_alive = seg_alive[ss_start:]
         ss_err = np.abs(ss_actual - cur_target)
         if ss_alive.any():
-            yaw_ss_errors.append(float(np.nanmean(np.where(ss_alive, ss_err, np.nan))))
+            ss_vals = np.where(ss_alive, ss_err, np.nan)
+            yaw_ss_errors.append(float(np.nanmean(ss_vals)))
+            ss_per_step = np.nanmean(ss_vals, axis=1)
+            yaw_ss_jitters.append(float(np.nanstd(ss_per_step[~np.isnan(ss_per_step)])))
         else:
             yaw_ss_errors.append(float("nan"))
+            yaw_ss_jitters.append(float("nan"))
+
+        # Zero crossing count (after initial 20%)
+        zc_start = int(seg_steps * 0.2)
+        mean_val = np.nanmean(np.where(seg_alive, seg_actual, np.nan), axis=1)
+        deviation = mean_val[zc_start:] - cur_target
+        valid = ~np.isnan(deviation)
+        if valid.sum() > 2:
+            signs = np.sign(deviation[valid])
+            yaw_zero_crossings.append(float(np.sum(np.abs(np.diff(signs)) > 0)))
+        else:
+            yaw_zero_crossings.append(float("nan"))
 
         # Step-response
         rt, os_pct = _step_response_scalar_segment(
@@ -795,9 +856,11 @@ def compute_metrics(data: dict) -> dict:
 
     yaw_block_start, yaw_block_end = _get_block_step_range(seg_names, seg_steps, "yaw")
     yaw_block_alive = alive[yaw_block_start:yaw_block_end]
-    yaw_block_abs = np.abs(data["yaw_rate"][yaw_block_start:yaw_block_end])
+    yaw_block_actual = data["yaw_rate"][yaw_block_start:yaw_block_end]
+    yaw_block_target = data["target_yaw_rate"][yaw_block_start:yaw_block_end, None]  # (T,) -> (T,1) for broadcast
+    yaw_block_err = np.abs(yaw_block_actual - yaw_block_target)
     if yaw_block_alive.any():
-        total_yaw_rate_error = float(np.nanmean(np.where(yaw_block_alive, yaw_block_abs, np.nan)))
+        total_yaw_rate_error = float(np.nanmean(np.where(yaw_block_alive, yaw_block_err, np.nan)))
     else:
         total_yaw_rate_error = float("nan")
 
@@ -808,20 +871,26 @@ def compute_metrics(data: dict) -> dict:
         "total_att_error": total_att_error,
         "total_att_error_std": total_att_error_std,
         "att_ss_errors": att_ss_errors,
+        "att_ss_jitters": att_ss_jitters,
         "att_settling_times": att_settling_times,
         "att_rise_times": att_rise_times,
         "att_overshoot_pcts": att_overshoot_pcts,
+        "att_zero_crossings": att_zero_crossings,
         # Linear velocity (per-axis)
         "total_lin_vel_error": total_lin_vel_error,
         "lin_vel_ss_errors": lin_vel_ss_errors,  # dict[axis_name, list[float]]
+        "lin_vel_ss_jitters": lin_vel_ss_jitters,
         "lin_vel_rise_times": lin_vel_rise_times,
         "lin_vel_overshoot_pcts": lin_vel_overshoot_pcts,
+        "lin_vel_zero_crossings": lin_vel_zero_crossings,
         "lin_vel_survival": lin_vel_survival,
         # Yaw
         "total_yaw_rate_error": total_yaw_rate_error,
         "yaw_ss_errors": yaw_ss_errors,
+        "yaw_ss_jitters": yaw_ss_jitters,
         "yaw_rise_times": yaw_rise_times,
         "yaw_overshoot_pcts": yaw_overshoot_pcts,
+        "yaw_zero_crossings": yaw_zero_crossings,
         "yaw_survival": yaw_survival,
         # Global
         "survival_rate": survival_rate,
@@ -1502,8 +1571,8 @@ def _plot_error(all_data: dict, levels: list[str], output_dir: str) -> None:
 # ---------------------------------------------------------------------------
 
 def _plot_summary_attitude(all_metrics: dict, levels: list[str], output_dir: str) -> None:
-    """Summary bar chart for attitude: SS error, settling time, rise time, overshoot."""
-    fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+    """Summary bar chart for attitude: SS error, jitter, settling, rise, overshoot, zero-X."""
+    fig, axes = plt.subplots(3, 2, figsize=(12, 12))
     fig.suptitle("Attitude Summary", fontsize=14)
     x = np.arange(len(levels))
     bar_colors = [DR_COLORS[lvl] for lvl in levels]
@@ -1514,20 +1583,30 @@ def _plot_summary_attitude(all_metrics: dict, levels: list[str], output_dir: str
     ss_stds = [float(np.nanstd(all_metrics[lvl]["att_ss_errors"])) for lvl in levels]
     _bar_subplot(axes[0, 0], x, ss_means, bar_colors, xlabels, "Error (deg)", "Attitude SS Error", yerr=ss_stds)
 
-    # (0,1): Settling time
+    # (0,1): SS jitter
+    jt_means = [float(np.nanmean(all_metrics[lvl]["att_ss_jitters"])) for lvl in levels]
+    jt_stds = [float(np.nanstd(all_metrics[lvl]["att_ss_jitters"])) for lvl in levels]
+    _bar_subplot(axes[0, 1], x, jt_means, bar_colors, xlabels, "Jitter (deg)", "SS Jitter (std of error in SS)", yerr=jt_stds)
+
+    # (1,0): Settling time
     st_means = [float(np.nanmean(all_metrics[lvl]["att_settling_times"])) for lvl in levels]
     st_stds = [float(np.nanstd(all_metrics[lvl]["att_settling_times"])) for lvl in levels]
-    _bar_subplot(axes[0, 1], x, st_means, bar_colors, xlabels, "Time (s)", "Settling Time", yerr=st_stds)
-
-    # (1,0): Rise time
-    rt_means = [float(np.nanmean(all_metrics[lvl]["att_rise_times"])) for lvl in levels]
-    rt_stds = [float(np.nanstd(all_metrics[lvl]["att_rise_times"])) for lvl in levels]
-    _bar_subplot(axes[1, 0], x, rt_means, bar_colors, xlabels, "Time (s)", "Rise Time (10%->90%)", yerr=rt_stds)
+    _bar_subplot(axes[1, 0], x, st_means, bar_colors, xlabels, "Time (s)", "Settling Time", yerr=st_stds)
 
     # (1,1): Overshoot
     os_means = [float(np.nanmean(all_metrics[lvl]["att_overshoot_pcts"])) for lvl in levels]
     os_stds = [float(np.nanstd(all_metrics[lvl]["att_overshoot_pcts"])) for lvl in levels]
     _bar_subplot(axes[1, 1], x, os_means, bar_colors, xlabels, "Overshoot (%)", "Step-Response Overshoot", yerr=os_stds)
+
+    # (2,0): Rise time
+    rt_means = [float(np.nanmean(all_metrics[lvl]["att_rise_times"])) for lvl in levels]
+    rt_stds = [float(np.nanstd(all_metrics[lvl]["att_rise_times"])) for lvl in levels]
+    _bar_subplot(axes[2, 0], x, rt_means, bar_colors, xlabels, "Time (s)", "Rise Time (10%->90%)", yerr=rt_stds)
+
+    # (2,1): Zero crossings
+    zx_means = [float(np.nanmean(all_metrics[lvl]["att_zero_crossings"])) for lvl in levels]
+    zx_stds = [float(np.nanstd(all_metrics[lvl]["att_zero_crossings"])) for lvl in levels]
+    _bar_subplot(axes[2, 1], x, zx_means, bar_colors, xlabels, "Count", "Zero Crossings (oscillation)", yerr=zx_stds)
 
     fig.tight_layout()
     fig.savefig(os.path.join(output_dir, "summary_att.png"), dpi=150)
@@ -1539,8 +1618,8 @@ def _plot_summary_attitude(all_metrics: dict, levels: list[str], output_dir: str
 # ---------------------------------------------------------------------------
 
 def _plot_summary_lin_vel(all_metrics: dict, levels: list[str], output_dir: str) -> None:
-    """Summary bar chart for lin vel: per-axis SS error, rise time, overshoot, survival."""
-    fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+    """Summary bar chart for lin vel: per-axis SS error, jitter, rise, overshoot, zero-X, survival."""
+    fig, axes = plt.subplots(3, 2, figsize=(12, 12))
     fig.suptitle("Linear Velocity Summary", fontsize=14)
     axis_names = ["vx", "vy", "vz"]
     n_ax = len(axis_names)
@@ -1550,50 +1629,29 @@ def _plot_summary_lin_vel(all_metrics: dict, levels: list[str], output_dir: str)
     ax_colors = ["#1f77b4", "#ff7f0e", "#2ca02c"]  # per-axis colors
     xlabels = [f"{lvl}\n(DR {int(DR_SCALE[lvl] * 100)}%)" for lvl in levels]
 
-    # (0,0): Per-axis SS error (grouped bar)
-    ax = axes[0, 0]
-    for ai, aname in enumerate(axis_names):
-        vals = [float(np.nanmean(all_metrics[lvl]["lin_vel_ss_errors"][aname])) for lvl in levels]
-        offset = (ai - (n_ax - 1) / 2) * bar_width
-        ax.bar(x_base + offset, vals, width=bar_width, color=ax_colors[ai], label=aname)
-    ax.set_xticks(x_base)
-    ax.set_xticklabels(xlabels, fontsize=9)
-    ax.set_ylabel("SS Error (m/s)")
-    ax.set_title("Per-Axis SS Error")
-    ax.legend(fontsize=8)
-    ax.grid(True, alpha=0.3, axis="y")
+    def _grouped_bar(ax, metric_key, ylabel, title):
+        for ai, aname in enumerate(axis_names):
+            vals = [float(np.nanmean(all_metrics[lvl][metric_key][aname])) for lvl in levels]
+            offset = (ai - (n_ax - 1) / 2) * bar_width
+            ax.bar(x_base + offset, vals, width=bar_width, color=ax_colors[ai], label=aname)
+        ax.set_xticks(x_base)
+        ax.set_xticklabels(xlabels, fontsize=9)
+        ax.set_ylabel(ylabel)
+        ax.set_title(title)
+        ax.legend(fontsize=8)
+        ax.grid(True, alpha=0.3, axis="y")
 
-    # (0,1): Per-axis rise time (grouped bar)
-    ax = axes[0, 1]
-    for ai, aname in enumerate(axis_names):
-        vals = [float(np.nanmean(all_metrics[lvl]["lin_vel_rise_times"][aname])) for lvl in levels]
-        offset = (ai - (n_ax - 1) / 2) * bar_width
-        ax.bar(x_base + offset, vals, width=bar_width, color=ax_colors[ai], label=aname)
-    ax.set_xticks(x_base)
-    ax.set_xticklabels(xlabels, fontsize=9)
-    ax.set_ylabel("Time (s)")
-    ax.set_title("Rise Time (10%->90%)")
-    ax.legend(fontsize=8)
-    ax.grid(True, alpha=0.3, axis="y")
+    _grouped_bar(axes[0, 0], "lin_vel_ss_errors", "SS Error (m/s)", "Per-Axis SS Error")
+    _grouped_bar(axes[0, 1], "lin_vel_ss_jitters", "Jitter (m/s)", "Per-Axis SS Jitter")
+    _grouped_bar(axes[1, 0], "lin_vel_rise_times", "Time (s)", "Rise Time (10%->90%)")
+    _grouped_bar(axes[1, 1], "lin_vel_overshoot_pcts", "Overshoot (%)", "Step-Response Overshoot")
+    _grouped_bar(axes[2, 0], "lin_vel_zero_crossings", "Count", "Zero Crossings (oscillation)")
 
-    # (1,0): Per-axis overshoot (grouped bar)
-    ax = axes[1, 0]
-    for ai, aname in enumerate(axis_names):
-        vals = [float(np.nanmean(all_metrics[lvl]["lin_vel_overshoot_pcts"][aname])) for lvl in levels]
-        offset = (ai - (n_ax - 1) / 2) * bar_width
-        ax.bar(x_base + offset, vals, width=bar_width, color=ax_colors[ai], label=aname)
-    ax.set_xticks(x_base)
-    ax.set_xticklabels(xlabels, fontsize=9)
-    ax.set_ylabel("Overshoot (%)")
-    ax.set_title("Step-Response Overshoot")
-    ax.legend(fontsize=8)
-    ax.grid(True, alpha=0.3, axis="y")
-
-    # (1,1): Survival at end of lin_vel block
+    # (2,1): Survival at end of lin_vel block
     bar_colors = [DR_COLORS[lvl] for lvl in levels]
     survivals = [all_metrics[lvl]["lin_vel_survival"] for lvl in levels]
     _bar_subplot(
-        axes[1, 1], x_base, survivals, bar_colors, xlabels,
+        axes[2, 1], x_base, survivals, bar_colors, xlabels,
         "Survival (%)", "Survival (end of lin_vel)", ylim=(0, 105),
     )
 
@@ -1607,8 +1665,8 @@ def _plot_summary_lin_vel(all_metrics: dict, levels: list[str], output_dir: str)
 # ---------------------------------------------------------------------------
 
 def _plot_summary_yaw(all_metrics: dict, levels: list[str], output_dir: str) -> None:
-    """Summary bar chart for yaw: SS error, rise time, overshoot, survival."""
-    fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+    """Summary bar chart for yaw: SS error, jitter, rise, overshoot, zero-X, survival."""
+    fig, axes = plt.subplots(3, 2, figsize=(12, 12))
     fig.suptitle("Yaw Rate Summary", fontsize=14)
     x = np.arange(len(levels))
     bar_colors = [DR_COLORS[lvl] for lvl in levels]
@@ -1619,19 +1677,29 @@ def _plot_summary_yaw(all_metrics: dict, levels: list[str], output_dir: str) -> 
     ss_stds = [float(np.nanstd(all_metrics[lvl]["yaw_ss_errors"])) for lvl in levels]
     _bar_subplot(axes[0, 0], x, ss_means, bar_colors, xlabels, "Error (rad/s)", "Yaw SS Error", yerr=ss_stds)
 
-    # (0,1): Rise time
-    rt_means = [float(np.nanmean(all_metrics[lvl]["yaw_rise_times"])) for lvl in levels]
-    rt_stds = [float(np.nanstd(all_metrics[lvl]["yaw_rise_times"])) for lvl in levels]
-    _bar_subplot(axes[0, 1], x, rt_means, bar_colors, xlabels, "Time (s)", "Rise Time (10%->90%)", yerr=rt_stds)
+    # (0,1): SS jitter
+    jt_means = [float(np.nanmean(all_metrics[lvl]["yaw_ss_jitters"])) for lvl in levels]
+    jt_stds = [float(np.nanstd(all_metrics[lvl]["yaw_ss_jitters"])) for lvl in levels]
+    _bar_subplot(axes[0, 1], x, jt_means, bar_colors, xlabels, "Jitter (rad/s)", "SS Jitter (std of error in SS)", yerr=jt_stds)
 
     # (1,0): Overshoot
     os_means = [float(np.nanmean(all_metrics[lvl]["yaw_overshoot_pcts"])) for lvl in levels]
     os_stds = [float(np.nanstd(all_metrics[lvl]["yaw_overshoot_pcts"])) for lvl in levels]
     _bar_subplot(axes[1, 0], x, os_means, bar_colors, xlabels, "Overshoot (%)", "Step-Response Overshoot", yerr=os_stds)
 
-    # (1,1): Survival at end of yaw block
+    # (1,1): Rise time
+    rt_means = [float(np.nanmean(all_metrics[lvl]["yaw_rise_times"])) for lvl in levels]
+    rt_stds = [float(np.nanstd(all_metrics[lvl]["yaw_rise_times"])) for lvl in levels]
+    _bar_subplot(axes[1, 1], x, rt_means, bar_colors, xlabels, "Time (s)", "Rise Time (10%->90%)", yerr=rt_stds)
+
+    # (2,0): Zero crossings
+    zx_means = [float(np.nanmean(all_metrics[lvl]["yaw_zero_crossings"])) for lvl in levels]
+    zx_stds = [float(np.nanstd(all_metrics[lvl]["yaw_zero_crossings"])) for lvl in levels]
+    _bar_subplot(axes[2, 0], x, zx_means, bar_colors, xlabels, "Count", "Zero Crossings (oscillation)", yerr=zx_stds)
+
+    # (2,1): Survival at end of yaw block
     survivals = [all_metrics[lvl]["yaw_survival"] for lvl in levels]
-    _bar_subplot(axes[1, 1], x, survivals, bar_colors, xlabels, "Survival (%)", "Survival (end of yaw)", ylim=(0, 105))
+    _bar_subplot(axes[2, 1], x, survivals, bar_colors, xlabels, "Survival (%)", "Survival (end of yaw)", ylim=(0, 105))
 
     fig.tight_layout()
     fig.savefig(os.path.join(output_dir, "summary_yaw.png"), dpi=150)
@@ -2005,22 +2073,28 @@ def main(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         print("    [Attitude]")
         print(f"      Error:     {metrics['total_att_error']:.1f} +/- {metrics['total_att_error_std']:.1f} deg")
         print(f"      SS error:  {np.nanmean(metrics['att_ss_errors']):.1f} deg")
+        print(f"      SS jitter: {np.nanmean(metrics['att_ss_jitters']):.2f} deg")
         print(f"      Settling:  {np.nanmean(metrics['att_settling_times']):.2f} s")
         print(f"      Rise time: {np.nanmean(metrics['att_rise_times']):.3f} s")
         print(f"      Overshoot: {np.nanmean(metrics['att_overshoot_pcts']):.1f}%")
+        print(f"      Zero-X:   {np.nanmean(metrics['att_zero_crossings']):.1f}")
         print("    [Lin Vel]")
         print(f"      Error:     {metrics['total_lin_vel_error']:.3f} m/s")
         for ax_name in ["vx", "vy", "vz"]:
             ss = np.nanmean(metrics['lin_vel_ss_errors'][ax_name])
+            jt = np.nanmean(metrics['lin_vel_ss_jitters'][ax_name])
             rt = np.nanmean(metrics['lin_vel_rise_times'][ax_name])
             os_p = np.nanmean(metrics['lin_vel_overshoot_pcts'][ax_name])
-            print(f"      {ax_name}: SS={ss:.3f} Rise={rt:.3f}s OS={os_p:.1f}%")
+            zx = np.nanmean(metrics['lin_vel_zero_crossings'][ax_name])
+            print(f"      {ax_name}: SS={ss:.3f} Jit={jt:.3f} Rise={rt:.3f}s OS={os_p:.1f}% ZX={zx:.1f}")
         print(f"      Survival:  {metrics['lin_vel_survival']:.0f}%")
         print("    [Yaw]")
         print(f"      Error:     {metrics['total_yaw_rate_error']:.4f} rad/s")
         print(f"      SS error:  {np.nanmean(metrics['yaw_ss_errors']):.4f} rad/s")
+        print(f"      SS jitter: {np.nanmean(metrics['yaw_ss_jitters']):.4f} rad/s")
         print(f"      Rise time: {np.nanmean(metrics['yaw_rise_times']):.3f} s")
         print(f"      Overshoot: {np.nanmean(metrics['yaw_overshoot_pcts']):.1f}%")
+        print(f"      Zero-X:   {np.nanmean(metrics['yaw_zero_crossings']):.1f}")
         print(f"      Survival:  {metrics['yaw_survival']:.0f}%")
         print(f"    [Global] Survival: {metrics['survival_rate']:.0f}%")
 
@@ -2037,10 +2111,10 @@ def main(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     print("COMPARISON SUMMARY")
     print(f"{'=' * 100}")
     print(
-        f"{'Level':<10} {'DR%':>5} {'AttErr':>10} {'AttSS':>8} {'AttRise':>8} "
+        f"{'Level':<10} {'DR%':>5} {'AttErr':>10} {'AttSS':>8} {'Jitter':>7} {'Settle':>7} {'AttOS':>6} {'ZeroX':>6} "
         f"{'LinVel':>8} {'YawErr':>8} {'YawSS':>8} {'Surv':>6}"
     )
-    print(f"{'-' * 10} {'-' * 5} {'-' * 10} {'-' * 8} {'-' * 8} {'-' * 8} {'-' * 8} {'-' * 8} {'-' * 6}")
+    print("-" * 110)
     for lvl in DR_LEVELS:
         m = all_metrics[lvl]
         print(
@@ -2048,13 +2122,16 @@ def main(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
             f"{int(DR_SCALE[lvl] * 100):4d}% "
             f"{m['total_att_error']:5.1f}+/-{m['total_att_error_std']:.1f} "
             f"{np.nanmean(m['att_ss_errors']):7.1f}d "
-            f"{np.nanmean(m['att_rise_times']):7.3f}s "
+            f"{np.nanmean(m['att_ss_jitters']):6.2f}d "
+            f"{np.nanmean(m['att_settling_times']):6.2f}s "
+            f"{np.nanmean(m['att_overshoot_pcts']):5.1f}% "
+            f"{np.nanmean(m['att_zero_crossings']):5.1f} "
             f"{m['total_lin_vel_error']:7.3f} "
             f"{m['total_yaw_rate_error']:7.4f} "
             f"{np.nanmean(m['yaw_ss_errors']):7.4f} "
             f"{m['survival_rate']:5.0f}%"
         )
-    print(f"{'=' * 100}")
+    print("=" * 110)
 
     print(f"\nOutput saved to: {output_dir}")
     env.close()
