@@ -39,7 +39,10 @@ def load_eval_data(eval_dir: str) -> dict[str, dict]:
 
 
 def compute_level_metrics(d: dict) -> dict:
-    """Compute summary metrics for one DR level."""
+    """Compute summary metrics for one DR level.
+
+    Steady-state error uses per-segment last-50% averaging (matching eval_dr.py).
+    """
     error_roll = d["error_roll"]
     error_pitch = d["error_pitch"]
     terminated = d["terminated"]
@@ -51,11 +54,26 @@ def compute_level_metrics(d: dict) -> dict:
     total_mean = float(np.nanmean(np.where(alive, error_norm, np.nan))) if alive.any() else float("nan")
     survival = float(alive[-1].sum()) / num_envs * 100.0
 
-    # Steady-state: last 50% of entire trajectory
-    ss_start = error_norm.shape[0] // 2
-    ss_err = error_norm[ss_start:]
-    ss_alive = alive[ss_start:]
-    ss_mean = float(np.nanmean(np.where(ss_alive, ss_err, np.nan))) if ss_alive.any() else float("nan")
+    # Steady-state: per-segment last 50% averaging (consistent with eval_dr.py)
+    seg_steps = int(d["steps_per_segment"]) if "steps_per_segment" in d else 0
+    if seg_steps > 0:
+        num_segments = error_norm.shape[0] // seg_steps
+        ss_errors = []
+        for seg_idx in range(num_segments):
+            s = seg_idx * seg_steps
+            e = (seg_idx + 1) * seg_steps
+            ss_start = s + int(seg_steps * 0.5)
+            seg_ss = error_norm[ss_start:e]
+            seg_alive = alive[ss_start:e]
+            if seg_alive.any():
+                ss_errors.append(float(np.nanmean(np.where(seg_alive, seg_ss, np.nan))))
+        ss_mean = float(np.nanmean(ss_errors)) if ss_errors else float("nan")
+    else:
+        # Fallback for old .npz files without steps_per_segment
+        ss_start = error_norm.shape[0] // 2
+        ss_err = error_norm[ss_start:]
+        ss_alive = alive[ss_start:]
+        ss_mean = float(np.nanmean(np.where(ss_alive, ss_err, np.nan))) if ss_alive.any() else float("nan")
 
     return {"total_mean": total_mean, "ss_mean": ss_mean, "survival": survival}
 
@@ -99,8 +117,7 @@ def main():
     align_time_ranges(all_policy_data, labels)
 
     all_policy_metrics = {
-        label: {lvl: compute_level_metrics(d) for lvl, d in all_policy_data[label].items()}
-        for label in labels
+        label: {lvl: compute_level_metrics(d) for lvl, d in all_policy_data[label].items()} for label in labels
     }
 
     levels = [lvl for lvl in DR_LEVELS if all(lvl in all_policy_data[l] for l in labels)]
@@ -118,10 +135,12 @@ def main():
             time_s = d["time"]
             alive = ~d["terminated"]
 
-            for col, (err_key, tgt_key, axis_name) in enumerate([
-                ("error_roll", "target_roll_deg", "Roll Error (deg)"),
-                ("error_pitch", "target_pitch_deg", "Pitch Error (deg)"),
-            ]):
+            for col, (err_key, tgt_key, axis_name) in enumerate(
+                [
+                    ("error_roll", "target_roll_deg", "Roll Error (deg)"),
+                    ("error_pitch", "target_pitch_deg", "Pitch Error (deg)"),
+                ]
+            ):
                 ax = axes1[row, col] if len(levels) > 1 else axes1[col]
                 err_vals = np.where(alive, np.abs(d[err_key]), np.nan)
                 mean = np.nanmean(err_vals, axis=1)
@@ -166,8 +185,12 @@ def main():
             for bar, val in zip(bars, vals):
                 if not np.isnan(val):
                     ax.text(
-                        bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.3,
-                        f"{val:.1f}", ha="center", va="bottom", fontsize=7,
+                        bar.get_x() + bar.get_width() / 2,
+                        bar.get_height() + 0.3,
+                        f"{val:.1f}",
+                        ha="center",
+                        va="bottom",
+                        fontsize=7,
                     )
         ax.set_xticks(x)
         ax.set_xticklabels([f"{lvl}\n(DR {dr_pct[lvl]}%)" for lvl in levels], fontsize=9)
@@ -190,10 +213,12 @@ def main():
             time_s = d["time"]
             alive = ~d["terminated"]
 
-            for col, (actual_key, tgt_key, axis_name) in enumerate([
-                ("actual_roll_deg", "target_roll_deg", "Roll (deg)"),
-                ("actual_pitch_deg", "target_pitch_deg", "Pitch (deg)"),
-            ]):
+            for col, (actual_key, tgt_key, axis_name) in enumerate(
+                [
+                    ("actual_roll_deg", "target_roll_deg", "Roll (deg)"),
+                    ("actual_pitch_deg", "target_pitch_deg", "Pitch (deg)"),
+                ]
+            ):
                 ax = axes3[row, col] if len(levels) > 1 else axes3[col]
                 vals = np.where(alive, d[actual_key], np.nan)
                 mean = np.nanmean(vals, axis=1)
@@ -237,7 +262,11 @@ def main():
         print(f"{'DR ' + str(dr_pct[lvl]) + '%':>14}", end="")
     print()
 
-    for metric_key, metric_label in [("total_mean", "Mean Error (deg)"), ("ss_mean", "SS Error (deg)"), ("survival", "Survival (%)")]:
+    for metric_key, metric_label in [
+        ("total_mean", "Mean Error (deg)"),
+        ("ss_mean", "SS Error (deg)"),
+        ("survival", "Survival (%)"),
+    ]:
         for label in labels:
             print(f"  {label + ' ' + metric_label:>38} ", end="")
             for lvl in levels:
