@@ -202,8 +202,10 @@ class RslRlConstraintTRPOAlgorithmCfg:
     std_lr: float = 1e-3
     entropy_coef: float = 0.003
 
-    # Adaptive entropy (SAC-style dual descent)
-    entropy_adaptive: bool = True
+    # Adaptive entropy (SAC-style dual descent) -- disabled, fixed coef is more
+    # stable for this task (alpha decays to < fixed coef during natural entropy
+    # decline, leaving less exploration pressure than the static baseline).
+    entropy_adaptive: bool = False
     entropy_target: float = 3.0
     entropy_alpha_lr: float = 1e-3
 

@@ -149,27 +149,27 @@ class HardDomainRandomizationCfg(DomainRandomizationCfg):
     """
 
     enable: bool = True
-    added_mass_scale: tuple[float, float] = (0.3, 1.8)  # was (0.5, 1.5); DORAEMON uniform saturation
-    linear_damping_scale: tuple[float, float] = (0.2, 2.0)  # was (0.4, 1.7); wider for robustness
-    quadratic_damping_scale: tuple[float, float] = (0.2, 2.0)  # was (0.4, 1.7); same
-    volume_scale: tuple[float, float] = (0.70, 1.35)  # was (0.75, 1.25); lower bound kept conservative (sinking risk at 0.65)
-    cob_offset_x: tuple[float, float] = (-0.03, 0.03)  # was (-0.02, 0.02)
-    cob_offset_y: tuple[float, float] = (-0.03, 0.03)  # was (-0.02, 0.02)
-    cob_offset_z: tuple[float, float] = (-0.04, 0.04)  # kept at prior value (passive instability at ±0.06 with cog_z)
-    cog_offset_x: tuple[float, float] = (-0.03, 0.03)  # was (-0.02, 0.02)
-    cog_offset_y: tuple[float, float] = (-0.03, 0.03)  # was (-0.02, 0.02)
-    cog_offset_z: tuple[float, float] = (-0.04, 0.04)  # kept at prior value (passive instability at ±0.06 with cob_z)
-    inertia_scale: tuple[float, float] = (0.3, 2.5)  # was (0.4, 2.0); wider for encoder challenge
-    body_mass_scale: tuple[float, float] = (0.65, 1.35)  # was (0.75, 1.25); mild expansion
-    payload_mass_range: tuple[float, float] = (0.0, 4.0)  # was (0.0, 3.0); 4kg = ~40% body weight
-    payload_cog_offset_xy_radius: float = 0.20  # was 0.15
-    payload_cog_offset_z: tuple[float, float] = (-0.07, 0.0)  # was (-0.05, 0.0)
-    # -- Joint Actuator (widened for hard DR) --
-    joint_stiffness_range: tuple[float, float] = (20.0, 180.0)  # was (30, 150)
-    joint_damping_range: tuple[float, float] = (0.5, 9.0)  # was (0.3, 7.0); lower bound 0.5 keeps damping ratio > 0.5
-    # -- Thruster (widened for hard DR) --
-    thrust_coefficient_scale: tuple[float, float] = (0.6, 1.4)  # was (0.7, 1.3)
-    time_constant_scale: tuple[float, float] = (0.6, 1.4)  # was (0.7, 1.3)
+    added_mass_scale: tuple[float, float] = (0.5, 1.5)
+    linear_damping_scale: tuple[float, float] = (0.4, 1.7)
+    quadratic_damping_scale: tuple[float, float] = (0.4, 1.7)
+    volume_scale: tuple[float, float] = (0.75, 1.25)
+    cob_offset_x: tuple[float, float] = (-0.02, 0.02)
+    cob_offset_y: tuple[float, float] = (-0.02, 0.02)
+    cob_offset_z: tuple[float, float] = (-0.04, 0.04)
+    cog_offset_x: tuple[float, float] = (-0.02, 0.02)
+    cog_offset_y: tuple[float, float] = (-0.02, 0.02)
+    cog_offset_z: tuple[float, float] = (-0.04, 0.04)
+    inertia_scale: tuple[float, float] = (0.4, 2.0)
+    body_mass_scale: tuple[float, float] = (0.75, 1.25)
+    payload_mass_range: tuple[float, float] = (0.0, 3.0)
+    payload_cog_offset_xy_radius: float = 0.15
+    payload_cog_offset_z: tuple[float, float] = (-0.05, 0.0)
+    # -- Joint Actuator --
+    joint_stiffness_range: tuple[float, float] = (30.0, 150.0)
+    joint_damping_range: tuple[float, float] = (0.3, 7.0)
+    # -- Thruster --
+    thrust_coefficient_scale: tuple[float, float] = (0.7, 1.3)
+    time_constant_scale: tuple[float, float] = (0.7, 1.3)
 
 
 # ==========================================================================
@@ -373,7 +373,7 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # Domain Randomization
     # ==========================================================================
     randomization: HardDomainRandomizationCfg = HardDomainRandomizationCfg()
-    doraemon: DoraemonCfg = DoraemonCfg(enable=True, kl_ub=0.08, performance_lb=130.0, step_interval=250)
+    doraemon: DoraemonCfg = DoraemonCfg(enable=True, kl_ub=0.08, performance_lb=90.0, step_interval=250)
 
     # ==========================================================================
     # Payload
