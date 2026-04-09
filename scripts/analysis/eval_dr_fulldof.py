@@ -567,6 +567,21 @@ def _get_block_step_range(
     return first * steps_per_segment, (last + 1) * steps_per_segment
 
 
+def _pick_sample_env(d: dict) -> int | None:
+    """Pick a representative (median-error) env index for trajectory overlay.
+
+    Returns None if num_envs <= 1 (sample would be identical to mean).
+    """
+    roll_err = d.get("error_roll")
+    if roll_err is None or roll_err.ndim < 2 or roll_err.shape[1] <= 1:
+        return None
+    # Total attitude error per env (mean over timesteps)
+    att_err = np.sqrt(d["error_roll"] ** 2 + d["error_pitch"] ** 2)
+    per_env = np.nanmean(att_err, axis=0)  # (num_envs,)
+    median_val = np.nanmedian(per_env)
+    return int(np.argmin(np.abs(per_env - median_val)))
+
+
 def _step_response_scalar_segment(
     actual: np.ndarray,
     alive: np.ndarray,
@@ -1373,6 +1388,7 @@ def _plot_attitude_tracking(all_data: dict, levels: list[str], output_dir: str) 
         alive = ~d["terminated"][att_start:att_end]
         dr_pct = int(DR_SCALE[lvl] * 100)
         block_time = np.arange(att_end - att_start) * step_dt
+        sample_idx = _pick_sample_env(d)
 
         for col, (actual_key, target_key, axis_label) in enumerate(
             [
@@ -1388,6 +1404,9 @@ def _plot_attitude_tracking(all_data: dict, levels: list[str], output_dir: str) 
             std = np.nanstd(vals, axis=1)
             ax.plot(block_time, mean, color=color, linewidth=1.0, label="actual (mean)")
             ax.fill_between(block_time, mean - std, mean + std, color=color, alpha=0.15)
+            if sample_idx is not None:
+                ax.plot(block_time, vals[:, sample_idx], color=color, linewidth=0.6,
+                        linestyle=":", alpha=0.7, label=f"sample (env {sample_idx})")
             ax.set_ylabel(axis_label, fontsize=9)
             ax.yaxis.set_major_locator(MultipleLocator(15))
             ax.grid(True, alpha=0.3)
@@ -1431,6 +1450,7 @@ def _plot_lin_vel(all_data: dict, levels: list[str], output_dir: str) -> None:
         alive = ~d["terminated"][lv_start:lv_end]
         dr_pct = int(DR_SCALE[lvl] * 100)
         block_time = np.arange(lv_end - lv_start) * step_dt
+        sample_idx = _pick_sample_env(d)
 
         for col, (dkey, tkey, ylabel) in enumerate(zip(data_keys, target_keys, axis_labels)):
             ax = axes[row, col] if len(levels) > 1 else axes[col]
@@ -1441,6 +1461,9 @@ def _plot_lin_vel(all_data: dict, levels: list[str], output_dir: str) -> None:
             std = np.nanstd(vals, axis=1)
             ax.plot(block_time, mean, color=color, linewidth=1.0, label="actual (mean)")
             ax.fill_between(block_time, mean - std, mean + std, color=color, alpha=0.15)
+            if sample_idx is not None:
+                ax.plot(block_time, vals[:, sample_idx], color=color, linewidth=0.6,
+                        linestyle=":", alpha=0.7, label=f"sample (env {sample_idx})")
             ax.set_ylabel(ylabel, fontsize=9)
             ax.grid(True, alpha=0.3)
             if col == 0:
@@ -1481,6 +1504,7 @@ def _plot_yaw_rate(all_data: dict, levels: list[str], output_dir: str) -> None:
         alive = ~d["terminated"][yaw_start:yaw_end]
         dr_pct = int(DR_SCALE[lvl] * 100)
         block_time = np.arange(yaw_end - yaw_start) * step_dt
+        sample_idx = _pick_sample_env(d)
 
         ax = axes[row]
         target = d["target_yaw_rate"][yaw_start:yaw_end]
@@ -1490,6 +1514,9 @@ def _plot_yaw_rate(all_data: dict, levels: list[str], output_dir: str) -> None:
         std = np.nanstd(vals, axis=1)
         ax.plot(block_time, mean, color=color, linewidth=1.0, label="actual (mean)")
         ax.fill_between(block_time, mean - std, mean + std, color=color, alpha=0.15)
+        if sample_idx is not None:
+            ax.plot(block_time, vals[:, sample_idx], color=color, linewidth=0.6,
+                    linestyle=":", alpha=0.7, label=f"sample (env {sample_idx})")
         ax.set_ylabel("Yaw Rate (rad/s)", fontsize=9)
         ax.set_title(f"{lvl} (DR {dr_pct}%)", fontsize=10, fontweight="bold", color=color)
         ax.grid(True, alpha=0.3)
