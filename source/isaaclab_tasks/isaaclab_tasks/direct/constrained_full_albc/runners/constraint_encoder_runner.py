@@ -294,6 +294,12 @@ class ConstraintEncoderRunner(OnPolicyRunner):
         for i, v in enumerate(alg._last_sigma_step_per_dim):
             metrics[f"SigmaStep/dim_{i}"] = v
 
+        # Per-dimension noise std (arm: 0-1, thruster: 2-7)
+        with torch.no_grad():
+            per_dim_std = self.alg.policy.log_std.exp()
+        for i, v in enumerate(per_dim_std.tolist()):
+            metrics[f"NoiseStd/dim_{i}"] = v
+
         # Gradient decomposition: vanilla vs natural gradient
         metrics["GradDecomp/enc_vanilla_norm"] = alg._last_enc_vanilla_norm
         metrics["GradDecomp/enc_natgrad_norm"] = alg._last_enc_natgrad_norm
