@@ -290,6 +290,9 @@ class ConstraintEncoderRunner(OnPolicyRunner):
         metrics["GradDecomp/sigma_vanilla_norm"] = alg._last_sigma_vanilla_norm
         metrics["GradDecomp/sigma_natgrad_norm"] = alg._last_sigma_natgrad_norm
         metrics["GradDecomp/sigma_step_norm"] = alg._last_sigma_step_norm
+        metrics["GradDecomp/sigma_step_mean"] = alg._last_sigma_step_mean  # positive = noise increase
+        for i, v in enumerate(alg._last_sigma_step_per_dim):
+            metrics[f"SigmaStep/dim_{i}"] = v
 
         # Gradient decomposition: vanilla vs natural gradient
         metrics["GradDecomp/enc_vanilla_norm"] = alg._last_enc_vanilla_norm

@@ -117,6 +117,8 @@ class ConstraintTRPO:
         self._last_sigma_vanilla_norm = 0.0
         self._last_sigma_natgrad_norm = 0.0
         self._last_sigma_step_norm = 0.0
+        self._last_sigma_step_mean = 0.0  # signed mean: positive = noise increase
+        self._last_sigma_step_per_dim: list[float] = [0.0] * 8  # per-action-dim signed step
         self._last_enc_vanilla_norm = 0.0
         self._last_enc_natgrad_norm = 0.0
         self._last_enc_step_norm = 0.0
@@ -509,9 +511,16 @@ class ConstraintTRPO:
         sig_s = self._sigma_param_offset
         sig_e = sig_s + self._sigma_param_count
         if self._sigma_param_count > 0:
-            self._last_sigma_vanilla_norm = g[sig_s:sig_e].norm().item()
-            self._last_sigma_natgrad_norm = nat_grad[sig_s:sig_e].norm().item()
-            self._last_sigma_step_norm = step_dir[sig_s:sig_e].norm().item()
+            sigma_g = g[sig_s:sig_e]
+            sigma_ng = nat_grad[sig_s:sig_e]
+            sigma_sd = step_dir[sig_s:sig_e]
+            self._last_sigma_vanilla_norm = sigma_g.norm().item()
+            self._last_sigma_natgrad_norm = sigma_ng.norm().item()
+            self._last_sigma_step_norm = sigma_sd.norm().item()
+            # Signed mean: positive = step increases log_std = noise increase
+            self._last_sigma_step_mean = sigma_sd.mean().item()
+            # Per-action-dimension signed step
+            self._last_sigma_step_per_dim = sigma_sd.tolist()
 
         if self._encoder_param_count > 0:
             s, e = self._encoder_param_offset, self._encoder_param_offset + self._encoder_param_count
