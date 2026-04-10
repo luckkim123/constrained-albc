@@ -238,14 +238,6 @@ class ConstraintEncoderRunner(OnPolicyRunner):
         if hasattr(raw_env, "_doraemon") and raw_env._doraemon is not None:
             self._save_aux_state(path, "doraemon_state.pt", raw_env._doraemon.state_dict())
 
-        # Save adaptive entropy alpha state (not in policy state_dict)
-        alg = self.alg
-        if getattr(alg, "_entropy_adaptive", False) and alg._log_alpha is not None:
-            alpha_state = {
-                "log_alpha": alg._log_alpha.detach().cpu(),
-                "alpha_optimizer": alg._alpha_optimizer.state_dict() if alg._alpha_optimizer else None,
-            }
-            self._save_aux_state(path, "entropy_alpha_state.pt", alpha_state)
 
     def load(self, path: str, load_optimizer: bool = True, map_location: str | None = None) -> dict:
         """Load model checkpoint, DORAEMON state, and adaptive entropy state."""
@@ -258,16 +250,6 @@ class ConstraintEncoderRunner(OnPolicyRunner):
             if doraemon_state is not None:
                 raw_env._doraemon.load_state_dict(doraemon_state)
                 logger.info("Restored DORAEMON distribution state from checkpoint")
-
-        # Restore adaptive entropy alpha state
-        alg = self.alg
-        if getattr(alg, "_entropy_adaptive", False) and alg._log_alpha is not None:
-            alpha_state = self._load_aux_state(path, "entropy_alpha_state.pt", self.device)
-            if alpha_state is not None:
-                alg._log_alpha.data.copy_(alpha_state["log_alpha"].to(self.device))
-                if load_optimizer and alg._alpha_optimizer is not None and alpha_state.get("alpha_optimizer"):
-                    alg._alpha_optimizer.load_state_dict(alpha_state["alpha_optimizer"])
-                logger.info("Restored adaptive entropy alpha=%.4f from checkpoint", alg._log_alpha.exp().item())
 
         return infos
 
@@ -304,7 +286,10 @@ class ConstraintEncoderRunner(OnPolicyRunner):
         metrics["Policy/entropy"] = alg._last_mean_entropy
         metrics["Policy/encoder_grad_norm"] = alg._last_encoder_grad_norm
         metrics["Policy/surrogate_loss"] = alg._last_surrogate_loss
-        metrics["Policy/entropy_alpha"] = alg._last_entropy_alpha
+        # Sigma gradient decomposition
+        metrics["GradDecomp/sigma_vanilla_norm"] = alg._last_sigma_vanilla_norm
+        metrics["GradDecomp/sigma_natgrad_norm"] = alg._last_sigma_natgrad_norm
+        metrics["GradDecomp/sigma_step_norm"] = alg._last_sigma_step_norm
 
         # Gradient decomposition: vanilla vs natural gradient
         metrics["GradDecomp/enc_vanilla_norm"] = alg._last_enc_vanilla_norm

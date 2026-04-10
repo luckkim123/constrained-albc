@@ -21,7 +21,7 @@ Parameter naming matches ActorCriticEncoder's value_prefixes contract for
 ConstraintTRPO classification:
     - "actor." -> policy params (TRPO natural gradient)
     - "critic." / "cost_critic." -> value params (Adam optimizer)
-    - "log_std" -> sigma optimizer (decoupled Adam)
+    - "log_std" -> policy params (TRPO natural gradient)
 
 Compared to ActorCriticEncoder(critic_uses_z=False), this class omits the
 encoder module and the z latent concatenation in the actor path. The critic

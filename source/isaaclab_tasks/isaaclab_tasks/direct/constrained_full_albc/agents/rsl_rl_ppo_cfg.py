@@ -158,9 +158,8 @@ class _FullDOFPolicyCfg(_EncoderPolicyCfg):
 class RslRlConstraintTRPOAlgorithmCfg:
     """TRPO + IPO (Interior-Point Optimization) algorithm.
 
-    Three optimizer groups:
-    - Actor + Encoder: TRPO natural gradient (trust region)
-    - Sigma (log_std): decoupled Adam (score-function gradient, std_lr=1e-3)
+    Two optimizer groups:
+    - Actor + Encoder + Sigma (log_std): TRPO natural gradient (trust region)
     - Value (critic + cost_critic): Adam (MSE loss)
     """
 
@@ -196,18 +195,9 @@ class RslRlConstraintTRPOAlgorithmCfg:
     barrier_t: float = 100.0
     barrier_alpha: float = 0.05
 
-    # Sigma (decoupled from TRPO)
+    # Sigma safety bounds (clamped after TRPO step)
     min_std: float = 0.05
     max_std: float = 2.0
-    std_lr: float = 1e-3
-    entropy_coef: float = 0.003
-
-    # Adaptive entropy (SAC-style dual descent) -- disabled, fixed coef is more
-    # stable for this task (alpha decays to < fixed coef during natural entropy
-    # decline, leaving less exploration pressure than the static baseline).
-    entropy_adaptive: bool = False
-    entropy_target: float = 3.0
-    entropy_alpha_lr: float = 1e-3
 
 
 # =============================================================================

@@ -63,15 +63,9 @@ class ConstraintTRPO:
         line_search_kl_margin: float = 1.5,
         barrier_t: float = 100.0,
         barrier_alpha: float = 0.02,
-        # Sigma (decoupled from TRPO trust region)
+        # Sigma safety bounds (clamped after TRPO step)
         min_std: float = 0.01,
         max_std: float = 2.0,
-        std_lr: float = 1e-3,
-        entropy_coef: float = 0.005,
-        # Adaptive entropy (SAC-style dual descent on alpha)
-        entropy_adaptive: bool = False,
-        entropy_target: float = 1.5,
-        entropy_alpha_lr: float = 3e-4,
         # Device
         device: str = "cpu",
         **_kwargs,
@@ -109,23 +103,6 @@ class ConstraintTRPO:
         self._barrier_alpha = barrier_alpha
         self.min_std = min_std
         self.max_std = max_std
-        self.entropy_coef = entropy_coef
-
-        # Adaptive entropy: SAC-style dual descent on alpha (Haarnoja et al., 2019)
-        # Learns alpha to maintain target entropy, preventing both entropy collapse
-        # and the entropy-advantage imbalance that causes noise_std divergence.
-        self._entropy_adaptive = entropy_adaptive
-        self._entropy_target = entropy_target
-        if entropy_adaptive:
-            self._log_alpha = torch.tensor(math.log(entropy_coef), device=device, requires_grad=True)
-            self._alpha_optimizer = optim.Adam([self._log_alpha], lr=entropy_alpha_lr)
-            logger.info(
-                "ConstraintTRPO: adaptive entropy enabled (target=%.1f, alpha_lr=%.1e, init_alpha=%.4f)",
-                entropy_target, entropy_alpha_lr, entropy_coef,
-            )
-        else:
-            self._log_alpha = None
-            self._alpha_optimizer = None
 
         # Monitoring (read by ConstraintEncoderRunner)
         self._last_cost_returns = [0.0] * num_constraints
@@ -136,7 +113,10 @@ class ConstraintTRPO:
         self._last_mean_entropy = 0.0
         self._last_surrogate_loss = 0.0
         self._last_encoder_grad_norm = 0.0
-        # Gradient decomposition: vanilla vs natural gradient for encoder
+        # Gradient decomposition: vanilla vs natural gradient (sigma/encoder/actor)
+        self._last_sigma_vanilla_norm = 0.0
+        self._last_sigma_natgrad_norm = 0.0
+        self._last_sigma_step_norm = 0.0
         self._last_enc_vanilla_norm = 0.0
         self._last_enc_natgrad_norm = 0.0
         self._last_enc_step_norm = 0.0
@@ -145,7 +125,6 @@ class ConstraintTRPO:
         self._last_actor_step_norm = 0.0
         self._last_enc_cos_vanilla_natgrad = 0.0
         self._last_enc_cos_vanilla_step = 0.0
-        self._last_entropy_alpha = entropy_coef
 
         if cost_gamma >= 1.0:
             raise ValueError(f"cost_gamma must be < 1.0, got {cost_gamma}")
@@ -158,30 +137,31 @@ class ConstraintTRPO:
         )
 
         # --- Parameter groups ---
-        # Three groups:
-        #   1. Policy (actor + encoder): TRPO natural gradient (no optimizer)
+        # Two groups:
+        #   1. Policy (actor + encoder + log_std): TRPO natural gradient (no optimizer)
         #      Encoder decoupling was tested (run 2026-03-30_12-27-19) and failed:
         #      enc_grad dropped 85% because actor->z gradient path is too weak.
-        #      Keeping encoder in TRPO where it gets indirect gradient from CG.
-        #   2. Sigma (log_std): Decoupled Adam (score-function gradient)
-        #      In 2D action space, sigma consumes ~33% of KL budget if inside TRPO.
-        #   3. Value (critic + cost_critic): Adam
+        #      log_std included in TRPO so KL trust region protects against entropy collapse.
+        #   2. Value (critic + cost_critic): Adam
         value_prefixes = ("critic.", "cost_critic.", "value_backbone.", "reward_head.", "cost_head.")
         value_params = []
         self._policy_params = []
+        self._sigma_param_offset = 0
+        self._sigma_param_count = 0
         self._encoder_param_offset = 0
         self._encoder_param_count = 0
 
         offset = 0
         enc_start = None
         for name, param in self.policy.named_parameters():
-            if name == "log_std":
-                continue  # handled by std_optimizer
             if any(name.startswith(p) for p in value_prefixes):
                 value_params.append(param)
             else:
                 self._policy_params.append(param)
-                if name.startswith("encoder"):
+                if name == "log_std":
+                    self._sigma_param_offset = offset
+                    self._sigma_param_count = param.numel()
+                elif name.startswith("encoder"):
                     if enc_start is None:
                         enc_start = offset
                     self._encoder_param_count += param.numel()
@@ -191,19 +171,15 @@ class ConstraintTRPO:
         self._value_params = value_params
         self.value_optimizer = optim.Adam(value_params, lr=value_lr)
 
-        # Sigma optimizer: separate Adam for log_std with score-function gradient.
-        self._std_lr = std_lr
-        self.std_optimizer = optim.Adam([self.policy.log_std], lr=std_lr)
-
         logger.info(
-            "ConstraintTRPO: %d policy params (TRPO), %d value params (Adam), "
-            "log_std decoupled (Adam, lr=%.4f, entropy_coef=%.4f, std_range=[%.3f, %.3f]), encoder slice [%d:%d] (%d params)",
+            "ConstraintTRPO: %d policy params (TRPO, includes log_std), %d value params (Adam), "
+            "std_range=[%.3f, %.3f], sigma slice [%d:%d], encoder slice [%d:%d] (%d params)",
             sum(p.numel() for p in self._policy_params),
             sum(p.numel() for p in value_params),
-            std_lr,
-            entropy_coef,
             min_std,
             max_std,
+            self._sigma_param_offset,
+            self._sigma_param_offset + self._sigma_param_count,
             self._encoder_param_offset,
             self._encoder_param_offset + self._encoder_param_count,
             self._encoder_param_count,
@@ -414,7 +390,7 @@ class ConstraintTRPO:
     # ==================================================================
 
     def update(self) -> dict[str, float]:
-        """One iteration: TRPO step (actor+encoder) -> sigma (Adam) -> values."""
+        """One iteration: TRPO step (actor+encoder+sigma) -> values."""
         obs_flat = self.storage.observations.flatten(0, 1).clone()
         actions_flat = self.storage.actions.flatten(0, 1).clone()
         returns_flat = self.storage.returns.flatten(0, 1).clone()
@@ -468,41 +444,9 @@ class ConstraintTRPO:
 
         ls_success = self._trpo_step(obs_flat, old_mu_flat, old_sigma_flat, surrogate)
 
-        # --- 3. Sigma update (decoupled from TRPO) ---
-        with torch.no_grad():
-            self.policy.act(obs_flat)
-            post_trpo_lp = self.policy.get_actions_log_prob(actions_flat).detach()
-
-        self.policy.act(obs_flat)
-        sigma_log_prob = self.policy.get_actions_log_prob(actions_flat)
-        sigma_ratio = torch.exp(sigma_log_prob - post_trpo_lp)
-
-        # Entropy coefficient: adaptive (SAC-style) or fixed
-        if self._entropy_adaptive and self._log_alpha is not None:
-            alpha = self._log_alpha.exp().detach()
-        else:
-            alpha = self.entropy_coef
-        sigma_surrogate = -(adv * sigma_ratio).mean() - alpha * self.policy.log_std.sum()
-
-        self.std_optimizer.zero_grad()
-        sigma_grad = torch.autograd.grad(sigma_surrogate, self.policy.log_std)[0]
-        self.policy.log_std.grad = sigma_grad
-        self.std_optimizer.step()
-
+        # --- 3. Safety clamp log_std after TRPO step ---
         with torch.no_grad():
             self.policy.log_std.data.clamp_(min=math.log(self.min_std), max=math.log(self.max_std))
-
-        # Adaptive alpha update: SAC dual descent (Haarnoja et al., 2019)
-        # min_alpha  alpha * (H(pi) - H_target)
-        # When H(pi) > H_target: loss > 0, grad descent decreases alpha
-        # When H(pi) < H_target: loss < 0, grad descent increases alpha
-        if self._entropy_adaptive and self._log_alpha is not None and self._alpha_optimizer is not None:
-            current_entropy = self.policy.entropy.mean().detach()
-            alpha_loss = self._log_alpha.exp() * (current_entropy - self._entropy_target)
-            self._alpha_optimizer.zero_grad()
-            alpha_loss.backward()
-            self._alpha_optimizer.step()
-            self._last_entropy_alpha = self._log_alpha.exp().item()
 
         # --- 4. KL after joint update ---
         with torch.no_grad():
@@ -561,15 +505,22 @@ class ConstraintTRPO:
             logger.warning("TRPO: step_dir contains NaN/Inf, skipping")
             return False
 
-        # --- Gradient decomposition: encoder vs actor ---
+        # --- Gradient decomposition: sigma / encoder / actor ---
+        sig_s = self._sigma_param_offset
+        sig_e = sig_s + self._sigma_param_count
+        if self._sigma_param_count > 0:
+            self._last_sigma_vanilla_norm = g[sig_s:sig_e].norm().item()
+            self._last_sigma_natgrad_norm = nat_grad[sig_s:sig_e].norm().item()
+            self._last_sigma_step_norm = step_dir[sig_s:sig_e].norm().item()
+
         if self._encoder_param_count > 0:
             s, e = self._encoder_param_offset, self._encoder_param_offset + self._encoder_param_count
             g_enc = g[s:e]
-            g_actor = torch.cat([g[:s], g[e:]])
+            g_actor = torch.cat([g[sig_e:s], g[e:]])
             ng_enc = nat_grad[s:e]
-            ng_actor = torch.cat([nat_grad[:s], nat_grad[e:]])
+            ng_actor = torch.cat([nat_grad[sig_e:s], nat_grad[e:]])
             sd_enc = step_dir[s:e]
-            sd_actor = torch.cat([step_dir[:s], step_dir[e:]])
+            sd_actor = torch.cat([step_dir[sig_e:s], step_dir[e:]])
 
             self._last_enc_vanilla_norm = g_enc.norm().item()
             self._last_enc_natgrad_norm = ng_enc.norm().item()
