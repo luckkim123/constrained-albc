@@ -3,23 +3,19 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""ERC-TRPO + IPO: Entropy-Regularized Constrained Trust Region Policy Optimization.
+"""TRPO + IPO: Trust Region Policy Optimization with Interior-Point constraints.
 
 Core algorithm:
     maximize  E[A(s,a)] + (1/t) * sum_k log(d_k^i - J_hat_Ck)
-    s.t.      KL(pi || pi_i) - beta * (H(pi) - H_ref) <= delta
+    s.t.      KL(pi || pi_i) <= delta
 
     - TRPO natural gradient via conjugate gradient + line search
-    - ERC-TRPO entropy regularization in KL constraint (prevents entropy collapse)
     - IPO log-barrier for K constraint costs
     - Adaptive thresholding: d_k^i = max(d_k, J_Ck + alpha * d_k)
-
-When entropy_beta=0, reduces to standard TRPO + IPO.
 
 Reference:
     Kim et al., "NORBC", IROS 2024 (Modified IPO).
     Muller et al., "Truly Constrained TRPO", ICML 2025.
-    ERC-TRPO, Neurocomputing 2024 (Entropy regularization for KL constraint).
 """
 
 from __future__ import annotations
@@ -70,12 +66,7 @@ class ConstraintTRPO:
         # Sigma safety bounds (clamped after TRPO step)
         min_std: float = 0.01,
         max_std: float = 2.0,
-        # ERC-TRPO: entropy regularization in trust region constraint
-        # Reformulates KL constraint: D_KL - beta * (H(pi) - H_ref) <= delta
-        # H_ref is captured at the first update (initial policy entropy).
-        # Entropy increase -> wider trust region, decrease -> tighter.
-        # Set to 0 to disable (standard TRPO).
-        # Reference: ERC-TRPO (Neurocomputing 2024).
+        # (reserved, unused) entropy_beta removed -- ERC-TRPO tested & reverted.
         entropy_beta: float = 0.0,
         # Device
         device: str = "cpu",
@@ -114,8 +105,6 @@ class ConstraintTRPO:
         self._barrier_alpha = barrier_alpha
         self.min_std = min_std
         self.max_std = max_std
-        self._entropy_beta = entropy_beta
-
         # Monitoring (read by ConstraintEncoderRunner)
         self._last_cost_returns = [0.0] * num_constraints
         self._last_violations = [0.0] * num_constraints
@@ -139,10 +128,8 @@ class ConstraintTRPO:
         self._last_actor_step_norm = 0.0
         self._last_enc_cos_vanilla_natgrad = 0.0
         self._last_enc_cos_vanilla_step = 0.0
-        # ERC-TRPO monitoring
-        self._entropy_ref: float | None = None  # H_ref: initial policy entropy (set on first update)
-        self._last_entropy_hTv = 0.0  # h^T F^{-1} h (entropy curvature)
-        self._last_effective_kl = 0.0  # KL - beta * (H - H_ref) (effective trust region usage)
+        self._last_entropy_hTv = 0.0
+        self._last_effective_kl = 0.0
 
         if cost_gamma >= 1.0:
             raise ValueError(f"cost_gamma must be < 1.0, got {cost_gamma}")
@@ -191,8 +178,7 @@ class ConstraintTRPO:
 
         logger.info(
             "ConstraintTRPO: %d policy params (TRPO, includes log_std), %d value params (Adam), "
-            "std_range=[%.3f, %.3f], sigma slice [%d:%d], encoder slice [%d:%d] (%d params), "
-            "entropy_beta=%.4f%s",
+            "std_range=[%.3f, %.3f], sigma slice [%d:%d], encoder slice [%d:%d] (%d params)",
             sum(p.numel() for p in self._policy_params),
             sum(p.numel() for p in value_params),
             min_std,
@@ -202,8 +188,6 @@ class ConstraintTRPO:
             self._encoder_param_offset,
             self._encoder_param_offset + self._encoder_param_count,
             self._encoder_param_count,
-            entropy_beta,
-            " (ERC-TRPO active)" if entropy_beta > 0 else "",
         )
 
         # RSL-RL OnPolicyRunner compatibility
@@ -401,12 +385,7 @@ class ConstraintTRPO:
         old_loss: torch.Tensor,
         surrogate_fn: Callable[[], torch.Tensor],
     ) -> bool:
-        """Backtracking line search: accept when surrogate improves and effective KL <= delta.
-
-        ERC-TRPO: acceptance uses (KL - beta * (H - H_ref)) <= delta.
-        Entropy increase relaxes trust region; decrease tightens it.
-        When beta=0 this reduces to standard TRPO line search.
-        """
+        """Backtracking line search: accept when surrogate improves and KL <= delta."""
         old_params = self._get_policy_params_flat()
         step_size = 1.0
         kl_limit = self.max_kl * self.line_search_kl_margin
@@ -415,12 +394,8 @@ class ConstraintTRPO:
             with torch.no_grad():
                 new_loss = surrogate_fn()
                 kl = self._kl_divergence(obs, old_mu, old_sigma)
-                # ERC-TRPO: subtract entropy CHANGE bonus from KL for acceptance.
-                # _entropy_ref is always set in update() before _trpo_step.
-                h_ref = self._entropy_ref if self._entropy_ref is not None else self._last_mean_entropy
-                effective_kl = kl - self._entropy_beta * (self._last_mean_entropy - h_ref)
-                self._last_effective_kl = effective_kl.item()
-            if (old_loss - new_loss) > 0 and effective_kl <= kl_limit:
+                self._last_effective_kl = kl.item()
+            if (old_loss - new_loss) > 0 and kl <= kl_limit:
                 return True
             step_size *= self.line_search_shrink_factor
         self._set_policy_params_flat(old_params)
@@ -433,14 +408,6 @@ class ConstraintTRPO:
     def update(self) -> dict[str, float]:
         """One iteration: TRPO step (actor+encoder+sigma) -> values."""
         obs_flat = self.storage.observations.flatten(0, 1).clone()
-
-        # Capture initial policy entropy as reference for ERC-TRPO normalization.
-        # H_ref is set once on first update; on resume it resets to current state.
-        if self._entropy_beta > 0 and self._entropy_ref is None:
-            with torch.no_grad():
-                self.policy.act(obs_flat)
-                self._entropy_ref = self.policy.entropy.mean().item()
-            logger.info("ERC-TRPO: entropy reference H_ref=%.4f", self._entropy_ref)
         actions_flat = self.storage.actions.flatten(0, 1).clone()
         returns_flat = self.storage.returns.flatten(0, 1).clone()
         advantages_flat = self.storage.advantages.flatten(0, 1).clone()
@@ -540,26 +507,10 @@ class ConstraintTRPO:
         if g_norm > self.max_grad_norm:
             g = g * (self.max_grad_norm / g_norm)
 
-        # ERC-TRPO: combine reward gradient with entropy gradient before CG.
-        # Reference: ERC-TRPO (Neurocomputing 2024).
-        # The trust region constraint D_KL - beta * H(pi) <= delta is equivalent to
-        # optimizing (surrogate + beta * H) within the standard trust region D_KL <= delta,
-        # then using the relaxed line search acceptance (KL - beta*H <= delta).
-        # By combining gradients before CG, both components receive consistent
-        # scaling from the trust region geometry (single step_size from F).
-        if self._entropy_beta > 0:
-            self.policy.act(obs_flat)
-            entropy = self.policy.entropy.mean()
-            # allow_unused=True because entropy depends only on log_std, not actor/encoder params
-            h = self._flat_grad(-entropy, self._policy_params, allow_unused=True)
-            self._last_entropy_hTv = (0.5 * h.dot(h)).item()  # ||h||^2 for monitoring
-            # Combined gradient: reward surrogate + entropy preservation
-            g = g + self._entropy_beta * h
-
-        # Natural gradient: u = F^{-1} (g + beta * h)
+        # Natural gradient: u = F^{-1} g
         nat_grad = self._conjugate_gradient(obs_flat, old_mu_flat, old_sigma_flat, g)
 
-        # Step size: sqrt(2 * delta / (g_combined^T F^{-1} g_combined))
+        # Step size: sqrt(2 * delta / (g^T F^{-1} g))
         shs = 0.5 * nat_grad.dot(g)
         if shs <= 0 or not torch.isfinite(shs):
             logger.warning("TRPO: shs=%.6e non-positive/non-finite, skipping", shs.item())

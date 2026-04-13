@@ -199,11 +199,8 @@ class RslRlConstraintTRPOAlgorithmCfg:
     min_std: float = 0.05
     max_std: float = 2.0
 
-    # ERC-TRPO: entropy regularization in KL constraint.
-    # Reformulates trust region: D_KL - beta * (H(pi) - H_ref) <= delta.
-    # H_ref = initial entropy; bonus is relative to starting point.
-    # Higher beta -> stronger entropy preservation. Set 0 to disable.
-    entropy_beta: float = 0.01
+    # (ERC-TRPO tested & reverted: created hard entropy floor, froze policy)
+    entropy_beta: float = 0.0
 
 
 # =============================================================================
