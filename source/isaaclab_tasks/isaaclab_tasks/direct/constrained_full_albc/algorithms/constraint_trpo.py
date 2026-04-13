@@ -63,11 +63,11 @@ class ConstraintTRPO:
         line_search_kl_margin: float = 1.5,
         barrier_t: float = 100.0,
         barrier_alpha: float = 0.02,
-        # Sigma safety bounds (clamped after TRPO step)
+        # Sigma safety bounds (clamped after TRPO step).
+        # min_std_per_dim overrides min_std when provided (per-action-dim floor).
         min_std: float = 0.01,
         max_std: float = 2.0,
-        # (reserved, unused) entropy_beta removed -- ERC-TRPO tested & reverted.
-        entropy_beta: float = 0.0,
+        min_std_per_dim: tuple[float, ...] = (),
         # Device
         device: str = "cpu",
         **_kwargs,
@@ -105,6 +105,14 @@ class ConstraintTRPO:
         self._barrier_alpha = barrier_alpha
         self.min_std = min_std
         self.max_std = max_std
+        # Per-dim min_std: tensor for clamp, or None for scalar fallback
+        if min_std_per_dim:
+            self._log_min_std = torch.tensor(
+                [math.log(s) for s in min_std_per_dim], device=device, dtype=torch.float32
+            )
+            logger.info("Per-dim min_std: %s", list(min_std_per_dim))
+        else:
+            self._log_min_std = None
         # Monitoring (read by ConstraintEncoderRunner)
         self._last_cost_returns = [0.0] * num_constraints
         self._last_violations = [0.0] * num_constraints
@@ -462,7 +470,12 @@ class ConstraintTRPO:
 
         # --- 3. Safety clamp log_std after TRPO step ---
         with torch.no_grad():
-            self.policy.log_std.data.clamp_(min=math.log(self.min_std), max=math.log(self.max_std))
+            log_max = math.log(self.max_std)
+            if self._log_min_std is not None:
+                self.policy.log_std.data.clamp_(max=log_max)
+                self.policy.log_std.data = torch.max(self.policy.log_std.data, self._log_min_std)
+            else:
+                self.policy.log_std.data.clamp_(min=math.log(self.min_std), max=log_max)
 
         # --- 4. KL after joint update ---
         with torch.no_grad():

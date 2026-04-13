@@ -198,9 +198,9 @@ class RslRlConstraintTRPOAlgorithmCfg:
     # Sigma safety bounds (clamped after TRPO step)
     min_std: float = 0.05
     max_std: float = 2.0
-
-    # (ERC-TRPO tested & reverted: created hard entropy floor, froze policy)
-    entropy_beta: float = 0.0
+    # Per-dim min_std: arm joints(0,1)=0.10, thrusters(2-7)=0.05.
+    # Arm dims collapse to scalar min_std by iter 1404; thruster dims stay above 0.14.
+    min_std_per_dim: tuple[float, ...] = (0.10, 0.10, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05)
 
 
 # =============================================================================
