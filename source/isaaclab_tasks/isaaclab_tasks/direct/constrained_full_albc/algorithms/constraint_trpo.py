@@ -63,6 +63,9 @@ class ConstraintTRPO:
         line_search_kl_margin: float = 1.5,
         barrier_t: float = 100.0,
         barrier_alpha: float = 0.02,
+        # Entropy bonus: added to surrogate loss to counteract natural noise reduction.
+        # Gradient for log_std: +entropy_coef per dim (pushes noise up).
+        entropy_coef: float = 0.0,
         # Sigma safety bounds (clamped after TRPO step).
         # min_std_per_dim overrides min_std when provided (per-action-dim floor).
         min_std: float = 0.01,
@@ -96,6 +99,9 @@ class ConstraintTRPO:
         # GAE
         self.gamma = gamma
         self.lam = lam
+
+        # Entropy bonus
+        self._entropy_coef = entropy_coef
 
         # IPO barrier
         self.num_constraints = num_constraints
@@ -463,8 +469,12 @@ class ConstraintTRPO:
             margin = barrier_base - cost_surrs
             barrier = -torch.log(margin.clamp(min=1e-8)).sum() / self._barrier_t
             self._last_barrier_penalty = barrier.item()
-            self._last_mean_entropy = self.policy.entropy.mean().item()
-            return reward_surr + barrier
+            mean_entropy = self.policy.entropy.mean()
+            self._last_mean_entropy = mean_entropy.item()
+            # Entropy bonus: minimize -coef*H to maximize entropy.
+            # Gradient for log_std_i: +entropy_coef (pushes noise up).
+            entropy_bonus = -self._entropy_coef * mean_entropy
+            return reward_surr + barrier + entropy_bonus
 
         ls_success = self._trpo_step(obs_flat, old_mu_flat, old_sigma_flat, surrogate)
 

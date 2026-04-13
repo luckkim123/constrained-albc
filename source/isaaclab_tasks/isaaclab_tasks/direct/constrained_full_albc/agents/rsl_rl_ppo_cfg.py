@@ -195,6 +195,11 @@ class RslRlConstraintTRPOAlgorithmCfg:
     barrier_t: float = 100.0
     barrier_alpha: float = 0.05
 
+    # Entropy bonus: counteracts TRPO's natural noise reduction.
+    # 04-09 run (entropy_coef=0.003): noise recovered 0.36->0.55 after iter 3758.
+    # 04-10 run (entropy_coef=0): noise collapsed to 0.12.
+    entropy_coef: float = 0.003
+
     # Sigma safety bounds (clamped after TRPO step)
     min_std: float = 0.05
     max_std: float = 2.0
