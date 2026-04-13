@@ -7,7 +7,7 @@
 
 Core algorithm:
     maximize  E[A(s,a)] + (1/t) * sum_k log(d_k^i - J_hat_Ck)
-    s.t.      KL(pi || pi_i) - beta * H(pi) <= delta
+    s.t.      KL(pi || pi_i) - beta * (H(pi) - H_ref) <= delta
 
     - TRPO natural gradient via conjugate gradient + line search
     - ERC-TRPO entropy regularization in KL constraint (prevents entropy collapse)
@@ -71,9 +71,10 @@ class ConstraintTRPO:
         min_std: float = 0.01,
         max_std: float = 2.0,
         # ERC-TRPO: entropy regularization in trust region constraint
-        # Reformulates KL constraint: D_KL - beta * H(pi) <= delta
-        # When beta > 0, high-entropy policies get a wider trust region,
-        # preventing entropy collapse. Set to 0 to disable (standard TRPO).
+        # Reformulates KL constraint: D_KL - beta * (H(pi) - H_ref) <= delta
+        # H_ref is captured at the first update (initial policy entropy).
+        # Entropy increase -> wider trust region, decrease -> tighter.
+        # Set to 0 to disable (standard TRPO).
         # Reference: ERC-TRPO (Neurocomputing 2024).
         entropy_beta: float = 0.0,
         # Device
@@ -139,8 +140,9 @@ class ConstraintTRPO:
         self._last_enc_cos_vanilla_natgrad = 0.0
         self._last_enc_cos_vanilla_step = 0.0
         # ERC-TRPO monitoring
+        self._entropy_ref: float | None = None  # H_ref: initial policy entropy (set on first update)
         self._last_entropy_hTv = 0.0  # h^T F^{-1} h (entropy curvature)
-        self._last_effective_kl = 0.0  # KL - beta * H (effective trust region usage)
+        self._last_effective_kl = 0.0  # KL - beta * (H - H_ref) (effective trust region usage)
 
         if cost_gamma >= 1.0:
             raise ValueError(f"cost_gamma must be < 1.0, got {cost_gamma}")
@@ -401,7 +403,8 @@ class ConstraintTRPO:
     ) -> bool:
         """Backtracking line search: accept when surrogate improves and effective KL <= delta.
 
-        ERC-TRPO: acceptance uses (KL - beta * H) <= delta instead of KL <= delta.
+        ERC-TRPO: acceptance uses (KL - beta * (H - H_ref)) <= delta.
+        Entropy increase relaxes trust region; decrease tightens it.
         When beta=0 this reduces to standard TRPO line search.
         """
         old_params = self._get_policy_params_flat()
@@ -412,8 +415,10 @@ class ConstraintTRPO:
             with torch.no_grad():
                 new_loss = surrogate_fn()
                 kl = self._kl_divergence(obs, old_mu, old_sigma)
-                # ERC-TRPO: subtract entropy bonus from KL for acceptance
-                effective_kl = kl - self._entropy_beta * self._last_mean_entropy
+                # ERC-TRPO: subtract entropy CHANGE bonus from KL for acceptance.
+                # _entropy_ref is always set in update() before _trpo_step.
+                h_ref = self._entropy_ref if self._entropy_ref is not None else self._last_mean_entropy
+                effective_kl = kl - self._entropy_beta * (self._last_mean_entropy - h_ref)
                 self._last_effective_kl = effective_kl.item()
             if (old_loss - new_loss) > 0 and effective_kl <= kl_limit:
                 return True
@@ -428,6 +433,14 @@ class ConstraintTRPO:
     def update(self) -> dict[str, float]:
         """One iteration: TRPO step (actor+encoder+sigma) -> values."""
         obs_flat = self.storage.observations.flatten(0, 1).clone()
+
+        # Capture initial policy entropy as reference for ERC-TRPO normalization.
+        # H_ref is set once on first update; on resume it resets to current state.
+        if self._entropy_beta > 0 and self._entropy_ref is None:
+            with torch.no_grad():
+                self.policy.act(obs_flat)
+                self._entropy_ref = self.policy.entropy.mean().item()
+            logger.info("ERC-TRPO: entropy reference H_ref=%.4f", self._entropy_ref)
         actions_flat = self.storage.actions.flatten(0, 1).clone()
         returns_flat = self.storage.returns.flatten(0, 1).clone()
         advantages_flat = self.storage.advantages.flatten(0, 1).clone()
