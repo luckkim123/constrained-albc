@@ -284,6 +284,8 @@ class ConstraintEncoderRunner(OnPolicyRunner):
         # Policy diagnostics
         metrics["Policy/line_search_success"] = alg._last_line_search_success
         metrics["Policy/entropy"] = alg._last_mean_entropy
+        metrics["Policy/effective_kl"] = alg._last_effective_kl
+        metrics["Policy/entropy_hTv"] = alg._last_entropy_hTv
         metrics["Policy/encoder_grad_norm"] = alg._last_encoder_grad_norm
         metrics["Policy/surrogate_loss"] = alg._last_surrogate_loss
         # Sigma gradient decomposition
