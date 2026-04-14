@@ -199,6 +199,9 @@ class RslRlConstraintTRPOAlgorithmCfg:
     # 04-09 run (entropy_coef=0.003): noise recovered 0.36->0.55 after iter 3758.
     # 04-10 run (entropy_coef=0): noise collapsed to 0.12.
     entropy_coef: float = 0.003
+    # Per-dim entropy_coef: overrides scalar when non-empty. Allows targeted
+    # entropy pressure per action dim (e.g., stronger for arm, weaker for thrusters).
+    entropy_coef_per_dim: tuple[float, ...] = ()
 
     # Sigma safety bounds (clamped after TRPO step)
     min_std: float = 0.05
@@ -232,6 +235,72 @@ class FullDOFTRPORunnerCfg(RslRlOnPolicyRunnerCfg):
     }
 
     algorithm = RslRlConstraintTRPOAlgorithmCfg()
+    policy = _FullDOFPolicyCfg()
+
+
+# =============================================================================
+# Experiment: Per-dim entropy_coef (arm=0.01, thr=0.001)
+# =============================================================================
+
+
+@configclass
+class _ExpPerDimEntAlgorithmCfg(RslRlConstraintTRPOAlgorithmCfg):
+    """TRPO + IPO with per-dim entropy coefficient.
+
+    arm dims (0,1): 0.01 — net gradient +0.003 (reverses arm collapse direction).
+    thr dims (2-7): 0.001 — 1/3 of baseline, slows thr6/7 noise divergence.
+    """
+
+    entropy_coef_per_dim: tuple[float, ...] = (0.01, 0.01, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001)
+
+
+@configclass
+class FullDOFPerDimEntRunnerCfg(RslRlOnPolicyRunnerCfg):
+    """Exp 1: per-dim entropy_coef experiment."""
+
+    class_name: str = "FullDOFConstraintEncoderRunner"
+    seed = 30
+    num_steps_per_env = 64
+    max_iterations = 5000
+    save_interval = 50
+    experiment_name = "full_dof_trpo_perdim_ent"
+    obs_groups: dict[str, list[str]] = {
+        "policy": ["policy", "privileged"],
+        "critic": ["policy", "privileged"],
+    }
+
+    algorithm = _ExpPerDimEntAlgorithmCfg()
+    policy = _FullDOFPolicyCfg()
+
+
+# =============================================================================
+# Experiment: max_std=1.0 (cap thr6/7 divergence)
+# =============================================================================
+
+
+@configclass
+class _ExpMaxStd1AlgorithmCfg(RslRlConstraintTRPOAlgorithmCfg):
+    """TRPO + IPO with max_std capped at 1.0."""
+
+    max_std: float = 1.0
+
+
+@configclass
+class FullDOFMaxStd1RunnerCfg(RslRlOnPolicyRunnerCfg):
+    """Exp 2: max_std=1.0 experiment."""
+
+    class_name: str = "FullDOFConstraintEncoderRunner"
+    seed = 30
+    num_steps_per_env = 64
+    max_iterations = 5000
+    save_interval = 50
+    experiment_name = "full_dof_trpo_maxstd1"
+    obs_groups: dict[str, list[str]] = {
+        "policy": ["policy", "privileged"],
+        "critic": ["policy", "privileged"],
+    }
+
+    algorithm = _ExpMaxStd1AlgorithmCfg()
     policy = _FullDOFPolicyCfg()
 
 

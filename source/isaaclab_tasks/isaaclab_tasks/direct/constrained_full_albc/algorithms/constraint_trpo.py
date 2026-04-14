@@ -65,7 +65,9 @@ class ConstraintTRPO:
         barrier_alpha: float = 0.02,
         # Entropy bonus: added to surrogate loss to counteract natural noise reduction.
         # Gradient for log_std: +entropy_coef per dim (pushes noise up).
+        # When entropy_coef_per_dim is provided, it overrides the scalar entropy_coef.
         entropy_coef: float = 0.0,
+        entropy_coef_per_dim: tuple[float, ...] = (),
         # Sigma safety bounds (clamped after TRPO step).
         # min_std_per_dim overrides min_std when provided (per-action-dim floor).
         min_std: float = 0.01,
@@ -100,8 +102,15 @@ class ConstraintTRPO:
         self.gamma = gamma
         self.lam = lam
 
-        # Entropy bonus
+        # Entropy bonus (scalar fallback or per-dim tensor)
         self._entropy_coef = entropy_coef
+        if entropy_coef_per_dim:
+            self._entropy_coef_per_dim: torch.Tensor | None = torch.tensor(
+                entropy_coef_per_dim, device=device, dtype=torch.float32
+            )
+            logger.info("Per-dim entropy_coef: %s", list(entropy_coef_per_dim))
+        else:
+            self._entropy_coef_per_dim = None
 
         # IPO barrier
         self.num_constraints = num_constraints
@@ -144,6 +153,7 @@ class ConstraintTRPO:
         self._last_enc_cos_vanilla_step = 0.0
         self._last_entropy_hTv = 0.0
         self._last_effective_kl = 0.0
+        self._last_per_dim_entropy: list[float] = []  # populated when per-dim entropy_coef is active
 
         if cost_gamma >= 1.0:
             raise ValueError(f"cost_gamma must be < 1.0, got {cost_gamma}")
@@ -472,8 +482,18 @@ class ConstraintTRPO:
             mean_entropy = self.policy.entropy.mean()
             self._last_mean_entropy = mean_entropy.item()
             # Entropy bonus: minimize -coef*H to maximize entropy.
-            # Gradient for log_std_i: +entropy_coef (pushes noise up).
-            entropy_bonus = -self._entropy_coef * mean_entropy
+            # Gradient for log_std_i: +entropy_coef_i (pushes noise up).
+            if self._entropy_coef_per_dim is not None:
+                # Per-dim weighted entropy: each dim gets its own coefficient.
+                per_dim_ent = self.policy.distribution.entropy()  # [batch, action_dim]
+                assert self._entropy_coef_per_dim.shape[0] == per_dim_ent.shape[-1], (
+                    f"entropy_coef_per_dim length {self._entropy_coef_per_dim.shape[0]} "
+                    f"!= action_dim {per_dim_ent.shape[-1]}"
+                )
+                entropy_bonus = -(self._entropy_coef_per_dim * per_dim_ent).sum(dim=-1).mean()
+                self._last_per_dim_entropy = per_dim_ent.mean(dim=0).detach().tolist()
+            else:
+                entropy_bonus = -self._entropy_coef * mean_entropy
             return reward_surr + barrier + entropy_bonus
 
         ls_success = self._trpo_step(obs_flat, old_mu_flat, old_sigma_flat, surrogate)

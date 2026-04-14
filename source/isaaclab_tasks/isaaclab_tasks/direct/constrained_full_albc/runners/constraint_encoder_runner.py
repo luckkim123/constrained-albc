@@ -302,6 +302,11 @@ class ConstraintEncoderRunner(OnPolicyRunner):
         for i, v in enumerate(per_dim_std.tolist()):
             metrics[f"NoiseStd/dim_{i}"] = v
 
+        # Per-dim entropy (when per-dim entropy_coef is active)
+        if alg._last_per_dim_entropy:
+            for i, v in enumerate(alg._last_per_dim_entropy):
+                metrics[f"Entropy/dim_{i}"] = v
+
         # Gradient decomposition: vanilla vs natural gradient
         metrics["GradDecomp/enc_vanilla_norm"] = alg._last_enc_vanilla_norm
         metrics["GradDecomp/enc_natgrad_norm"] = alg._last_enc_natgrad_norm
