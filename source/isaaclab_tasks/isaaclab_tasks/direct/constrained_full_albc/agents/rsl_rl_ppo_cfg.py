@@ -305,6 +305,42 @@ class FullDOFMaxStd1RunnerCfg(RslRlOnPolicyRunnerCfg):
 
 
 # =============================================================================
+# Experiment: Arm-only boost (arm=0.01, thr=0.003 = baseline uniform)
+# =============================================================================
+
+
+@configclass
+class _ExpArmOnlyAlgorithmCfg(RslRlConstraintTRPOAlgorithmCfg):
+    """TRPO + IPO with per-dim entropy: arm boost only.
+
+    arm dims (0,1): 0.01 -- same as PerDimEnt.
+    thr dims (2-7): 0.003 -- same as baseline uniform entropy_coef.
+    Tests whether arm-only intervention suffices without thruster noise reduction.
+    """
+
+    entropy_coef_per_dim: tuple[float, ...] = (0.01, 0.01, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003)
+
+
+@configclass
+class FullDOFArmOnlyRunnerCfg(RslRlOnPolicyRunnerCfg):
+    """Exp: arm-only entropy boost (thr = baseline uniform)."""
+
+    class_name: str = "FullDOFConstraintEncoderRunner"
+    seed = 30
+    num_steps_per_env = 64
+    max_iterations = 5000
+    save_interval = 50
+    experiment_name = "full_dof_trpo_armonly"
+    obs_groups: dict[str, list[str]] = {
+        "policy": ["policy", "privileged"],
+        "critic": ["policy", "privileged"],
+    }
+
+    algorithm = _ExpArmOnlyAlgorithmCfg()
+    policy = _FullDOFPolicyCfg()
+
+
+# =============================================================================
 # Baseline 1: NoEncoder + TRPO + IPO (ablation)
 # =============================================================================
 

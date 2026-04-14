@@ -66,6 +66,16 @@ gym.register(
 )
 
 gym.register(
+    id="Isaac-FullDOF-ArmOnly-v0",
+    entry_point="isaaclab_tasks.direct.constrained_full_albc:ALBCEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.config:ALBCEnvCfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:FullDOFArmOnlyRunnerCfg",
+    },
+)
+
+gym.register(
     id="Isaac-FullDOF-MaxStd1-v0",
     entry_point="isaaclab_tasks.direct.constrained_full_albc:ALBCEnv",
     disable_env_checker=True,
