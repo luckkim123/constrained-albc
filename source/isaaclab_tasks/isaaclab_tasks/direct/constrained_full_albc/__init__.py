@@ -16,13 +16,23 @@ Registered tasks:
     Isaac-FullDOF-ArmOnly-v0:       arm-only entropy boost (thr=baseline)
     Isaac-FullDOF-Exp-L1-v0:        L1 penalty for SS error (lin_ratio=0.15, yaw_ratio=0.15)
     Isaac-FullDOF-Exp-Settling-v0:  Settling constraints for overshoot (lin_vel + yaw)
+    Isaac-FullDOF-Exp-Tanh-v0:      Saturating tanh penalty (coef=1.0, eps=0.10) -- Round 4
+    Isaac-FullDOF-Exp-Arctan-v0:    Saturating arctan penalty (coef=1.0, eps=0.10) -- Round 4
     Isaac-FullDOF-MaxStd1-v0:       max_std=1.0 (cap thr noise divergence)
 """
 
 import gymnasium as gym
 
 from .albc_env import ALBCEnv
-from .config import ALBCEnvCfg, ALBCEnvL1Cfg, ALBCEnvSettlingCfg, DomainRandomizationCfg, HardDomainRandomizationCfg
+from .config import (
+    ALBCEnvArctanCfg,
+    ALBCEnvCfg,
+    ALBCEnvL1Cfg,
+    ALBCEnvSettlingCfg,
+    ALBCEnvTanhCfg,
+    DomainRandomizationCfg,
+    HardDomainRandomizationCfg,
+)
 
 ##
 # Register Gym environments.
@@ -105,5 +115,25 @@ gym.register(
     kwargs={
         "env_cfg_entry_point": f"{__name__}.config:ALBCEnvCfg",
         "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:FullDOFMaxStd1RunnerCfg",
+    },
+)
+
+gym.register(
+    id="Isaac-FullDOF-Exp-Tanh-v0",
+    entry_point="isaaclab_tasks.direct.constrained_full_albc:ALBCEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.config:ALBCEnvTanhCfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:FullDOFExpTanhRunnerCfg",
+    },
+)
+
+gym.register(
+    id="Isaac-FullDOF-Exp-Arctan-v0",
+    entry_point="isaaclab_tasks.direct.constrained_full_albc:ALBCEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.config:ALBCEnvArctanCfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:FullDOFExpArctanRunnerCfg",
     },
 )

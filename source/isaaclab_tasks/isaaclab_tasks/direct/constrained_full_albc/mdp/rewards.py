@@ -26,6 +26,7 @@ r_s:    -k_s   * (mean(da^2) + mean(d2a^2)) (action smoothness)
 
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING, Any
 
 import torch
@@ -54,10 +55,19 @@ class ALBCRewardCfg:
     lin_vel_sigma: float = 0.10  # exp kernel sigma (m/s) -- matches OLD run 2026-04-06_21-24-43
     lin_vel_quad_ratio: float = 1.0  # quadratic/exp weight ratio
     lin_vel_lin_ratio: float = 0.0  # linear penalty disabled (caused dead zone at moderate errors)
+    # Saturating alternatives to L1 (active if coef > 0). Only one of tanh/arctan at a time.
+    lin_vel_tanh_coef: float = 0.0  # ρ = coef·eps·tanh(|e|/eps). grad at 0 = coef; decays as sech²(e/eps)
+    lin_vel_tanh_eps: float = 0.10  # eps (match sigma); controls saturation scale
+    lin_vel_arctan_coef: float = 0.0  # ρ = coef·eps·(2/pi)·arctan(|e|/eps). grad at 0 = 2·coef/pi
+    lin_vel_arctan_eps: float = 0.10  # eps (match sigma)
     k_yaw: float = 3.5  # yaw rate (exp + quad)
     yaw_vel_sigma: float = 0.10  # exp kernel sigma (rad/s) -- matches OLD run 2026-04-06_21-24-43
     yaw_vel_quad_ratio: float = 1.0  # quadratic/exp weight ratio
     yaw_vel_lin_ratio: float = 0.0  # linear penalty disabled (caused dead zone at moderate errors)
+    yaw_vel_tanh_coef: float = 0.0
+    yaw_vel_tanh_eps: float = 0.10
+    yaw_vel_arctan_coef: float = 0.0
+    yaw_vel_arctan_eps: float = 0.10
     k_tau: float = -0.01  # joint torque penalty
     k_thr: float = -0.35  # thruster energy penalty
     k_s: float = -0.1  # action smoothness penalty
@@ -68,17 +78,26 @@ class ALBCRewardCfg:
 
 
 def lin_vel_tracking(env: ALBCEnv) -> torch.Tensor:
-    """r_lin = exp(-||e||^2/2s^2) - q_quad*||e||^2 - q_lin*||e||.
+    """r_lin = exp(-||e||^2/2s^2) - q_quad*||e||^2 - (L1 or saturating penalty).
 
-    Linear velocity tracking (exp + quad + linear). The linear term ensures
-    constant SS error pressure -- without it, both exp and quadratic gradients
-    vanish as err -> 0 and the policy stops reducing small SS errors.
+    Supports three near-zero pressure shapes:
+      - L1 (lin_ratio):      constant far-field force -- induces overshoot
+      - tanh (tanh_coef):    sech²-decay, vanishes far from zero
+      - arctan (arctan_coef):1/(1+x²)-decay, smoother transition
+    Only one of {tanh, arctan} should be active; lin_ratio can coexist.
     """
     cfg = env.cfg.reward
     err_sq = env._lin_vel_err.pow(2).sum(dim=-1)
     err_norm = err_sq.clamp(min=1e-12).sqrt()  # ||e|| = sqrt(sum e_i^2)
     exp_term = torch.exp(-err_sq / (2.0 * cfg.lin_vel_sigma ** 2))
-    return exp_term - cfg.lin_vel_quad_ratio * err_sq - cfg.lin_vel_lin_ratio * err_norm
+    penalty = cfg.lin_vel_quad_ratio * err_sq + cfg.lin_vel_lin_ratio * err_norm
+    if cfg.lin_vel_tanh_coef > 0.0:
+        eps = cfg.lin_vel_tanh_eps
+        penalty = penalty + cfg.lin_vel_tanh_coef * eps * torch.tanh(err_norm / eps)
+    if cfg.lin_vel_arctan_coef > 0.0:
+        eps = cfg.lin_vel_arctan_eps
+        penalty = penalty + cfg.lin_vel_arctan_coef * eps * (2.0 / math.pi) * torch.atan(err_norm / eps)
+    return exp_term - penalty
 
 
 def att_rp_tracking(env: ALBCEnv) -> torch.Tensor:
@@ -96,13 +115,23 @@ def att_rp_tracking(env: ALBCEnv) -> torch.Tensor:
 
 
 def yaw_vel_tracking(env: ALBCEnv) -> torch.Tensor:
-    """r_yaw = exp(-e^2/2s^2) - q_quad*e^2 - q_lin*|e|. Exp + quad + linear."""
+    """r_yaw = exp(-e^2/2s^2) - q_quad*e^2 - (L1 or saturating penalty).
+
+    See lin_vel_tracking for penalty shape semantics.
+    """
     cfg = env.cfg.reward
     err = env._yaw_rate_err
     err_sq = err.pow(2)
     err_abs = err.abs()
     exp_term = torch.exp(-err_sq / (2.0 * cfg.yaw_vel_sigma ** 2))
-    return exp_term - cfg.yaw_vel_quad_ratio * err_sq - cfg.yaw_vel_lin_ratio * err_abs
+    penalty = cfg.yaw_vel_quad_ratio * err_sq + cfg.yaw_vel_lin_ratio * err_abs
+    if cfg.yaw_vel_tanh_coef > 0.0:
+        eps = cfg.yaw_vel_tanh_eps
+        penalty = penalty + cfg.yaw_vel_tanh_coef * eps * torch.tanh(err_abs / eps)
+    if cfg.yaw_vel_arctan_coef > 0.0:
+        eps = cfg.yaw_vel_arctan_eps
+        penalty = penalty + cfg.yaw_vel_arctan_coef * eps * (2.0 / math.pi) * torch.atan(err_abs / eps)
+    return exp_term - penalty
 
 
 def joint_torque(robot: Articulation, env: ALBCEnv) -> torch.Tensor:

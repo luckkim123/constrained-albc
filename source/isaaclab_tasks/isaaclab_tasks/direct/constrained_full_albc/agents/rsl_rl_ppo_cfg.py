@@ -403,6 +403,62 @@ class FullDOFExpSettlingRunnerCfg(RslRlOnPolicyRunnerCfg):
 
 
 # =============================================================================
+# Round 4: Saturating penalty shapes for SS error without overshoot
+# =============================================================================
+
+
+@configclass
+class FullDOFExpTanhRunnerCfg(RslRlOnPolicyRunnerCfg):
+    """Round 4 Exp A: tanh saturating penalty.
+
+    Tests hypothesis from Round 3 Exp1 (L1) analysis: SS error reduction
+    is achievable WITHOUT the overshoot side-effect if the penalty gradient
+    decays far from zero. tanh penalty: coef·eps·tanh(|e|/eps).
+    Control: Round 2 PerDimEnt kl_ub=0.06 (no penalty).
+    Comparison: Round 3 Exp1 (L1 ratio=0.15).
+    """
+
+    class_name: str = "FullDOFConstraintEncoderRunner"
+    seed = 30
+    num_steps_per_env = 64
+    max_iterations = 5000
+    save_interval = 50
+    experiment_name = "full_dof_trpo_exp_tanh"
+    obs_groups: dict[str, list[str]] = {
+        "policy": ["policy", "privileged"],
+        "critic": ["policy", "privileged"],
+    }
+
+    algorithm = RslRlConstraintTRPOAlgorithmCfg()
+    policy = _FullDOFPolicyCfg()
+
+
+@configclass
+class FullDOFExpArctanRunnerCfg(RslRlOnPolicyRunnerCfg):
+    """Round 4 Exp B: arctan saturating penalty.
+
+    Companion to Tanh experiment. arctan penalty has heavier tail
+    (1/(1+x^2)) and weaker near-zero gradient (2·coef/pi vs coef) --
+    safer margin against instability.
+    Control: Round 2 PerDimEnt kl_ub=0.06 (no penalty).
+    """
+
+    class_name: str = "FullDOFConstraintEncoderRunner"
+    seed = 30
+    num_steps_per_env = 64
+    max_iterations = 5000
+    save_interval = 50
+    experiment_name = "full_dof_trpo_exp_arctan"
+    obs_groups: dict[str, list[str]] = {
+        "policy": ["policy", "privileged"],
+        "critic": ["policy", "privileged"],
+    }
+
+    algorithm = RslRlConstraintTRPOAlgorithmCfg()
+    policy = _FullDOFPolicyCfg()
+
+
+# =============================================================================
 # Baseline 1: NoEncoder + TRPO + IPO (ablation)
 # =============================================================================
 

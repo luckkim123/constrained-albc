@@ -445,3 +445,50 @@ class ALBCEnvSettlingCfg(ALBCEnvCfg):
     """
 
     constraints: ALBCConstraintCfg = ALBCConstraintCfg(terms=_SETTLING_CONSTRAINT_TERMS)
+
+
+@configclass
+class ALBCEnvTanhCfg(ALBCEnvCfg):
+    """Round 4 Exp A: Saturating tanh penalty for SS error.
+
+    Replaces L1 |e| with coef·eps·tanh(|e|/eps). Non-zero gradient at e=0
+    (= coef, kills SS error dead zone), but penalty gradient decays as
+    sech²(|e|/eps) so far-field force vanishes. This avoids the constant
+    far-field force that caused Round 3 Exp1 (L1) to increase overshoot.
+
+    Coefs chosen from gradient analysis:
+      coef=1.0: grad at 0 ~16% of exp kernel peak (strong near-zero, weak far)
+      eps=sigma=0.10: saturation kicks in at the exp kernel's active region
+
+    Control: Round 2 PerDimEnt kl_ub=0.06 (no penalty).
+    Comparison: Round 3 Exp1 (L1 ratio=0.15) showed SS -15-24% but overshoot +25-86%.
+    Tanh predicted SS reduction ~50% with overshoot near baseline.
+    """
+
+    reward: ALBCRewardCfg = ALBCRewardCfg(
+        lin_vel_tanh_coef=1.0,
+        lin_vel_tanh_eps=0.10,
+        yaw_vel_tanh_coef=1.0,
+        yaw_vel_tanh_eps=0.10,
+    )
+
+
+@configclass
+class ALBCEnvArctanCfg(ALBCEnvCfg):
+    """Round 4 Exp B: Saturating arctan penalty for SS error.
+
+    Replaces L1 |e| with coef·eps·(2/pi)·arctan(|e|/eps). Similar motivation
+    to Tanh variant but with smoother 1/(1+(e/eps)^2) decay (heavier tail).
+    grad at 0 = 2·coef/pi (~0.637 for coef=1.0, about 10.5% of exp kernel peak).
+    Safer margin against overshoot at the cost of weaker near-zero pressure.
+
+    Serves as companion experiment to Tanh (ALBCEnvTanhCfg) to compare
+    shape decay profiles. If Tanh creates instability, Arctan is the safer fallback.
+    """
+
+    reward: ALBCRewardCfg = ALBCRewardCfg(
+        lin_vel_arctan_coef=1.0,
+        lin_vel_arctan_eps=0.10,
+        yaw_vel_arctan_coef=1.0,
+        yaw_vel_arctan_eps=0.10,
+    )
