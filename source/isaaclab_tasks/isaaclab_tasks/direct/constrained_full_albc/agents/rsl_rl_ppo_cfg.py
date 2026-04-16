@@ -201,7 +201,10 @@ class RslRlConstraintTRPOAlgorithmCfg:
     entropy_coef: float = 0.003
     # Per-dim entropy_coef: overrides scalar when non-empty. Allows targeted
     # entropy pressure per action dim (e.g., stronger for arm, weaker for thrusters).
-    entropy_coef_per_dim: tuple[float, ...] = ()
+    # Default: arm=0.01 (prevents noise collapse), thr=0.001 (prevents noise divergence).
+    # Validated in Round 2 experiments (2026-04-14): PerDimEnt outperformed Baseline
+    # and ArmOnly on reward, noise stability, and DORAEMON success.
+    entropy_coef_per_dim: tuple[float, ...] = (0.01, 0.01, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001)
 
     # Sigma safety bounds (clamped after TRPO step)
     min_std: float = 0.05
@@ -337,6 +340,65 @@ class FullDOFArmOnlyRunnerCfg(RslRlOnPolicyRunnerCfg):
     }
 
     algorithm = _ExpArmOnlyAlgorithmCfg()
+    policy = _FullDOFPolicyCfg()
+
+
+# =============================================================================
+# Experiment: L1 SS error penalty (lin_vel_lin_ratio=0.15, yaw_vel_lin_ratio=0.15)
+# =============================================================================
+
+
+@configclass
+class FullDOFExpL1RunnerCfg(RslRlOnPolicyRunnerCfg):
+    """Exp: L1 penalty for SS error reduction.
+
+    Tests whether constant-gradient L1 term fixes the near-zero dead zone
+    in exp+quad tracking reward. Uses PerDimEnt entropy (default).
+    Control: Round 2 PerDimEnt (kl_ub=0.06, no L1).
+    """
+
+    class_name: str = "FullDOFConstraintEncoderRunner"
+    seed = 30
+    num_steps_per_env = 64
+    max_iterations = 5000
+    save_interval = 50
+    experiment_name = "full_dof_trpo_exp_l1"
+    obs_groups: dict[str, list[str]] = {
+        "policy": ["policy", "privileged"],
+        "critic": ["policy", "privileged"],
+    }
+
+    algorithm = RslRlConstraintTRPOAlgorithmCfg()
+    policy = _FullDOFPolicyCfg()
+
+
+# =============================================================================
+# Experiment: Settling constraints (anti-overshoot for lin_vel + yaw)
+# =============================================================================
+
+
+@configclass
+class FullDOFExpSettlingRunnerCfg(RslRlOnPolicyRunnerCfg):
+    """Exp: Settling constraints for overshoot reduction.
+
+    Tests whether penalizing acceleration near target (same mechanism as
+    rp_vel_settling for attitude) reduces lin_vel and yaw overshoot.
+    Adds 2 constraints (12 total). Uses PerDimEnt entropy (default).
+    Control: Round 2 PerDimEnt (kl_ub=0.06, 10 constraints).
+    """
+
+    class_name: str = "FullDOFConstraintEncoderRunner"
+    seed = 30
+    num_steps_per_env = 64
+    max_iterations = 5000
+    save_interval = 50
+    experiment_name = "full_dof_trpo_exp_settling"
+    obs_groups: dict[str, list[str]] = {
+        "policy": ["policy", "privileged"],
+        "critic": ["policy", "privileged"],
+    }
+
+    algorithm = RslRlConstraintTRPOAlgorithmCfg()
     policy = _FullDOFPolicyCfg()
 
 

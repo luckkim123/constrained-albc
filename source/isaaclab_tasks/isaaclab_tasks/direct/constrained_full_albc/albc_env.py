@@ -232,6 +232,9 @@ class ALBCEnv(DirectRLEnv):
 
     def _init_velocity_buffers(self) -> None:
         """Command tracking buffers (mixed attitude + velocity)."""
+        # Previous-step velocity for settling cost constraints (anti-overshoot)
+        self._prev_root_lin_vel_b = torch.zeros(self.num_envs, 3, device=self.device)
+        self._prev_root_ang_vel_z = torch.zeros(self.num_envs, device=self.device)
         self._vel_cmd_lin = torch.zeros(self.num_envs, 3, device=self.device)
         # [0:2] = roll/pitch attitude (rad), [2] = yaw rate (rad/s)
         self._ang_cmd = torch.zeros(self.num_envs, 3, device=self.device)
@@ -798,6 +801,11 @@ class ALBCEnv(DirectRLEnv):
         if self._constraints_cfg is not None and self._constraints_cfg.num_constraints > 0:
             self.extras["costs"] = compute_all_costs(self._robot, self, self._constraints_cfg)
 
+        # Update previous-step velocity buffers (used by settling cost constraints).
+        # Must be AFTER constraint computation so settling costs see the previous velocity.
+        self._prev_root_lin_vel_b[:] = self._robot.data.root_lin_vel_b
+        self._prev_root_ang_vel_z[:] = self._robot.data.root_ang_vel_b[:, 2]
+
         # DORAEMON: accumulate episode return for binary success criterion
         if self._doraemon is not None:
             self._episode_return_accum += reward
@@ -1067,6 +1075,10 @@ class ALBCEnv(DirectRLEnv):
         self._cumulative_yaw[env_ids] = 0.0
         _, _, yaw = euler_xyz_from_quat(self._robot.data.root_quat_w)
         self._prev_yaw[env_ids] = yaw[env_ids]
+
+        # Reset previous-step velocity buffers (settling cost constraints)
+        self._prev_root_lin_vel_b[env_ids] = self._robot.data.root_lin_vel_b[env_ids]
+        self._prev_root_ang_vel_z[env_ids] = self._robot.data.root_ang_vel_b[env_ids, 2]
 
         # Reset mid-episode payload toggle state
         self._payload_toggle_counter[env_ids] = 0

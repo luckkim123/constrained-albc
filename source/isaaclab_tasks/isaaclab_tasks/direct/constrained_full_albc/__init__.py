@@ -9,17 +9,20 @@ Forked from constrained_albc. Uses 8D action space (2D arm + 6D thruster)
 for full position + attitude tracking with constrained RL.
 
 Registered tasks:
-    Isaac-FullDOF-TRPO-v0:       TRPO + IPO + Asymmetric Encoder (production)
-    Isaac-FullDOF-NoEncoder-v0:  TRPO + IPO without encoder (ablation baseline 1)
-    Isaac-FullDOF-PPO-v0:        Standard PPO + asymmetric critic (ablation baseline 2)
-    Isaac-FullDOF-PerDimEnt-v0:  Exp 1: per-dim entropy_coef (arm=0.01, thr=0.001)
-    Isaac-FullDOF-MaxStd1-v0:    Exp 2: max_std=1.0 (cap thr noise divergence)
+    Isaac-FullDOF-TRPO-v0:          TRPO + IPO + Asymmetric Encoder (production)
+    Isaac-FullDOF-NoEncoder-v0:     TRPO + IPO without encoder (ablation baseline 1)
+    Isaac-FullDOF-PPO-v0:           Standard PPO + asymmetric critic (ablation baseline 2)
+    Isaac-FullDOF-PerDimEnt-v0:     per-dim entropy_coef (arm=0.01, thr=0.001)
+    Isaac-FullDOF-ArmOnly-v0:       arm-only entropy boost (thr=baseline)
+    Isaac-FullDOF-Exp-L1-v0:        L1 penalty for SS error (lin_ratio=0.15, yaw_ratio=0.15)
+    Isaac-FullDOF-Exp-Settling-v0:  Settling constraints for overshoot (lin_vel + yaw)
+    Isaac-FullDOF-MaxStd1-v0:       max_std=1.0 (cap thr noise divergence)
 """
 
 import gymnasium as gym
 
 from .albc_env import ALBCEnv
-from .config import ALBCEnvCfg, DomainRandomizationCfg, HardDomainRandomizationCfg
+from .config import ALBCEnvCfg, ALBCEnvL1Cfg, ALBCEnvSettlingCfg, DomainRandomizationCfg, HardDomainRandomizationCfg
 
 ##
 # Register Gym environments.
@@ -72,6 +75,26 @@ gym.register(
     kwargs={
         "env_cfg_entry_point": f"{__name__}.config:ALBCEnvCfg",
         "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:FullDOFArmOnlyRunnerCfg",
+    },
+)
+
+gym.register(
+    id="Isaac-FullDOF-Exp-L1-v0",
+    entry_point="isaaclab_tasks.direct.constrained_full_albc:ALBCEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.config:ALBCEnvL1Cfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:FullDOFExpL1RunnerCfg",
+    },
+)
+
+gym.register(
+    id="Isaac-FullDOF-Exp-Settling-v0",
+    entry_point="isaaclab_tasks.direct.constrained_full_albc:ALBCEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.config:ALBCEnvSettlingCfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:FullDOFExpSettlingRunnerCfg",
     },
 )
 

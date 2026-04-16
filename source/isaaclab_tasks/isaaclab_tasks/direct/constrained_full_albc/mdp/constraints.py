@@ -258,6 +258,60 @@ def rp_vel_settling_cost(
     return rp_vel * settling_mask
 
 
+def lin_vel_settling_cost(
+    _robot: Articulation,
+    env: ALBCEnv,
+    settling_threshold: float = 0.04,
+) -> torch.Tensor:
+    """Penalize acceleration when near target velocity (anti-overshoot).
+
+    Type: Average
+    Budget: 0.005
+
+    Mirrors rp_vel_settling_cost logic for linear velocity tracking:
+    - rp_vel_settling: penalizes |angular_vel| when |att_err| < threshold
+    - This:            penalizes |acceleration| when |vel_err| < threshold
+
+    When velocity error is small, large acceleration means the robot is about
+    to overshoot the target velocity. The cost is gated by a settling mask so
+    it does not interfere with transit (approaching the target from far away).
+
+    Acceleration is approximated as velocity change between consecutive steps:
+    |dv| = |v_t - v_{t-1}|. No dt division needed; budget absorbs the scale.
+
+    Args:
+        settling_threshold: velocity error below which settling is enforced (m/s).
+            Default 0.04 m/s = 8% of command range (+-0.5 m/s).
+    """
+    vel_err_norm = env._lin_vel_err.norm(dim=-1)
+    near_target = (vel_err_norm < settling_threshold).float()
+    dv = (_robot.data.root_lin_vel_b - env._prev_root_lin_vel_b).norm(dim=-1)
+    return dv * near_target
+
+
+def yaw_settling_cost(
+    _robot: Articulation,
+    env: ALBCEnv,
+    settling_threshold: float = 0.04,
+) -> torch.Tensor:
+    """Penalize yaw angular acceleration when near target yaw rate (anti-overshoot).
+
+    Type: Average
+    Budget: 0.005
+
+    Same principle as lin_vel_settling_cost but for yaw rate tracking.
+    Penalizes yaw rate change (angular acceleration) when yaw rate error is small.
+
+    Args:
+        settling_threshold: yaw rate error below which settling is enforced (rad/s).
+            Default 0.04 rad/s = 8% of command range (+-0.5 rad/s).
+    """
+    yaw_err = env._yaw_rate_err.abs()
+    near_target = (yaw_err < settling_threshold).float()
+    d_yaw_rate = (_robot.data.root_ang_vel_b[:, 2] - env._prev_root_ang_vel_z).abs()
+    return d_yaw_rate * near_target
+
+
 def manipulability_cost(
     _robot: Articulation,
     env: ALBCEnv,

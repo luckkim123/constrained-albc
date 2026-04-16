@@ -38,6 +38,7 @@ from .mdp.constraints import (
     attitude_limit_cost,
     cumulative_yaw_cost,
     joint1_position_cost,
+    lin_vel_settling_cost,
     manipulability_cost,
     rp_rate_cost,
     rp_vel_settling_cost,
@@ -45,6 +46,7 @@ from .mdp.constraints import (
     torque_limit_cost,
     velocity_limit_cost,
     yaw_rate_cost,
+    yaw_settling_cost,
 )
 from .mdp.rewards import ALBCRewardCfg
 
@@ -390,6 +392,56 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     )
 
     # ==========================================================================
-    # Constraints (11 terms: 6 probabilistic + 5 average)
+    # Constraints (10 terms: 5 probabilistic + 5 average)
     # ==========================================================================
     constraints: ALBCConstraintCfg = ALBCConstraintCfg(terms=_FULL_DOF_CONSTRAINT_TERMS)
+
+
+# =============================================================================
+# Experiment Env Configs
+# =============================================================================
+
+# Settling constraint terms (anti-overshoot for lin_vel and yaw)
+_SETTLING_CONSTRAINT_TERMS: list[ConstraintTermCfg] = _FULL_DOF_CONSTRAINT_TERMS + [
+    ConstraintTermCfg(
+        func=lin_vel_settling_cost,
+        params={"settling_threshold": 0.04},
+        budget=0.005,
+        name="lin_vel_settling",
+    ),
+    ConstraintTermCfg(
+        func=yaw_settling_cost,
+        params={"settling_threshold": 0.04},
+        budget=0.005,
+        name="yaw_settling",
+    ),
+]
+
+
+@configclass
+class ALBCEnvL1Cfg(ALBCEnvCfg):
+    """Exp 1: L1 penalty for SS error reduction.
+
+    Enables linear penalty term in lin_vel and yaw_vel tracking rewards.
+    L1 provides constant gradient at e=0, fixing the dead zone where
+    exp+quad gradients vanish. Ratio 0.15 is low enough to avoid the
+    'moderate error dead zone' that caused L1 to be disabled originally.
+    """
+
+    reward: ALBCRewardCfg = ALBCRewardCfg(
+        lin_vel_lin_ratio=0.15,
+        yaw_vel_lin_ratio=0.15,
+    )
+
+
+@configclass
+class ALBCEnvSettlingCfg(ALBCEnvCfg):
+    """Exp 2: Settling constraints for overshoot reduction.
+
+    Adds lin_vel_settling_cost and yaw_settling_cost constraints.
+    These penalize acceleration (velocity change) when near the target,
+    mirroring the proven rp_vel_settling_cost mechanism that keeps
+    attitude overshoot under control.
+    """
+
+    constraints: ALBCConstraintCfg = ALBCConstraintCfg(terms=_SETTLING_CONSTRAINT_TERMS)
