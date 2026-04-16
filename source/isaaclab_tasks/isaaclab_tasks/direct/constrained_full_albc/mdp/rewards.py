@@ -50,6 +50,12 @@ class ALBCRewardCfg:
     att_rp_sigma: float = 0.10  # exp kernel sigma (radians, ~5.7 deg) -- matches OLD run 2026-04-06_21-24-43
     att_rp_quad_ratio: float = 0.833  # quadratic/exp weight ratio
     att_rp_lin_ratio: float = 0.0  # linear penalty disabled (caused dead zone at moderate errors)
+    # Saturating alternatives to L1 (active if coef > 0). Only one of tanh/arctan at a time.
+    # e=0 gradient: tanh -> coef; arctan -> 2*coef/pi. Far-field (|e|>>eps) decays to 0.
+    att_rp_tanh_coef: float = 0.0  # ρ = coef·eps·tanh(|e_w|/eps). sech²-decay.
+    att_rp_tanh_eps: float = 0.10  # saturation scale (rad); match att_rp_sigma by default.
+    att_rp_arctan_coef: float = 0.0  # ρ = coef·eps·(2/pi)·arctan(|e_w|/eps). 1/(1+x²)-decay.
+    att_rp_arctan_eps: float = 0.10  # saturation scale (rad).
     att_roll_weight: float = 1.5  # roll weight in err_sq (roll has weaker TAM actuation: 0.007m vs pitch 0.145m)
     k_lin: float = 4.0  # linear velocity (exp + quad) -- matches OLD run 2026-04-06_21-24-43
     lin_vel_sigma: float = 0.10  # exp kernel sigma (m/s) -- matches OLD run 2026-04-06_21-24-43
@@ -101,17 +107,30 @@ def lin_vel_tracking(env: ALBCEnv) -> torch.Tensor:
 
 
 def att_rp_tracking(env: ALBCEnv) -> torch.Tensor:
-    """r_att = exp(-e_w^2/2s^2) - q_quad*e_w^2 - q_lin*|e_w|. Exp + quad + linear.
+    """r_att = exp(-e_w^2/2s^2) - q_quad*e_w^2 - (L1 or saturating penalty).
 
     e_w^2 = w_roll * roll_err^2 + pitch_err^2 (roll weighted for weak TAM actuation).
-    The L1 |e_w| term uses the same roll weighting for consistency.
+    The L1 |e_w| and saturating penalties use the same roll-weighted |e_w| for consistency.
+
+    Supports three near-zero pressure shapes:
+      - L1 (lin_ratio):      constant far-field force -- induces overshoot
+      - tanh (tanh_coef):    sech²-decay, vanishes far from zero
+      - arctan (arctan_coef):1/(1+x²)-decay, smoother transition
+    Only one of {tanh, arctan} should be active; lin_ratio can coexist.
     """
     cfg = env.cfg.reward
     rp_err = env._att_rp_err  # (num_envs, 2): [roll_err, pitch_err]
     err_sq = cfg.att_roll_weight * rp_err[:, 0].pow(2) + rp_err[:, 1].pow(2)
     err_abs_w = cfg.att_roll_weight * rp_err[:, 0].abs() + rp_err[:, 1].abs()
     exp_term = torch.exp(-err_sq / (2.0 * cfg.att_rp_sigma * cfg.att_rp_sigma))
-    return exp_term - cfg.att_rp_quad_ratio * err_sq - cfg.att_rp_lin_ratio * err_abs_w
+    penalty = cfg.att_rp_quad_ratio * err_sq + cfg.att_rp_lin_ratio * err_abs_w
+    if cfg.att_rp_tanh_coef > 0.0:
+        eps = cfg.att_rp_tanh_eps
+        penalty = penalty + cfg.att_rp_tanh_coef * eps * torch.tanh(err_abs_w / eps)
+    if cfg.att_rp_arctan_coef > 0.0:
+        eps = cfg.att_rp_arctan_eps
+        penalty = penalty + cfg.att_rp_arctan_coef * eps * (2.0 / math.pi) * torch.atan(err_abs_w / eps)
+    return exp_term - penalty
 
 
 def yaw_vel_tracking(env: ALBCEnv) -> torch.Tensor:

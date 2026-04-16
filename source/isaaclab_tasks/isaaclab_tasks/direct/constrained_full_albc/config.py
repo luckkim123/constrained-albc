@@ -578,3 +578,70 @@ class ALBCEnvR5VelSettlingCfg(ALBCEnvCfg):
     """
 
     constraints: ALBCConstraintCfg = ALBCConstraintCfg(terms=_R5_VEL_SETTLING_CONSTRAINT_TERMS)
+
+
+# =============================================================================
+# Round 6: Axis-specific saturating penalty (reward shape calibration)
+# =============================================================================
+# Diagnosis from Rounds 3/4/5: settling constraints are a structural dead end
+# (Round 3 + R5 GPU1 + R5 GPU2 all failed). 5-way eval showed reward shape has
+# real axis-specific effects -- Arctan was the only winner for roll SS (-15%),
+# Tanh/L1 were winners for vy/yaw SS (-17~-26%). Round 4 coef=1.0 was too strong
+# (e=0 grad 1.0/0.637) and caused vy reward -40% + OS +40%. This round retries
+# with coef calibrated to L1's grad=0.15 region (coef=0.3: e=0 grad 0.191/0.3).
+#
+# Constraints unchanged (10 terms, Control's _FULL_DOF_CONSTRAINT_TERMS). Only
+# reward shape parameter changes per experiment. Single-variable control.
+
+
+@configclass
+class ALBCEnvR6AttArctanCfg(ALBCEnvCfg):
+    """Round 6 GPU1: Arctan saturating penalty on attitude only.
+
+    Hypothesis: Arctan (e=0 grad = 2*coef/pi = 0.191 at coef=0.3) breaks the
+    reward dead zone on attitude while preserving Control's lin_vel/yaw_vel
+    shape. Round 4's Arctan on lin/yaw was the roll SS winner (1.42, -15% vs
+    Control 1.68); this re-applies the same shape to attitude directly.
+
+    Change: att_rp_arctan_coef 0 -> 0.3, att_rp_arctan_eps = 0.10 (= att_rp_sigma).
+    No other reward changes. Constraint set = Control (10 terms, rp_vel_settling
+    budget=0.20 retained per user decision).
+
+    Expected (hard DR):
+      roll  SS: 1.68 -> ~1.35  (Round 4 Arctan lin/yaw case precedent: 1.42)
+      pitch SS: 1.38 -> ~1.25  (structural dead-zone relief)
+      vy/yaw SS: Control +/-5% (no change in lin/yaw reward)
+    """
+
+    reward: ALBCRewardCfg = ALBCRewardCfg(
+        att_rp_arctan_coef=0.3,
+        att_rp_arctan_eps=0.10,  # = att_rp_sigma
+    )
+
+
+@configclass
+class ALBCEnvR6VelTanhCfg(ALBCEnvCfg):
+    """Round 6 GPU2: Tanh saturating penalty on lin_vel + yaw_vel only.
+
+    Hypothesis: Calibrated Tanh (e=0 grad = coef = 0.3; 1/3 of Round 4's 1.0)
+    gives velocity SS improvement without Round 4's OS blowup (vy OS was +40%).
+    Round 4 Tanh at coef=1.0 achieved vy SS 0.045 (-22%) but lost 40% lin_vel
+    reward. Coef=0.3 is near L1's grad=0.15 level, expected to retain most SS
+    benefit at much lower reward magnitude cost.
+
+    Change: lin_vel_tanh_coef 0 -> 0.3, yaw_vel_tanh_coef 0 -> 0.3.
+    No other reward changes. Constraint set = Control (10 terms).
+
+    Expected (hard DR):
+      vy  SS: 0.059 -> ~0.045 (Round 4 Tanh matched)
+      yaw SS: 0.025 -> ~0.020 (Round 4 Tanh matched)
+      vy  OS: Control + at most 15-20%  (vs Round 4 Tanh's +40%, calibrated)
+      attitude SS: Control +/-5% (no change)
+    """
+
+    reward: ALBCRewardCfg = ALBCRewardCfg(
+        lin_vel_tanh_coef=0.3,
+        lin_vel_tanh_eps=0.10,  # = lin_vel_sigma
+        yaw_vel_tanh_coef=0.3,
+        yaw_vel_tanh_eps=0.10,  # = yaw_vel_sigma
+    )

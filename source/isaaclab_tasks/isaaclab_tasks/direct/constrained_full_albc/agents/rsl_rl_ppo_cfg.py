@@ -515,6 +515,66 @@ class FullDOFR5VelSettlingRunnerCfg(RslRlOnPolicyRunnerCfg):
 
 
 # =============================================================================
+# Round 6: Axis-specific saturating-penalty reward shape (calibrated coef=0.3)
+# =============================================================================
+# After R5 settling-constraint failure (yaw catastrophic +1117% on GPU2), revert
+# to reward-shape intervention. Unlike Round 4 (coef=1.0 caused vy reward -40%,
+# OS +40%), Round 6 uses coef=0.3 (e=0 grad 0.191 arctan / 0.3 tanh) -- near
+# L1's 0.15. Applied axis-specifically: attitude-arctan vs velocity-tanh based
+# on 5-way winner profile (Arctan roll winner, Tanh vy/yaw winner in Round 4).
+# Constraints unchanged from Control (10 terms). Per-dim entropy matches
+# perdim_kl06 Control run.
+
+
+@configclass
+class FullDOFR6AttArctanRunnerCfg(RslRlOnPolicyRunnerCfg):
+    """Round 6 GPU1: att_rp Arctan saturating penalty (coef=0.3).
+
+    Env: ALBCEnvR6AttArctanCfg (reward shape change only, Control constraints).
+    Algorithm: per-dim entropy (same as Control).
+    Target: hard DR roll SS 1.68 -> ~1.35, pitch SS 1.38 -> ~1.25.
+    """
+
+    class_name: str = "FullDOFConstraintEncoderRunner"
+    seed = 30
+    num_steps_per_env = 64
+    max_iterations = 5000
+    save_interval = 50
+    experiment_name = "full_dof_trpo_r6_attarctan"
+    obs_groups: dict[str, list[str]] = {
+        "policy": ["policy", "privileged"],
+        "critic": ["policy", "privileged"],
+    }
+
+    algorithm = _ExpPerDimEntAlgorithmCfg()
+    policy = _FullDOFPolicyCfg()
+
+
+@configclass
+class FullDOFR6VelTanhRunnerCfg(RslRlOnPolicyRunnerCfg):
+    """Round 6 GPU2: lin_vel + yaw_vel Tanh saturating penalty (coef=0.3).
+
+    Env: ALBCEnvR6VelTanhCfg (reward shape change only, Control constraints).
+    Algorithm: per-dim entropy (same as Control).
+    Target: hard DR vy SS 0.059 -> ~0.045, yaw SS 0.025 -> ~0.020 with OS<+20%.
+    """
+
+    class_name: str = "FullDOFConstraintEncoderRunner"
+    seed = 30
+    num_steps_per_env = 64
+    max_iterations = 5000
+    save_interval = 50
+    experiment_name = "full_dof_trpo_r6_veltanh"
+    obs_groups: dict[str, list[str]] = {
+        "policy": ["policy", "privileged"],
+        "critic": ["policy", "privileged"],
+    }
+
+    algorithm = _ExpPerDimEntAlgorithmCfg()
+    policy = _FullDOFPolicyCfg()
+
+
+# =============================================================================
 # Baseline 1: NoEncoder + TRPO + IPO (ablation)
 # =============================================================================
 

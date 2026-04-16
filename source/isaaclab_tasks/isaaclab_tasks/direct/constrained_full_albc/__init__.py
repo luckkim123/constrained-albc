@@ -21,6 +21,8 @@ Registered tasks:
     Isaac-FullDOF-MaxStd1-v0:       max_std=1.0 (cap thr noise divergence)
     Isaac-FullDOF-R5-RpVel-v0:      Round 5 GPU1: rp_vel_settling budget 0.20->0.08 (attitude SS)
     Isaac-FullDOF-R5-VelSettling-v0: Round 5 GPU2: activate lin_vel+yaw settling (threshold=sigma)
+    Isaac-FullDOF-R6-AttArctan-v0:  Round 6 GPU1: att_rp Arctan coef=0.3 (attitude SS via shape)
+    Isaac-FullDOF-R6-VelTanh-v0:    Round 6 GPU2: lin+yaw_vel Tanh coef=0.3 (velocity SS via shape)
 """
 
 import gymnasium as gym
@@ -32,6 +34,8 @@ from .config import (
     ALBCEnvL1Cfg,
     ALBCEnvR5RpVelSettlingCfg,
     ALBCEnvR5VelSettlingCfg,
+    ALBCEnvR6AttArctanCfg,
+    ALBCEnvR6VelTanhCfg,
     ALBCEnvSettlingCfg,
     ALBCEnvTanhCfg,
     DomainRandomizationCfg,
@@ -159,5 +163,25 @@ gym.register(
     kwargs={
         "env_cfg_entry_point": f"{__name__}.config:ALBCEnvR5VelSettlingCfg",
         "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:FullDOFR5VelSettlingRunnerCfg",
+    },
+)
+
+gym.register(
+    id="Isaac-FullDOF-R6-AttArctan-v0",
+    entry_point="isaaclab_tasks.direct.constrained_full_albc:ALBCEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.config:ALBCEnvR6AttArctanCfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:FullDOFR6AttArctanRunnerCfg",
+    },
+)
+
+gym.register(
+    id="Isaac-FullDOF-R6-VelTanh-v0",
+    entry_point="isaaclab_tasks.direct.constrained_full_albc:ALBCEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.config:ALBCEnvR6VelTanhCfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:FullDOFR6VelTanhRunnerCfg",
     },
 )
