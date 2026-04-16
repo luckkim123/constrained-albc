@@ -492,3 +492,89 @@ class ALBCEnvArctanCfg(ALBCEnvCfg):
         yaw_vel_arctan_coef=1.0,
         yaw_vel_arctan_eps=0.10,
     )
+
+
+# =============================================================================
+# Round 5: Constraint-only SS error reduction (no reward changes)
+# =============================================================================
+# Diagnostic: Round 4 showed rp_vel_settling at 33% of budget utilization
+# (cost_return ~6.6 vs d_k 20.0), lin_vel_settling/yaw_settling not registered.
+# Strategy: attack SS error via constraint tuning, keep reward identical to
+# Control (pure exp+quad, no L1/tanh/arctan). Two orthogonal interventions.
+
+# GPU1 variant: tighten rp_vel_settling budget from 0.20 to 0.08 (2.5x tighter).
+# Targets roll/pitch SS error (hard DR 1.68/1.38 -> <1.25 goal).
+_R5_RP_VEL_CONSTRAINT_TERMS: list[ConstraintTermCfg] = [
+    ConstraintTermCfg(func=attitude_limit_cost, params={"limit": 1.396}, budget=0.01, name="attitude"),
+    ConstraintTermCfg(func=torque_limit_cost, params={"limit_nm": 9.5}, budget=0.08, name="arm_torque"),
+    ConstraintTermCfg(func=velocity_limit_cost, params={"limit_rad_per_s": 4.189}, budget=0.02, name="arm_joint_vel"),
+    ConstraintTermCfg(func=joint1_position_cost, params={"limit_rad": 4 * math.pi}, budget=0.01, name="joint1_pos"),
+    ConstraintTermCfg(func=cumulative_yaw_cost, params={"limit_rad": 8 * math.pi}, budget=0.01, name="cumul_yaw"),
+    ConstraintTermCfg(func=thruster_utilization_cost, budget=0.40, name="thruster_util"),
+    ConstraintTermCfg(func=rp_rate_cost, params={"soft_threshold": 1.0}, budget=0.10, name="rp_rate"),
+    ConstraintTermCfg(func=yaw_rate_cost, params={"soft_threshold": 0.7}, budget=0.10, name="yaw_rate"),
+    # Tightened: 0.20 -> 0.08. Expected to move rp_vel_settling utilization 33% -> ~80%.
+    ConstraintTermCfg(func=rp_vel_settling_cost, params={"settling_threshold": 0.087}, budget=0.08, name="rp_vel_settling"),
+    ConstraintTermCfg(func=manipulability_cost, params={"w_threshold": 0.3}, budget=0.05, name="manipulability"),
+]
+
+# GPU2 variant: activate lin_vel + yaw settling constraints, threshold matched to reward sigma.
+# Targets velocity SS error (hard DR vx/vy/vz 0.046/0.059/0.069 -> <0.04 goal).
+# Threshold = sigma = 0.10 matches rp_vel_settling design (threshold ~= att sigma 0.087 rad ~= 5deg).
+# Budget 0.015 per step = 3x original 0.005 to accommodate the 2.5x larger active region.
+_R5_VEL_SETTLING_CONSTRAINT_TERMS: list[ConstraintTermCfg] = _FULL_DOF_CONSTRAINT_TERMS + [
+    ConstraintTermCfg(
+        func=lin_vel_settling_cost,
+        params={"settling_threshold": 0.10},  # = lin_vel_sigma (was 0.04)
+        budget=0.015,  # was 0.005
+        name="lin_vel_settling",
+    ),
+    ConstraintTermCfg(
+        func=yaw_settling_cost,
+        params={"settling_threshold": 0.10},  # = yaw_vel_sigma (was 0.04)
+        budget=0.015,  # was 0.005
+        name="yaw_settling",
+    ),
+]
+
+
+@configclass
+class ALBCEnvR5RpVelSettlingCfg(ALBCEnvCfg):
+    """Round 5 GPU1: Tightened rp_vel_settling budget for attitude SS.
+
+    Baseline: Control (pure exp+quad reward, matches perdim_kl06 run).
+    Change: rp_vel_settling budget 0.20 -> 0.08 (2.5x tighter).
+
+    Rationale: Round 4 analysis showed rp_vel_settling cost_return ~6.6 vs
+    d_k 20.0 (33% utilization). Budget was slack, constraint not actively
+    pushing policy toward lower angular velocity near target. Tightening
+    to 0.08 brings utilization closer to 80%, activating the settling
+    mechanism designed to reduce roll/pitch SS error.
+
+    No reward changes (6 reward items preserved per user constraint).
+    Expected: roll SS 1.68 -> 1.3-1.5, pitch SS 1.38 -> 1.2-1.3 on hard DR.
+    """
+
+    constraints: ALBCConstraintCfg = ALBCConstraintCfg(terms=_R5_RP_VEL_CONSTRAINT_TERMS)
+
+
+@configclass
+class ALBCEnvR5VelSettlingCfg(ALBCEnvCfg):
+    """Round 5 GPU2: Activate lin_vel + yaw settling constraints for velocity SS.
+
+    Baseline: Control (pure exp+quad reward, matches perdim_kl06 run).
+    Change: 10 -> 12 constraints. Add lin_vel_settling + yaw_settling with
+            threshold=sigma=0.10, budget=0.015.
+
+    Rationale: Round 4 runs all used only 10 constraints (rp_vel_settling for
+    attitude only). lin_vel_settling and yaw_settling existed in code but were
+    inactive. Original threshold 0.04 < Control hard DR SS (0.06-0.07) caused
+    chicken-egg problem (constraint never activates). Matching threshold to
+    reward sigma (0.10) follows rp_vel_settling's design principle (threshold
+    ~= att_rp_sigma 0.087) and guarantees activation in practical SS regime.
+
+    No reward changes (6 reward items preserved per user constraint).
+    Expected: vx/vy/vz hard SS 0.046/0.059/0.069 -> ~0.035/0.04/0.05.
+    """
+
+    constraints: ALBCConstraintCfg = ALBCConstraintCfg(terms=_R5_VEL_SETTLING_CONSTRAINT_TERMS)

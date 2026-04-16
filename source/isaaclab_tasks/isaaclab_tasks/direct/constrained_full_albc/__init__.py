@@ -19,6 +19,8 @@ Registered tasks:
     Isaac-FullDOF-Exp-Tanh-v0:      Saturating tanh penalty (coef=1.0, eps=0.10) -- Round 4
     Isaac-FullDOF-Exp-Arctan-v0:    Saturating arctan penalty (coef=1.0, eps=0.10) -- Round 4
     Isaac-FullDOF-MaxStd1-v0:       max_std=1.0 (cap thr noise divergence)
+    Isaac-FullDOF-R5-RpVel-v0:      Round 5 GPU1: rp_vel_settling budget 0.20->0.08 (attitude SS)
+    Isaac-FullDOF-R5-VelSettling-v0: Round 5 GPU2: activate lin_vel+yaw settling (threshold=sigma)
 """
 
 import gymnasium as gym
@@ -28,6 +30,8 @@ from .config import (
     ALBCEnvArctanCfg,
     ALBCEnvCfg,
     ALBCEnvL1Cfg,
+    ALBCEnvR5RpVelSettlingCfg,
+    ALBCEnvR5VelSettlingCfg,
     ALBCEnvSettlingCfg,
     ALBCEnvTanhCfg,
     DomainRandomizationCfg,
@@ -135,5 +139,25 @@ gym.register(
     kwargs={
         "env_cfg_entry_point": f"{__name__}.config:ALBCEnvArctanCfg",
         "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:FullDOFExpArctanRunnerCfg",
+    },
+)
+
+gym.register(
+    id="Isaac-FullDOF-R5-RpVel-v0",
+    entry_point="isaaclab_tasks.direct.constrained_full_albc:ALBCEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.config:ALBCEnvR5RpVelSettlingCfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:FullDOFR5RpVelRunnerCfg",
+    },
+)
+
+gym.register(
+    id="Isaac-FullDOF-R5-VelSettling-v0",
+    entry_point="isaaclab_tasks.direct.constrained_full_albc:ALBCEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.config:ALBCEnvR5VelSettlingCfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:FullDOFR5VelSettlingRunnerCfg",
     },
 )

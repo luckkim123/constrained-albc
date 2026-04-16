@@ -459,6 +459,62 @@ class FullDOFExpArctanRunnerCfg(RslRlOnPolicyRunnerCfg):
 
 
 # =============================================================================
+# Round 5: Constraint-only SS error reduction
+# =============================================================================
+# Both variants inherit PerDimEnt entropy (arm=0.01, thr=0.001) to match the
+# Control run (2026-04-14 perdiment_kl06). This isolates the constraint change
+# as the single variable relative to Control baseline.
+
+
+@configclass
+class FullDOFR5RpVelRunnerCfg(RslRlOnPolicyRunnerCfg):
+    """Round 5 GPU1: rp_vel_settling budget 0.20 -> 0.08 (attitude SS attack).
+
+    Env: ALBCEnvR5RpVelSettlingCfg (10 constraints, tightened rp_vel_settling).
+    Algorithm: per-dim entropy (same as Control perdim_kl06 run).
+    Target: hard DR roll SS 1.68 -> <1.5, pitch SS 1.38 -> <1.3.
+    """
+
+    class_name: str = "FullDOFConstraintEncoderRunner"
+    seed = 30
+    num_steps_per_env = 64
+    max_iterations = 5000
+    save_interval = 50
+    experiment_name = "full_dof_trpo_r5_rpvel"
+    obs_groups: dict[str, list[str]] = {
+        "policy": ["policy", "privileged"],
+        "critic": ["policy", "privileged"],
+    }
+
+    algorithm = _ExpPerDimEntAlgorithmCfg()
+    policy = _FullDOFPolicyCfg()
+
+
+@configclass
+class FullDOFR5VelSettlingRunnerCfg(RslRlOnPolicyRunnerCfg):
+    """Round 5 GPU2: activate lin_vel + yaw settling constraints (velocity SS attack).
+
+    Env: ALBCEnvR5VelSettlingCfg (12 constraints, threshold=sigma=0.10, budget=0.015).
+    Algorithm: per-dim entropy (same as Control perdim_kl06 run).
+    Target: hard DR vx/vy/vz SS 0.046/0.059/0.069 -> ~0.035/0.04/0.05.
+    """
+
+    class_name: str = "FullDOFConstraintEncoderRunner"
+    seed = 30
+    num_steps_per_env = 64
+    max_iterations = 5000
+    save_interval = 50
+    experiment_name = "full_dof_trpo_r5_velsettling"
+    obs_groups: dict[str, list[str]] = {
+        "policy": ["policy", "privileged"],
+        "critic": ["policy", "privileged"],
+    }
+
+    algorithm = _ExpPerDimEntAlgorithmCfg()
+    policy = _FullDOFPolicyCfg()
+
+
+# =============================================================================
 # Baseline 1: NoEncoder + TRPO + IPO (ablation)
 # =============================================================================
 
