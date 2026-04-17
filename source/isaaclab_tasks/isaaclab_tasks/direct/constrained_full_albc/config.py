@@ -268,6 +268,10 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # Breakdown: cmd(6) + body(9) + arm(5) + thruster(6) = 26D current
     #            + joint_hist(12) + body_hist(27) + action_hist(16) = 55D history
     state_space: int = 24  # Privileged info (see observations.py compute_privileged_obs)
+    # Integral error observation (Hwangbo 2017 pattern)
+    use_integral_obs: bool = False  # When True, appends 3D leaky-integral to policy obs
+    integral_leak: float = 0.99  # Leaky integrator decay: I_{t+1} = leak * I_t + err * dt
+    integral_clamp: float = 2.0  # Windup prevention: clamp |I| <= this value
     debug_vis: bool = False
 
     viewer: ViewerCfg = ViewerCfg(eye=(0.0, 0.0, 12.0), lookat=(0.0, 0.0, 4.5))
@@ -644,4 +648,83 @@ class ALBCEnvR6VelTanhCfg(ALBCEnvCfg):
         lin_vel_tanh_eps=0.10,  # = lin_vel_sigma
         yaw_vel_tanh_coef=0.3,
         yaw_vel_tanh_eps=0.10,  # = yaw_vel_sigma
+    )
+
+
+# =============================================================================
+# Round 7: R6-VelTanh refinement experiments
+# =============================================================================
+
+
+@configclass
+class ALBCEnvR7EpsSmoothCfg(ALBCEnvCfg):
+    """Round 7 GPU1: Wider tanh eps + stronger smoothness penalty.
+
+    Base: R6-VelTanh (tanh coef=0.3 on lin_vel + yaw_vel).
+    Changes from R6-VelTanh:
+      1. lin_vel_tanh_eps  0.10 -> 0.20: wider saturation scale reduces penalty
+         at moderate velocity errors (off-equilibrium coupling zone ~0.1-0.2 m/s).
+         This should reduce roll SS degradation at non-zero targets.
+      2. yaw_vel_tanh_eps  0.10 -> 0.20: same rationale for yaw.
+      3. k_s  -0.1 -> -0.2: doubled smoothness penalty suppresses action jerk,
+         reducing attitude overshoot (currently ~100% for +/-15 deg steps).
+
+    Expected vs R6-VelTanh:
+      roll SS (medium): 1.29 -> <1.25 (eps widening reduces cross-axis interference)
+      attitude OS: ~16 deg -> ~12-14 deg (smoothness penalty)
+      vy/yaw SS: may degrade slightly (wider eps = weaker near-zero gradient)
+    """
+
+    reward: ALBCRewardCfg = ALBCRewardCfg(
+        lin_vel_tanh_coef=0.3,
+        lin_vel_tanh_eps=0.20,  # widened from 0.10
+        yaw_vel_tanh_coef=0.3,
+        yaw_vel_tanh_eps=0.20,  # widened from 0.10
+        k_s=-0.2,  # doubled smoothness penalty
+    )
+
+
+@configclass
+class ALBCEnvR7IntegralCfg(ALBCEnvCfg):
+    """Round 7 GPU2: Integral error observation (Hwangbo 2017 pattern).
+
+    Adds 3D leaky-integrated error to policy observation:
+      I_{t+1} = 0.99 * I_t + [roll_err, pitch_err, vy_err] * dt
+    Clamped to [-2, 2] for windup prevention.
+
+    The integral provides the policy with cumulative error information,
+    enabling PI-like control that drives SS error toward zero. Without it,
+    the policy has no signal distinguishing "just arrived at target" from
+    "stuck at 1 deg offset for 100 steps".
+
+    Changes from base:
+      observation_space: 81 -> 84 (3D integral appended)
+      use_integral_obs: True
+      Reward: R6-VelTanh (tanh coef=0.3 on lin_vel + yaw_vel)
+
+    Expected:
+      roll/pitch SS: significant improvement (integral drives SS -> 0)
+      vy/yaw SS: additional improvement on top of R6-VelTanh
+      Attitude OS: neutral or slightly worse (integral may cause overshoot initially)
+    """
+
+    observation_space: int = 84  # 81 + 3D integral
+    use_integral_obs: bool = True
+    integral_leak: float = 0.99
+    integral_clamp: float = 2.0
+
+    # Extend noise vectors from 81D to 84D (integral dims get zero noise: internal computation)
+    observation_noise_model: NoiseModelWithAdditiveBiasCfg = NoiseModelWithAdditiveBiasCfg(
+        noise_cfg=GaussianNoiseCfg(mean=0.0, std=tuple(list(_OBS_NOISE_STD) + [0.0] * 3)),
+        bias_noise_cfg=UniformNoiseCfg(
+            n_min=tuple(list(_OBS_BIAS_MIN) + [0] * 3),
+            n_max=tuple(list(_OBS_BIAS_MAX) + [0] * 3),
+        ),
+    )
+
+    reward: ALBCRewardCfg = ALBCRewardCfg(
+        lin_vel_tanh_coef=0.3,
+        lin_vel_tanh_eps=0.10,
+        yaw_vel_tanh_coef=0.3,
+        yaw_vel_tanh_eps=0.10,
     )

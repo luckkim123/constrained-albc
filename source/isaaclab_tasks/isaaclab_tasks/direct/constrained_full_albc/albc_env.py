@@ -243,6 +243,8 @@ class ALBCEnv(DirectRLEnv):
         self._yaw_rate_err = torch.zeros(self.num_envs, device=self.device)
         # 3D mixed error for history buffer: [att_rp_err(2), yaw_rate_err(1)]
         self._ang_err = torch.zeros(self.num_envs, 3, device=self.device)
+        # Leaky-integrated error for Hwangbo 2017 pattern: [roll, pitch, vy]
+        self._error_integral = torch.zeros(self.num_envs, 3, device=self.device)
         self._vel_cmd_step_counter = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
         # Per-env command range scales (DORAEMON-managed, default 1.0 if disabled)
         self._cmd_lin_scale = torch.ones(self.num_envs, device=self.device)
@@ -762,6 +764,10 @@ class ALBCEnv(DirectRLEnv):
         else:
             policy_obs = current_proprio
 
+        # Append leaky-integrated error (3D) when enabled
+        if self.cfg.use_integral_obs:
+            policy_obs = torch.cat([policy_obs, self._error_integral], dim=-1)
+
         observations = {"policy": policy_obs}
         if self.cfg.state_space > 0:
             observations["privileged"] = compute_privileged_obs(self)
@@ -786,6 +792,14 @@ class ALBCEnv(DirectRLEnv):
         self._lin_vel_err = self._vel_cmd_lin - self._robot.data.root_lin_vel_b
         # Roll/pitch attitude error + yaw rate error
         self._compute_ang_errors()
+
+        # Update leaky-integrated error: I = leak * I + [roll_err, pitch_err, vy_err] * dt
+        if self.cfg.use_integral_obs:
+            self._error_integral.mul_(self.cfg.integral_leak)
+            self._error_integral[:, 0] += self._att_rp_err[:, 0] * self.step_dt
+            self._error_integral[:, 1] += self._att_rp_err[:, 1] * self.step_dt
+            self._error_integral[:, 2] += self._lin_vel_err[:, 1] * self.step_dt  # vy only
+            self._error_integral.clamp_(-self.cfg.integral_clamp, self.cfg.integral_clamp)
 
         reward = self._reward_manager.compute(
             robot=self._robot,
@@ -1178,6 +1192,8 @@ class ALBCEnv(DirectRLEnv):
         self._yaw_rate_err[env_ids] = self._ang_cmd[env_ids, 2] - self._robot.data.root_ang_vel_b[env_ids, 2]
         self._ang_err[env_ids, :2] = self._att_rp_err[env_ids]
         self._ang_err[env_ids, 2] = self._yaw_rate_err[env_ids]
+        # Reset integral error on episode reset
+        self._error_integral[env_ids] = 0.0
 
     # ------------------------------------------------------------------
     # Play-mode evaluation

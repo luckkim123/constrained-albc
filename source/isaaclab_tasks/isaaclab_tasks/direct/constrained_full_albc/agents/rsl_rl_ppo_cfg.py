@@ -575,6 +575,65 @@ class FullDOFR6VelTanhRunnerCfg(RslRlOnPolicyRunnerCfg):
 
 
 # =============================================================================
+# Round 7: R6-VelTanh refinement experiments
+# =============================================================================
+
+
+@configclass
+class FullDOFR7EpsSmoothRunnerCfg(RslRlOnPolicyRunnerCfg):
+    """Round 7 GPU1: Wider tanh eps (0.20) + stronger smoothness (k_s=-0.2).
+
+    Env: ALBCEnvR7EpsSmoothCfg. Config-only change from R6-VelTanh.
+    Target: roll medium DR 1.29 -> <1.25, attitude OS ~16 -> ~12-14 deg.
+    """
+
+    class_name: str = "FullDOFConstraintEncoderRunner"
+    seed = 30
+    num_steps_per_env = 64
+    max_iterations = 5000
+    save_interval = 50
+    experiment_name = "full_dof_trpo_r7_epssmooth"
+    obs_groups: dict[str, list[str]] = {
+        "policy": ["policy", "privileged"],
+        "critic": ["policy", "privileged"],
+    }
+
+    algorithm = _ExpPerDimEntAlgorithmCfg()
+    policy = _FullDOFPolicyCfg()
+
+
+@configclass
+class _R7IntegralPolicyCfg(_FullDOFPolicyCfg):
+    """Policy config for integral-obs variant (84D policy obs)."""
+
+    policy_obs_dim: int = 84  # 81 + 3D integral error
+
+
+@configclass
+class FullDOFR7IntegralRunnerCfg(RslRlOnPolicyRunnerCfg):
+    """Round 7 GPU2: Integral error observation (Hwangbo 2017 pattern).
+
+    Env: ALBCEnvR7IntegralCfg (84D obs = 81 + 3D leaky integral).
+    Reward: R6-VelTanh (tanh coef=0.3 on vel). Fresh training (no resume).
+    Target: roll/pitch SS reduction via PI-like error accumulation.
+    """
+
+    class_name: str = "FullDOFConstraintEncoderRunner"
+    seed = 30
+    num_steps_per_env = 64
+    max_iterations = 5000
+    save_interval = 50
+    experiment_name = "full_dof_trpo_r7_integral"
+    obs_groups: dict[str, list[str]] = {
+        "policy": ["policy", "privileged"],
+        "critic": ["policy", "privileged"],
+    }
+
+    algorithm = _ExpPerDimEntAlgorithmCfg()
+    policy = _R7IntegralPolicyCfg()
+
+
+# =============================================================================
 # Baseline 1: NoEncoder + TRPO + IPO (ablation)
 # =============================================================================
 

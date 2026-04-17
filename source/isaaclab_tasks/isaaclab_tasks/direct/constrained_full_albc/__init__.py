@@ -23,6 +23,8 @@ Registered tasks:
     Isaac-FullDOF-R5-VelSettling-v0: Round 5 GPU2: activate lin_vel+yaw settling (threshold=sigma)
     Isaac-FullDOF-R6-AttArctan-v0:  Round 6 GPU1: att_rp Arctan coef=0.3 (attitude SS via shape)
     Isaac-FullDOF-R6-VelTanh-v0:    Round 6 GPU2: lin+yaw_vel Tanh coef=0.3 (velocity SS via shape)
+    Isaac-FullDOF-R7-EpsSmooth-v0:  Round 7 GPU1: wider eps(0.20) + k_s=-0.2 (roll fix + OS reduce)
+    Isaac-FullDOF-R7-Integral-v0:   Round 7 GPU2: integral-error obs (Hwangbo 2017, 84D obs)
 """
 
 import gymnasium as gym
@@ -36,6 +38,8 @@ from .config import (
     ALBCEnvR5VelSettlingCfg,
     ALBCEnvR6AttArctanCfg,
     ALBCEnvR6VelTanhCfg,
+    ALBCEnvR7EpsSmoothCfg,
+    ALBCEnvR7IntegralCfg,
     ALBCEnvSettlingCfg,
     ALBCEnvTanhCfg,
     DomainRandomizationCfg,
@@ -183,5 +187,25 @@ gym.register(
     kwargs={
         "env_cfg_entry_point": f"{__name__}.config:ALBCEnvR6VelTanhCfg",
         "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:FullDOFR6VelTanhRunnerCfg",
+    },
+)
+
+gym.register(
+    id="Isaac-FullDOF-R7-EpsSmooth-v0",
+    entry_point="isaaclab_tasks.direct.constrained_full_albc:ALBCEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.config:ALBCEnvR7EpsSmoothCfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:FullDOFR7EpsSmoothRunnerCfg",
+    },
+)
+
+gym.register(
+    id="Isaac-FullDOF-R7-Integral-v0",
+    entry_point="isaaclab_tasks.direct.constrained_full_albc:ALBCEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.config:ALBCEnvR7IntegralCfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:FullDOFR7IntegralRunnerCfg",
     },
 )
