@@ -25,6 +25,9 @@ Registered tasks:
     Isaac-FullDOF-R6-VelTanh-v0:    Round 6 GPU2: lin+yaw_vel Tanh coef=0.3 (velocity SS via shape)
     Isaac-FullDOF-R7-EpsSmooth-v0:  Round 7 GPU1: wider eps(0.20) + k_s=-0.2 (roll fix + OS reduce)
     Isaac-FullDOF-R7-Integral-v0:   Round 7 GPU2: integral-error obs (Hwangbo 2017, 84D obs)
+    Isaac-FullDOF-R8-Baseline-v0:   Round 8 Baseline: 6D integral (87D obs)
+    Isaac-FullDOF-R8-Gated-v0:      Round 8 Exp1: error-gated conditional integration
+    Isaac-FullDOF-R8-FastLeak-v0:   Round 8 Exp2: faster leak (0.95, tau=0.39s)
 """
 
 import gymnasium as gym
@@ -40,6 +43,9 @@ from .config import (
     ALBCEnvR6VelTanhCfg,
     ALBCEnvR7EpsSmoothCfg,
     ALBCEnvR7IntegralCfg,
+    ALBCEnvR8BaselineCfg,
+    ALBCEnvR8FastLeakCfg,
+    ALBCEnvR8GatedCfg,
     ALBCEnvSettlingCfg,
     ALBCEnvTanhCfg,
     DomainRandomizationCfg,
@@ -207,5 +213,35 @@ gym.register(
     kwargs={
         "env_cfg_entry_point": f"{__name__}.config:ALBCEnvR7IntegralCfg",
         "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:FullDOFR7IntegralRunnerCfg",
+    },
+)
+
+gym.register(
+    id="Isaac-FullDOF-R8-Baseline-v0",
+    entry_point="isaaclab_tasks.direct.constrained_full_albc:ALBCEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.config:ALBCEnvR8BaselineCfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:FullDOFR8BaselineRunnerCfg",
+    },
+)
+
+gym.register(
+    id="Isaac-FullDOF-R8-Gated-v0",
+    entry_point="isaaclab_tasks.direct.constrained_full_albc:ALBCEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.config:ALBCEnvR8GatedCfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:FullDOFR8GatedRunnerCfg",
+    },
+)
+
+gym.register(
+    id="Isaac-FullDOF-R8-FastLeak-v0",
+    entry_point="isaaclab_tasks.direct.constrained_full_albc:ALBCEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.config:ALBCEnvR8FastLeakCfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:FullDOFR8FastLeakRunnerCfg",
     },
 )

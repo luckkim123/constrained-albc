@@ -610,6 +610,13 @@ class _R7IntegralPolicyCfg(_FullDOFPolicyCfg):
 
 
 @configclass
+class _R8IntegralPolicyCfg(_FullDOFPolicyCfg):
+    """Policy config for 6D integral-obs variant (87D policy obs)."""
+
+    policy_obs_dim: int = 87  # 81 + 6D integral error
+
+
+@configclass
 class FullDOFR7IntegralRunnerCfg(RslRlOnPolicyRunnerCfg):
     """Round 7 GPU2: Integral error observation (Hwangbo 2017 pattern).
 
@@ -631,6 +638,78 @@ class FullDOFR7IntegralRunnerCfg(RslRlOnPolicyRunnerCfg):
 
     algorithm = _ExpPerDimEntAlgorithmCfg()
     policy = _R7IntegralPolicyCfg()
+
+
+# =============================================================================
+# Round 8: Full 6D integral + overshoot reduction experiments
+# =============================================================================
+
+
+@configclass
+class FullDOFR8BaselineRunnerCfg(RslRlOnPolicyRunnerCfg):
+    """Round 8 Baseline: 6D integral observation (87D obs).
+
+    Extends R7-Integral from 3D to 6D. Covers all tracking channels.
+    """
+
+    class_name: str = "FullDOFConstraintEncoderRunner"
+    seed = 30
+    num_steps_per_env = 64
+    max_iterations = 5000
+    save_interval = 50
+    experiment_name = "full_dof_trpo_r8_baseline"
+    obs_groups: dict[str, list[str]] = {
+        "policy": ["policy", "privileged"],
+        "critic": ["policy", "privileged"],
+    }
+
+    algorithm = _ExpPerDimEntAlgorithmCfg()
+    policy = _R8IntegralPolicyCfg()
+
+
+@configclass
+class FullDOFR8GatedRunnerCfg(RslRlOnPolicyRunnerCfg):
+    """Round 8 Exp1: Error-gated conditional integration.
+
+    Only accumulate integral when |error| < reward sigma.
+    Target: reduce overshoot while preserving SS improvement.
+    """
+
+    class_name: str = "FullDOFConstraintEncoderRunner"
+    seed = 30
+    num_steps_per_env = 64
+    max_iterations = 5000
+    save_interval = 50
+    experiment_name = "full_dof_trpo_r8_gated"
+    obs_groups: dict[str, list[str]] = {
+        "policy": ["policy", "privileged"],
+        "critic": ["policy", "privileged"],
+    }
+
+    algorithm = _ExpPerDimEntAlgorithmCfg()
+    policy = _R8IntegralPolicyCfg()
+
+
+@configclass
+class FullDOFR8FastLeakRunnerCfg(RslRlOnPolicyRunnerCfg):
+    """Round 8 Exp2: Faster leak rate (0.95, tau=0.39s).
+
+    Integral drains ~5x faster. Less windup but weaker SS correction.
+    """
+
+    class_name: str = "FullDOFConstraintEncoderRunner"
+    seed = 30
+    num_steps_per_env = 64
+    max_iterations = 5000
+    save_interval = 50
+    experiment_name = "full_dof_trpo_r8_fastleak"
+    obs_groups: dict[str, list[str]] = {
+        "policy": ["policy", "privileged"],
+        "critic": ["policy", "privileged"],
+    }
+
+    algorithm = _ExpPerDimEntAlgorithmCfg()
+    policy = _R8IntegralPolicyCfg()
 
 
 # =============================================================================

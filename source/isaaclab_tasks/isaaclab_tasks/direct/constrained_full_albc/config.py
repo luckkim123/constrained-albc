@@ -269,9 +269,11 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     #            + joint_hist(12) + body_hist(27) + action_hist(16) = 55D history
     state_space: int = 24  # Privileged info (see observations.py compute_privileged_obs)
     # Integral error observation (Hwangbo 2017 pattern)
-    use_integral_obs: bool = False  # When True, appends 3D leaky-integral to policy obs
+    use_integral_obs: bool = False  # When True, appends leaky-integral to policy obs
+    integral_dims: int = 3  # Number of integral channels: 3=[roll,pitch,vy], 6=[roll,pitch,vx,vy,vz,yaw_rate]
     integral_leak: float = 0.99  # Leaky integrator decay: I_{t+1} = leak * I_t + err * dt
     integral_clamp: float = 2.0  # Windup prevention: clamp |I| <= this value
+    integral_gated: bool = False  # Error-gated integration: only accumulate when |err| < reward sigma
     debug_vis: bool = False
 
     viewer: ViewerCfg = ViewerCfg(eye=(0.0, 0.0, 12.0), lookat=(0.0, 0.0, 4.5))
@@ -728,3 +730,78 @@ class ALBCEnvR7IntegralCfg(ALBCEnvCfg):
         yaw_vel_tanh_coef=0.3,
         yaw_vel_tanh_eps=0.10,
     )
+
+
+# =============================================================================
+# Round 8: Full 6D integral + overshoot reduction experiments
+# =============================================================================
+
+# Shared 87D noise model for 6D integral configs (81D base + 6D integral zeros)
+_OBS_NOISE_STD_87 = tuple(list(_OBS_NOISE_STD) + [0.0] * 6)
+_OBS_BIAS_MIN_87 = tuple(list(_OBS_BIAS_MIN) + [0] * 6)
+_OBS_BIAS_MAX_87 = tuple(list(_OBS_BIAS_MAX) + [0] * 6)
+
+
+@configclass
+class ALBCEnvR8BaselineCfg(ALBCEnvCfg):
+    """Round 8 Baseline: Full 6D integral error observation.
+
+    Extends R7-Integral from 3D to 6D integral:
+      [roll_err, pitch_err, vx_err, vy_err, vz_err, yaw_rate_err]
+
+    R7-Integral (3D) results: SS error -50 to -67% on integral channels,
+    but yaw SS +94% (no integral). Full 6D covers all tracking channels.
+
+    Reward: R6-VelTanh (tanh coef=0.3 on lin_vel + yaw_vel).
+    Algorithm: PerDimEnt (arm=0.01, thr=0.001).
+    """
+
+    observation_space: int = 87  # 81 + 6D integral
+    use_integral_obs: bool = True
+    integral_dims: int = 6
+    integral_leak: float = 0.99
+    integral_clamp: float = 2.0
+
+    observation_noise_model: NoiseModelWithAdditiveBiasCfg = NoiseModelWithAdditiveBiasCfg(
+        noise_cfg=GaussianNoiseCfg(mean=0.0, std=_OBS_NOISE_STD_87),
+        bias_noise_cfg=UniformNoiseCfg(n_min=_OBS_BIAS_MIN_87, n_max=_OBS_BIAS_MAX_87),
+    )
+
+    reward: ALBCRewardCfg = ALBCRewardCfg(
+        lin_vel_tanh_coef=0.3,
+        lin_vel_tanh_eps=0.10,
+        yaw_vel_tanh_coef=0.3,
+        yaw_vel_tanh_eps=0.10,
+    )
+
+
+@configclass
+class ALBCEnvR8GatedCfg(ALBCEnvR8BaselineCfg):
+    """Round 8 Exp1: Error-gated conditional integration.
+
+    Only accumulates integral when |error| < reward sigma (5.7 deg / 0.10 m/s).
+    During large transients (|error| > sigma), integral only decays.
+
+    Prevents integral windup during step responses while preserving
+    full SS correction capability near the target.
+
+    Overshoot analysis showed ~9x reduction in integral accumulation at
+    target crossing with sigma gating.
+    """
+
+    integral_gated: bool = True
+
+
+@configclass
+class ALBCEnvR8FastLeakCfg(ALBCEnvR8BaselineCfg):
+    """Round 8 Exp2: Faster leak rate (0.95 vs 0.99).
+
+    Time constant: 2.0s -> 0.39s.  Half-life: 1.38s -> 0.27s.
+    Integral drains ~5x faster, reducing windup at the cost of
+    weaker SS correction (smaller steady-state integral magnitude).
+
+    Trade-off: R7-Integral's 60% SS reduction may partially revert,
+    but overshoot should decrease significantly.
+    """
+
+    integral_leak: float = 0.95

@@ -243,8 +243,9 @@ class ALBCEnv(DirectRLEnv):
         self._yaw_rate_err = torch.zeros(self.num_envs, device=self.device)
         # 3D mixed error for history buffer: [att_rp_err(2), yaw_rate_err(1)]
         self._ang_err = torch.zeros(self.num_envs, 3, device=self.device)
-        # Leaky-integrated error for Hwangbo 2017 pattern: [roll, pitch, vy]
-        self._error_integral = torch.zeros(self.num_envs, 3, device=self.device)
+        # Leaky-integrated error for Hwangbo 2017 pattern
+        # 3D: [roll, pitch, vy] (R7 legacy) | 6D: [roll, pitch, vx, vy, vz, yaw_rate] (R8+)
+        self._error_integral = torch.zeros(self.num_envs, self.cfg.integral_dims, device=self.device)
         self._vel_cmd_step_counter = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
         # Per-env command range scales (DORAEMON-managed, default 1.0 if disabled)
         self._cmd_lin_scale = torch.ones(self.num_envs, device=self.device)
@@ -793,12 +794,40 @@ class ALBCEnv(DirectRLEnv):
         # Roll/pitch attitude error + yaw rate error
         self._compute_ang_errors()
 
-        # Update leaky-integrated error: I = leak * I + [roll_err, pitch_err, vy_err] * dt
+        # Update leaky-integrated error: I = leak * I + err * dt
         if self.cfg.use_integral_obs:
             self._error_integral.mul_(self.cfg.integral_leak)
-            self._error_integral[:, 0] += self._att_rp_err[:, 0] * self.step_dt
-            self._error_integral[:, 1] += self._att_rp_err[:, 1] * self.step_dt
-            self._error_integral[:, 2] += self._lin_vel_err[:, 1] * self.step_dt  # vy only
+
+            # Collect per-channel errors
+            if self.cfg.integral_dims == 6:
+                errs = [
+                    self._att_rp_err[:, 0],   # roll
+                    self._att_rp_err[:, 1],   # pitch
+                    self._lin_vel_err[:, 0],  # vx
+                    self._lin_vel_err[:, 1],  # vy
+                    self._lin_vel_err[:, 2],  # vz
+                    self._yaw_rate_err,       # yaw rate
+                ]
+            else:  # 3D legacy (R7)
+                errs = [
+                    self._att_rp_err[:, 0],   # roll
+                    self._att_rp_err[:, 1],   # pitch
+                    self._lin_vel_err[:, 1],  # vy only
+                ]
+
+            if self.cfg.integral_gated:
+                # Error-gated: only accumulate when |error| < reward sigma
+                sigmas = [self.cfg.reward.att_rp_sigma, self.cfg.reward.att_rp_sigma]
+                if self.cfg.integral_dims == 6:
+                    sigmas += [self.cfg.reward.lin_vel_sigma] * 3 + [self.cfg.reward.yaw_vel_sigma]
+                else:
+                    sigmas.append(self.cfg.reward.lin_vel_sigma)
+                for i, (err, sigma) in enumerate(zip(errs, sigmas)):
+                    self._error_integral[:, i] += (err.abs() < sigma).float() * err * self.step_dt
+            else:
+                for i, err in enumerate(errs):
+                    self._error_integral[:, i] += err * self.step_dt
+
             self._error_integral.clamp_(-self.cfg.integral_clamp, self.cfg.integral_clamp)
 
         reward = self._reward_manager.compute(
