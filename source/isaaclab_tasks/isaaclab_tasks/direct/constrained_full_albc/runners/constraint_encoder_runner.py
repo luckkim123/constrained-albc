@@ -114,7 +114,15 @@ class ConstraintEncoderRunner(OnPolicyRunner):
                     normalize_advantage=not normalize_adv_pmb,
                 )
 
-                # 4. Update running stats from raw returns, then normalize
+                # 4. Cost GAE (ConstraintTRPO-specific). The wrapper replaces the
+                # entire ConstraintTRPO.compute_returns, so we must still run the
+                # cost-side GAE path or barrier/IPO signals go to zero. Costs are
+                # NOT normalized (adaptive thresholds operate on raw units).
+                if getattr(self.alg, "num_constraints", 0) > 0:
+                    last_cost_values = self.alg.policy.evaluate_costs(obs).detach()
+                    self.alg._compute_cost_returns(last_cost_values)
+
+                # 5. Update running stats from raw returns, then normalize
                 #    values/returns in-place for critic loss targets.
                 self._normalize_storage_values()
 
