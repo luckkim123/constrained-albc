@@ -45,7 +45,7 @@ from .utils import log_dr_metrics
 class ALBCEnv(DirectRLEnv):
     """Velocity + attitude tracking ALBC environment with constrained RL.
 
-    Obs (81D): current_proprio(26D) + temporal_history(55D).
+    Obs (87D): current_proprio(26D) + temporal_history(55D) + integral_error(6D).
         Current: cmd(6) [lin_vel(3) + att_rp(2) + yaw_rate(1)], euler(3),
                  ang_vel(3), lin_vel(3), jpos(2), jvel(2), manipulability(1), thr(6).
         History: joint_tracking(12D) + body_tracking(27D) + action(16D).
@@ -104,14 +104,17 @@ class ALBCEnv(DirectRLEnv):
         self._init_thrusters()
         self._init_doraemon()
 
-        # Cache constraint config (avoids getattr on every _get_rewards call)
+        # DR sampler shared between _reset_physics() and _reset_task_and_state()
+        self._current_dr_sampler: DRSampler | None = None
+
+        # Cache config-static values (avoids repeated attribute lookups)
         self._constraints_cfg = getattr(self.cfg, "constraints", None)
+        self._vel_cmd_resample_steps = self.cfg.vel_cmd_resample_steps
+        self._has_ocean_current = any(v > 0 for v in self.cfg.ocean_current.max_velocity)
 
         # Per-condition termination flags (for diagnostics logging)
-        self._term_too_fast_ang = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
         self._term_bad_state = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
         self._term_excessive_tilt = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
-        self._term_too_fast_lin = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
 
     @staticmethod
     def _iter_noise_params(cfg: ALBCEnvCfg):
@@ -186,6 +189,7 @@ class ALBCEnv(DirectRLEnv):
             )
         # Both joints are continuous rotation motors (no physical position limits).
         # Observation uses angular wrapping (atan2) instead of linear normalization.
+        self._default_effort_limit = self._robot.data.joint_effort_limits[0, self._albc_joint_ids[0]].item()
 
     def _init_task_and_rewards(self) -> None:
         """Initialize reward manager for velocity tracking."""
@@ -202,6 +206,8 @@ class ALBCEnv(DirectRLEnv):
         self._init_velocity_buffers()
         self._init_tracking_buffers()
         self._init_force_buffers()
+        # Euler angle cache (refreshed once per step in _get_dones, read by rewards/obs/constraints)
+        self._euler_cache: tuple[torch.Tensor, torch.Tensor, torch.Tensor] | None = None
 
     def _init_action_buffers(self) -> None:
         """Action history (3-deep for smoothness penalty) and joint PD targets."""
@@ -412,7 +418,7 @@ class ALBCEnv(DirectRLEnv):
 
         # Velocity command resampling (mid-episode)
         self._vel_cmd_step_counter += 1
-        resample_steps = getattr(self.cfg, "vel_cmd_resample_steps", 0)
+        resample_steps = self._vel_cmd_resample_steps
         if resample_steps > 0:
             resample_mask = self._vel_cmd_step_counter >= resample_steps
             if resample_mask.any():
@@ -605,23 +611,16 @@ class ALBCEnv(DirectRLEnv):
 
     def _clamp_payload_cog(self, env_ids: torch.Tensor) -> None:
         """Clamp payload CoG offset for static stability: m*g*|r_eff_xy| <= F_bu * h."""
-        if not hasattr(self, "_buoy_hydro"):
-            return
-        F_bu = self._buoy_hydro.buoyancy_force[env_ids]
-        h = self.cfg.randomization.buoy_moment_arm
-        mass = self._payload_mass[env_ids]
-        g = 9.81
+        from .mdp.events import _clamp_payload_cog_stability
 
-        effective = self._payload_attachment_offset[env_ids] + self._payload_cog_offset[env_ids]
-        current_norm = effective[:, :2].norm(dim=-1)
-        max_norm = torch.where(
-            mass > 1e-6,
-            (F_bu * h) / (mass * g),
-            torch.full_like(mass, float("inf")),
+        self._payload_cog_offset[env_ids] = _clamp_payload_cog_stability(
+            attachment_offset=self._payload_attachment_offset[env_ids],
+            cog_offset=self._payload_cog_offset[env_ids],
+            buoyancy_force=self._buoy_hydro.buoyancy_force[env_ids],
+            moment_arm=self.cfg.randomization.buoy_moment_arm,
+            mass=self._payload_mass[env_ids],
+            gravity=self._gravity_magnitude.item(),
         )
-        scale = torch.clamp(max_norm / current_norm.clamp(min=1e-8), max=1.0)
-        clamped = effective * scale.unsqueeze(-1)
-        self._payload_cog_offset[env_ids] = clamped - self._payload_attachment_offset[env_ids]
 
     def _sample_stashed_cog_offset(self, env_ids: torch.Tensor) -> None:
         """Sample CoG offset for stashed payload (PICK events starting without payload)."""
@@ -744,7 +743,7 @@ class ALBCEnv(DirectRLEnv):
         return payload_weight_b, payload_torque_b
 
     def _get_observations(self) -> dict:
-        """Compute unified observation o_t (81D) and privileged p_t (24D).
+        """Compute unified observation o_t (87D) and privileged p_t (24D).
 
         o_t = current proprioception (26D) + temporal history (55D):
             - Joint tracking: 4D x 3 steps = 12D (all hist_len steps)
@@ -776,7 +775,7 @@ class ALBCEnv(DirectRLEnv):
 
     def _compute_ang_errors(self) -> None:
         """Compute roll/pitch attitude error + yaw rate error from current state."""
-        roll, pitch, _ = euler_xyz_from_quat(self._robot.data.root_quat_w)
+        roll, pitch, _ = self._euler_cache
         raw = self._ang_cmd[:, :2] - torch.stack([roll, pitch], dim=-1)
         self._att_rp_err = torch.atan2(torch.sin(raw), torch.cos(raw))
         self._yaw_rate_err = self._ang_cmd[:, 2] - self._robot.data.root_ang_vel_b[:, 2]
@@ -801,32 +800,33 @@ class ALBCEnv(DirectRLEnv):
             # Collect per-channel errors
             if self.cfg.integral_dims == 6:
                 errs = [
-                    self._att_rp_err[:, 0],   # roll
-                    self._att_rp_err[:, 1],   # pitch
+                    self._att_rp_err[:, 0],  # roll
+                    self._att_rp_err[:, 1],  # pitch
                     self._lin_vel_err[:, 0],  # vx
                     self._lin_vel_err[:, 1],  # vy
                     self._lin_vel_err[:, 2],  # vz
-                    self._yaw_rate_err,       # yaw rate
+                    self._yaw_rate_err,  # yaw rate
                 ]
             else:  # 3D legacy (R7)
                 errs = [
-                    self._att_rp_err[:, 0],   # roll
-                    self._att_rp_err[:, 1],   # pitch
+                    self._att_rp_err[:, 0],  # roll
+                    self._att_rp_err[:, 1],  # pitch
                     self._lin_vel_err[:, 1],  # vy only
                 ]
 
             if self.cfg.integral_gated:
                 # Error-gated: only accumulate when |error| < reward sigma
-                sigmas = [self.cfg.reward.att_rp_sigma, self.cfg.reward.att_rp_sigma]
+                sigmas = [self.cfg.reward.att_rp.sigma, self.cfg.reward.att_rp.sigma]
                 if self.cfg.integral_dims == 6:
-                    sigmas += [self.cfg.reward.lin_vel_sigma] * 3 + [self.cfg.reward.yaw_vel_sigma]
+                    sigmas += [self.cfg.reward.lin_vel.sigma] * 3 + [self.cfg.reward.yaw_vel.sigma]
                 else:
-                    sigmas.append(self.cfg.reward.lin_vel_sigma)
-                for i, (err, sigma) in enumerate(zip(errs, sigmas)):
-                    self._error_integral[:, i] += (err.abs() < sigma).float() * err * self.step_dt
+                    sigmas.append(self.cfg.reward.lin_vel.sigma)
+                err_stack = torch.stack(errs, dim=-1)
+                sigma_t = torch.tensor(sigmas, device=self.device)
+                gate = (err_stack.abs() < sigma_t).float()
+                self._error_integral += gate * err_stack * self.step_dt
             else:
-                for i, err in enumerate(errs):
-                    self._error_integral[:, i] += err * self.step_dt
+                self._error_integral += torch.stack(errs, dim=-1) * self.step_dt
 
             self._error_integral.clamp_(-self.cfg.integral_clamp, self.cfg.integral_clamp)
 
@@ -872,9 +872,9 @@ class ALBCEnv(DirectRLEnv):
         total = 0.0
         for name, value in reward_sums.items():
             normalized = value / self.max_episode_length_s
-            log[f"Episode_Reward/{name}"] = normalized
+            log[f"Reward/{name}"] = normalized
             total += normalized
-        log["Episode_Reward/total"] = total
+        log["Reward/total"] = total
 
         self._collect_termination_metrics(log, env_ids, n)
         if n == 0:
@@ -891,97 +891,84 @@ class ALBCEnv(DirectRLEnv):
         return log
 
     def _log_tracking_metrics(self, log: dict, env_ids: torch.Tensor) -> None:
-        """Attitude, velocity tracking, command diagnostics, and manipulability."""
-        roll, pitch, _ = euler_xyz_from_quat(self._robot.data.root_quat_w[env_ids])
-        log["Attitude/roll_deg"] = torch.rad2deg(roll).abs().mean().item()
-        log["Attitude/pitch_deg"] = torch.rad2deg(pitch).abs().mean().item()
-
-        # Linear velocity tracking
-        lin_err = self._lin_vel_err[env_ids]
-        log["Vel_Tracking/lin_vel_err_norm"] = lin_err.norm(dim=-1).mean().item()
-        log["Vel_Tracking/lin_err_x"] = lin_err[:, 0].abs().mean().item()
-        log["Vel_Tracking/lin_err_y"] = lin_err[:, 1].abs().mean().item()
-        log["Vel_Tracking/lin_err_z"] = lin_err[:, 2].abs().mean().item()
-
-        # Roll/pitch attitude tracking (radians -> degrees)
+        """Tracking errors, commands, and manipulability (2-level WandB hierarchy)."""
+        # Attitude tracking (grouped in one WandB chart)
         att_err = self._att_rp_err[env_ids]
-        log["Att_Tracking/err_roll_deg"] = torch.rad2deg(att_err[:, 0]).abs().mean().item()
-        log["Att_Tracking/err_pitch_deg"] = torch.rad2deg(att_err[:, 1]).abs().mean().item()
-        log["Att_Tracking/err_rp_norm_deg"] = torch.rad2deg(att_err.norm(dim=-1)).mean().item()
+        log["Track/att/roll_err_deg"] = torch.rad2deg(att_err[:, 0]).abs().mean().item()
+        log["Track/att/pitch_err_deg"] = torch.rad2deg(att_err[:, 1]).abs().mean().item()
+
+        # Linear velocity tracking (grouped in one chart)
+        lin_err = self._lin_vel_err[env_ids]
+        log["Track/lin/err_x"] = lin_err[:, 0].abs().mean().item()
+        log["Track/lin/err_y"] = lin_err[:, 1].abs().mean().item()
+        log["Track/lin/err_z"] = lin_err[:, 2].abs().mean().item()
 
         # Yaw rate tracking
-        log["Vel_Tracking/yaw_rate_err"] = self._yaw_rate_err[env_ids].abs().mean().item()
+        log["Track/yaw/rate_err"] = self._yaw_rate_err[env_ids].abs().mean().item()
 
-        # Command diagnostics
-        log["Command/att_roll_deg"] = torch.rad2deg(self._ang_cmd[env_ids, 0]).abs().mean().item()
-        log["Command/att_pitch_deg"] = torch.rad2deg(self._ang_cmd[env_ids, 1]).abs().mean().item()
-        log["Command/yaw_rate"] = self._ang_cmd[env_ids, 2].abs().mean().item()
-        log["Command/lin_vel_x"] = self._vel_cmd_lin[env_ids, 0].abs().mean().item()
-        log["Command/lin_vel_y"] = self._vel_cmd_lin[env_ids, 1].abs().mean().item()
-        log["Command/lin_vel_z"] = self._vel_cmd_lin[env_ids, 2].abs().mean().item()
+        # Command diagnostics (attitude + yaw grouped, linear grouped)
+        log["Track/cmd_att/roll_deg"] = torch.rad2deg(self._ang_cmd[env_ids, 0]).abs().mean().item()
+        log["Track/cmd_att/pitch_deg"] = torch.rad2deg(self._ang_cmd[env_ids, 1]).abs().mean().item()
+        log["Track/cmd_att/yaw_rate"] = self._ang_cmd[env_ids, 2].abs().mean().item()
+        log["Track/cmd_lin/vel_x"] = self._vel_cmd_lin[env_ids, 0].abs().mean().item()
+        log["Track/cmd_lin/vel_y"] = self._vel_cmd_lin[env_ids, 1].abs().mean().item()
+        log["Track/cmd_lin/vel_z"] = self._vel_cmd_lin[env_ids, 2].abs().mean().item()
 
-        log["Arm/manipulability_mean"] = self._manipulability[env_ids].mean().item()
-        log["Arm/manipulability_min"] = self._manipulability[env_ids].min().item()
+        # Arm manipulability
+        log["Track/arm/manip_mean"] = self._manipulability[env_ids].mean().item()
+        log["Track/arm/manip_min"] = self._manipulability[env_ids].min().item()
 
     def _log_action_metrics(self, log: dict, env_ids: torch.Tensor) -> None:
         """Per-subsystem action diagnostics (arm 2D vs thruster 6D)."""
         actions = self._actions[env_ids]
         prev = self._prev_actions[env_ids]
 
-        # Arm delta targets (actions[:, :2])
         arm, arm_prev = actions[:, :2], prev[:, :2]
-        log["Action/arm_norm"] = torch.linalg.norm(arm, dim=-1).mean().item()
-        log["Action/arm_rate"] = torch.linalg.norm(arm - arm_prev, dim=-1).mean().item()
+        log["Action/arm/norm"] = torch.linalg.norm(arm, dim=-1).mean().item()
+        log["Action/arm/rate"] = torch.linalg.norm(arm - arm_prev, dim=-1).mean().item()
 
-        # Thruster commands (actions[:, 2:])
         thr, thr_prev = actions[:, 2:], prev[:, 2:]
-        log["Action/thruster_norm"] = torch.linalg.norm(thr, dim=-1).mean().item()
-        log["Action/thruster_rate"] = torch.linalg.norm(thr - thr_prev, dim=-1).mean().item()
+        log["Action/thr/norm"] = torch.linalg.norm(thr, dim=-1).mean().item()
+        log["Action/thr/rate"] = torch.linalg.norm(thr - thr_prev, dim=-1).mean().item()
 
     def _log_dynamics_metrics(self, log: dict, env_ids: torch.Tensor) -> None:
-        """Angular velocity, joint state, and actuator saturation diagnostics."""
+        """Angular velocity, joint state, actuator saturation, and thruster diagnostics."""
         ang_vel = self._robot.data.root_ang_vel_b[env_ids]
-        log["Dynamics/angular_velocity_rp_rms"] = ang_vel[:, :2].pow(2).mean().sqrt().item()
-        log["Dynamics/angular_velocity_yaw_rms"] = ang_vel[:, 2].pow(2).mean().sqrt().item()
+        log["Dynamics/ang_vel/rp_rms"] = ang_vel[:, :2].pow(2).mean().sqrt().item()
+        log["Dynamics/ang_vel/yaw_rms"] = ang_vel[:, 2].pow(2).mean().sqrt().item()
 
         jids = self._albc_joint_ids
         joint_vel = self._robot.data.joint_vel[env_ids][:, jids]
         joint_pos = self._robot.data.joint_pos[env_ids][:, jids]
-        log["Dynamics/joint_pos_mean_abs"] = joint_pos.abs().mean().item()
-        log["Dynamics/joint_vel_abs_max"] = joint_vel.abs().max().item()
+        log["Dynamics/joint/pos_abs"] = joint_pos.abs().mean().item()
+        log["Dynamics/joint/vel_max"] = joint_vel.abs().max().item()
 
         effort_lim = self._robot.data.joint_effort_limits[env_ids][:, jids]
         computed = self._robot.data.computed_torque[env_ids][:, jids]
         applied = self._robot.data.applied_torque[env_ids][:, jids]
-        log["Dynamics/effort_limit_mean"] = effort_lim.mean().item()
-        log["Dynamics/computed_torque_abs_max"] = computed.abs().max().item()
-        log["Dynamics/applied_torque_abs_max"] = applied.abs().max().item()
-        log["Dynamics/effort_saturation_frac"] = (computed.abs() >= effort_lim * 0.99).float().mean().item()
+        log["Dynamics/joint/torque_max"] = applied.abs().max().item()
+        log["Dynamics/joint/effort_sat"] = (computed.abs() >= effort_lim * 0.99).float().mean().item()
 
         vel_lim = self._robot.data.joint_vel_limits[env_ids][:, jids]
-        log["Dynamics/vel_saturation_frac"] = (joint_vel.abs() >= vel_lim.clamp(min=1e-6) * 0.95).float().mean().item()
+        log["Dynamics/joint/vel_sat"] = (joint_vel.abs() >= vel_lim.clamp(min=1e-6) * 0.95).float().mean().item()
 
-        # Thruster diagnostics (6 thrusters, state in [-1, 1])
+        # Thruster diagnostics
         if self._thruster is not None:
-            thr_state = self._thruster.state[env_ids]
-            thr_abs = thr_state.abs()
-            log["Thruster/utilization_mean"] = thr_abs.mean().item()
-            log["Thruster/utilization_max"] = thr_abs.max().item()
-            log["Thruster/utilization_std"] = thr_abs.std().item()
+            thr_abs = self._thruster.state[env_ids].abs()
+            log["Dynamics/thr/util_mean"] = thr_abs.mean().item()
+            log["Dynamics/thr/util_max"] = thr_abs.max().item()
 
     def _log_midep_metrics(self, log: dict, env_ids: torch.Tensor) -> None:
         """Mid-episode dynamics diagnostics (payload, OU current, cumulative yaw)."""
         if self.cfg.payload_toggle_steps != 0:
-            log["MidEp/payload_toggled_frac"] = self._payload_toggled[env_ids].float().mean().item()
-            log["MidEp/payload_mass_final"] = self._payload_mass[env_ids].mean().item()
+            log["Episode/payload_toggled"] = self._payload_toggled[env_ids].float().mean().item()
         if self.cfg.ou_enable:
             current = self._hydro._current_velocity[env_ids, :3]
             base = self._ou_base_current[env_ids]
-            log["MidEp/current_drift_norm"] = (current - base).norm(dim=-1).mean().item()
-            log["MidEp/current_mag_final"] = current.norm(dim=-1).mean().item()
+            log["Episode/current_drift"] = (current - base).norm(dim=-1).mean().item()
+            log["Episode/current_mag"] = current.norm(dim=-1).mean().item()
 
-        # Cumulative yaw (tether wrapping indicator, see cumulative_yaw_cost constraint)
-        log["Control/cumulative_yaw_deg"] = torch.rad2deg(self._cumulative_yaw[env_ids].abs()).mean().item()
+        log["Episode/cumul_yaw_deg"] = torch.rad2deg(self._cumulative_yaw[env_ids].abs()).mean().item()
 
     def _collect_termination_metrics(self, log: dict[str, float | torch.Tensor], env_ids: torch.Tensor, n: int) -> None:
         """Collect termination rate metrics (0.0~1.0, scale-invariant)."""
@@ -989,12 +976,17 @@ class ALBCEnv(DirectRLEnv):
         def _term_rate(flag: torch.Tensor) -> float:
             return torch.count_nonzero(flag[env_ids]).item() / n if n > 0 else 0.0
 
-        log["Episode_Termination/terminated"] = _term_rate(self.reset_terminated)
-        log["Episode_Termination/time_out"] = _term_rate(self.reset_time_outs)
-        log["Episode_Termination/too_fast_ang"] = _term_rate(self._term_too_fast_ang)
-        log["Episode_Termination/too_fast_lin"] = _term_rate(self._term_too_fast_lin)
-        log["Episode_Termination/bad_state"] = _term_rate(self._term_bad_state)
-        log["Episode_Termination/excessive_tilt"] = _term_rate(self._term_excessive_tilt)
+        log["Term/terminated"] = _term_rate(self.reset_terminated)
+        log["Term/time_out"] = _term_rate(self.reset_time_outs)
+        log["Term/bad_state"] = _term_rate(self._term_bad_state)
+        log["Term/excessive_tilt"] = _term_rate(self._term_excessive_tilt)
+        # Velocity flags: computed at episode end only (not per-step)
+        if n > 0:
+            ang_vel_max = self._robot.data.root_ang_vel_b[env_ids].abs().max(dim=1).values
+            too_fast_ang = ang_vel_max > self.cfg.max_angular_velocity
+            too_fast_lin = self._robot.data.root_lin_vel_w[env_ids].norm(dim=-1) > self.cfg.max_linear_velocity
+            log["Term/too_fast_ang"] = too_fast_ang.float().mean().item()
+            log["Term/too_fast_lin"] = too_fast_lin.float().mean().item()
 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
         """Compute termination conditions.
@@ -1022,20 +1014,16 @@ class ALBCEnv(DirectRLEnv):
             | torch.isinf(self._robot.data.root_ang_vel_b).any(dim=1)
         )
 
+        # Refresh euler cache (used by _get_rewards, _get_observations, constraints)
+        self._euler_cache = euler_xyz_from_quat(self._robot.data.root_quat_w)
+        roll, pitch, _ = self._euler_cache
+
         # Attitude angle check: terminate if roll or pitch exceeds limit.
-        roll, pitch, _ = euler_xyz_from_quat(self._robot.data.root_quat_w)
         excessive_tilt = (roll.abs() > self.cfg.max_attitude_angle) | (pitch.abs() > self.cfg.max_attitude_angle)
 
-        # Velocity flags: computed for diagnostics only, NOT used for termination.
-        # Soft constraints provide per-step gradient instead.
-        too_fast_ang = self._robot.data.root_ang_vel_b.abs().max(dim=1).values > self.cfg.max_angular_velocity
-        too_fast_lin = self._robot.data.root_lin_vel_w.norm(dim=-1) > self.cfg.max_linear_velocity
-
         # Store per-condition flags for diagnostics
-        self._term_too_fast_ang = too_fast_ang
         self._term_bad_state = bad_state
         self._term_excessive_tilt = excessive_tilt
-        self._term_too_fast_lin = too_fast_lin
 
         terminated = bad_state | excessive_tilt
         return terminated, time_out
@@ -1139,13 +1127,12 @@ class ALBCEnv(DirectRLEnv):
         self._payload_attachment_offset[env_ids] = offset
         self._payload_cog_offset[env_ids] = 0.0
 
-        # Mid-episode dynamics setup (must run regardless of DR enable/disable)
-        self._setup_payload_toggle(env_ids)
-        if self.cfg.ou_enable:
-            self._ou_base_current[env_ids] = self._hydro._current_velocity[env_ids, :3].clone()
-
         rand_cfg = self.cfg.randomization
         if not rand_cfg.enable:
+            # Non-DR path: setup mid-episode dynamics with default values
+            self._setup_payload_toggle(env_ids)
+            if self.cfg.ou_enable:
+                self._ou_base_current[env_ids] = self._hydro._current_velocity[env_ids, :3].clone()
             return
 
         # Create DRSampler (bundles rand_cfg + num_envs + device)
@@ -1156,11 +1143,9 @@ class ALBCEnv(DirectRLEnv):
         # DORAEMON: sample from Beta distribution for curriculum-managed parameters
         sampled: dict[str, torch.Tensor] | None = None
         if self._doraemon is not None:
-            from .doraemon import PARAM_SPECS
-
             n = len(env_ids)
             xi_physical, log_probs = self._doraemon.sample(n)
-            sampled = {spec.name: xi_physical[:, i] for i, spec in enumerate(PARAM_SPECS)}
+            sampled = {spec.name: xi_physical[:, i] for i, spec in enumerate(self._doraemon.dist.params)}
             self._episode_dr_xi[env_ids] = xi_physical
             self._episode_dr_log_probs[env_ids] = log_probs
             self._episode_return_accum[env_ids] = 0.0
@@ -1172,11 +1157,10 @@ class ALBCEnv(DirectRLEnv):
         randomize_body_mass(env=self, env_ids=env_ids, dr=dr, sampled=sampled)
         randomize_payload(env=self, env_ids=env_ids, dr=dr, sampled=sampled)
 
-        has_ocean_current = any(v > 0 for v in self.cfg.ocean_current.max_velocity)
-        if has_ocean_current:
+        if self._has_ocean_current:
             randomize_ocean_current(env=self, env_ids=env_ids)
 
-        # Re-run mid-episode setup with DR'd values (overrides pre-DR defaults)
+        # Mid-episode dynamics setup with DR'd values (once, after randomization)
         self._setup_payload_toggle(env_ids)
         if self.cfg.ou_enable:
             self._ou_base_current[env_ids] = self._hydro._current_velocity[env_ids, :3].clone()
@@ -1203,12 +1187,14 @@ class ALBCEnv(DirectRLEnv):
         # Joint actuator DR: only when DR enabled.
         # TDC envs override stiffness/damping in their own _reset_idx().
         if rand_cfg.enable:
-            dr = getattr(self, "_current_dr_sampler", None)
-            if dr is None:
-                dr = DRSampler(rand_cfg, num_envs=len(env_ids), device=self.device)
+            assert self._current_dr_sampler is not None, (
+                "_reset_physics must run before _reset_task_and_state when DR is enabled"
+            )
+            dr = self._current_dr_sampler
             randomize_joint_gains(env=self, env_ids=env_ids, dr=dr)
             randomize_joint_effort_limit(env=self, env_ids=env_ids, dr=dr)
             randomize_joint_friction(env=self, env_ids=env_ids, dr=dr)
+            self._current_dr_sampler = None  # Clear after use
 
         # Sample commands
         self._sample_velocity_command(env_ids)

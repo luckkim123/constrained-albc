@@ -1405,8 +1405,8 @@ def _plot_attitude_tracking(all_data: dict, levels: list[str], output_dir: str) 
             ax.plot(block_time, mean, color=color, linewidth=1.0, label="actual (mean)")
             ax.fill_between(block_time, mean - std, mean + std, color=color, alpha=0.15)
             if sample_idx is not None:
-                ax.plot(block_time, vals[:, sample_idx], color=color, linewidth=0.6,
-                        linestyle=":", alpha=0.7, label=f"sample (env {sample_idx})")
+                ax.plot(block_time, vals[:, sample_idx], color=color, linewidth=1.2,
+                        linestyle="--", alpha=0.9, label=f"sample (env {sample_idx})")
             ax.set_ylabel(axis_label, fontsize=9)
             ax.yaxis.set_major_locator(MultipleLocator(15))
             ax.grid(True, alpha=0.3)
@@ -1462,8 +1462,8 @@ def _plot_lin_vel(all_data: dict, levels: list[str], output_dir: str) -> None:
             ax.plot(block_time, mean, color=color, linewidth=1.0, label="actual (mean)")
             ax.fill_between(block_time, mean - std, mean + std, color=color, alpha=0.15)
             if sample_idx is not None:
-                ax.plot(block_time, vals[:, sample_idx], color=color, linewidth=0.6,
-                        linestyle=":", alpha=0.7, label=f"sample (env {sample_idx})")
+                ax.plot(block_time, vals[:, sample_idx], color=color, linewidth=1.2,
+                        linestyle="--", alpha=0.9, label=f"sample (env {sample_idx})")
             ax.set_ylabel(ylabel, fontsize=9)
             ax.grid(True, alpha=0.3)
             if col == 0:
@@ -1515,8 +1515,8 @@ def _plot_yaw_rate(all_data: dict, levels: list[str], output_dir: str) -> None:
         ax.plot(block_time, mean, color=color, linewidth=1.0, label="actual (mean)")
         ax.fill_between(block_time, mean - std, mean + std, color=color, alpha=0.15)
         if sample_idx is not None:
-            ax.plot(block_time, vals[:, sample_idx], color=color, linewidth=0.6,
-                    linestyle=":", alpha=0.7, label=f"sample (env {sample_idx})")
+            ax.plot(block_time, vals[:, sample_idx], color=color, linewidth=1.2,
+                    linestyle="--", alpha=0.9, label=f"sample (env {sample_idx})")
         ax.set_ylabel("Yaw Rate (rad/s)", fontsize=9)
         ax.set_title(f"{lvl} (DR {dr_pct}%)", fontsize=10, fontweight="bold", color=color)
         ax.grid(True, alpha=0.3)
@@ -2162,6 +2162,16 @@ def main(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
 
     print(f"\nOutput saved to: {output_dir}")
     env.close()
+
+    # Post-process: regenerate summary_*.png using per-env enhanced metrics
+    # (overwrites the ensemble-mean-trajectory versions written above).
+    try:
+        from recompute_eval_summary import process_and_write
+        run_dir = os.path.dirname(output_dir.rstrip("/"))
+        print(f"\n[INFO] Regenerating summary_*.png with per-env metrics...")
+        process_and_write(run_dir)
+    except Exception as e:
+        print(f"[WARN] Enhanced summary generation failed: {e}")
 
 
 if __name__ == "__main__":

@@ -26,14 +26,12 @@ Constraint layout (5 Probabilistic + 5 Average = 10 total):
 
 from __future__ import annotations
 
-import math
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 import torch
 
 from isaaclab.utils import configclass
-from isaaclab.utils.math import euler_xyz_from_quat
 
 if TYPE_CHECKING:
     from isaaclab.assets import Articulation
@@ -83,17 +81,17 @@ class ALBCConstraintCfg:
 def attitude_limit_cost(
     _robot: Articulation,
     _env: ALBCEnv,
-    limit: float = 1.396,
+    limit: float,
 ) -> torch.Tensor:
     """I(max(|roll|, |pitch|) > limit). Tilt safety bound."""
-    roll, pitch, _ = euler_xyz_from_quat(_robot.data.root_quat_w)
+    roll, pitch, _ = _env._euler_cache
     return (torch.max(roll.abs(), pitch.abs()) > limit).float()
 
 
 def torque_limit_cost(
     _robot: Articulation,
     env: ALBCEnv,
-    limit_nm: float = 9.5,
+    limit_nm: float,
 ) -> torch.Tensor:
     """I(any |tau_j| > tau_max). Arm joint torque limit.
 
@@ -108,7 +106,7 @@ def torque_limit_cost(
 def velocity_limit_cost(
     _robot: Articulation,
     env: ALBCEnv,
-    limit_rad_per_s: float = 4.189,
+    limit_rad_per_s: float,
 ) -> torch.Tensor:
     """I(any |q_dot_j| > q_dot_max). Arm joint velocity limit."""
     joint_vel = _robot.data.joint_vel[:, env._albc_joint_ids]
@@ -118,7 +116,7 @@ def velocity_limit_cost(
 def joint1_position_cost(
     _robot: Articulation,
     env: ALBCEnv,
-    limit_rad: float = 4 * math.pi,
+    limit_rad: float,
 ) -> torch.Tensor:
     """I(|theta1| > limit). Prevents cable wrapping on joint1.
 
@@ -133,7 +131,7 @@ def joint1_position_cost(
 def cumulative_yaw_cost(
     _robot: Articulation,
     env: ALBCEnv,
-    limit_rad: float = 8 * math.pi,
+    limit_rad: float,
 ) -> torch.Tensor:
     """I(|yaw_accumulated| > limit). Prevents tether wrapping around robot body.
 
@@ -151,7 +149,7 @@ def cumulative_yaw_cost(
 def rp_rate_cost(
     _robot: Articulation,
     _env: ALBCEnv,
-    soft_threshold: float = 1.0,
+    soft_threshold: float,
 ) -> torch.Tensor:
     """max(0, max(|p|,|q|) - threshold). Roll/pitch angular velocity limit.
 
@@ -171,7 +169,7 @@ def rp_rate_cost(
 def yaw_rate_cost(
     _robot: Articulation,
     _env: ALBCEnv,
-    soft_threshold: float = 1.0,
+    soft_threshold: float,
 ) -> torch.Tensor:
     """max(0, |w_z| - threshold). Penalizes excessive yaw rate only.
 
@@ -180,20 +178,6 @@ def yaw_rate_cost(
     Replaces the old yaw_velocity_cost which conflicted with yaw commands.
     """
     return (_robot.data.root_ang_vel_b[:, 2].abs() - soft_threshold).clamp(min=0.0)
-
-
-def body_linear_velocity_cost(
-    _robot: Articulation,
-    _env: ALBCEnv,
-    soft_threshold: float = 1.0,
-) -> torch.Tensor:
-    """max(0, ||v_body|| - threshold). Penalizes excessive translation speed.
-
-    Protects tether from becoming taut due to rapid robot movement.
-    Threshold > vel_cmd_lin_range (0.5) so normal tracking is unaffected.
-    Softer than termination threshold (2.0 m/s).
-    """
-    return (_robot.data.root_lin_vel_b.norm(dim=-1) - soft_threshold).clamp(min=0.0)
 
 
 def thruster_utilization_cost(
@@ -214,29 +198,10 @@ def thruster_utilization_cost(
     return env._thruster.state.abs().max(dim=-1).values
 
 
-def thruster_rate_cost(
-    _robot: Articulation,
-    env: ALBCEnv,
-    soft_threshold: float = 0.5,
-) -> torch.Tensor:
-    """max(0, max(|dT_i|) - threshold). Penalizes rapid thruster command changes.
-
-    Type: Average
-    Budget: 0.10
-
-    Protects thruster motors from rapid command changes that cause
-    mechanical wear and electrical stress. Threshold=0.5 means a 50% range
-    change per control step (50Hz) is tolerated; anything faster is penalized.
-    Complements action_smoothness reward (which covers all 8D equally).
-    """
-    da_thr = env._actions[:, 2:] - env._prev_actions[:, 2:]
-    return (da_thr.abs().max(dim=-1).values - soft_threshold).clamp(min=0.0)
-
-
 def rp_vel_settling_cost(
     _robot: Articulation,
     _env: ALBCEnv,
-    settling_threshold: float = 0.087,
+    settling_threshold: float,
 ) -> torch.Tensor:
     """Settling-aware (|p| + |q|) / 2. Active only when near target attitude.
 
@@ -258,64 +223,10 @@ def rp_vel_settling_cost(
     return rp_vel * settling_mask
 
 
-def lin_vel_settling_cost(
-    _robot: Articulation,
-    env: ALBCEnv,
-    settling_threshold: float = 0.04,
-) -> torch.Tensor:
-    """Penalize acceleration when near target velocity (anti-overshoot).
-
-    Type: Average
-    Budget: 0.005
-
-    Mirrors rp_vel_settling_cost logic for linear velocity tracking:
-    - rp_vel_settling: penalizes |angular_vel| when |att_err| < threshold
-    - This:            penalizes |acceleration| when |vel_err| < threshold
-
-    When velocity error is small, large acceleration means the robot is about
-    to overshoot the target velocity. The cost is gated by a settling mask so
-    it does not interfere with transit (approaching the target from far away).
-
-    Acceleration is approximated as velocity change between consecutive steps:
-    |dv| = |v_t - v_{t-1}|. No dt division needed; budget absorbs the scale.
-
-    Args:
-        settling_threshold: velocity error below which settling is enforced (m/s).
-            Default 0.04 m/s = 8% of command range (+-0.5 m/s).
-    """
-    vel_err_norm = env._lin_vel_err.norm(dim=-1)
-    near_target = (vel_err_norm < settling_threshold).float()
-    dv = (_robot.data.root_lin_vel_b - env._prev_root_lin_vel_b).norm(dim=-1)
-    return dv * near_target
-
-
-def yaw_settling_cost(
-    _robot: Articulation,
-    env: ALBCEnv,
-    settling_threshold: float = 0.04,
-) -> torch.Tensor:
-    """Penalize yaw angular acceleration when near target yaw rate (anti-overshoot).
-
-    Type: Average
-    Budget: 0.005
-
-    Same principle as lin_vel_settling_cost but for yaw rate tracking.
-    Penalizes yaw rate change (angular acceleration) when yaw rate error is small.
-
-    Args:
-        settling_threshold: yaw rate error below which settling is enforced (rad/s).
-            Default 0.04 rad/s = 8% of command range (+-0.5 rad/s).
-    """
-    yaw_err = env._yaw_rate_err.abs()
-    near_target = (yaw_err < settling_threshold).float()
-    d_yaw_rate = (_robot.data.root_ang_vel_b[:, 2] - env._prev_root_ang_vel_z).abs()
-    return d_yaw_rate * near_target
-
-
 def manipulability_cost(
     _robot: Articulation,
     env: ALBCEnv,
-    w_threshold: float = 0.3,
+    w_threshold: float,
 ) -> torch.Tensor:
     """max(0, threshold - w). Penalizes proximity to arm singularity.
 

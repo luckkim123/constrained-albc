@@ -61,29 +61,30 @@ class ParamSpec(NamedTuple):
     nominal: float
 
 
-# 18 DORAEMON-managed parameters for constrained ALBC.
+# Single source of truth: 15 DORAEMON-managed physics parameters.
 # Order matches BetaDistribution dimension indices.
-# Physics bounds are auto-synced from DomainRandomizationCfg at init time.
-
-# Mapping: DORAEMON param name -> DomainRandomizationCfg field name.
-# Fields with different names (e.g. payload_mass -> payload_mass_range) are explicit.
-_PHYSICS_PARAM_DR_FIELDS: list[tuple[str, str]] = [
-    ("payload_mass", "payload_mass_range"),
-    ("added_mass_scale", "added_mass_scale"),
-    ("linear_damping_scale", "linear_damping_scale"),
-    ("quadratic_damping_scale", "quadratic_damping_scale"),
-    ("water_density", "water_density_range"),
-    ("cog_offset_z", "cog_offset_z"),
-    ("cob_offset_z", "cob_offset_z"),
-    ("volume_scale", "volume_scale"),
-    ("cob_offset_x", "cob_offset_x"),
-    ("cob_offset_y", "cob_offset_y"),
-    ("cog_offset_x", "cog_offset_x"),
-    ("cog_offset_y", "cog_offset_y"),
-    ("inertia_scale", "inertia_scale"),
-    ("body_mass_scale", "body_mass_scale"),
-    ("payload_cog_offset_z", "payload_cog_offset_z"),
+# (doraemon_name, dr_config_field_name, default_lo, default_hi)
+# Default bounds match base DomainRandomizationCfg; at runtime,
+# build_param_specs(dr_cfg) reads actual bounds from the DR config.
+_PARAM_DEFS: list[tuple[str, str, float, float]] = [
+    ("payload_mass", "payload_mass_range", 0.0, 1.0),
+    ("added_mass_scale", "added_mass_scale", 0.85, 1.15),
+    ("linear_damping_scale", "linear_damping_scale", 0.5, 1.5),
+    ("quadratic_damping_scale", "quadratic_damping_scale", 0.5, 1.5),
+    ("water_density", "water_density_range", 995.0, 1025.0),
+    ("cog_offset_z", "cog_offset_z", -0.02, 0.02),
+    ("cob_offset_z", "cob_offset_z", -0.02, 0.02),
+    ("volume_scale", "volume_scale", 0.9, 1.1),
+    ("cob_offset_x", "cob_offset_x", -0.01, 0.01),
+    ("cob_offset_y", "cob_offset_y", -0.01, 0.01),
+    ("cog_offset_x", "cog_offset_x", -0.01, 0.01),
+    ("cog_offset_y", "cog_offset_y", -0.01, 0.01),
+    ("inertia_scale", "inertia_scale", 0.75, 1.3),
+    ("body_mass_scale", "body_mass_scale", 0.9, 1.1),
+    ("payload_cog_offset_z", "payload_cog_offset_z", -0.03, 0.0),
 ]
+NDIMS = len(_PARAM_DEFS)
+
 
 def build_param_specs(dr_cfg) -> list[ParamSpec]:
     """Build PARAM_SPECS from DomainRandomizationCfg, auto-syncing physics bounds.
@@ -93,37 +94,14 @@ def build_param_specs(dr_cfg) -> list[ParamSpec]:
     parameters that vary between sim and real. DORAEMON optimizes physics DR only.
     """
     specs: list[ParamSpec] = []
-    for param_name, field_name in _PHYSICS_PARAM_DR_FIELDS:
+    for param_name, field_name, _, _ in _PARAM_DEFS:
         lo, hi = getattr(dr_cfg, field_name)
-        nominal = (lo + hi) / 2.0
-        specs.append(ParamSpec(param_name, lo, hi, nominal))
+        specs.append(ParamSpec(param_name, lo, hi, (lo + hi) / 2.0))
     return specs
 
 
-# Default specs for backward compatibility and eval scripts.
-# Uses hardcoded defaults matching base DomainRandomizationCfg.
-# At runtime, DoraemonScheduler uses build_param_specs(dr_cfg) for actual bounds.
-PARAM_SPECS: list[ParamSpec] = [
-    ParamSpec(n, lo, hi, (lo + hi) / 2.0)
-    for n, _, lo, hi in [
-        ("payload_mass", "payload_mass_range", 0.0, 1.0),
-        ("added_mass_scale", "added_mass_scale", 0.85, 1.15),
-        ("linear_damping_scale", "linear_damping_scale", 0.5, 1.5),
-        ("quadratic_damping_scale", "quadratic_damping_scale", 0.5, 1.5),
-        ("water_density", "water_density_range", 995.0, 1025.0),
-        ("cog_offset_z", "cog_offset_z", -0.02, 0.02),
-        ("cob_offset_z", "cob_offset_z", -0.02, 0.02),
-        ("volume_scale", "volume_scale", 0.9, 1.1),
-        ("cob_offset_x", "cob_offset_x", -0.01, 0.01),
-        ("cob_offset_y", "cob_offset_y", -0.01, 0.01),
-        ("cog_offset_x", "cog_offset_x", -0.01, 0.01),
-        ("cog_offset_y", "cog_offset_y", -0.01, 0.01),
-        ("inertia_scale", "inertia_scale", 0.75, 1.3),
-        ("body_mass_scale", "body_mass_scale", 0.9, 1.1),
-        ("payload_cog_offset_z", "payload_cog_offset_z", -0.03, 0.0),
-    ]
-]
-NDIMS = len(PARAM_SPECS)
+# Default specs for backward compatibility and eval scripts without DR config.
+PARAM_SPECS: list[ParamSpec] = [ParamSpec(name, lo, hi, (lo + hi) / 2.0) for name, _, lo, hi in _PARAM_DEFS]
 
 _MIN_BETA_PARAM = 1.0
 _MAX_BETA_PARAM = 500.0
@@ -457,9 +435,7 @@ class DoraemonScheduler:
 
         if self.cfg.hard_performance_constraint and current_success_rate < self.cfg.alpha:
             # Infeasible: inverted problem to find feasible starting point
-            feasible_flat, inv_kl, inv_ok = self._find_feasible_start(
-                prev_dist, xi, success
-            )
+            feasible_flat, inv_kl, inv_ok = self._find_feasible_start(prev_dist, xi, success)
 
             if inv_ok:
                 self.dist.set_flat_params(feasible_flat)
@@ -539,6 +515,57 @@ class DoraemonScheduler:
         return ess, ess / max(n, 1)
 
     # ------------------------------------------------------------------
+    # Shared helpers for scipy optimization
+    # ------------------------------------------------------------------
+
+    def _precompute_is_data(
+        self,
+        prev_flat: np.ndarray,
+        xi: torch.Tensor,
+        success: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Precompute CPU tensors for scipy IS optimization.
+
+        Returns (xi_unit, success_t, ref_lp) -- all on CPU, float64.
+        """
+        mins = self.dist._mins
+        ranges = self.dist._ranges
+        xi_unit = ((xi.detach().cpu().float() - mins.float()) / ranges.float()).clamp(1e-6, 1 - 1e-6).double()
+        success_t = success.detach().cpu().double()
+        prev_a_b = torch.from_numpy(prev_flat.copy()).reshape(NDIMS, 2).double()
+        prev_dist_ref = torch.distributions.Beta(
+            prev_a_b[:, 0].clamp(min=_MIN_BETA_PARAM), prev_a_b[:, 1].clamp(min=_MIN_BETA_PARAM)
+        )
+        ref_lp = prev_dist_ref.log_prob(xi_unit).sum(dim=-1).detach()
+        return xi_unit, success_t, ref_lp
+
+    @staticmethod
+    def _make_kl_constraint(
+        prev_flat: np.ndarray,
+        kl_budget: float,
+    ) -> dict:
+        """Build SLSQP KL inequality constraint: kl_budget - KL(new || prev) >= 0."""
+
+        def kl_ineq(log_flat: np.ndarray) -> float:
+            flat = np.exp(log_flat).clip(min=_MIN_BETA_PARAM, max=_MAX_BETA_PARAM)
+            return kl_budget - _compute_kl(flat, prev_flat)
+
+        def kl_ineq_jac(log_flat: np.ndarray) -> np.ndarray:
+            log_t = torch.from_numpy(log_flat.copy()).double().requires_grad_(True)
+            a_b = torch.exp(log_t).reshape(NDIMS, 2)
+            new_d = torch.distributions.Beta(a_b[:, 0].clamp(min=_MIN_BETA_PARAM), a_b[:, 1].clamp(min=_MIN_BETA_PARAM))
+            prev_a_b = torch.from_numpy(prev_flat.copy()).reshape(NDIMS, 2).double()
+            prev_d = torch.distributions.Beta(
+                prev_a_b[:, 0].clamp(min=_MIN_BETA_PARAM), prev_a_b[:, 1].clamp(min=_MIN_BETA_PARAM)
+            )
+            kl = torch.distributions.kl_divergence(new_d, prev_d).sum()
+            kl.backward()
+            assert log_t.grad is not None
+            return -log_t.grad.numpy().copy()
+
+        return {"type": "ineq", "fun": kl_ineq, "jac": kl_ineq_jac}
+
+    # ------------------------------------------------------------------
     # Main optimization: max H(phi) s.t. Ghat >= alpha, KL <= eps
     # ------------------------------------------------------------------
 
@@ -551,28 +578,16 @@ class DoraemonScheduler:
         """Maximize entropy subject to success >= alpha and KL trust region.
 
         Uses SLSQP with analytical gradients in log-space parameterization.
-        Reference uses trust-constr in sigmoid-inverse space, but trust-constr fails
-        when KL gradient is zero at x0 (KL divergence has zero gradient at identity).
-        SLSQP handles this correctly via sequential quadratic programming.
         IS denominator: prev_dist (not stored log_probs) for ring buffer stability.
         """
         prev_flat = prev_dist.get_flat_params()
+        xi_unit, success_t, ref_lp = self._precompute_is_data(prev_flat, xi, success)
         ranges = self.dist._ranges
-        mins = self.dist._mins
-
-        # Precompute on CPU for scipy
-        xi_unit = ((xi.detach().cpu().float() - mins.float()) / ranges.float()).clamp(1e-6, 1 - 1e-6).double()
-        success_t = success.detach().cpu().double()
-        prev_a_b_ref = torch.from_numpy(prev_flat.copy()).reshape(NDIMS, 2).double()
-        prev_dist_ref = torch.distributions.Beta(
-            prev_a_b_ref[:, 0].clamp(min=_MIN_BETA_PARAM), prev_a_b_ref[:, 1].clamp(min=_MIN_BETA_PARAM)
-        )
-        ref_lp = prev_dist_ref.log_prob(xi_unit).sum(dim=-1).detach()
 
         x0_flat = self.dist.get_flat_params()
         log_x0 = np.log(x0_flat.clip(min=_MIN_BETA_PARAM))
 
-        # -- Objective: minimize negative entropy (log-space) --
+        # Objective: minimize negative entropy (log-space)
         def objective_fn(log_flat: np.ndarray) -> tuple[float, np.ndarray]:
             log_t = torch.from_numpy(log_flat.copy()).double().requires_grad_(True)
             a_b = torch.exp(log_t).reshape(NDIMS, 2)
@@ -584,24 +599,23 @@ class DoraemonScheduler:
             assert log_t.grad is not None
             return neg_entropy.item(), log_t.grad.numpy().copy()
 
-        # -- Performance constraint: Ghat >= alpha (SLSQP 'ineq' = g(x) >= 0) --
+        # Performance constraint: Ghat >= alpha (SLSQP 'ineq' = g(x) >= 0)
         def perf_ineq(log_flat: np.ndarray) -> float:
             log_t = torch.from_numpy(log_flat.copy()).double()
             a_b = torch.exp(log_t).reshape(NDIMS, 2)
-            a = a_b[:, 0].clamp(min=_MIN_BETA_PARAM)
-            b = a_b[:, 1].clamp(min=_MIN_BETA_PARAM)
-            new_dist = torch.distributions.Beta(a, b)
+            new_dist = torch.distributions.Beta(
+                a_b[:, 0].clamp(min=_MIN_BETA_PARAM), a_b[:, 1].clamp(min=_MIN_BETA_PARAM)
+            )
             new_lp = new_dist.log_prob(xi_unit).sum(dim=-1)
             IS_w = torch.exp((new_lp - ref_lp).clamp(-_IS_LOG_CLAMP, _IS_LOG_CLAMP))
-            ghat = torch.mean(IS_w * success_t).item()
-            return ghat - self.cfg.alpha
+            return torch.mean(IS_w * success_t).item() - self.cfg.alpha
 
         def perf_ineq_jac(log_flat: np.ndarray) -> np.ndarray:
             log_t = torch.from_numpy(log_flat.copy()).double().requires_grad_(True)
             a_b = torch.exp(log_t).reshape(NDIMS, 2)
-            a = a_b[:, 0].clamp(min=_MIN_BETA_PARAM)
-            b = a_b[:, 1].clamp(min=_MIN_BETA_PARAM)
-            new_dist = torch.distributions.Beta(a, b)
+            new_dist = torch.distributions.Beta(
+                a_b[:, 0].clamp(min=_MIN_BETA_PARAM), a_b[:, 1].clamp(min=_MIN_BETA_PARAM)
+            )
             new_lp = new_dist.log_prob(xi_unit).sum(dim=-1)
             IS_w = torch.exp((new_lp - ref_lp).clamp(-_IS_LOG_CLAMP, _IS_LOG_CLAMP))
             ghat = torch.mean(IS_w * success_t)
@@ -609,50 +623,40 @@ class DoraemonScheduler:
             assert log_t.grad is not None
             return log_t.grad.numpy().copy()
 
-        # -- KL constraint: kl_ub - KL(new || prev) >= 0 --
-        def kl_ineq(log_flat: np.ndarray) -> float:
-            flat = np.exp(log_flat).clip(min=_MIN_BETA_PARAM, max=_MAX_BETA_PARAM)
-            return self.cfg.kl_ub - _compute_kl(flat, prev_flat)
-
-        def kl_ineq_jac(log_flat: np.ndarray) -> np.ndarray:
-            log_t = torch.from_numpy(log_flat.copy()).double().requires_grad_(True)
-            a_b = torch.exp(log_t).reshape(NDIMS, 2)
-            a = a_b[:, 0].clamp(min=_MIN_BETA_PARAM)
-            b = a_b[:, 1].clamp(min=_MIN_BETA_PARAM)
-            new_d = torch.distributions.Beta(a, b)
-            prev_a_b = torch.from_numpy(prev_flat.copy()).reshape(NDIMS, 2).double()
-            prev_d = torch.distributions.Beta(
-                prev_a_b[:, 0].clamp(min=_MIN_BETA_PARAM), prev_a_b[:, 1].clamp(min=_MIN_BETA_PARAM)
-            )
-            kl = torch.distributions.kl_divergence(new_d, prev_d).sum()
-            kl.backward()
-            assert log_t.grad is not None
-            return -log_t.grad.numpy().copy()  # negative: d(kl_ub - KL)/d(log_flat)
-
+        kl_constraint = self._make_kl_constraint(prev_flat, self.cfg.kl_ub)
         constraints = [
             {"type": "ineq", "fun": perf_ineq, "jac": perf_ineq_jac},
-            {"type": "ineq", "fun": kl_ineq, "jac": kl_ineq_jac},
+            kl_constraint,
         ]
 
         try:
             result = minimize(
-                objective_fn, log_x0, method="SLSQP", jac=True,
+                objective_fn,
+                log_x0,
+                method="SLSQP",
+                jac=True,
                 constraints=constraints,
                 options={"maxiter": 300, "ftol": 1e-8},
             )
             flat_result = np.exp(result.x).clip(min=_MIN_BETA_PARAM, max=_MAX_BETA_PARAM)
             init_obj = objective_fn(log_x0)[0]
-            kl_val = self.cfg.kl_ub - kl_ineq(result.x)
+            kl_val = self.cfg.kl_ub - kl_constraint["fun"](result.x)
             if result.success or (result.fun < init_obj and kl_val <= self.cfg.kl_ub):
                 self.dist.set_flat_params(flat_result)
                 logger.info(
                     "[DORAEMON] Entropy opt: neg_H %.4f -> %.4f, KL=%.4f, success=%s",
-                    init_obj, result.fun, kl_val, result.success,
+                    init_obj,
+                    result.fun,
+                    kl_val,
+                    result.success,
                 )
             else:
                 logger.warning(
                     "[DORAEMON] Entropy opt rejected: %s (neg_H %.4f -> %.4f, KL=%.4f)",
-                    result.message, init_obj, result.fun, kl_val,
+                    result.message,
+                    init_obj,
+                    result.fun,
+                    kl_val,
                 )
         except Exception as e:
             logger.warning("[DORAEMON] Entropy optimization failed: %s", e)
@@ -670,23 +674,13 @@ class DoraemonScheduler:
         """Find a feasible starting distribution by maximizing success rate within trust region.
 
         Returns (flat_params, kl_step, success_flag).
-        Uses SLSQP in log-space (same rationale as _optimize_entropy).
         """
         if success.sum().item() < 1.0:
             logger.debug("[DORAEMON] Inverted problem skipped: no successful episodes.")
             return None, 0.0, False
 
         prev_flat = prev_dist.get_flat_params()
-        mins = self.dist._mins
-        ranges = self.dist._ranges
-
-        xi_unit = ((xi.detach().cpu().float() - mins.float()) / ranges.float()).clamp(1e-6, 1 - 1e-6).double()
-        success_t = success.detach().cpu().double()
-        prev_a_b_ref = torch.from_numpy(prev_flat.copy()).reshape(NDIMS, 2).double()
-        prev_dist_ref = torch.distributions.Beta(
-            prev_a_b_ref[:, 0].clamp(min=_MIN_BETA_PARAM), prev_a_b_ref[:, 1].clamp(min=_MIN_BETA_PARAM)
-        )
-        ref_lp = prev_dist_ref.log_prob(xi_unit).sum(dim=-1).detach()
+        xi_unit, success_t, ref_lp = self._precompute_is_data(prev_flat, xi, success)
 
         log_x0 = np.log(prev_flat.clip(min=_MIN_BETA_PARAM))
 
@@ -694,9 +688,9 @@ class DoraemonScheduler:
         def neg_success_fn(log_flat: np.ndarray) -> tuple[float, np.ndarray]:
             log_t = torch.from_numpy(log_flat.copy()).double().requires_grad_(True)
             a_b = torch.exp(log_t).reshape(NDIMS, 2)
-            a = a_b[:, 0].clamp(min=_MIN_BETA_PARAM)
-            b = a_b[:, 1].clamp(min=_MIN_BETA_PARAM)
-            new_dist = torch.distributions.Beta(a, b)
+            new_dist = torch.distributions.Beta(
+                a_b[:, 0].clamp(min=_MIN_BETA_PARAM), a_b[:, 1].clamp(min=_MIN_BETA_PARAM)
+            )
             new_lp = new_dist.log_prob(xi_unit).sum(dim=-1)
             IS_w = torch.exp((new_lp - ref_lp).clamp(-_IS_LOG_CLAMP, _IS_LOG_CLAMP))
             neg_sr = -torch.mean(IS_w * success_t)
@@ -704,57 +698,45 @@ class DoraemonScheduler:
             assert log_t.grad is not None
             return neg_sr.item(), log_t.grad.numpy().copy()
 
-        # KL constraint: kl_ub - 1e-5 - KL(new || prev) >= 0
-        def kl_ineq(log_flat: np.ndarray) -> float:
-            flat = np.exp(log_flat).clip(min=_MIN_BETA_PARAM, max=_MAX_BETA_PARAM)
-            return self.cfg.kl_ub - 1e-5 - _compute_kl(flat, prev_flat)
-
-        def kl_ineq_jac(log_flat: np.ndarray) -> np.ndarray:
-            log_t = torch.from_numpy(log_flat.copy()).double().requires_grad_(True)
-            a_b = torch.exp(log_t).reshape(NDIMS, 2)
-            a = a_b[:, 0].clamp(min=_MIN_BETA_PARAM)
-            b = a_b[:, 1].clamp(min=_MIN_BETA_PARAM)
-            new_d = torch.distributions.Beta(a, b)
-            prev_a_b = torch.from_numpy(prev_flat.copy()).reshape(NDIMS, 2).double()
-            prev_d = torch.distributions.Beta(
-                prev_a_b[:, 0].clamp(min=_MIN_BETA_PARAM), prev_a_b[:, 1].clamp(min=_MIN_BETA_PARAM)
-            )
-            kl = torch.distributions.kl_divergence(new_d, prev_d).sum()
-            kl.backward()
-            assert log_t.grad is not None
-            return -log_t.grad.numpy().copy()
-
-        constraints = [{"type": "ineq", "fun": kl_ineq, "jac": kl_ineq_jac}]
+        # Tighter KL margin (1e-5) to leave room for subsequent main optimization
+        kl_constraint = self._make_kl_constraint(prev_flat, self.cfg.kl_ub - 1e-5)
+        constraints = [kl_constraint]
 
         try:
             result = minimize(
-                neg_success_fn, log_x0, method="SLSQP", jac=True,
+                neg_success_fn,
+                log_x0,
+                method="SLSQP",
+                jac=True,
                 constraints=constraints,
                 options={"maxiter": 300, "ftol": 1e-8},
             )
             flat_result = np.exp(result.x).clip(min=_MIN_BETA_PARAM, max=_MAX_BETA_PARAM)
-            kl_val = self.cfg.kl_ub - 1e-5 - kl_ineq(result.x)
+            kl_val = (self.cfg.kl_ub - 1e-5) - kl_constraint["fun"](result.x)
 
             if result.success:
                 logger.info(
                     "[DORAEMON] Inverted problem converged: sr=%.4f, KL=%.4f",
-                    -result.fun, kl_val,
+                    -result.fun,
+                    kl_val,
                 )
                 return flat_result, kl_val, True
             else:
-                # Accept if objective improved and KL constraint satisfied
                 init_obj = neg_success_fn(log_x0)[0]
                 if result.fun < init_obj and kl_val <= self.cfg.kl_ub:
                     logger.info(
-                        "[DORAEMON] Inverted: not converged but improved "
-                        "(sr %.4f -> %.4f, KL=%.4f). Accepting.",
-                        -init_obj, -result.fun, kl_val,
+                        "[DORAEMON] Inverted: not converged but improved (sr %.4f -> %.4f, KL=%.4f). Accepting.",
+                        -init_obj,
+                        -result.fun,
+                        kl_val,
                     )
                     return flat_result, kl_val, True
                 logger.warning(
-                    "[DORAEMON] Inverted problem failed: %s "
-                    "(sr %.4f -> %.4f, KL=%.4f)",
-                    result.message, -init_obj, -result.fun, kl_val,
+                    "[DORAEMON] Inverted problem failed: %s (sr %.4f -> %.4f, KL=%.4f)",
+                    result.message,
+                    -init_obj,
+                    -result.fun,
+                    kl_val,
                 )
                 return None, 0.0, False
         except Exception as e:

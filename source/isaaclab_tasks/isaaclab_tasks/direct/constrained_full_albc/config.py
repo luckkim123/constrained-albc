@@ -38,7 +38,6 @@ from .mdp.constraints import (
     attitude_limit_cost,
     cumulative_yaw_cost,
     joint1_position_cost,
-    lin_vel_settling_cost,
     manipulability_cost,
     rp_rate_cost,
     rp_vel_settling_cost,
@@ -46,9 +45,8 @@ from .mdp.constraints import (
     torque_limit_cost,
     velocity_limit_cost,
     yaw_rate_cost,
-    yaw_settling_cost,
 )
-from .mdp.rewards import ALBCRewardCfg
+from .mdp.rewards import ALBCRewardCfg, TrackingTermCfg
 
 # 10 constraint terms: 5 Probabilistic + 5 Average.
 # thruster_rate removed: structurally incompatible with entropy_coef>0 (noise alone violates 5x).
@@ -64,7 +62,9 @@ _FULL_DOF_CONSTRAINT_TERMS: list[ConstraintTermCfg] = [
     ConstraintTermCfg(func=thruster_utilization_cost, budget=0.40, name="thruster_util"),
     ConstraintTermCfg(func=rp_rate_cost, params={"soft_threshold": 1.0}, budget=0.10, name="rp_rate"),
     ConstraintTermCfg(func=yaw_rate_cost, params={"soft_threshold": 0.7}, budget=0.10, name="yaw_rate"),
-    ConstraintTermCfg(func=rp_vel_settling_cost, params={"settling_threshold": 0.087}, budget=0.20, name="rp_vel_settling"),
+    ConstraintTermCfg(
+        func=rp_vel_settling_cost, params={"settling_threshold": 0.087}, budget=0.20, name="rp_vel_settling"
+    ),
     ConstraintTermCfg(func=manipulability_cost, params={"w_threshold": 0.3}, budget=0.05, name="manipulability"),
 ]
 
@@ -175,7 +175,7 @@ class HardDomainRandomizationCfg(DomainRandomizationCfg):
 
 
 # ==========================================================================
-# 81D Observation Noise Model (26D current proprio + 55D temporal history)
+# 87D Observation Noise Model
 #
 # Current Proprioception (26D):
 #   Command (6D): vel_cmd_lin(3), ang_cmd(3) [att_rp(2) + yaw_rate(1)]
@@ -187,6 +187,8 @@ class HardDomainRandomizationCfg(DomainRandomizationCfg):
 #   Joint tracking x3 steps (12D): joint_pos_error(2), joint_vel(2)
 #   Body tracking x3 steps (27D): lin_vel_err(3), ang_err(3) [att_rp(2)+yaw_rate(1)], rpy(3)
 #   Action x2 steps (16D): full_action(8)
+#
+# Integral Error (6D): roll, pitch, vx, vy, vz, yaw_rate
 # ==========================================================================
 _OBS_NOISE_STD = tuple(
     # --- Current Proprioception (26D) ---
@@ -205,28 +207,12 @@ _OBS_NOISE_STD = tuple(
     + ([0.04] * 3 + [0.04] * 3 + [0.02] * 3) * 3  # lin_vel_err + ang_err [att_rp+yaw_rate] + rpy
     # --- Action History (16D = 8D x 2 steps) ---
     + [0.0] * 16  # actions (our command, no noise)
+    # --- Integral Error (6D) ---
+    + [0.0] * 6  # integral observation (computed, no sensor noise)
 )
 
-_OBS_BIAS_MIN = tuple(
-    # --- Current Proprioception (26D) ---
-    [0] * 3  # vel_cmd_lin
-    + [0] * 3  # ang_cmd
-    + [-0.02] * 3  # euler
-    + [-0.03] * 3  # ang_vel
-    + [-0.02] * 3  # lin_vel
-    + [-0.02] * 2  # joint_pos
-    + [-0.03] * 2  # joint_vel
-    + [0]  # manipulability
-    + [-0.01] * 6  # thruster
-    # --- Joint Tracking History (12D) ---
-    + ([-0.02] * 2 + [-0.03] * 2) * 3
-    # --- Body Tracking History (27D) ---
-    + ([-0.02] * 3 + [-0.04] * 3 + [-0.02] * 3) * 3  # lin_vel_err + ang_err [att_rp+yaw_rate] + rpy
-    # --- Action History (16D) ---
-    + [0] * 16
-)
-
-_OBS_BIAS_MAX = tuple(
+# Bias magnitude (symmetric: MIN = -MAG, MAX = +MAG)
+_OBS_BIAS_MAG = tuple(
     # --- Current Proprioception (26D) ---
     [0] * 3  # vel_cmd_lin
     + [0] * 3  # ang_cmd
@@ -243,7 +229,11 @@ _OBS_BIAS_MAX = tuple(
     + ([0.02] * 3 + [0.04] * 3 + [0.02] * 3) * 3  # lin_vel_err + ang_err [att_rp+yaw_rate] + rpy
     # --- Action History (16D) ---
     + [0] * 16
+    # --- Integral Error (6D) ---
+    + [0] * 6  # integral observation (computed, no bias)
 )
+_OBS_BIAS_MIN = tuple(-x for x in _OBS_BIAS_MAG)
+_OBS_BIAS_MAX = _OBS_BIAS_MAG
 
 
 @configclass
@@ -264,16 +254,17 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     episode_length_s: float = 30.0
     decimation: int = 4
     action_space: int = 8  # 2D arm delta + 6D thruster
-    observation_space: int = 81  # 26D current proprio + 55D history (see observations.py)
+    observation_space: int = 87  # 26D current proprio + 55D history + 6D integral
     # Breakdown: cmd(6) + body(9) + arm(5) + thruster(6) = 26D current
     #            + joint_hist(12) + body_hist(27) + action_hist(16) = 55D history
+    #            + integral(6) [roll, pitch, vx, vy, vz, yaw_rate]
     state_space: int = 24  # Privileged info (see observations.py compute_privileged_obs)
-    # Integral error observation (Hwangbo 2017 pattern)
-    use_integral_obs: bool = False  # When True, appends leaky-integral to policy obs
-    integral_dims: int = 3  # Number of integral channels: 3=[roll,pitch,vy], 6=[roll,pitch,vx,vy,vz,yaw_rate]
+    # Integral error observation (Hwangbo 2017 pattern, validated in R7/R8 experiments)
+    use_integral_obs: bool = True
+    integral_dims: int = 6  # [roll, pitch, vx, vy, vz, yaw_rate]
     integral_leak: float = 0.99  # Leaky integrator decay: I_{t+1} = leak * I_t + err * dt
     integral_clamp: float = 2.0  # Windup prevention: clamp |I| <= this value
-    integral_gated: bool = False  # Error-gated integration: only accumulate when |err| < reward sigma
+    integral_gated: bool = True  # Error-gated integration: only accumulate when |err| < reward sigma
     debug_vis: bool = False
 
     viewer: ViewerCfg = ViewerCfg(eye=(0.0, 0.0, 12.0), lookat=(0.0, 0.0, 4.5))
@@ -350,7 +341,10 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     play_mode: bool = False
     """Play/eval mode: disable command resampling, fix all commands to zero (hovering)."""
 
-    reward: ALBCRewardCfg = ALBCRewardCfg()
+    reward: ALBCRewardCfg = ALBCRewardCfg(
+        lin_vel=TrackingTermCfg(k=4.0, sigma=0.10, quad_ratio=1.0, tanh_coef=0.3, tanh_eps=0.10),
+        yaw_vel=TrackingTermCfg(k=3.5, sigma=0.10, quad_ratio=1.0, tanh_coef=0.3, tanh_eps=0.10),
+    )
 
     # ==========================================================================
     # Mid-Episode Dynamics
@@ -390,7 +384,7 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     payload_attachment_offset: tuple[float, float, float] = (0.0, 0.0, -0.05)
 
     # ==========================================================================
-    # Observation Noise (81D)
+    # Observation Noise (87D)
     # ==========================================================================
     observation_noise_model: NoiseModelWithAdditiveBiasCfg = NoiseModelWithAdditiveBiasCfg(
         noise_cfg=GaussianNoiseCfg(mean=0.0, std=_OBS_NOISE_STD),
@@ -401,407 +395,3 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # Constraints (10 terms: 5 probabilistic + 5 average)
     # ==========================================================================
     constraints: ALBCConstraintCfg = ALBCConstraintCfg(terms=_FULL_DOF_CONSTRAINT_TERMS)
-
-
-# =============================================================================
-# Experiment Env Configs
-# =============================================================================
-
-# Settling constraint terms (anti-overshoot for lin_vel and yaw)
-_SETTLING_CONSTRAINT_TERMS: list[ConstraintTermCfg] = _FULL_DOF_CONSTRAINT_TERMS + [
-    ConstraintTermCfg(
-        func=lin_vel_settling_cost,
-        params={"settling_threshold": 0.04},
-        budget=0.005,
-        name="lin_vel_settling",
-    ),
-    ConstraintTermCfg(
-        func=yaw_settling_cost,
-        params={"settling_threshold": 0.04},
-        budget=0.005,
-        name="yaw_settling",
-    ),
-]
-
-
-@configclass
-class ALBCEnvL1Cfg(ALBCEnvCfg):
-    """Exp 1: L1 penalty for SS error reduction.
-
-    Enables linear penalty term in lin_vel and yaw_vel tracking rewards.
-    L1 provides constant gradient at e=0, fixing the dead zone where
-    exp+quad gradients vanish. Ratio 0.15 is low enough to avoid the
-    'moderate error dead zone' that caused L1 to be disabled originally.
-    """
-
-    reward: ALBCRewardCfg = ALBCRewardCfg(
-        lin_vel_lin_ratio=0.15,
-        yaw_vel_lin_ratio=0.15,
-    )
-
-
-@configclass
-class ALBCEnvSettlingCfg(ALBCEnvCfg):
-    """Exp 2: Settling constraints for overshoot reduction.
-
-    Adds lin_vel_settling_cost and yaw_settling_cost constraints.
-    These penalize acceleration (velocity change) when near the target,
-    mirroring the proven rp_vel_settling_cost mechanism that keeps
-    attitude overshoot under control.
-    """
-
-    constraints: ALBCConstraintCfg = ALBCConstraintCfg(terms=_SETTLING_CONSTRAINT_TERMS)
-
-
-@configclass
-class ALBCEnvTanhCfg(ALBCEnvCfg):
-    """Round 4 Exp A: Saturating tanh penalty for SS error.
-
-    Replaces L1 |e| with coef·eps·tanh(|e|/eps). Non-zero gradient at e=0
-    (= coef, kills SS error dead zone), but penalty gradient decays as
-    sech²(|e|/eps) so far-field force vanishes. This avoids the constant
-    far-field force that caused Round 3 Exp1 (L1) to increase overshoot.
-
-    Coefs chosen from gradient analysis:
-      coef=1.0: grad at 0 ~16% of exp kernel peak (strong near-zero, weak far)
-      eps=sigma=0.10: saturation kicks in at the exp kernel's active region
-
-    Control: Round 2 PerDimEnt kl_ub=0.06 (no penalty).
-    Comparison: Round 3 Exp1 (L1 ratio=0.15) showed SS -15-24% but overshoot +25-86%.
-    Tanh predicted SS reduction ~50% with overshoot near baseline.
-    """
-
-    reward: ALBCRewardCfg = ALBCRewardCfg(
-        lin_vel_tanh_coef=1.0,
-        lin_vel_tanh_eps=0.10,
-        yaw_vel_tanh_coef=1.0,
-        yaw_vel_tanh_eps=0.10,
-    )
-
-
-@configclass
-class ALBCEnvArctanCfg(ALBCEnvCfg):
-    """Round 4 Exp B: Saturating arctan penalty for SS error.
-
-    Replaces L1 |e| with coef·eps·(2/pi)·arctan(|e|/eps). Similar motivation
-    to Tanh variant but with smoother 1/(1+(e/eps)^2) decay (heavier tail).
-    grad at 0 = 2·coef/pi (~0.637 for coef=1.0, about 10.5% of exp kernel peak).
-    Safer margin against overshoot at the cost of weaker near-zero pressure.
-
-    Serves as companion experiment to Tanh (ALBCEnvTanhCfg) to compare
-    shape decay profiles. If Tanh creates instability, Arctan is the safer fallback.
-    """
-
-    reward: ALBCRewardCfg = ALBCRewardCfg(
-        lin_vel_arctan_coef=1.0,
-        lin_vel_arctan_eps=0.10,
-        yaw_vel_arctan_coef=1.0,
-        yaw_vel_arctan_eps=0.10,
-    )
-
-
-# =============================================================================
-# Round 5: Constraint-only SS error reduction (no reward changes)
-# =============================================================================
-# Diagnostic: Round 4 showed rp_vel_settling at 33% of budget utilization
-# (cost_return ~6.6 vs d_k 20.0), lin_vel_settling/yaw_settling not registered.
-# Strategy: attack SS error via constraint tuning, keep reward identical to
-# Control (pure exp+quad, no L1/tanh/arctan). Two orthogonal interventions.
-
-# GPU1 variant: tighten rp_vel_settling budget from 0.20 to 0.08 (2.5x tighter).
-# Targets roll/pitch SS error (hard DR 1.68/1.38 -> <1.25 goal).
-_R5_RP_VEL_CONSTRAINT_TERMS: list[ConstraintTermCfg] = [
-    ConstraintTermCfg(func=attitude_limit_cost, params={"limit": 1.396}, budget=0.01, name="attitude"),
-    ConstraintTermCfg(func=torque_limit_cost, params={"limit_nm": 9.5}, budget=0.08, name="arm_torque"),
-    ConstraintTermCfg(func=velocity_limit_cost, params={"limit_rad_per_s": 4.189}, budget=0.02, name="arm_joint_vel"),
-    ConstraintTermCfg(func=joint1_position_cost, params={"limit_rad": 4 * math.pi}, budget=0.01, name="joint1_pos"),
-    ConstraintTermCfg(func=cumulative_yaw_cost, params={"limit_rad": 8 * math.pi}, budget=0.01, name="cumul_yaw"),
-    ConstraintTermCfg(func=thruster_utilization_cost, budget=0.40, name="thruster_util"),
-    ConstraintTermCfg(func=rp_rate_cost, params={"soft_threshold": 1.0}, budget=0.10, name="rp_rate"),
-    ConstraintTermCfg(func=yaw_rate_cost, params={"soft_threshold": 0.7}, budget=0.10, name="yaw_rate"),
-    # Tightened: 0.20 -> 0.08. Expected to move rp_vel_settling utilization 33% -> ~80%.
-    ConstraintTermCfg(func=rp_vel_settling_cost, params={"settling_threshold": 0.087}, budget=0.08, name="rp_vel_settling"),
-    ConstraintTermCfg(func=manipulability_cost, params={"w_threshold": 0.3}, budget=0.05, name="manipulability"),
-]
-
-# GPU2 variant: activate lin_vel + yaw settling constraints, threshold matched to reward sigma.
-# Targets velocity SS error (hard DR vx/vy/vz 0.046/0.059/0.069 -> <0.04 goal).
-# Threshold = sigma = 0.10 matches rp_vel_settling design (threshold ~= att sigma 0.087 rad ~= 5deg).
-# Budget 0.015 per step = 3x original 0.005 to accommodate the 2.5x larger active region.
-_R5_VEL_SETTLING_CONSTRAINT_TERMS: list[ConstraintTermCfg] = _FULL_DOF_CONSTRAINT_TERMS + [
-    ConstraintTermCfg(
-        func=lin_vel_settling_cost,
-        params={"settling_threshold": 0.10},  # = lin_vel_sigma (was 0.04)
-        budget=0.015,  # was 0.005
-        name="lin_vel_settling",
-    ),
-    ConstraintTermCfg(
-        func=yaw_settling_cost,
-        params={"settling_threshold": 0.10},  # = yaw_vel_sigma (was 0.04)
-        budget=0.015,  # was 0.005
-        name="yaw_settling",
-    ),
-]
-
-
-@configclass
-class ALBCEnvR5RpVelSettlingCfg(ALBCEnvCfg):
-    """Round 5 GPU1: Tightened rp_vel_settling budget for attitude SS.
-
-    Baseline: Control (pure exp+quad reward, matches perdim_kl06 run).
-    Change: rp_vel_settling budget 0.20 -> 0.08 (2.5x tighter).
-
-    Rationale: Round 4 analysis showed rp_vel_settling cost_return ~6.6 vs
-    d_k 20.0 (33% utilization). Budget was slack, constraint not actively
-    pushing policy toward lower angular velocity near target. Tightening
-    to 0.08 brings utilization closer to 80%, activating the settling
-    mechanism designed to reduce roll/pitch SS error.
-
-    No reward changes (6 reward items preserved per user constraint).
-    Expected: roll SS 1.68 -> 1.3-1.5, pitch SS 1.38 -> 1.2-1.3 on hard DR.
-    """
-
-    constraints: ALBCConstraintCfg = ALBCConstraintCfg(terms=_R5_RP_VEL_CONSTRAINT_TERMS)
-
-
-@configclass
-class ALBCEnvR5VelSettlingCfg(ALBCEnvCfg):
-    """Round 5 GPU2: Activate lin_vel + yaw settling constraints for velocity SS.
-
-    Baseline: Control (pure exp+quad reward, matches perdim_kl06 run).
-    Change: 10 -> 12 constraints. Add lin_vel_settling + yaw_settling with
-            threshold=sigma=0.10, budget=0.015.
-
-    Rationale: Round 4 runs all used only 10 constraints (rp_vel_settling for
-    attitude only). lin_vel_settling and yaw_settling existed in code but were
-    inactive. Original threshold 0.04 < Control hard DR SS (0.06-0.07) caused
-    chicken-egg problem (constraint never activates). Matching threshold to
-    reward sigma (0.10) follows rp_vel_settling's design principle (threshold
-    ~= att_rp_sigma 0.087) and guarantees activation in practical SS regime.
-
-    No reward changes (6 reward items preserved per user constraint).
-    Expected: vx/vy/vz hard SS 0.046/0.059/0.069 -> ~0.035/0.04/0.05.
-    """
-
-    constraints: ALBCConstraintCfg = ALBCConstraintCfg(terms=_R5_VEL_SETTLING_CONSTRAINT_TERMS)
-
-
-# =============================================================================
-# Round 6: Axis-specific saturating penalty (reward shape calibration)
-# =============================================================================
-# Diagnosis from Rounds 3/4/5: settling constraints are a structural dead end
-# (Round 3 + R5 GPU1 + R5 GPU2 all failed). 5-way eval showed reward shape has
-# real axis-specific effects -- Arctan was the only winner for roll SS (-15%),
-# Tanh/L1 were winners for vy/yaw SS (-17~-26%). Round 4 coef=1.0 was too strong
-# (e=0 grad 1.0/0.637) and caused vy reward -40% + OS +40%. This round retries
-# with coef calibrated to L1's grad=0.15 region (coef=0.3: e=0 grad 0.191/0.3).
-#
-# Constraints unchanged (10 terms, Control's _FULL_DOF_CONSTRAINT_TERMS). Only
-# reward shape parameter changes per experiment. Single-variable control.
-
-
-@configclass
-class ALBCEnvR6AttArctanCfg(ALBCEnvCfg):
-    """Round 6 GPU1: Arctan saturating penalty on attitude only.
-
-    Hypothesis: Arctan (e=0 grad = 2*coef/pi = 0.191 at coef=0.3) breaks the
-    reward dead zone on attitude while preserving Control's lin_vel/yaw_vel
-    shape. Round 4's Arctan on lin/yaw was the roll SS winner (1.42, -15% vs
-    Control 1.68); this re-applies the same shape to attitude directly.
-
-    Change: att_rp_arctan_coef 0 -> 0.3, att_rp_arctan_eps = 0.10 (= att_rp_sigma).
-    No other reward changes. Constraint set = Control (10 terms, rp_vel_settling
-    budget=0.20 retained per user decision).
-
-    Expected (hard DR):
-      roll  SS: 1.68 -> ~1.35  (Round 4 Arctan lin/yaw case precedent: 1.42)
-      pitch SS: 1.38 -> ~1.25  (structural dead-zone relief)
-      vy/yaw SS: Control +/-5% (no change in lin/yaw reward)
-    """
-
-    reward: ALBCRewardCfg = ALBCRewardCfg(
-        att_rp_arctan_coef=0.3,
-        att_rp_arctan_eps=0.10,  # = att_rp_sigma
-    )
-
-
-@configclass
-class ALBCEnvR6VelTanhCfg(ALBCEnvCfg):
-    """Round 6 GPU2: Tanh saturating penalty on lin_vel + yaw_vel only.
-
-    Hypothesis: Calibrated Tanh (e=0 grad = coef = 0.3; 1/3 of Round 4's 1.0)
-    gives velocity SS improvement without Round 4's OS blowup (vy OS was +40%).
-    Round 4 Tanh at coef=1.0 achieved vy SS 0.045 (-22%) but lost 40% lin_vel
-    reward. Coef=0.3 is near L1's grad=0.15 level, expected to retain most SS
-    benefit at much lower reward magnitude cost.
-
-    Change: lin_vel_tanh_coef 0 -> 0.3, yaw_vel_tanh_coef 0 -> 0.3.
-    No other reward changes. Constraint set = Control (10 terms).
-
-    Expected (hard DR):
-      vy  SS: 0.059 -> ~0.045 (Round 4 Tanh matched)
-      yaw SS: 0.025 -> ~0.020 (Round 4 Tanh matched)
-      vy  OS: Control + at most 15-20%  (vs Round 4 Tanh's +40%, calibrated)
-      attitude SS: Control +/-5% (no change)
-    """
-
-    reward: ALBCRewardCfg = ALBCRewardCfg(
-        lin_vel_tanh_coef=0.3,
-        lin_vel_tanh_eps=0.10,  # = lin_vel_sigma
-        yaw_vel_tanh_coef=0.3,
-        yaw_vel_tanh_eps=0.10,  # = yaw_vel_sigma
-    )
-
-
-# =============================================================================
-# Round 7: R6-VelTanh refinement experiments
-# =============================================================================
-
-
-@configclass
-class ALBCEnvR7EpsSmoothCfg(ALBCEnvCfg):
-    """Round 7 GPU1: Wider tanh eps + stronger smoothness penalty.
-
-    Base: R6-VelTanh (tanh coef=0.3 on lin_vel + yaw_vel).
-    Changes from R6-VelTanh:
-      1. lin_vel_tanh_eps  0.10 -> 0.20: wider saturation scale reduces penalty
-         at moderate velocity errors (off-equilibrium coupling zone ~0.1-0.2 m/s).
-         This should reduce roll SS degradation at non-zero targets.
-      2. yaw_vel_tanh_eps  0.10 -> 0.20: same rationale for yaw.
-      3. k_s  -0.1 -> -0.2: doubled smoothness penalty suppresses action jerk,
-         reducing attitude overshoot (currently ~100% for +/-15 deg steps).
-
-    Expected vs R6-VelTanh:
-      roll SS (medium): 1.29 -> <1.25 (eps widening reduces cross-axis interference)
-      attitude OS: ~16 deg -> ~12-14 deg (smoothness penalty)
-      vy/yaw SS: may degrade slightly (wider eps = weaker near-zero gradient)
-    """
-
-    reward: ALBCRewardCfg = ALBCRewardCfg(
-        lin_vel_tanh_coef=0.3,
-        lin_vel_tanh_eps=0.20,  # widened from 0.10
-        yaw_vel_tanh_coef=0.3,
-        yaw_vel_tanh_eps=0.20,  # widened from 0.10
-        k_s=-0.2,  # doubled smoothness penalty
-    )
-
-
-@configclass
-class ALBCEnvR7IntegralCfg(ALBCEnvCfg):
-    """Round 7 GPU2: Integral error observation (Hwangbo 2017 pattern).
-
-    Adds 3D leaky-integrated error to policy observation:
-      I_{t+1} = 0.99 * I_t + [roll_err, pitch_err, vy_err] * dt
-    Clamped to [-2, 2] for windup prevention.
-
-    The integral provides the policy with cumulative error information,
-    enabling PI-like control that drives SS error toward zero. Without it,
-    the policy has no signal distinguishing "just arrived at target" from
-    "stuck at 1 deg offset for 100 steps".
-
-    Changes from base:
-      observation_space: 81 -> 84 (3D integral appended)
-      use_integral_obs: True
-      Reward: R6-VelTanh (tanh coef=0.3 on lin_vel + yaw_vel)
-
-    Expected:
-      roll/pitch SS: significant improvement (integral drives SS -> 0)
-      vy/yaw SS: additional improvement on top of R6-VelTanh
-      Attitude OS: neutral or slightly worse (integral may cause overshoot initially)
-    """
-
-    observation_space: int = 84  # 81 + 3D integral
-    use_integral_obs: bool = True
-    integral_leak: float = 0.99
-    integral_clamp: float = 2.0
-
-    # Extend noise vectors from 81D to 84D (integral dims get zero noise: internal computation)
-    observation_noise_model: NoiseModelWithAdditiveBiasCfg = NoiseModelWithAdditiveBiasCfg(
-        noise_cfg=GaussianNoiseCfg(mean=0.0, std=tuple(list(_OBS_NOISE_STD) + [0.0] * 3)),
-        bias_noise_cfg=UniformNoiseCfg(
-            n_min=tuple(list(_OBS_BIAS_MIN) + [0] * 3),
-            n_max=tuple(list(_OBS_BIAS_MAX) + [0] * 3),
-        ),
-    )
-
-    reward: ALBCRewardCfg = ALBCRewardCfg(
-        lin_vel_tanh_coef=0.3,
-        lin_vel_tanh_eps=0.10,
-        yaw_vel_tanh_coef=0.3,
-        yaw_vel_tanh_eps=0.10,
-    )
-
-
-# =============================================================================
-# Round 8: Full 6D integral + overshoot reduction experiments
-# =============================================================================
-
-# Shared 87D noise model for 6D integral configs (81D base + 6D integral zeros)
-_OBS_NOISE_STD_87 = tuple(list(_OBS_NOISE_STD) + [0.0] * 6)
-_OBS_BIAS_MIN_87 = tuple(list(_OBS_BIAS_MIN) + [0] * 6)
-_OBS_BIAS_MAX_87 = tuple(list(_OBS_BIAS_MAX) + [0] * 6)
-
-
-@configclass
-class ALBCEnvR8BaselineCfg(ALBCEnvCfg):
-    """Round 8 Baseline: Full 6D integral error observation.
-
-    Extends R7-Integral from 3D to 6D integral:
-      [roll_err, pitch_err, vx_err, vy_err, vz_err, yaw_rate_err]
-
-    R7-Integral (3D) results: SS error -50 to -67% on integral channels,
-    but yaw SS +94% (no integral). Full 6D covers all tracking channels.
-
-    Reward: R6-VelTanh (tanh coef=0.3 on lin_vel + yaw_vel).
-    Algorithm: PerDimEnt (arm=0.01, thr=0.001).
-    """
-
-    observation_space: int = 87  # 81 + 6D integral
-    use_integral_obs: bool = True
-    integral_dims: int = 6
-    integral_leak: float = 0.99
-    integral_clamp: float = 2.0
-
-    observation_noise_model: NoiseModelWithAdditiveBiasCfg = NoiseModelWithAdditiveBiasCfg(
-        noise_cfg=GaussianNoiseCfg(mean=0.0, std=_OBS_NOISE_STD_87),
-        bias_noise_cfg=UniformNoiseCfg(n_min=_OBS_BIAS_MIN_87, n_max=_OBS_BIAS_MAX_87),
-    )
-
-    reward: ALBCRewardCfg = ALBCRewardCfg(
-        lin_vel_tanh_coef=0.3,
-        lin_vel_tanh_eps=0.10,
-        yaw_vel_tanh_coef=0.3,
-        yaw_vel_tanh_eps=0.10,
-    )
-
-
-@configclass
-class ALBCEnvR8GatedCfg(ALBCEnvR8BaselineCfg):
-    """Round 8 Exp1: Error-gated conditional integration.
-
-    Only accumulates integral when |error| < reward sigma (5.7 deg / 0.10 m/s).
-    During large transients (|error| > sigma), integral only decays.
-
-    Prevents integral windup during step responses while preserving
-    full SS correction capability near the target.
-
-    Overshoot analysis showed ~9x reduction in integral accumulation at
-    target crossing with sigma gating.
-    """
-
-    integral_gated: bool = True
-
-
-@configclass
-class ALBCEnvR8FastLeakCfg(ALBCEnvR8BaselineCfg):
-    """Round 8 Exp2: Faster leak rate (0.95 vs 0.99).
-
-    Time constant: 2.0s -> 0.39s.  Half-life: 1.38s -> 0.27s.
-    Integral drains ~5x faster, reducing windup at the cost of
-    weaker SS correction (smaller steady-state integral magnitude).
-
-    Trade-off: R7-Integral's 60% SS reduction may partially revert,
-    but overshoot should decrease significantly.
-    """
-
-    integral_leak: float = 0.95

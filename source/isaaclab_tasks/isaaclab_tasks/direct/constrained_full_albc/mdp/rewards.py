@@ -43,37 +43,34 @@ if TYPE_CHECKING:
 
 
 @configclass
-class ALBCRewardCfg:
-    """Tracking reward weights (dt-scaled). All tracking terms use exp + quadratic."""
+class TrackingTermCfg:
+    """Config for a single tracking reward term (exp kernel + quadratic + saturating penalty).
 
-    k_att_rp: float = 9.0  # roll/pitch attitude (exp + quad) -- raised from 6.0 to shift SS error equilibrium toward attitude
-    att_rp_sigma: float = 0.10  # exp kernel sigma (radians, ~5.7 deg) -- matches OLD run 2026-04-06_21-24-43
-    att_rp_quad_ratio: float = 0.833  # quadratic/exp weight ratio
-    att_rp_lin_ratio: float = 0.0  # linear penalty disabled (caused dead zone at moderate errors)
-    # Saturating alternatives to L1 (active if coef > 0). Only one of tanh/arctan at a time.
-    # e=0 gradient: tanh -> coef; arctan -> 2*coef/pi. Far-field (|e|>>eps) decays to 0.
-    att_rp_tanh_coef: float = 0.0  # ρ = coef·eps·tanh(|e_w|/eps). sech²-decay.
-    att_rp_tanh_eps: float = 0.10  # saturation scale (rad); match att_rp_sigma by default.
-    att_rp_arctan_coef: float = 0.0  # ρ = coef·eps·(2/pi)·arctan(|e_w|/eps). 1/(1+x²)-decay.
-    att_rp_arctan_eps: float = 0.10  # saturation scale (rad).
-    att_roll_weight: float = 1.5  # roll weight in err_sq (roll has weaker TAM actuation: 0.007m vs pitch 0.145m)
-    k_lin: float = 4.0  # linear velocity (exp + quad) -- matches OLD run 2026-04-06_21-24-43
-    lin_vel_sigma: float = 0.10  # exp kernel sigma (m/s) -- matches OLD run 2026-04-06_21-24-43
-    lin_vel_quad_ratio: float = 1.0  # quadratic/exp weight ratio
-    lin_vel_lin_ratio: float = 0.0  # linear penalty disabled (caused dead zone at moderate errors)
-    # Saturating alternatives to L1 (active if coef > 0). Only one of tanh/arctan at a time.
-    lin_vel_tanh_coef: float = 0.0  # ρ = coef·eps·tanh(|e|/eps). grad at 0 = coef; decays as sech²(e/eps)
-    lin_vel_tanh_eps: float = 0.10  # eps (match sigma); controls saturation scale
-    lin_vel_arctan_coef: float = 0.0  # ρ = coef·eps·(2/pi)·arctan(|e|/eps). grad at 0 = 2·coef/pi
-    lin_vel_arctan_eps: float = 0.10  # eps (match sigma)
-    k_yaw: float = 3.5  # yaw rate (exp + quad)
-    yaw_vel_sigma: float = 0.10  # exp kernel sigma (rad/s) -- matches OLD run 2026-04-06_21-24-43
-    yaw_vel_quad_ratio: float = 1.0  # quadratic/exp weight ratio
-    yaw_vel_lin_ratio: float = 0.0  # linear penalty disabled (caused dead zone at moderate errors)
-    yaw_vel_tanh_coef: float = 0.0
-    yaw_vel_tanh_eps: float = 0.10
-    yaw_vel_arctan_coef: float = 0.0
-    yaw_vel_arctan_eps: float = 0.10
+    r = k * (exp(-e^2/2s^2) - quad_ratio*e^2 - lin_ratio*|e| - saturating_penalty)
+
+    Saturating penalty options (active if coef > 0, only one of tanh/arctan at a time):
+      tanh:   coef * eps * tanh(|e|/eps)    -- sech^2-decay, grad at 0 = coef
+      arctan: coef * eps * (2/pi) * atan(|e|/eps) -- 1/(1+x^2)-decay
+    """
+
+    k: float = 1.0  # reward weight (dt-scaled)
+    sigma: float = 0.10  # exp kernel sigma
+    quad_ratio: float = 1.0  # quadratic/exp weight ratio
+    lin_ratio: float = 0.0  # linear penalty ratio (disabled: caused dead zone)
+    tanh_coef: float = 0.0  # saturating tanh coefficient
+    tanh_eps: float = 0.10  # tanh saturation scale (match sigma by default)
+    arctan_coef: float = 0.0  # saturating arctan coefficient
+    arctan_eps: float = 0.10  # arctan saturation scale
+
+
+@configclass
+class ALBCRewardCfg:
+    """Tracking reward config. Three tracking terms + penalty terms."""
+
+    att_rp: TrackingTermCfg = TrackingTermCfg(k=9.0, sigma=0.10, quad_ratio=0.833)
+    att_roll_weight: float = 1.5  # roll weight in err_sq (weak TAM actuation: 0.007m vs pitch 0.145m)
+    lin_vel: TrackingTermCfg = TrackingTermCfg(k=4.0, sigma=0.10, quad_ratio=1.0)
+    yaw_vel: TrackingTermCfg = TrackingTermCfg(k=3.5, sigma=0.10, quad_ratio=1.0)
     k_tau: float = -0.01  # joint torque penalty
     k_thr: float = -0.35  # thruster energy penalty
     k_s: float = -0.1  # action smoothness penalty
@@ -83,74 +80,53 @@ class ALBCRewardCfg:
 # --- Reward Functions ---
 
 
-def lin_vel_tracking(env: ALBCEnv) -> torch.Tensor:
-    """r_lin = exp(-||e||^2/2s^2) - q_quad*||e||^2 - (L1 or saturating penalty).
+def _exp_quad_saturating(
+    err_sq: torch.Tensor,
+    err_norm: torch.Tensor,
+    term: TrackingTermCfg,
+) -> torch.Tensor:
+    """Shared tracking reward kernel: exp(-e^2/2s^2) - quad*e^2 - lin*|e| - saturating.
 
-    Supports three near-zero pressure shapes:
-      - L1 (lin_ratio):      constant far-field force -- induces overshoot
-      - tanh (tanh_coef):    sech²-decay, vanishes far from zero
-      - arctan (arctan_coef):1/(1+x²)-decay, smoother transition
-    Only one of {tanh, arctan} should be active; lin_ratio can coexist.
+    Args:
+        err_sq: Squared error (may be weighted). Shape: (num_envs,).
+        err_norm: Norm or weighted absolute error. Shape: (num_envs,).
+        term: Tracking term config with sigma, ratios, and saturating coefficients.
     """
-    cfg = env.cfg.reward
-    err_sq = env._lin_vel_err.pow(2).sum(dim=-1)
-    err_norm = err_sq.clamp(min=1e-12).sqrt()  # ||e|| = sqrt(sum e_i^2)
-    exp_term = torch.exp(-err_sq / (2.0 * cfg.lin_vel_sigma ** 2))
-    penalty = cfg.lin_vel_quad_ratio * err_sq + cfg.lin_vel_lin_ratio * err_norm
-    if cfg.lin_vel_tanh_coef > 0.0:
-        eps = cfg.lin_vel_tanh_eps
-        penalty = penalty + cfg.lin_vel_tanh_coef * eps * torch.tanh(err_norm / eps)
-    if cfg.lin_vel_arctan_coef > 0.0:
-        eps = cfg.lin_vel_arctan_eps
-        penalty = penalty + cfg.lin_vel_arctan_coef * eps * (2.0 / math.pi) * torch.atan(err_norm / eps)
+    exp_term = torch.exp(-err_sq / (2.0 * term.sigma**2))
+    penalty = term.quad_ratio * err_sq + term.lin_ratio * err_norm
+    if term.tanh_coef > 0.0:
+        penalty = penalty + term.tanh_coef * term.tanh_eps * torch.tanh(err_norm / term.tanh_eps)
+    if term.arctan_coef > 0.0:
+        penalty = penalty + term.arctan_coef * term.arctan_eps * (2.0 / math.pi) * torch.atan(
+            err_norm / term.arctan_eps
+        )
     return exp_term - penalty
 
 
+def lin_vel_tracking(env: ALBCEnv) -> torch.Tensor:
+    """r_lin: Euclidean norm tracking for linear velocity."""
+    err_sq = env._lin_vel_err.pow(2).sum(dim=-1)
+    err_norm = err_sq.clamp(min=1e-12).sqrt()
+    return _exp_quad_saturating(err_sq, err_norm, env.cfg.reward.lin_vel)
+
+
 def att_rp_tracking(env: ALBCEnv) -> torch.Tensor:
-    """r_att = exp(-e_w^2/2s^2) - q_quad*e_w^2 - (L1 or saturating penalty).
+    """r_att: Roll-weighted attitude tracking (Manhattan norm for saturating terms).
 
-    e_w^2 = w_roll * roll_err^2 + pitch_err^2 (roll weighted for weak TAM actuation).
-    The L1 |e_w| and saturating penalties use the same roll-weighted |e_w| for consistency.
-
-    Supports three near-zero pressure shapes:
-      - L1 (lin_ratio):      constant far-field force -- induces overshoot
-      - tanh (tanh_coef):    sech²-decay, vanishes far from zero
-      - arctan (arctan_coef):1/(1+x²)-decay, smoother transition
-    Only one of {tanh, arctan} should be active; lin_ratio can coexist.
+    e_w^2 = w_roll * roll_err^2 + pitch_err^2 (quadratic weighting).
+    |e_w| = w_roll * |roll_err| + |pitch_err| (Manhattan weighting for penalties).
     """
     cfg = env.cfg.reward
     rp_err = env._att_rp_err  # (num_envs, 2): [roll_err, pitch_err]
     err_sq = cfg.att_roll_weight * rp_err[:, 0].pow(2) + rp_err[:, 1].pow(2)
     err_abs_w = cfg.att_roll_weight * rp_err[:, 0].abs() + rp_err[:, 1].abs()
-    exp_term = torch.exp(-err_sq / (2.0 * cfg.att_rp_sigma * cfg.att_rp_sigma))
-    penalty = cfg.att_rp_quad_ratio * err_sq + cfg.att_rp_lin_ratio * err_abs_w
-    if cfg.att_rp_tanh_coef > 0.0:
-        eps = cfg.att_rp_tanh_eps
-        penalty = penalty + cfg.att_rp_tanh_coef * eps * torch.tanh(err_abs_w / eps)
-    if cfg.att_rp_arctan_coef > 0.0:
-        eps = cfg.att_rp_arctan_eps
-        penalty = penalty + cfg.att_rp_arctan_coef * eps * (2.0 / math.pi) * torch.atan(err_abs_w / eps)
-    return exp_term - penalty
+    return _exp_quad_saturating(err_sq, err_abs_w, cfg.att_rp)
 
 
 def yaw_vel_tracking(env: ALBCEnv) -> torch.Tensor:
-    """r_yaw = exp(-e^2/2s^2) - q_quad*e^2 - (L1 or saturating penalty).
-
-    See lin_vel_tracking for penalty shape semantics.
-    """
-    cfg = env.cfg.reward
+    """r_yaw: Scalar tracking for yaw rate."""
     err = env._yaw_rate_err
-    err_sq = err.pow(2)
-    err_abs = err.abs()
-    exp_term = torch.exp(-err_sq / (2.0 * cfg.yaw_vel_sigma ** 2))
-    penalty = cfg.yaw_vel_quad_ratio * err_sq + cfg.yaw_vel_lin_ratio * err_abs
-    if cfg.yaw_vel_tanh_coef > 0.0:
-        eps = cfg.yaw_vel_tanh_eps
-        penalty = penalty + cfg.yaw_vel_tanh_coef * eps * torch.tanh(err_abs / eps)
-    if cfg.yaw_vel_arctan_coef > 0.0:
-        eps = cfg.yaw_vel_arctan_eps
-        penalty = penalty + cfg.yaw_vel_arctan_coef * eps * (2.0 / math.pi) * torch.atan(err_abs / eps)
-    return exp_term - penalty
+    return _exp_quad_saturating(err.pow(2), err.abs(), env.cfg.reward.yaw_vel)
 
 
 def joint_torque(robot: Articulation, env: ALBCEnv) -> torch.Tensor:
@@ -189,9 +165,9 @@ class RewardManager:
         self._buf.zero_()
 
         terms = [
-            ("lin_vel", cfg.k_lin, lin_vel_tracking(env)),
-            ("att_rp", cfg.k_att_rp, att_rp_tracking(env)),
-            ("yaw_vel", cfg.k_yaw, yaw_vel_tracking(env)),
+            ("lin_vel", cfg.lin_vel.k, lin_vel_tracking(env)),
+            ("att_rp", cfg.att_rp.k, att_rp_tracking(env)),
+            ("yaw_vel", cfg.yaw_vel.k, yaw_vel_tracking(env)),
             ("torque", cfg.k_tau, joint_torque(robot, env)),
             ("thruster", cfg.k_thr, thruster_energy(env)),
             ("smoothness", cfg.k_s, action_smoothness(env)),

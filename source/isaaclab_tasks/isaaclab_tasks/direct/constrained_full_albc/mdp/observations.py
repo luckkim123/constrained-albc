@@ -5,7 +5,7 @@
 
 """Observation functions for velocity + attitude tracking environment.
 
-    o_t (81D): Unified policy observation = current proprioception (26D) + temporal history (55D)
+    o_t (87D): Unified policy observation = current proprioception (26D) + temporal history (55D) + integral (6D)
     p_t (24D): Privileged information (simulator-only DR parameters)
 
 The encoder receives p_t to compress physical unknowns into latent z.
@@ -28,8 +28,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import torch
-
-from isaaclab.utils.math import euler_xyz_from_quat
 
 if TYPE_CHECKING:
     from isaaclab.assets import Articulation
@@ -63,7 +61,7 @@ def compute_policy_obs(
     Thruster State (6D):
         [20:26] thruster filtered output (T0-T5)
     """
-    roll, pitch, yaw = euler_xyz_from_quat(robot.data.root_quat_w)
+    roll, pitch, yaw = env._euler_cache
     joint_pos = robot.data.joint_pos[:, env._albc_joint_ids]
     joint_vel = robot.data.joint_vel[:, env._albc_joint_ids]
     thr_state = env._thruster.state if env._thruster is not None else torch.zeros(env.num_envs, 6, device=env.device)

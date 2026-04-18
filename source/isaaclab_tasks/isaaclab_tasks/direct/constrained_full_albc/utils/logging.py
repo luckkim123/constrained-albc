@@ -130,32 +130,12 @@ def log_encoder_metrics(
     iteration: int,
     device: str | torch.device,
     logger_type: str = "tensorboard",
-    metrics: dict[str, float] | None = None,
 ) -> None:
-    """Log encoder z-latent health metrics.
-
-    Metrics (4):
-        - Encoder/z_mean, z_std, z_min, z_max: z latent distribution health
-
-    Note: encoder gradient norm is logged separately as Policy/encoder_grad_norm
-    in _log_constraint_metrics to avoid duplication.
-
-    Args:
-        writer: TensorBoard SummaryWriter or equivalent logger.
-        policy: Policy with encoder attribute (ActorCriticEncoder).
-        env: Environment instance with get_observations() method.
-        iteration: Current training iteration.
-        device: Computation device.
-        logger_type: Logger type ("tensorboard" or "wandb").
-        metrics: Optional dict to accumulate into. If None, flushes immediately.
-    """
+    """Log encoder z-latent health metrics (z_mean, z_std, z_min, z_max)."""
     if not hasattr(policy, "encoder"):
         return
 
-    flush_after = metrics is None
-    if metrics is None:
-        metrics = {}
-
+    metrics: dict[str, float] = {}
     with torch.no_grad():
         obs = env.get_observations().to(device)
         z = policy._encode(obs)
@@ -165,5 +145,4 @@ def log_encoder_metrics(
         metrics["Encoder/z_min"] = z.min().item()
         metrics["Encoder/z_max"] = z.max().item()
 
-    if flush_after:
-        flush_metrics(writer, metrics, iteration, logger_type)
+    flush_metrics(writer, metrics, iteration, logger_type)

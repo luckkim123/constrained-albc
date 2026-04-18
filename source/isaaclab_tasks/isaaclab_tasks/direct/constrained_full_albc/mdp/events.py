@@ -85,6 +85,39 @@ def _apply_xyz_offset_with_doraemon(
 # --- DRSampler ---
 
 
+def _clamp_payload_cog_stability(
+    attachment_offset: torch.Tensor,
+    cog_offset: torch.Tensor,
+    buoyancy_force: torch.Tensor,
+    moment_arm: float,
+    mass: torch.Tensor,
+    gravity: float,
+) -> torch.Tensor:
+    """Clamp payload CoG offset for static stability: m*g*|r_eff_xy| <= F_bu * h.
+
+    Args:
+        attachment_offset: Payload attachment offset in body frame. Shape: (N, 3).
+        cog_offset: Payload CoG offset (relative to attachment). Shape: (N, 3).
+        buoyancy_force: Buoy buoyancy force. Shape: (N,).
+        moment_arm: Buoy moment arm (scalar, meters).
+        mass: Payload mass. Shape: (N,).
+        gravity: Gravitational acceleration (m/s^2).
+
+    Returns:
+        Clamped cog_offset tensor. Shape: (N, 3).
+    """
+    effective = attachment_offset + cog_offset
+    current_norm = effective[:, :2].norm(dim=-1)
+    max_norm = torch.where(
+        mass > 1e-6,
+        (buoyancy_force * moment_arm) / (mass * gravity),
+        torch.full_like(mass, float("inf")),
+    )
+    scale = torch.clamp(max_norm / current_norm.clamp(min=1e-8), max=1.0)
+    clamped = effective * scale.unsqueeze(-1)
+    return clamped - attachment_offset
+
+
 class DRSampler:
     """Bundles DR config + num_envs + device for domain randomization sampling."""
 
@@ -178,9 +211,8 @@ def _randomize_hydro_model(
     hydro.quadratic_damping[env_ids] = base.quadratic_damping.unsqueeze(0) * qd_scales
 
     # Yaw-specific quadratic damping override (index 5)
-    if hasattr(cfg, "yaw_damping_scale"):
-        yaw_scales = dr.get(cfg.yaw_damping_scale)
-        hydro.quadratic_damping[env_ids, 5] = base.quadratic_damping[5] * yaw_scales
+    yaw_scales = dr.get(cfg.yaw_damping_scale)
+    hydro.quadratic_damping[env_ids, 5] = base.quadratic_damping[5] * yaw_scales
 
     # Volume (DORAEMON if available)
     vol_scales = _sample_or_uniform("volume_scale", sampled, n, cfg.volume_scale, device)
@@ -247,12 +279,8 @@ def randomize_hydrodynamics(
 ) -> None:
     """Randomize hydrodynamic parameters for main body and buoy."""
     env_ids = _ensure_env_ids(env, env_ids)
-
-    if hasattr(env, "_hydro"):
-        _randomize_hydro_model(env._hydro, env_ids, dr, sampled)
-
-    if hasattr(env, "_buoy_hydro"):
-        _randomize_hydro_model(env._buoy_hydro, env_ids, dr, sampled)
+    _randomize_hydro_model(env._hydro, env_ids, dr, sampled)
+    _randomize_hydro_model(env._buoy_hydro, env_ids, dr, sampled)
 
 
 def randomize_ocean_current(
@@ -261,12 +289,10 @@ def randomize_ocean_current(
 ) -> None:
     """Randomize ocean current (same velocity for main body and buoy)."""
     env_ids = _ensure_env_ids(env, env_ids)
-    if not hasattr(env, "_hydro"):
-        return
     env._hydro.set_ocean_current(env_ids)
 
     # Share current with buoy (same water volume)
-    if hasattr(env, "_buoy_hydro"):
+    if env._buoy_hydro is not None:
         env._buoy_hydro.set_ocean_current(env_ids, velocity=env._hydro._current_velocity[env_ids])
 
 
@@ -373,26 +399,14 @@ def randomize_payload(
         )
 
         # Clamp effective xy offset: m*g*|r_eff_xy| <= F_bu * h
-        if hasattr(env, "_buoy_hydro"):
-            F_bu = env._buoy_hydro.buoyancy_force[env_ids]  # (N,)
-            h = cfg.buoy_moment_arm  # scalar
-            mass = env._payload_mass[env_ids]  # (N,)
-            g = 9.81
-
-            effective = env._payload_attachment_offset[env_ids] + env._payload_cog_offset[env_ids]  # (N, 3)
-            current_norm = effective[:, :2].norm(dim=-1)  # (N,) horizontal only
-
-            max_norm = torch.where(
-                mass > 1e-6,
-                (F_bu * h) / (mass * g),
-                torch.full_like(mass, float("inf")),
-            )
-
-            # Scale down if exceeding max, keep direction
-            scale = torch.clamp(max_norm / current_norm.clamp(min=1e-8), max=1.0)  # (N,)
-            clamped_effective = effective * scale.unsqueeze(-1)  # (N, 3)
-
-            env._payload_cog_offset[env_ids] = clamped_effective - env._payload_attachment_offset[env_ids]
+        env._payload_cog_offset[env_ids] = _clamp_payload_cog_stability(
+            attachment_offset=env._payload_attachment_offset[env_ids],
+            cog_offset=env._payload_cog_offset[env_ids],
+            buoyancy_force=env._buoy_hydro.buoyancy_force[env_ids],
+            moment_arm=cfg.buoy_moment_arm,
+            mass=env._payload_mass[env_ids],
+            gravity=env._gravity_magnitude.item(),
+        )
 
 
 # --- Joint Actuator Gain Randomization ---
@@ -424,9 +438,6 @@ def randomize_joint_effort_limit(
     """Randomize ALBC joint effort limits (scale applied to asset default)."""
     scale = dr.get(dr.cfg.joint_effort_limit_range)
 
-    # Cache default effort limit on first call
-    if not hasattr(env, "_default_effort_limit"):
-        env._default_effort_limit = env._robot.data.joint_effort_limits[0, env._albc_joint_ids[0]].item()
     num_joints = len(env._albc_joint_ids)
     effort = (env._default_effort_limit * scale).unsqueeze(-1).expand(-1, num_joints)
 

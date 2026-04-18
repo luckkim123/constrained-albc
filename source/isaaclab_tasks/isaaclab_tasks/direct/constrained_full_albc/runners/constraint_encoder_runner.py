@@ -70,13 +70,6 @@ class ConstraintEncoderRunner(OnPolicyRunner):
 
         super().__init__(env, train_cfg, log_dir, device)
 
-        # Warm-start actor from history-only checkpoint if configured.
-        # Must run after super().__init__ (which creates self.alg.policy)
-        # and before training starts.
-        hist_ckpt = train_cfg.get("hist_only_checkpoint", "")
-        if hist_ckpt and hasattr(self.alg.policy, "load_history_only_weights"):
-            self.alg.policy.load_history_only_weights(hist_ckpt)
-
         # Detect encoder for conditional metrics logging
         self._has_encoder = hasattr(self.alg.policy, "encoder")
         if self._has_encoder:
@@ -238,7 +231,6 @@ class ConstraintEncoderRunner(OnPolicyRunner):
         if hasattr(raw_env, "_doraemon") and raw_env._doraemon is not None:
             self._save_aux_state(path, "doraemon_state.pt", raw_env._doraemon.state_dict())
 
-
     def load(self, path: str, load_optimizer: bool = True, map_location: str | None = None) -> dict:
         """Load model checkpoint, DORAEMON state, and adaptive entropy state."""
         infos = super().load(path, load_optimizer, map_location)
@@ -270,51 +262,31 @@ class ConstraintEncoderRunner(OnPolicyRunner):
         K = alg.num_constraints
         metrics: dict[str, float] = {}
 
-        # Per-constraint: cost_return, violation, d_k, barrier_margin
+        # Per-constraint: violation + barrier margin (2-level hierarchy for WandB grouping)
         for k in range(K):
             suffix = self._constraint_names[k] if k < len(self._constraint_names) else str(k)
-            metrics[f"Constraint/violation_{suffix}"] = alg._last_violations[k]
-            metrics[f"Constraint/cost_return_{suffix}"] = alg._last_cost_returns[k]
-            metrics[f"Constraint/d_k_{suffix}"] = alg.d_k[k].item()
-            metrics[f"Constraint/barrier_margin_{suffix}"] = alg._last_barrier_margins[k]
+            metrics[f"Constraint/viol/{suffix}"] = alg._last_violations[k]
+            metrics[f"Constraint/margin/{suffix}"] = alg._last_barrier_margins[k]
 
-        # Aggregate metrics
+        # Aggregate constraint metric
         metrics["Constraint/barrier_penalty"] = alg._last_barrier_penalty
 
         # Policy diagnostics
         metrics["Policy/line_search_success"] = alg._last_line_search_success
         metrics["Policy/entropy"] = alg._last_mean_entropy
-        metrics["Policy/effective_kl"] = alg._last_effective_kl
-        metrics["Policy/entropy_hTv"] = alg._last_entropy_hTv
         metrics["Policy/encoder_grad_norm"] = alg._last_encoder_grad_norm
         metrics["Policy/surrogate_loss"] = alg._last_surrogate_loss
-        # Sigma gradient decomposition
-        metrics["GradDecomp/sigma_vanilla_norm"] = alg._last_sigma_vanilla_norm
-        metrics["GradDecomp/sigma_natgrad_norm"] = alg._last_sigma_natgrad_norm
-        metrics["GradDecomp/sigma_step_norm"] = alg._last_sigma_step_norm
-        metrics["GradDecomp/sigma_step_mean"] = alg._last_sigma_step_mean  # positive = noise increase
-        for i, v in enumerate(alg._last_sigma_step_per_dim):
-            metrics[f"SigmaStep/dim_{i}"] = v
 
-        # Per-dimension noise std (arm: 0-1, thruster: 2-7)
+        # Gradient step norms (consolidated from GradDecomp + SigmaStep)
+        metrics["Grad/enc_step"] = alg._last_enc_step_norm
+        metrics["Grad/actor_step"] = alg._last_actor_step_norm
+        metrics["Grad/sigma_step"] = alg._last_sigma_step_norm
+        metrics["Grad/sigma_dir"] = alg._last_sigma_step_mean  # positive = noise increase
+
+        # Noise std (consolidated from per-dim NoiseStd)
         with torch.no_grad():
             per_dim_std = self.alg.policy.log_std.exp()
-        for i, v in enumerate(per_dim_std.tolist()):
-            metrics[f"NoiseStd/dim_{i}"] = v
-
-        # Per-dim entropy (when per-dim entropy_coef is active)
-        if alg._last_per_dim_entropy:
-            for i, v in enumerate(alg._last_per_dim_entropy):
-                metrics[f"Entropy/dim_{i}"] = v
-
-        # Gradient decomposition: vanilla vs natural gradient
-        metrics["GradDecomp/enc_vanilla_norm"] = alg._last_enc_vanilla_norm
-        metrics["GradDecomp/enc_natgrad_norm"] = alg._last_enc_natgrad_norm
-        metrics["GradDecomp/enc_step_norm"] = alg._last_enc_step_norm
-        metrics["GradDecomp/actor_vanilla_norm"] = alg._last_actor_vanilla_norm
-        metrics["GradDecomp/actor_natgrad_norm"] = alg._last_actor_natgrad_norm
-        metrics["GradDecomp/actor_step_norm"] = alg._last_actor_step_norm
-        metrics["GradDecomp/enc_cos_vanilla_natgrad"] = alg._last_enc_cos_vanilla_natgrad
-        metrics["GradDecomp/enc_cos_vanilla_step"] = alg._last_enc_cos_vanilla_step
+        metrics["Noise/std_mean"] = per_dim_std.mean().item()
+        metrics["Noise/std_min"] = per_dim_std.min().item()
 
         flush_metrics(self.writer, metrics, iteration, self.logger_type)

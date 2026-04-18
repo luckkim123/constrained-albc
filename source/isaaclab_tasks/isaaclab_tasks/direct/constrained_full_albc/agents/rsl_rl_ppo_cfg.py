@@ -123,7 +123,7 @@ class _EncoderPolicyCfg(RslRlPpoActorCriticCfg):
     encoder_activation: str = "elu"
     encoder_obs_normalization: bool = False
     # Observation dimensions
-    policy_obs_dim: int = 81  # 26D current proprio + 55D temporal history
+    policy_obs_dim: int = 87  # 26D current proprio + 55D temporal history + 6D integral
     privileged_dim: int = 24
 
 
@@ -133,13 +133,12 @@ class _FullDOFPolicyCfg(_EncoderPolicyCfg):
 
     Architecture (24D->9D encoder, 8D action):
         Encoder: p_t(24D) -> static_minmax -> MLP[256,128,64] -> LN -> softsign -> z(9D)
-        Actor:   cat([o_t(81D), z(9D)]) = 90D -> MLP[256,128,64] -> 8D
-        Critic:  cat([o_t(81D), z(9D), p_t(24D)]) = 114D -> MLP[512,256,128] -> 1D
-        Cost:    same 114D input -> MLP[512,256,128] -> K (multi-head)
+        Actor:   cat([o_t(87D), z(9D)]) = 96D -> MLP[256,128,64] -> 8D
+        Critic:  cat([o_t(87D), z(9D), p_t(24D)]) = 120D -> MLP[512,256,128] -> 1D
+        Cost:    same 120D input -> MLP[512,256,128] -> K (multi-head)
     """
 
     class_name: str = "FullDOFActorCriticEncoder"
-    shared_backbone: bool = False
     critic_uses_z: bool = True
     encoder_output_norm: bool = True  # LayerNorm before softsign
     encoder_obs_lower: list[float] = _PRIV_OBS_LOWER
@@ -237,479 +236,10 @@ class FullDOFTRPORunnerCfg(RslRlOnPolicyRunnerCfg):
         "critic": ["policy", "privileged"],
     }
 
-    algorithm = RslRlConstraintTRPOAlgorithmCfg()
-    policy = _FullDOFPolicyCfg()
-
-
-# =============================================================================
-# Experiment: Per-dim entropy_coef (arm=0.01, thr=0.001)
-# =============================================================================
-
-
-@configclass
-class _ExpPerDimEntAlgorithmCfg(RslRlConstraintTRPOAlgorithmCfg):
-    """TRPO + IPO with per-dim entropy coefficient.
-
-    arm dims (0,1): 0.01 — net gradient +0.003 (reverses arm collapse direction).
-    thr dims (2-7): 0.001 — 1/3 of baseline, slows thr6/7 noise divergence.
-    """
-
-    entropy_coef_per_dim: tuple[float, ...] = (0.01, 0.01, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001)
-
-
-@configclass
-class FullDOFPerDimEntRunnerCfg(RslRlOnPolicyRunnerCfg):
-    """Exp 1: per-dim entropy_coef experiment."""
-
-    class_name: str = "FullDOFConstraintEncoderRunner"
-    seed = 30
-    num_steps_per_env = 64
-    max_iterations = 5000
-    save_interval = 50
-    experiment_name = "full_dof_trpo_perdim_ent"
-    obs_groups: dict[str, list[str]] = {
-        "policy": ["policy", "privileged"],
-        "critic": ["policy", "privileged"],
-    }
-
-    algorithm = _ExpPerDimEntAlgorithmCfg()
-    policy = _FullDOFPolicyCfg()
-
-
-# =============================================================================
-# Experiment: max_std=1.0 (cap thr6/7 divergence)
-# =============================================================================
-
-
-@configclass
-class _ExpMaxStd1AlgorithmCfg(RslRlConstraintTRPOAlgorithmCfg):
-    """TRPO + IPO with max_std capped at 1.0."""
-
-    max_std: float = 1.0
-
-
-@configclass
-class FullDOFMaxStd1RunnerCfg(RslRlOnPolicyRunnerCfg):
-    """Exp 2: max_std=1.0 experiment."""
-
-    class_name: str = "FullDOFConstraintEncoderRunner"
-    seed = 30
-    num_steps_per_env = 64
-    max_iterations = 5000
-    save_interval = 50
-    experiment_name = "full_dof_trpo_maxstd1"
-    obs_groups: dict[str, list[str]] = {
-        "policy": ["policy", "privileged"],
-        "critic": ["policy", "privileged"],
-    }
-
-    algorithm = _ExpMaxStd1AlgorithmCfg()
-    policy = _FullDOFPolicyCfg()
-
-
-# =============================================================================
-# Experiment: Arm-only boost (arm=0.01, thr=0.003 = baseline uniform)
-# =============================================================================
-
-
-@configclass
-class _ExpArmOnlyAlgorithmCfg(RslRlConstraintTRPOAlgorithmCfg):
-    """TRPO + IPO with per-dim entropy: arm boost only.
-
-    arm dims (0,1): 0.01 -- same as PerDimEnt.
-    thr dims (2-7): 0.003 -- same as baseline uniform entropy_coef.
-    Tests whether arm-only intervention suffices without thruster noise reduction.
-    """
-
-    entropy_coef_per_dim: tuple[float, ...] = (0.01, 0.01, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003)
-
-
-@configclass
-class FullDOFArmOnlyRunnerCfg(RslRlOnPolicyRunnerCfg):
-    """Exp: arm-only entropy boost (thr = baseline uniform)."""
-
-    class_name: str = "FullDOFConstraintEncoderRunner"
-    seed = 30
-    num_steps_per_env = 64
-    max_iterations = 5000
-    save_interval = 50
-    experiment_name = "full_dof_trpo_armonly"
-    obs_groups: dict[str, list[str]] = {
-        "policy": ["policy", "privileged"],
-        "critic": ["policy", "privileged"],
-    }
-
-    algorithm = _ExpArmOnlyAlgorithmCfg()
-    policy = _FullDOFPolicyCfg()
-
-
-# =============================================================================
-# Experiment: L1 SS error penalty (lin_vel_lin_ratio=0.15, yaw_vel_lin_ratio=0.15)
-# =============================================================================
-
-
-@configclass
-class FullDOFExpL1RunnerCfg(RslRlOnPolicyRunnerCfg):
-    """Exp: L1 penalty for SS error reduction.
-
-    Tests whether constant-gradient L1 term fixes the near-zero dead zone
-    in exp+quad tracking reward. Uses PerDimEnt entropy (default).
-    Control: Round 2 PerDimEnt (kl_ub=0.06, no L1).
-    """
-
-    class_name: str = "FullDOFConstraintEncoderRunner"
-    seed = 30
-    num_steps_per_env = 64
-    max_iterations = 5000
-    save_interval = 50
-    experiment_name = "full_dof_trpo_exp_l1"
-    obs_groups: dict[str, list[str]] = {
-        "policy": ["policy", "privileged"],
-        "critic": ["policy", "privileged"],
-    }
+    normalize_value: bool = False
 
     algorithm = RslRlConstraintTRPOAlgorithmCfg()
     policy = _FullDOFPolicyCfg()
-
-
-# =============================================================================
-# Experiment: Settling constraints (anti-overshoot for lin_vel + yaw)
-# =============================================================================
-
-
-@configclass
-class FullDOFExpSettlingRunnerCfg(RslRlOnPolicyRunnerCfg):
-    """Exp: Settling constraints for overshoot reduction.
-
-    Tests whether penalizing acceleration near target (same mechanism as
-    rp_vel_settling for attitude) reduces lin_vel and yaw overshoot.
-    Adds 2 constraints (12 total). Uses PerDimEnt entropy (default).
-    Control: Round 2 PerDimEnt (kl_ub=0.06, 10 constraints).
-    """
-
-    class_name: str = "FullDOFConstraintEncoderRunner"
-    seed = 30
-    num_steps_per_env = 64
-    max_iterations = 5000
-    save_interval = 50
-    experiment_name = "full_dof_trpo_exp_settling"
-    obs_groups: dict[str, list[str]] = {
-        "policy": ["policy", "privileged"],
-        "critic": ["policy", "privileged"],
-    }
-
-    algorithm = RslRlConstraintTRPOAlgorithmCfg()
-    policy = _FullDOFPolicyCfg()
-
-
-# =============================================================================
-# Round 4: Saturating penalty shapes for SS error without overshoot
-# =============================================================================
-
-
-@configclass
-class FullDOFExpTanhRunnerCfg(RslRlOnPolicyRunnerCfg):
-    """Round 4 Exp A: tanh saturating penalty.
-
-    Tests hypothesis from Round 3 Exp1 (L1) analysis: SS error reduction
-    is achievable WITHOUT the overshoot side-effect if the penalty gradient
-    decays far from zero. tanh penalty: coef·eps·tanh(|e|/eps).
-    Control: Round 2 PerDimEnt kl_ub=0.06 (no penalty).
-    Comparison: Round 3 Exp1 (L1 ratio=0.15).
-    """
-
-    class_name: str = "FullDOFConstraintEncoderRunner"
-    seed = 30
-    num_steps_per_env = 64
-    max_iterations = 5000
-    save_interval = 50
-    experiment_name = "full_dof_trpo_exp_tanh"
-    obs_groups: dict[str, list[str]] = {
-        "policy": ["policy", "privileged"],
-        "critic": ["policy", "privileged"],
-    }
-
-    algorithm = RslRlConstraintTRPOAlgorithmCfg()
-    policy = _FullDOFPolicyCfg()
-
-
-@configclass
-class FullDOFExpArctanRunnerCfg(RslRlOnPolicyRunnerCfg):
-    """Round 4 Exp B: arctan saturating penalty.
-
-    Companion to Tanh experiment. arctan penalty has heavier tail
-    (1/(1+x^2)) and weaker near-zero gradient (2·coef/pi vs coef) --
-    safer margin against instability.
-    Control: Round 2 PerDimEnt kl_ub=0.06 (no penalty).
-    """
-
-    class_name: str = "FullDOFConstraintEncoderRunner"
-    seed = 30
-    num_steps_per_env = 64
-    max_iterations = 5000
-    save_interval = 50
-    experiment_name = "full_dof_trpo_exp_arctan"
-    obs_groups: dict[str, list[str]] = {
-        "policy": ["policy", "privileged"],
-        "critic": ["policy", "privileged"],
-    }
-
-    algorithm = RslRlConstraintTRPOAlgorithmCfg()
-    policy = _FullDOFPolicyCfg()
-
-
-# =============================================================================
-# Round 5: Constraint-only SS error reduction
-# =============================================================================
-# Both variants inherit PerDimEnt entropy (arm=0.01, thr=0.001) to match the
-# Control run (2026-04-14 perdiment_kl06). This isolates the constraint change
-# as the single variable relative to Control baseline.
-
-
-@configclass
-class FullDOFR5RpVelRunnerCfg(RslRlOnPolicyRunnerCfg):
-    """Round 5 GPU1: rp_vel_settling budget 0.20 -> 0.08 (attitude SS attack).
-
-    Env: ALBCEnvR5RpVelSettlingCfg (10 constraints, tightened rp_vel_settling).
-    Algorithm: per-dim entropy (same as Control perdim_kl06 run).
-    Target: hard DR roll SS 1.68 -> <1.5, pitch SS 1.38 -> <1.3.
-    """
-
-    class_name: str = "FullDOFConstraintEncoderRunner"
-    seed = 30
-    num_steps_per_env = 64
-    max_iterations = 5000
-    save_interval = 50
-    experiment_name = "full_dof_trpo_r5_rpvel"
-    obs_groups: dict[str, list[str]] = {
-        "policy": ["policy", "privileged"],
-        "critic": ["policy", "privileged"],
-    }
-
-    algorithm = _ExpPerDimEntAlgorithmCfg()
-    policy = _FullDOFPolicyCfg()
-
-
-@configclass
-class FullDOFR5VelSettlingRunnerCfg(RslRlOnPolicyRunnerCfg):
-    """Round 5 GPU2: activate lin_vel + yaw settling constraints (velocity SS attack).
-
-    Env: ALBCEnvR5VelSettlingCfg (12 constraints, threshold=sigma=0.10, budget=0.015).
-    Algorithm: per-dim entropy (same as Control perdim_kl06 run).
-    Target: hard DR vx/vy/vz SS 0.046/0.059/0.069 -> ~0.035/0.04/0.05.
-    """
-
-    class_name: str = "FullDOFConstraintEncoderRunner"
-    seed = 30
-    num_steps_per_env = 64
-    max_iterations = 5000
-    save_interval = 50
-    experiment_name = "full_dof_trpo_r5_velsettling"
-    obs_groups: dict[str, list[str]] = {
-        "policy": ["policy", "privileged"],
-        "critic": ["policy", "privileged"],
-    }
-
-    algorithm = _ExpPerDimEntAlgorithmCfg()
-    policy = _FullDOFPolicyCfg()
-
-
-# =============================================================================
-# Round 6: Axis-specific saturating-penalty reward shape (calibrated coef=0.3)
-# =============================================================================
-# After R5 settling-constraint failure (yaw catastrophic +1117% on GPU2), revert
-# to reward-shape intervention. Unlike Round 4 (coef=1.0 caused vy reward -40%,
-# OS +40%), Round 6 uses coef=0.3 (e=0 grad 0.191 arctan / 0.3 tanh) -- near
-# L1's 0.15. Applied axis-specifically: attitude-arctan vs velocity-tanh based
-# on 5-way winner profile (Arctan roll winner, Tanh vy/yaw winner in Round 4).
-# Constraints unchanged from Control (10 terms). Per-dim entropy matches
-# perdim_kl06 Control run.
-
-
-@configclass
-class FullDOFR6AttArctanRunnerCfg(RslRlOnPolicyRunnerCfg):
-    """Round 6 GPU1: att_rp Arctan saturating penalty (coef=0.3).
-
-    Env: ALBCEnvR6AttArctanCfg (reward shape change only, Control constraints).
-    Algorithm: per-dim entropy (same as Control).
-    Target: hard DR roll SS 1.68 -> ~1.35, pitch SS 1.38 -> ~1.25.
-    """
-
-    class_name: str = "FullDOFConstraintEncoderRunner"
-    seed = 30
-    num_steps_per_env = 64
-    max_iterations = 5000
-    save_interval = 50
-    experiment_name = "full_dof_trpo_r6_attarctan"
-    obs_groups: dict[str, list[str]] = {
-        "policy": ["policy", "privileged"],
-        "critic": ["policy", "privileged"],
-    }
-
-    algorithm = _ExpPerDimEntAlgorithmCfg()
-    policy = _FullDOFPolicyCfg()
-
-
-@configclass
-class FullDOFR6VelTanhRunnerCfg(RslRlOnPolicyRunnerCfg):
-    """Round 6 GPU2: lin_vel + yaw_vel Tanh saturating penalty (coef=0.3).
-
-    Env: ALBCEnvR6VelTanhCfg (reward shape change only, Control constraints).
-    Algorithm: per-dim entropy (same as Control).
-    Target: hard DR vy SS 0.059 -> ~0.045, yaw SS 0.025 -> ~0.020 with OS<+20%.
-    """
-
-    class_name: str = "FullDOFConstraintEncoderRunner"
-    seed = 30
-    num_steps_per_env = 64
-    max_iterations = 5000
-    save_interval = 50
-    experiment_name = "full_dof_trpo_r6_veltanh"
-    obs_groups: dict[str, list[str]] = {
-        "policy": ["policy", "privileged"],
-        "critic": ["policy", "privileged"],
-    }
-
-    algorithm = _ExpPerDimEntAlgorithmCfg()
-    policy = _FullDOFPolicyCfg()
-
-
-# =============================================================================
-# Round 7: R6-VelTanh refinement experiments
-# =============================================================================
-
-
-@configclass
-class FullDOFR7EpsSmoothRunnerCfg(RslRlOnPolicyRunnerCfg):
-    """Round 7 GPU1: Wider tanh eps (0.20) + stronger smoothness (k_s=-0.2).
-
-    Env: ALBCEnvR7EpsSmoothCfg. Config-only change from R6-VelTanh.
-    Target: roll medium DR 1.29 -> <1.25, attitude OS ~16 -> ~12-14 deg.
-    """
-
-    class_name: str = "FullDOFConstraintEncoderRunner"
-    seed = 30
-    num_steps_per_env = 64
-    max_iterations = 5000
-    save_interval = 50
-    experiment_name = "full_dof_trpo_r7_epssmooth"
-    obs_groups: dict[str, list[str]] = {
-        "policy": ["policy", "privileged"],
-        "critic": ["policy", "privileged"],
-    }
-
-    algorithm = _ExpPerDimEntAlgorithmCfg()
-    policy = _FullDOFPolicyCfg()
-
-
-@configclass
-class _R7IntegralPolicyCfg(_FullDOFPolicyCfg):
-    """Policy config for integral-obs variant (84D policy obs)."""
-
-    policy_obs_dim: int = 84  # 81 + 3D integral error
-
-
-@configclass
-class _R8IntegralPolicyCfg(_FullDOFPolicyCfg):
-    """Policy config for 6D integral-obs variant (87D policy obs)."""
-
-    policy_obs_dim: int = 87  # 81 + 6D integral error
-
-
-@configclass
-class FullDOFR7IntegralRunnerCfg(RslRlOnPolicyRunnerCfg):
-    """Round 7 GPU2: Integral error observation (Hwangbo 2017 pattern).
-
-    Env: ALBCEnvR7IntegralCfg (84D obs = 81 + 3D leaky integral).
-    Reward: R6-VelTanh (tanh coef=0.3 on vel). Fresh training (no resume).
-    Target: roll/pitch SS reduction via PI-like error accumulation.
-    """
-
-    class_name: str = "FullDOFConstraintEncoderRunner"
-    seed = 30
-    num_steps_per_env = 64
-    max_iterations = 5000
-    save_interval = 50
-    experiment_name = "full_dof_trpo_r7_integral"
-    obs_groups: dict[str, list[str]] = {
-        "policy": ["policy", "privileged"],
-        "critic": ["policy", "privileged"],
-    }
-
-    algorithm = _ExpPerDimEntAlgorithmCfg()
-    policy = _R7IntegralPolicyCfg()
-
-
-# =============================================================================
-# Round 8: Full 6D integral + overshoot reduction experiments
-# =============================================================================
-
-
-@configclass
-class FullDOFR8BaselineRunnerCfg(RslRlOnPolicyRunnerCfg):
-    """Round 8 Baseline: 6D integral observation (87D obs).
-
-    Extends R7-Integral from 3D to 6D. Covers all tracking channels.
-    """
-
-    class_name: str = "FullDOFConstraintEncoderRunner"
-    seed = 30
-    num_steps_per_env = 64
-    max_iterations = 5000
-    save_interval = 50
-    experiment_name = "full_dof_trpo_r8_baseline"
-    obs_groups: dict[str, list[str]] = {
-        "policy": ["policy", "privileged"],
-        "critic": ["policy", "privileged"],
-    }
-
-    algorithm = _ExpPerDimEntAlgorithmCfg()
-    policy = _R8IntegralPolicyCfg()
-
-
-@configclass
-class FullDOFR8GatedRunnerCfg(RslRlOnPolicyRunnerCfg):
-    """Round 8 Exp1: Error-gated conditional integration.
-
-    Only accumulate integral when |error| < reward sigma.
-    Target: reduce overshoot while preserving SS improvement.
-    """
-
-    class_name: str = "FullDOFConstraintEncoderRunner"
-    seed = 30
-    num_steps_per_env = 64
-    max_iterations = 5000
-    save_interval = 50
-    experiment_name = "full_dof_trpo_r8_gated"
-    obs_groups: dict[str, list[str]] = {
-        "policy": ["policy", "privileged"],
-        "critic": ["policy", "privileged"],
-    }
-
-    algorithm = _ExpPerDimEntAlgorithmCfg()
-    policy = _R8IntegralPolicyCfg()
-
-
-@configclass
-class FullDOFR8FastLeakRunnerCfg(RslRlOnPolicyRunnerCfg):
-    """Round 8 Exp2: Faster leak rate (0.95, tau=0.39s).
-
-    Integral drains ~5x faster. Less windup but weaker SS correction.
-    """
-
-    class_name: str = "FullDOFConstraintEncoderRunner"
-    seed = 30
-    num_steps_per_env = 64
-    max_iterations = 5000
-    save_interval = 50
-    experiment_name = "full_dof_trpo_r8_fastleak"
-    obs_groups: dict[str, list[str]] = {
-        "policy": ["policy", "privileged"],
-        "critic": ["policy", "privileged"],
-    }
-
-    algorithm = _ExpPerDimEntAlgorithmCfg()
-    policy = _R8IntegralPolicyCfg()
 
 
 # =============================================================================
@@ -722,9 +252,9 @@ class _FullDOFNoEncoderPolicyCfg(RslRlPpoActorCriticCfg):
     """Asymmetric actor-critic without encoder (Baseline 1).
 
     Architecture (no encoder, 8D action):
-        Actor:       o_t(81D) -> MLP[256,128,64] -> 8D
-        Critic:      cat([o_t(81D), p_t(24D)]) = 105D -> MLP[512,256,128] -> 1D
-        Cost Critic: cat([o_t(81D), p_t(24D)]) = 105D -> MLP[512,256,128] -> K
+        Actor:       o_t(87D) -> MLP[256,128,64] -> 8D
+        Critic:      cat([o_t(87D), p_t(24D)]) = 111D -> MLP[512,256,128] -> 1D
+        Cost Critic: cat([o_t(87D), p_t(24D)]) = 111D -> MLP[512,256,128] -> K
     """
 
     class_name: str = "FullDOFActorCriticAsymConstrained"
@@ -735,7 +265,7 @@ class _FullDOFNoEncoderPolicyCfg(RslRlPpoActorCriticCfg):
     critic_hidden_dims: list[int] = [512, 256, 128]
     activation: str = "elu"
     # Observation dimensions
-    policy_obs_dim: int = 81
+    policy_obs_dim: int = 87
     privileged_dim: int = 24
     # Cost critic for IPO
     num_constraints: int = 0  # Auto-synced from env config
@@ -776,8 +306,8 @@ class _FullDOFPPOPolicyCfg(RslRlPpoActorCriticCfg):
     """Standard rsl-rl ActorCritic with asymmetric obs (Baseline 2).
 
     Architecture (8D action):
-        Actor:  o_t(81D)           -> MLP[256,128,64] -> 8D
-        Critic: cat(o_t, p_t)=105D -> MLP[512,256,128] -> 1D
+        Actor:  o_t(87D)           -> MLP[256,128,64] -> 8D
+        Critic: cat(o_t, p_t)=111D -> MLP[512,256,128] -> 1D
 
     Asymmetric routing is done via Runner.obs_groups -- no custom policy
     class required because rsl-rl ActorCritic auto-computes num_actor_obs

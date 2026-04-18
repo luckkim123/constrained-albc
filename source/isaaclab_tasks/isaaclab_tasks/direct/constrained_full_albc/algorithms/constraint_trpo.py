@@ -122,14 +122,11 @@ class ConstraintTRPO:
         self.max_std = max_std
         # Per-dim min_std: tensor for clamp, or None for scalar fallback
         if min_std_per_dim:
-            self._log_min_std = torch.tensor(
-                [math.log(s) for s in min_std_per_dim], device=device, dtype=torch.float32
-            )
+            self._log_min_std = torch.tensor([math.log(s) for s in min_std_per_dim], device=device, dtype=torch.float32)
             logger.info("Per-dim min_std: %s", list(min_std_per_dim))
         else:
             self._log_min_std = None
-        # Monitoring (read by ConstraintEncoderRunner)
-        self._last_cost_returns = [0.0] * num_constraints
+        # Monitoring (read by ConstraintEncoderRunner._log_constraint_metrics)
         self._last_violations = [0.0] * num_constraints
         self._last_barrier_margins = [0.0] * num_constraints
         self._last_line_search_success = 0.0
@@ -137,23 +134,11 @@ class ConstraintTRPO:
         self._last_mean_entropy = 0.0
         self._last_surrogate_loss = 0.0
         self._last_encoder_grad_norm = 0.0
-        # Gradient decomposition: vanilla vs natural gradient (sigma/encoder/actor)
-        self._last_sigma_vanilla_norm = 0.0
-        self._last_sigma_natgrad_norm = 0.0
+        # Step norms (from TRPO natural gradient step direction)
         self._last_sigma_step_norm = 0.0
         self._last_sigma_step_mean = 0.0  # signed mean: positive = noise increase
-        self._last_sigma_step_per_dim: list[float] = [0.0] * 8  # per-action-dim signed step
-        self._last_enc_vanilla_norm = 0.0
-        self._last_enc_natgrad_norm = 0.0
         self._last_enc_step_norm = 0.0
-        self._last_actor_vanilla_norm = 0.0
-        self._last_actor_natgrad_norm = 0.0
         self._last_actor_step_norm = 0.0
-        self._last_enc_cos_vanilla_natgrad = 0.0
-        self._last_enc_cos_vanilla_step = 0.0
-        self._last_entropy_hTv = 0.0
-        self._last_effective_kl = 0.0
-        self._last_per_dim_entropy: list[float] = []  # populated when per-dim entropy_coef is active
 
         if cost_gamma >= 1.0:
             raise ValueError(f"cost_gamma must be < 1.0, got {cost_gamma}")
@@ -418,7 +403,6 @@ class ConstraintTRPO:
             with torch.no_grad():
                 new_loss = surrogate_fn()
                 kl = self._kl_divergence(obs, old_mu, old_sigma)
-                self._last_effective_kl = kl.item()
             if (old_loss - new_loss) > 0 and kl <= kl_limit:
                 return True
             step_size *= self.line_search_shrink_factor
@@ -491,7 +475,6 @@ class ConstraintTRPO:
                     f"!= action_dim {per_dim_ent.shape[-1]}"
                 )
                 entropy_bonus = -(self._entropy_coef_per_dim * per_dim_ent).sum(dim=-1).mean()
-                self._last_per_dim_entropy = per_dim_ent.mean(dim=0).detach().tolist()
             else:
                 entropy_bonus = -self._entropy_coef * mean_entropy
             return reward_surr + barrier + entropy_bonus
@@ -517,7 +500,6 @@ class ConstraintTRPO:
         )
 
         # Store monitoring metrics
-        self._last_cost_returns = mean_cost_returns.tolist()
         self._last_violations = violations
         self._last_line_search_success = float(ls_success)
 
@@ -564,50 +546,18 @@ class ConstraintTRPO:
             logger.warning("TRPO: step_dir contains NaN/Inf, skipping")
             return False
 
-        # --- Gradient decomposition: sigma / encoder / actor ---
+        # --- Step direction norms (for logging) ---
         sig_s = self._sigma_param_offset
         sig_e = sig_s + self._sigma_param_count
         if self._sigma_param_count > 0:
-            sigma_g = g[sig_s:sig_e]
-            sigma_ng = nat_grad[sig_s:sig_e]
             sigma_sd = step_dir[sig_s:sig_e]
-            self._last_sigma_vanilla_norm = sigma_g.norm().item()
-            self._last_sigma_natgrad_norm = sigma_ng.norm().item()
             self._last_sigma_step_norm = sigma_sd.norm().item()
-            # Signed mean: positive = step increases log_std = noise increase
             self._last_sigma_step_mean = sigma_sd.mean().item()
-            # Per-action-dimension signed step
-            self._last_sigma_step_per_dim = sigma_sd.tolist()
 
         if self._encoder_param_count > 0:
             s, e = self._encoder_param_offset, self._encoder_param_offset + self._encoder_param_count
-            g_enc = g[s:e]
-            g_actor = torch.cat([g[sig_e:s], g[e:]])
-            ng_enc = nat_grad[s:e]
-            ng_actor = torch.cat([nat_grad[sig_e:s], nat_grad[e:]])
-            sd_enc = step_dir[s:e]
-            sd_actor = torch.cat([step_dir[sig_e:s], step_dir[e:]])
-
-            self._last_enc_vanilla_norm = g_enc.norm().item()
-            self._last_enc_natgrad_norm = ng_enc.norm().item()
-            self._last_enc_step_norm = sd_enc.norm().item()
-            self._last_actor_vanilla_norm = g_actor.norm().item()
-            self._last_actor_natgrad_norm = ng_actor.norm().item()
-            self._last_actor_step_norm = sd_actor.norm().item()
-
-            # Cosine similarity: vanilla vs natural gradient (encoder)
-            # < 0 means FIM rotates encoder gradient direction
-            g_enc_norm = g_enc.norm()
-            ng_enc_norm = ng_enc.norm()
-            sd_enc_norm = sd_enc.norm()
-            if g_enc_norm > 1e-10 and ng_enc_norm > 1e-10:
-                self._last_enc_cos_vanilla_natgrad = (g_enc.dot(ng_enc) / (g_enc_norm * ng_enc_norm)).item()
-            else:
-                self._last_enc_cos_vanilla_natgrad = 0.0
-            if g_enc_norm > 1e-10 and sd_enc_norm > 1e-10:
-                self._last_enc_cos_vanilla_step = (g_enc.dot(sd_enc) / (g_enc_norm * sd_enc_norm)).item()
-            else:
-                self._last_enc_cos_vanilla_step = 0.0
+            self._last_enc_step_norm = step_dir[s:e].norm().item()
+            self._last_actor_step_norm = torch.cat([step_dir[sig_e:s], step_dir[e:]]).norm().item()
 
         with torch.no_grad():
             old_loss = surrogate_fn()
