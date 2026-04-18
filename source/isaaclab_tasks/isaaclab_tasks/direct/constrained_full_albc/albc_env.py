@@ -1051,6 +1051,9 @@ class ALBCEnv(DirectRLEnv):
         self._reset_framework(env_ids_)
         self._reset_physics(env_ids_)
         self._reset_task_and_state(env_ids_)
+        # Populate Euler cache from post-reset quaternion so _get_observations/_get_rewards,
+        # which run before the next _get_dones, see valid roll/pitch/yaw values.
+        self._euler_cache = euler_xyz_from_quat(self._robot.data.root_quat_w)
 
     def _log_and_reset_rewards(self, env_ids: torch.Tensor) -> None:
         """Collect episode metrics, record DORAEMON episodes, and reset accumulators."""

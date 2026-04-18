@@ -141,9 +141,10 @@ class ActorCriticEncoder(PolicyBase):
                 )
             self.register_buffer("_enc_obs_lower", lower)
             self.register_buffer("_enc_obs_upper", upper)
-            # Pre-compute for fast static min-max: (2*x - midpoint) / range
-            self._enc_obs_range = upper - lower
-            self._enc_obs_midpoint = upper + lower
+            # Pre-compute for fast static min-max: (2*x - midpoint) / range.
+            # Registered as buffers so module.to(device) moves them alongside inputs.
+            self.register_buffer("_enc_obs_range", upper - lower)
+            self.register_buffer("_enc_obs_midpoint", upper + lower)
             self.encoder_obs_normalizer = nn.Identity()
             self.encoder_obs_normalization = False
             logger.info("Encoder normalization: static min-max (HORA-style) -> [-1, 1]")
