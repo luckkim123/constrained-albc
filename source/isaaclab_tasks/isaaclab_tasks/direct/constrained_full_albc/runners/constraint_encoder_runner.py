@@ -104,11 +104,14 @@ class ConstraintEncoderRunner(OnPolicyRunner):
                 last_values = last_values * std + mean
 
                 # 3. GAE on raw-scale values -> normalized advantages (mean=0).
+                # ConstraintTRPO lacks normalize_advantage_per_mini_batch (PPO-only attr);
+                # default to False so storage normalizes advantages here.
+                normalize_adv_pmb = getattr(self.alg, "normalize_advantage_per_mini_batch", False)
                 storage.compute_returns(
                     last_values,
                     self.alg.gamma,
                     self.alg.lam,
-                    normalize_advantage=not self.alg.normalize_advantage_per_mini_batch,
+                    normalize_advantage=not normalize_adv_pmb,
                 )
 
                 # 4. Update running stats from raw returns, then normalize
