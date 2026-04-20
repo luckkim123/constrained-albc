@@ -37,7 +37,10 @@ parser.add_argument("--seed", type=int, default=42)
 parser.add_argument("--logger", type=str, default="wandb", choices=["wandb", "tensorboard"])
 parser.add_argument("--wandb_project", type=str, default="full_dof_trpo_student")
 AppLauncher.add_app_launcher_args(parser)
-args_cli, _ = parser.parse_known_args()
+args_cli, hydra_args = parser.parse_known_args()
+
+# Clear out sys.argv for Hydra: only hydra-style args remain.
+sys.argv = [sys.argv[0]] + hydra_args
 
 # Launch Omniverse app (required before importing isaaclab_tasks)
 app_launcher = AppLauncher(args_cli)
@@ -54,6 +57,7 @@ from isaaclab.envs import DirectRLEnvCfg
 from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper
 
 import isaaclab_tasks  # noqa: F401
+from isaaclab_tasks.utils.hydra import hydra_task_config
 
 from isaaclab_tasks.direct.constrained_full_albc.student.config import StudentCfg
 from isaaclab_tasks.direct.constrained_full_albc.student.runner import StudentRunner
@@ -62,7 +66,9 @@ logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(levelname)s %(na
 logger = logging.getLogger("train_student")
 
 
-def main() -> None:
+@hydra_task_config(args_cli.task, "rsl_rl_cfg_entry_point")
+def main(env_cfg: DirectRLEnvCfg, _agent_cfg) -> None:
+    """Hydra-decorated entry: receives env_cfg from the task registry."""
     # Build student cfg from CLI
     cfg = StudentCfg()
     cfg.encoder_type = args_cli.encoder_type
@@ -88,19 +94,13 @@ def main() -> None:
     os.makedirs(log_dir, exist_ok=True)
     logger.info("log_dir=%s", log_dir)
 
+    # Apply our overrides on the hydra-supplied env_cfg
+    env_cfg.scene.num_envs = cfg.num_envs
+    env_cfg.seed = cfg.seed
+    env_cfg.sim.device = cfg.device
+    env_cfg.log_dir = log_dir
+
     # Build env
-    # Use Hydra-style env cfg loading via gym registry
-    from isaaclab_tasks.utils.hydra import hydra_task_config
-
-    @hydra_task_config(args_cli.task, "rsl_rl_cfg_entry_point")
-    def _create(env_cfg: DirectRLEnvCfg, _agent_cfg):
-        env_cfg.scene.num_envs = cfg.num_envs
-        env_cfg.seed = cfg.seed
-        env_cfg.sim.device = cfg.device
-        env_cfg.log_dir = log_dir
-        return env_cfg
-
-    env_cfg = _create()
     env = gym.make(args_cli.task, cfg=env_cfg, render_mode=None)
     env = RslRlVecEnvWrapper(env, clip_actions=None)
 
