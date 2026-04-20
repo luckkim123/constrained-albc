@@ -24,11 +24,14 @@ class StudentCfg:
     latent_dim: int = 9             # must match r13_A teacher
 
     # TCN-specific
-    tcn_history: int = 50           # H = 50 steps (1.0 s at 50 Hz)
+    # H=9 mirrors teacher's embedded history: stride=3 x 3 steps = 9 physical
+    # steps at 50 Hz (180 ms). Sampled at stride=1 for denser temporal signal.
+    # Kernels shrunk to fit H=9: (3,3,3) strides (1,1,1) -> L_out 9->7->5->3.
+    tcn_history: int = 9
     tcn_input_channels: int = 32    # after per-step channel transform
     tcn_conv_channels: tuple[int, ...] = (64, 128, 128)
-    tcn_conv_kernels: tuple[int, ...] = (9, 5, 5)
-    tcn_conv_strides: tuple[int, ...] = (2, 1, 1)
+    tcn_conv_kernels: tuple[int, ...] = (3, 3, 3)
+    tcn_conv_strides: tuple[int, ...] = (1, 1, 1)
     tcn_head_hidden: int = 128
 
     # GRU-specific
