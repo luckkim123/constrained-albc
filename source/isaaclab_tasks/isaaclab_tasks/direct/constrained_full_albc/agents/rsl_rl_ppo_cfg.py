@@ -119,7 +119,7 @@ class _EncoderPolicyCfg(RslRlPpoActorCriticCfg):
     activation: str = "elu"
     # Encoder
     encoder_hidden_dims: list[int] = [256, 128, 64]
-    encoder_latent_dim: int = 9
+    encoder_latent_dim: int = 16
     encoder_activation: str = "elu"
     encoder_obs_normalization: bool = False
     # Observation dimensions
@@ -203,7 +203,9 @@ class RslRlConstraintTRPOAlgorithmCfg:
     # Default: arm=0.01 (prevents noise collapse), thr=0.001 (prevents noise divergence).
     # Validated in Round 2 experiments (2026-04-14): PerDimEnt outperformed Baseline
     # and ArmOnly on reward, noise stability, and DORAEMON success.
-    entropy_coef_per_dim: tuple[float, ...] = (0.01, 0.01, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001)
+    # r14: thrusters 0.001 -> 0.0005 to attack roll-osc root cause (thruster std ~0.25
+    # drove 0.68-0.87 Hz limit cycle via weak TAM roll arm 0.007m). Target std ~0.15.
+    entropy_coef_per_dim: tuple[float, ...] = (0.01, 0.01, 0.0005, 0.0005, 0.0005, 0.0005, 0.0005, 0.0005)
 
     # Sigma safety bounds (clamped after TRPO step)
     min_std: float = 0.05
@@ -229,7 +231,7 @@ class FullDOFTRPORunnerCfg(RslRlOnPolicyRunnerCfg):
     seed = 30
     num_steps_per_env = 64
     max_iterations = 2500
-    save_interval = 50
+    save_interval = 100
     experiment_name = "full_dof_trpo"
     obs_groups: dict[str, list[str]] = {
         "policy": ["policy", "privileged"],
