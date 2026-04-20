@@ -127,6 +127,10 @@ class StudentRunner:
             obs = obs_next_policy
             privileged = privileged_next
 
+        # Slide the last H rollout obs into the pre-rollout history region of
+        # flat_buf so the NEXT iteration's early windows contain real history.
+        # (GRU path is a no-op.)
+        self.buffer.carry_over_history()
         return obs, privileged
 
     def _compute_loss_tcn(self, batch) -> dict[str, torch.Tensor]:
