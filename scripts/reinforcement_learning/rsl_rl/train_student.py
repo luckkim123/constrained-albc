@@ -116,5 +116,5 @@ def main(env_cfg: DirectRLEnvCfg, _agent_cfg) -> None:
 
 
 if __name__ == "__main__":
-    main()
+    main()  # pyright: ignore[reportCallIssue]  -- hydra_task_config injects args
     simulation_app.close()
