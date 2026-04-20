@@ -76,6 +76,13 @@ class StudentRunner:
         self.teacher = FrozenTeacher(cfg, device=device)
         self.student = make_student_encoder(cfg).to(device)
 
+        # Reuse teacher's frozen actor_obs_normalizer as student's input normalizer.
+        # Student saw plateau at loss_latent ~0.113 with raw 87D obs (scales
+        # spanning 10^-2 to 10^2 across quat/omega/torque/action/integral).
+        # Normalized input aligns distribution with teacher's actor convention
+        # and restores useful gradient signal.
+        self.obs_normalizer = self.teacher.policy.actor_obs_normalizer
+
         self.optimizer = torch.optim.Adam(self.student.parameters(), lr=cfg.lr)
 
         self.buffer = RolloutBuffer(cfg, device=device)
@@ -90,11 +97,22 @@ class StudentRunner:
                 dir=log_dir,
             )
 
-        # GRU hidden state carried across rollout steps
+        # GRU hidden state carried across rollout steps (collection-time only
+        # — unused during training; training uses self.train_hidden below).
         if cfg.encoder_type == "gru":
             self.gru_hidden = self.student.init_hidden(cfg.num_envs, device)
+            # Training-time hidden persists across iterations so BPTT chunks
+            # start from the last rollout's end-state, not zero. This is the
+            # RMA-canonical truncated BPTT setup. Initialized to zero.
+            self.train_hidden = self.student.init_hidden(cfg.num_envs, device)
         else:
             self.gru_hidden = None
+            self.train_hidden = None
+
+        # dones from the last env.step of the previous rollout. Used to tag the
+        # very first observation of the next rollout as "post-reset" when an env
+        # terminated right at the rollout boundary. Initialized in learn().
+        self.prev_dones: torch.Tensor | None = None
 
         os.makedirs(os.path.join(log_dir, "models"), exist_ok=True)
         logger.info("StudentRunner initialized: encoder=%s log_dir=%s", cfg.encoder_type, log_dir)
@@ -102,21 +120,33 @@ class StudentRunner:
     def _collect_rollout(self, obs: torch.Tensor, privileged: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """Run n_steps env steps with teacher actions, filling the buffer.
 
+        Alignment (BC-critical):
+            buffer[step_idx=s] stores (obs_s, priv_s, a_s, l_s) where a_s, l_s were
+            computed from obs_s, priv_s. Student must learn l_hat(history_s) ~= l_s
+            and teacher_actor(obs_s, l_hat) ~= a_s. Any time-shift between obs and
+            (a, l) breaks the BC target and creates an unreachable loss floor.
+
         Returns the final (obs, privileged) so the caller can carry state.
         """
         self.buffer.reset()
+        # Track dones from the PREVIOUS env.step so that "dones" stored at
+        # step_idx=s correctly indicates whether obs_s is a fresh post-reset
+        # observation. self.prev_dones persists across rollouts so an env that
+        # terminated at the last step of the previous rollout is correctly
+        # marked as "post-reset" at step_idx=0 of the next rollout.
+        assert self.prev_dones is not None, "prev_dones must be initialized in learn()"
+        prev_dones = self.prev_dones
+
         for _ in range(self.cfg.n_steps_per_rollout):
-            # Teacher acts from current obs+privileged
+            # Teacher acts from CURRENT (pre-step) obs+privileged
             a_t, l_t = self.teacher.act(obs, privileged)
+
+            # Record PRE-STEP: (obs_s, priv_s, l_s, a_s, prev_dones).
+            # prev_dones says whether the current obs is a fresh post-reset obs.
+            self.buffer.add(obs, privileged, l_t.detach(), a_t.detach(), prev_dones)
 
             # Step env with teacher action
             obs_next, _rew, dones, extras = self.env.step(a_t)
-            privileged_next = obs_next["privileged"]
-            obs_next_policy = obs_next["policy"]
-
-            # Record at the step AFTER dones/reset processing. The "dones" indicate
-            # which envs were reset between previous step and this new obs.
-            self.buffer.add(obs_next_policy, privileged_next, l_t.detach(), a_t.detach(), dones.to(torch.bool))
 
             # GRU hidden state: zero out for reset envs so the next forward pass
             # starts fresh for them.
@@ -124,8 +154,13 @@ class StudentRunner:
                 reset_ids = torch.nonzero(dones).squeeze(-1)
                 self.gru_hidden[:, reset_ids] = 0.0
 
-            obs = obs_next_policy
-            privileged = privileged_next
+            obs = obs_next["policy"]
+            privileged = obs_next["privileged"]
+            prev_dones = dones.to(torch.bool)
+
+        # Persist last env.step dones so the next rollout's step_idx=0 records
+        # the correct "post-reset" flag for envs that terminated at the boundary.
+        self.prev_dones = prev_dones
 
         # Slide the last H rollout obs into the pre-rollout history region of
         # flat_buf so the NEXT iteration's early windows contain real history.
@@ -142,10 +177,15 @@ class StudentRunner:
         total = loss_action + self.cfg.lambda_latent * loss_latent
         return {"loss_total": total, "loss_action": loss_action, "loss_latent": loss_latent}
 
-    def _compute_loss_gru(self, batch) -> dict[str, torch.Tensor]:
-        # Forward over sequence; ignore hidden state from training chunks (we
-        # treat each chunk as an independent BPTT unit for simplicity).
-        l_hat_seq, _ = self.student(batch.obs_seq, hidden=None)         # (envs, T, 9)
+    def _compute_loss_gru(self, batch, h_in: torch.Tensor) -> dict[str, torch.Tensor]:
+        """h_in: (num_layers, M_envs, gru_hidden) — rollout-start hidden for this
+        minibatch's envs. Threaded across iters so GRU can accumulate evidence
+        over many rollouts, not just 24 steps.
+        """
+        # Normalize student input (obs_seq) with teacher's actor_obs_normalizer.
+        B, T, D = batch.obs_seq.shape
+        obs_seq_n = self.obs_normalizer(batch.obs_seq.reshape(B * T, D)).reshape(B, T, D)
+        l_hat_seq, _ = self.student(obs_seq_n, hidden=h_in)             # (envs, T, 9)
         M = l_hat_seq.shape[0] * l_hat_seq.shape[1]
         l_hat = l_hat_seq.reshape(M, -1)
         obs_normed = self.teacher.normalize_obs(batch.obs_t)
@@ -171,6 +211,9 @@ class StudentRunner:
         obs_td, _extras = self.env.reset()
         obs = obs_td["policy"]
         privileged = obs_td["privileged"]
+        # Freshly-reset obs: treat as post-reset (dones=True) so flat_buf's
+        # pre-rollout region (zeros) isn't mixed with bogus history on step 0.
+        self.prev_dones = torch.ones(self.cfg.num_envs, dtype=torch.bool, device=self.device)
 
         t_start = time.time()
         for it in range(self.cfg.max_iterations):
@@ -183,6 +226,21 @@ class StudentRunner:
             t0 = time.time()
             epoch_totals = {"loss_total": 0.0, "loss_action": 0.0, "loss_latent": 0.0, "grad_norm": 0.0}
             n_updates = 0
+
+            # GRU hidden threading: snapshot the rollout-start hidden, zero it
+            # for envs that reset mid-rollout (rare given episode length), then
+            # reuse the same snapshot across n_epochs so gradient flow through
+            # each env's 24-step chunk starts from the correct initial state.
+            if self.cfg.encoder_type == "gru":
+                assert self.train_hidden is not None
+                T_ = self.buffer.step_idx
+                any_done_in_rollout = self.buffer.done_flat[:T_].any(dim=0)
+                h_start = self.train_hidden.detach().clone()
+                h_start[:, any_done_in_rollout] = 0.0
+            else:
+                h_start = None
+                any_done_in_rollout = None
+
             for _ in range(self.cfg.n_epochs):
                 if self.cfg.encoder_type == "tcn":
                     batches = self.buffer.iter_minibatches_tcn()
@@ -192,7 +250,9 @@ class StudentRunner:
                     if self.cfg.encoder_type == "tcn":
                         losses = self._compute_loss_tcn(batch)
                     else:
-                        losses = self._compute_loss_gru(batch)
+                        assert h_start is not None and batch.env_idx is not None
+                        h_in = h_start[:, batch.env_idx].contiguous()
+                        losses = self._compute_loss_gru(batch, h_in)
                     self.optimizer.zero_grad()
                     losses["loss_total"].backward()
                     grad_norm = torch.nn.utils.clip_grad_norm_(
@@ -206,6 +266,21 @@ class StudentRunner:
             for k in epoch_totals:
                 epoch_totals[k] /= max(1, n_updates)
             t_train = time.time() - t0
+
+            # GRU: recompute the end-of-rollout hidden with ONE no-grad forward
+            # over the full rollout so the next iter's h_start reflects the
+            # post-update student's hidden trajectory. Uses normalized obs.
+            if self.cfg.encoder_type == "gru":
+                with torch.no_grad():
+                    T_ = self.buffer.step_idx
+                    D = self.cfg.policy_obs_dim
+                    obs_all = self.buffer.obs_flat[:T_].transpose(0, 1)    # (E, T, D)
+                    obs_all_n = self.obs_normalizer(
+                        obs_all.reshape(-1, D)
+                    ).reshape(self.cfg.num_envs, T_, D)
+                    _, h_end = self.student(obs_all_n, hidden=h_start)
+                    h_end[:, any_done_in_rollout] = 0.0
+                    self.train_hidden = h_end.detach()
 
             # Log
             metrics = {

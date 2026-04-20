@@ -47,6 +47,12 @@ class StudentInLoopPolicy:
         self.student.load_state_dict(blob["student_state_dict"])
         self.student.eval()
 
+        # GRU-only: student was trained on obs normalized by teacher's
+        # actor_obs_normalizer. Eval must apply the same normalization.
+        # TCN checkpoints predating this change remain unnormalized.
+        self.obs_normalizer = self.teacher.policy.actor_obs_normalizer
+        self._apply_obs_norm = cfg.encoder_type == "gru"
+
         if cfg.encoder_type == "tcn":
             self.ring = torch.zeros(num_envs, cfg.tcn_history, cfg.policy_obs_dim, device=device)
             self.hidden = None
@@ -55,7 +61,20 @@ class StudentInLoopPolicy:
             self.hidden = self.student.init_hidden(num_envs, device)
 
     def reset(self, env_ids: torch.Tensor | None = None) -> None:
-        """Clear history/hidden for the given envs (or all if None)."""
+        """Clear history/hidden for the given envs (or all if None).
+
+        Accepts either: (1) None to reset all, (2) a long index tensor (N,), or
+        (3) a bool mask of shape (num_envs,) or (num_envs, 1) -- the latter is
+        what eval_dr_fulldof passes via `dones`.
+        """
+        if env_ids is not None:
+            if env_ids.dtype == torch.bool:
+                if env_ids.dim() > 1:
+                    env_ids = env_ids.squeeze(-1)
+                if not env_ids.any():
+                    return
+                env_ids = torch.nonzero(env_ids, as_tuple=False).squeeze(-1)
+
         if self.cfg.encoder_type == "tcn":
             assert self.ring is not None
             if env_ids is None:
@@ -71,17 +90,26 @@ class StudentInLoopPolicy:
 
     @torch.no_grad()
     def __call__(self, obs_td) -> torch.Tensor:
-        """obs_td: tensordict with 'policy' key of shape (B, 87). Returns (B, 8)."""
+        """obs_td: tensordict with 'policy' key of shape (B, 87). Returns (B, 8).
+
+        Time ordering (TCN): training window is [oldest @ idx 0, ..., newest @ idx H-1].
+        The ring buffer MUST match this so Conv1d filters see the same temporal
+        direction at train and eval. Previous version had newest at idx 0 — fixed.
+        """
         obs = obs_td["policy"]
         if self.cfg.encoder_type == "tcn":
             assert self.ring is not None
-            # Push new obs onto ring
-            self.ring = torch.roll(self.ring, shifts=1, dims=1)
-            self.ring[:, 0] = obs
+            # Shift LEFT (drop oldest at idx 0) so newest obs lands at idx H-1.
+            # Before: [o_{t-H+1}, o_{t-H+2}, ..., o_{t-1}, o_t]
+            # After roll(shifts=-1): [o_{t-H+2}, ..., o_{t-1}, o_t, o_{t-H+1}]
+            # Then ring[:, -1] = o_{t+1}: [o_{t-H+2}, ..., o_t, o_{t+1}]
+            self.ring = torch.roll(self.ring, shifts=-1, dims=1)
+            self.ring[:, -1] = obs
             l_hat = self.student(self.ring)
         else:
-            # Single-step forward
-            obs_seq = obs.unsqueeze(1)  # (B, 1, 87)
+            # Single-step forward. Normalize obs to match training distribution.
+            obs_for_student = self.obs_normalizer(obs) if self._apply_obs_norm else obs
+            obs_seq = obs_for_student.unsqueeze(1)  # (B, 1, 87)
             l_hat_seq, self.hidden = self.student(obs_seq, hidden=self.hidden)
             l_hat = l_hat_seq[:, -1]    # (B, 9)
 

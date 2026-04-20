@@ -31,6 +31,9 @@ class RolloutBatch:
     obs_t: torch.Tensor               # (M, 87) -- the "current" obs used by teacher actor
     l_t: torch.Tensor                 # (M, 9)
     a_t: torch.Tensor                 # (M, 8)
+    # GRU-only: env indices for this minibatch, used to slice the persisted
+    # hidden state at rollout start. None for TCN batches.
+    env_idx: torch.Tensor | None = None
 
 
 class RolloutBuffer:
@@ -172,6 +175,7 @@ class RolloutBuffer:
                     obs_t=self.obs_flat[:T, idx].reshape(-1, self.D),
                     l_t=self.l_gt_flat[:T, idx].reshape(-1, self.cfg.latent_dim),
                     a_t=self.a_gt_flat[:T, idx].reshape(-1, 8),
+                    env_idx=idx,
                 )
             )
         return batches
