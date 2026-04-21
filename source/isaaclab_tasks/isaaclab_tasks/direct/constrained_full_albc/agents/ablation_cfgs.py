@@ -68,9 +68,13 @@ class _FullDOFPPOEncPolicyCfg(_FullDOFPolicyCfg):
 
 @configclass
 class FullDOFPPOEncRunnerCfg(RslRlOnPolicyRunnerCfg):
-    """Encoder + PPO. No IPO. Uses ALBCNoConstraintEnvCfg."""
+    """Encoder + PPO. No IPO. Uses ALBCNoConstraintEnvCfg.
 
-    # Standard rsl-rl OnPolicyRunner (default class_name).
+    Runs under OnPolicyDoraemonRunner so DORAEMON curriculum is stepped
+    every iteration — same DR schedule as Isaac-FullDOF-TRPO-v0.
+    """
+
+    class_name: str = "OnPolicyDoraemonRunner"
     seed: int = 30
     num_steps_per_env: int = 64
     max_iterations: int = 2500

@@ -289,7 +289,7 @@ class FullDOFNoEncoderRunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 64
     max_iterations = 2500
     save_interval = 50
-    experiment_name = "full_dof_trpo_no_encoder"
+    experiment_name = "full_dof_ablation"
     obs_groups: dict[str, list[str]] = {
         "policy": ["policy", "privileged"],
         "critic": ["policy", "privileged"],
@@ -355,21 +355,28 @@ class _FullDOFPPOAlgorithmCfg(RslRlPpoAlgorithmCfg):
 class FullDOFPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     """PPO baseline: standard PPO + asymmetric critic, no encoder, no constraint.
 
-    Uses rsl-rl's default OnPolicyRunner (class_name inherited as
-    "OnPolicyRunner"). Asymmetric actor/critic observation routing is
-    expressed purely through obs_groups: actor receives "policy" (81D)
-    only while critic receives cat(["policy", "privileged"]) = 105D.
+    Uses OnPolicyDoraemonRunner (OnPolicyRunner + DORAEMON curriculum hook)
+    so the DR schedule matches Isaac-FullDOF-TRPO-v0 — without this override
+    stock OnPolicyRunner would never step the env's DORAEMON scheduler,
+    freezing the Beta distribution at ``init_concentration=30`` and
+    confounding the algorithm ablation with a DR-curriculum ablation.
 
-    DR, reward weights, action space, and DORAEMON are identical to
-    Isaac-FullDOF-TRPO-v0. Constraint costs are still computed by the env
-    for diagnostics but do not influence the PPO objective.
+    Asymmetric actor/critic observation routing is expressed purely through
+    obs_groups: actor receives "policy" (81D) only while critic receives
+    cat(["policy", "privileged"]) = 105D.
+
+    DR, reward weights, action space, and DORAEMON hyperparameters are
+    identical to Isaac-FullDOF-TRPO-v0 (all variants inherit ALBCEnvCfg).
+    Constraint costs are still computed by the env for diagnostics but do
+    not influence the PPO objective.
     """
 
+    class_name: str = "OnPolicyDoraemonRunner"
     seed = 30
     num_steps_per_env = 64
     max_iterations = 2500
     save_interval = 50
-    experiment_name = "full_dof_ppo"
+    experiment_name = "full_dof_ablation"
     obs_groups: dict[str, list[str]] = {
         "policy": ["policy"],
         "critic": ["policy", "privileged"],

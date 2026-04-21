@@ -52,6 +52,14 @@ parser.add_argument(
     help="Use DORAEMON-learned DR (mean +/- 2*std) as hard level. Default: auto-load from run dir. "
          "Use --no-doraemon-dr to fall back to HardDomainRandomizationCfg.",
 )
+parser.add_argument(
+    "--doraemon-dr-from",
+    type=str,
+    default=None,
+    help="Load DORAEMON DR from this run dir instead of the evaluated run's own dir. "
+         "Used to evaluate all ablation variants on the r13_A baseline's learned DR "
+         "distribution (common test distribution). Overrides --doraemon-dr auto-load.",
+)
 cli_args.add_rsl_rl_args(parser)
 AppLauncher.add_app_launcher_args(parser)
 args_cli, hydra_args = parser.parse_known_args()
@@ -59,9 +67,17 @@ args_cli, hydra_args = parser.parse_known_args()
 # clear sys.argv for Hydra
 sys.argv = [sys.argv[0]] + hydra_args
 
-# launch omniverse app
-app_launcher = AppLauncher(args_cli)
-simulation_app = app_launcher.app
+# launch omniverse app -- ONLY when executed directly.
+# When this module is imported by another eval script (e.g. eval_student_dr.py),
+# the importing script is responsible for calling AppLauncher exactly once.
+# Re-launching AppLauncher in imported mode corrupts Kit state and causes Kit
+# to shutdown mid-init with "Exception during viewport wait" (kit log evidence).
+if __name__ == "__main__":
+    app_launcher = AppLauncher(args_cli)
+    simulation_app = app_launcher.app
+else:
+    app_launcher = None  # type: ignore[assignment]
+    simulation_app = None  # type: ignore[assignment]
 
 """Rest everything follows."""
 
@@ -241,6 +257,10 @@ _DR_TUPLE_FIELDS = [
     "payload_cog_offset_z",
     "thrust_coefficient_scale",
     "time_constant_scale",
+    # r13: ocean current strength is DORAEMON-managed during training. Eval must
+    # also scale this range with DR level so none/soft/medium/hard match training
+    # curriculum stages. Nominal=(0,0) (no current), hard=(0,1) (full range).
+    "ocean_current_strength_range",
 ]
 
 _DR_FLOAT_FIELDS = [
@@ -281,6 +301,9 @@ _TRUE_NOMINAL_PHYSICS: dict[str, float] = {
     "joint_viscous_friction_range": 0.0,
     # Float fields
     "payload_cog_offset_xy_radius": 0.0,
+    # r13: ocean current strength tuple collapses to (0, 0) at nominal -> no current.
+    # HardDR full range = (0, 1). Linear interpolation yields per-level strength range.
+    "ocean_current_strength_range": 0.0,
 }
 
 
@@ -1989,8 +2012,27 @@ def main(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     # Default behavior: auto-load DORAEMON-learned distribution from the run dir
     # and use it as the hard-DR anchor. Use --no-doraemon-dr to fall back to
     # HardDomainRandomizationCfg (the static training-time physics ranges).
+    #
+    # --doraemon-dr-from=<path> overrides the auto-load path with an explicit
+    # run dir. This is used to evaluate every ablation variant on a common test
+    # distribution (typically the r13_A baseline's final DR), so cross-variant
+    # comparisons are not confounded by per-variant curriculum drift.
     global _DORAEMON_FULL_DR, _DORAEMON_RAW
-    if args_cli.doraemon_dr and resume_path:
+    if args_cli.doraemon_dr_from:
+        dr_source = args_cli.doraemon_dr_from
+        if not os.path.isdir(dr_source):
+            raise FileNotFoundError(f"--doraemon-dr-from path does not exist: {dr_source}")
+        print(f"\n[INFO] Loading DORAEMON-learned DR from override path: {dr_source}")
+        cfg, raw = load_doraemon_dr(dr_source)
+        if cfg is None:
+            raise RuntimeError(
+                f"--doraemon-dr-from requested but no DORAEMON tags found in {dr_source}. "
+                "Check that the run dir contains a TB event file with DORAEMON/mean/* scalars."
+            )
+        _DORAEMON_FULL_DR = cfg
+        _DORAEMON_RAW = raw
+        print("[INFO] Hard DR = DORAEMON-learned distribution from override (mean +/- 2*std).\n")
+    elif args_cli.doraemon_dr and resume_path:
         run_dir = os.path.dirname(resume_path)
         print(f"\n[INFO] Attempting to load DORAEMON-learned DR from: {run_dir}")
         cfg, raw = load_doraemon_dr(run_dir)
@@ -2175,5 +2217,6 @@ def main(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
 
 
 if __name__ == "__main__":
-    main()
+    main()  # pyright: ignore[reportCallIssue]  -- hydra_task_config injects env_cfg, agent_cfg
+    assert simulation_app is not None
     simulation_app.close()

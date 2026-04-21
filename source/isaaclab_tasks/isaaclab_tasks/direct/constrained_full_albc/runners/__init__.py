@@ -6,5 +6,6 @@
 """Training runner for constrained ALBC environments."""
 
 from .constraint_encoder_runner import ConstraintEncoderRunner
+from .on_policy_doraemon_runner import OnPolicyDoraemonRunner
 
-__all__ = ["ConstraintEncoderRunner"]
+__all__ = ["ConstraintEncoderRunner", "OnPolicyDoraemonRunner"]
