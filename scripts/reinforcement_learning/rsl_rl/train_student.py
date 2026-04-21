@@ -33,6 +33,10 @@ parser.add_argument("--minibatch_size", type=int, default=8192)
 parser.add_argument("--lr", type=float, default=5e-4)
 parser.add_argument("--lambda_latent", type=float, default=1.0)
 parser.add_argument("--save_interval", type=int, default=100)
+parser.add_argument("--gru_hidden", type=int, default=None,
+                    help="GRU hidden size (default: StudentCfg.gru_hidden).")
+parser.add_argument("--gru_head_hidden", type=int, default=None,
+                    help="GRU head intermediate dim (0=disable, default: StudentCfg.gru_head_hidden).")
 parser.add_argument("--seed", type=int, default=42)
 parser.add_argument("--logger", type=str, default="wandb", choices=["wandb", "tensorboard"])
 parser.add_argument("--wandb_project", type=str, default="full_dof_trpo_student")
@@ -87,6 +91,10 @@ def main(env_cfg: DirectRLEnvCfg, _agent_cfg) -> None:
     cfg.wandb_project = args_cli.wandb_project
     cfg.task = args_cli.task
     cfg.run_name = args_cli.run_name or f"student_{args_cli.encoder_type}"
+    if args_cli.gru_hidden is not None:
+        cfg.gru_hidden = args_cli.gru_hidden
+    if args_cli.gru_head_hidden is not None:
+        cfg.gru_head_hidden = args_cli.gru_head_hidden
 
     # Log dir
     stamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")

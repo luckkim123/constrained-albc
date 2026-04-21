@@ -37,6 +37,12 @@ class StudentCfg:
     # GRU-specific
     gru_layers: int = 1
     gru_hidden: int = 128
+    # Intermediate head layer dim (128 -> gru_head_hidden -> latent_dim).
+    # 0 disables intermediate layer (shallow head: Linear + LN(latent)).
+    # Teacher's encoder has a 128->64->9 pattern; matching this eases
+    # representation of teacher's per-dim latent structure (per-dim stds
+    # 0.17..0.48). Default 64 adds ~8K params, ~10% inference cost.
+    gru_head_hidden: int = 64
 
     # Training
     num_envs: int = 4096

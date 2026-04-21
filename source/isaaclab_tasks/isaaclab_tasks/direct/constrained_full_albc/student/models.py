@@ -81,10 +81,23 @@ class StudentEncoderGRU(nn.Module):
             num_layers=cfg.gru_layers,
             batch_first=True,
         )
-        self.head = nn.Sequential(
-            nn.Linear(cfg.gru_hidden, cfg.latent_dim),
-            nn.LayerNorm(cfg.latent_dim),
-        )
+        # Deeper head optional (matches teacher's 128->64->9 pattern). When
+        # gru_head_hidden == 0, fall back to the original shallow head.
+        # No LN on the 9D output: verified diagnostic showed per-sample LN(9)
+        # collapses student std to 0.001-0.03 vs teacher 0.17-0.48, while TCN
+        # (no output LN) matches teacher std range.
+        head_h = getattr(cfg, "gru_head_hidden", 0)
+        if head_h and head_h > 0:
+            self.head = nn.Sequential(
+                nn.Linear(cfg.gru_hidden, head_h),
+                nn.ELU(),
+                nn.LayerNorm(head_h),
+                nn.Linear(head_h, cfg.latent_dim),
+            )
+        else:
+            self.head = nn.Sequential(
+                nn.Linear(cfg.gru_hidden, cfg.latent_dim),
+            )
 
     def forward(
         self,
