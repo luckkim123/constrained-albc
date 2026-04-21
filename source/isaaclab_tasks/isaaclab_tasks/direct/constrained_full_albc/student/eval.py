@@ -41,10 +41,12 @@ class StudentInLoopPolicy:
         self.num_envs = num_envs
 
         self.teacher = FrozenTeacher(cfg, device=device)
-        # Auto-infer GRU hidden / head_hidden from checkpoint to avoid eval cfg
-        # mismatch when students are trained with non-default architecture.
+        # Auto-infer architecture from checkpoint to avoid eval cfg mismatch
+        # when students are trained with non-default architecture. Training
+        # saves `cfg=vars(self.cfg)`; restore relevant fields for model build.
         blob = torch.load(student_ckpt, map_location=device, weights_only=False)
         sd = blob["student_state_dict"]
+        saved_cfg = blob.get("cfg", {})
         if cfg.encoder_type == "gru":
             if "gru.weight_ih_l0" in sd:
                 cfg.gru_hidden = sd["gru.weight_ih_l0"].shape[0] // 3
@@ -53,6 +55,12 @@ class StudentInLoopPolicy:
             if "head.0.weight" in sd:
                 out_dim = sd["head.0.weight"].shape[0]
                 cfg.gru_head_hidden = out_dim if out_dim != cfg.latent_dim else 0
+        elif cfg.encoder_type == "tcn":
+            for field in ("tcn_history", "tcn_input_channels", "tcn_conv_channels",
+                           "tcn_conv_kernels", "tcn_conv_strides", "tcn_conv_dilations",
+                           "tcn_head_hidden"):
+                if field in saved_cfg:
+                    setattr(cfg, field, saved_cfg[field])
         self.student = make_student_encoder(cfg).to(device)
         # Load student weights
         self.student.load_state_dict(sd)
