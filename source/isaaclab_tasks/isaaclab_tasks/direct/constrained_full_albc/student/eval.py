@@ -57,8 +57,7 @@ class StudentInLoopPolicy:
                 cfg.gru_head_hidden = out_dim if out_dim != cfg.latent_dim else 0
         elif cfg.encoder_type == "tcn":
             for field in ("tcn_history", "tcn_input_channels", "tcn_conv_channels",
-                           "tcn_conv_kernels", "tcn_conv_strides", "tcn_conv_dilations",
-                           "tcn_head_hidden"):
+                           "tcn_conv_kernels", "tcn_conv_strides", "tcn_head_hidden"):
                 if field in saved_cfg:
                     setattr(cfg, field, saved_cfg[field])
         self.student = make_student_encoder(cfg).to(device)

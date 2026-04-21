@@ -86,14 +86,6 @@ class StudentRunner:
 
         self.optimizer = torch.optim.Adam(self.student.parameters(), lr=cfg.lr)
 
-        # Optional LR schedule. Linear warmup from lr*0.1 -> lr over lr_warmup_iters,
-        # then cosine decay from lr -> lr_min over remaining iters. When schedule
-        # is "none" the LR stays at cfg.lr for the whole run.
-        self._lr_base = cfg.lr
-        self._lr_min = getattr(cfg, "lr_min", 0.0)
-        self._lr_warmup = getattr(cfg, "lr_warmup_iters", 0)
-        self._lr_schedule = getattr(cfg, "lr_schedule", "none")
-
         self.buffer = RolloutBuffer(cfg, device=device)
 
         self.writer = SummaryWriter(log_dir=log_dir)
@@ -210,27 +202,6 @@ class StudentRunner:
         total = loss_action + self.cfg.lambda_latent * loss_latent
         return {"loss_total": total, "loss_action": loss_action, "loss_latent": loss_latent}
 
-    def _set_lr_for_iter(self, it: int) -> None:
-        """Update optimizer LR per self._lr_schedule. 'none' keeps cfg.lr constant."""
-        if self._lr_schedule == "none" and self._lr_warmup <= 0:
-            return
-        total = max(1, self.cfg.max_iterations)
-        warmup = self._lr_warmup
-        if warmup > 0 and it < warmup:
-            # Linear warmup from lr_base*0.1 to lr_base.
-            frac = (it + 1) / float(warmup)
-            lr = self._lr_base * (0.1 + 0.9 * frac)
-        elif self._lr_schedule == "cosine":
-            import math
-            t = max(0, it - warmup)
-            t_total = max(1, total - warmup)
-            cos = 0.5 * (1.0 + math.cos(math.pi * min(t, t_total) / t_total))
-            lr = self._lr_min + (self._lr_base - self._lr_min) * cos
-        else:
-            lr = self._lr_base
-        for g in self.optimizer.param_groups:
-            g["lr"] = lr
-
     def _log(self, iter_idx: int, metrics: dict[str, float]) -> None:
         for k, v in metrics.items():
             self.writer.add_scalar(k, v, iter_idx)
@@ -253,9 +224,6 @@ class StudentRunner:
 
         t_start = time.time()
         for it in range(self.cfg.max_iterations):
-            # LR schedule (linear warmup then cosine or flat).
-            self._set_lr_for_iter(it)
-
             # Collect
             t0 = time.time()
             obs, privileged = self._collect_rollout(obs, privileged)

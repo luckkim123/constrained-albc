@@ -37,22 +37,6 @@ parser.add_argument("--gru_hidden", type=int, default=None,
                     help="GRU hidden size (default: StudentCfg.gru_hidden).")
 parser.add_argument("--gru_head_hidden", type=int, default=None,
                     help="GRU head intermediate dim (0=disable, default: StudentCfg.gru_head_hidden).")
-parser.add_argument("--tcn_history", type=int, default=None,
-                    help="TCN input history length H (default: StudentCfg.tcn_history=9).")
-parser.add_argument("--tcn_channels", type=str, default=None,
-                    help="TCN conv channels, comma-list (e.g. '64,128,128').")
-parser.add_argument("--tcn_kernels", type=str, default=None,
-                    help="TCN conv kernel sizes, comma-list (e.g. '3,3,3').")
-parser.add_argument("--tcn_strides", type=str, default=None,
-                    help="TCN conv strides, comma-list (e.g. '1,1,1').")
-parser.add_argument("--tcn_dilations", type=str, default=None,
-                    help="TCN conv dilations, comma-list (e.g. '1,3,9').")
-parser.add_argument("--lr_schedule", type=str, default=None, choices=["none", "cosine"],
-                    help="LR schedule (default: 'none').")
-parser.add_argument("--lr_warmup_iters", type=int, default=None,
-                    help="Linear warmup iterations from lr*0.1 to lr (default: 0).")
-parser.add_argument("--lr_min", type=float, default=None,
-                    help="Cosine floor LR (default: 0.0).")
 parser.add_argument("--seed", type=int, default=42)
 parser.add_argument("--logger", type=str, default="wandb", choices=["wandb", "tensorboard"])
 parser.add_argument("--wandb_project", type=str, default="full_dof_trpo_student")
@@ -111,29 +95,6 @@ def main(env_cfg: DirectRLEnvCfg, _agent_cfg) -> None:
         cfg.gru_hidden = args_cli.gru_hidden
     if args_cli.gru_head_hidden is not None:
         cfg.gru_head_hidden = args_cli.gru_head_hidden
-
-    # TCN overrides
-    def _parse_int_tuple(s: str) -> tuple[int, ...]:
-        return tuple(int(x) for x in s.split(",") if x.strip())
-
-    if args_cli.tcn_history is not None:
-        cfg.tcn_history = args_cli.tcn_history
-    if args_cli.tcn_channels is not None:
-        cfg.tcn_conv_channels = _parse_int_tuple(args_cli.tcn_channels)
-    if args_cli.tcn_kernels is not None:
-        cfg.tcn_conv_kernels = _parse_int_tuple(args_cli.tcn_kernels)
-    if args_cli.tcn_strides is not None:
-        cfg.tcn_conv_strides = _parse_int_tuple(args_cli.tcn_strides)
-    if args_cli.tcn_dilations is not None:
-        cfg.tcn_conv_dilations = _parse_int_tuple(args_cli.tcn_dilations)
-
-    # LR schedule overrides
-    if args_cli.lr_schedule is not None:
-        cfg.lr_schedule = args_cli.lr_schedule
-    if args_cli.lr_warmup_iters is not None:
-        cfg.lr_warmup_iters = args_cli.lr_warmup_iters
-    if args_cli.lr_min is not None:
-        cfg.lr_min = args_cli.lr_min
 
     # Log dir
     stamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
