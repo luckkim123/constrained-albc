@@ -5,7 +5,11 @@
 
 """RL agent configurations for Full 6-DOF ALBC environment."""
 
-from .ablation_cfgs import FullDOFTRPOChallengerEnc16RunnerCfg
+from .ablation_cfgs import (
+    FullDOFPPOEncRunnerCfg,
+    FullDOFTRPOChallengerEnc16RunnerCfg,
+    FullDOFTRPONoIPORunnerCfg,
+)
 from .rsl_rl_ppo_cfg import (
     FullDOFTRPORunnerCfg,
     RslRlConstraintTRPOAlgorithmCfg,
@@ -14,5 +18,7 @@ from .rsl_rl_ppo_cfg import (
 __all__ = [
     "FullDOFTRPORunnerCfg",
     "FullDOFTRPOChallengerEnc16RunnerCfg",
+    "FullDOFTRPONoIPORunnerCfg",
+    "FullDOFPPOEncRunnerCfg",
     "RslRlConstraintTRPOAlgorithmCfg",
 ]

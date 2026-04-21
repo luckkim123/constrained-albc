@@ -71,3 +71,25 @@ gym.register(
         "rsl_rl_cfg_entry_point": f"{__name__}.agents.ablation_cfgs:FullDOFTRPOChallengerEnc16RunnerCfg",
     },
 )
+
+# Variant #3: Encoder + TRPO without IPO (empty constraint list)
+gym.register(
+    id="Isaac-FullDOF-TRPO-NoIPO-v0",
+    entry_point="isaaclab_tasks.direct.constrained_full_albc:ALBCEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.config_noconstraint:ALBCNoConstraintEnvCfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.agents.ablation_cfgs:FullDOFTRPONoIPORunnerCfg",
+    },
+)
+
+# Variant #4: Encoder + PPO (no IPO)
+gym.register(
+    id="Isaac-FullDOF-PPO-Enc-v0",
+    entry_point="isaaclab_tasks.direct.constrained_full_albc:ALBCEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.config_noconstraint:ALBCNoConstraintEnvCfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.agents.ablation_cfgs:FullDOFPPOEncRunnerCfg",
+    },
+)
