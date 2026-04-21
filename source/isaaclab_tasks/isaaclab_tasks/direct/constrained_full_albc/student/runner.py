@@ -170,7 +170,13 @@ class StudentRunner:
         return obs, privileged
 
     def _compute_loss_tcn(self, batch) -> dict[str, torch.Tensor]:
-        l_hat = self.student(batch.obs_window)           # (M, 9)
+        # Normalize per-step with teacher's actor_obs_normalizer so TCN input
+        # matches the GRU path and the teacher actor's own input distribution.
+        # Previously TCN trained on raw 87D obs (scales 10^-2..10^2), a known
+        # cause of the loss_latent plateau the GRU path was already fixed for.
+        B, H, D = batch.obs_window.shape
+        obs_window_n = self.obs_normalizer(batch.obs_window.reshape(B * H, D)).reshape(B, H, D)
+        l_hat = self.student(obs_window_n)               # (M, 9)
         obs_normed = self.teacher.normalize_obs(batch.obs_t)
         a_hat = self.teacher.actor_forward(obs_normed, l_hat)  # (M, 8)
         loss_action = F.mse_loss(a_hat, batch.a_t)

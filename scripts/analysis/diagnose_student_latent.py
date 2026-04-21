@@ -102,7 +102,7 @@ class InstrumentedStudentPolicy:
             s.ring[:, -1] = obs
             l_hat = s.student(s.ring)
         else:
-            obs_for_student = s.obs_normalizer(obs) if s._apply_obs_norm else obs
+            obs_for_student = s.obs_normalizer(obs)
             obs_seq = obs_for_student.unsqueeze(1)
             l_hat_seq, s.hidden = s.student(obs_seq, hidden=s.hidden)
             l_hat = l_hat_seq[:, -1]

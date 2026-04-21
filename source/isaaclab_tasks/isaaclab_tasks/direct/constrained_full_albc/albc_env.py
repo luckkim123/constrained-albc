@@ -1239,6 +1239,45 @@ class ALBCEnv(DirectRLEnv):
     # Play-mode evaluation
     # ------------------------------------------------------------------
 
+    def randomize_physics_mid_episode(self, env_ids: torch.Tensor | None = None) -> None:
+        """Re-sample physics DR parameters without resetting motion state.
+
+        Used by eval_dr_switching.py: holds robot pose/velocity constant while
+        changing hydro/mass/payload/ocean/thruster params. Joint gains/friction
+        intentionally left unchanged (mid-episode actuator change destabilizes
+        control, not meaningful for policy-adaptation benchmark).
+        """
+        if env_ids is None:
+            env_ids = torch.arange(self.num_envs, device=self.device)
+
+        rand_cfg = self.cfg.randomization
+        if not rand_cfg.enable:
+            return
+
+        dr = DRSampler(rand_cfg, num_envs=len(env_ids), device=self.device)
+
+        sampled: dict[str, torch.Tensor] | None = None
+        if self._doraemon is not None:
+            n = len(env_ids)
+            xi_physical, _ = self._doraemon.sample(n)
+            sampled = {spec.name: xi_physical[:, i] for i, spec in enumerate(self._doraemon.dist.params)}
+
+        randomize_hydrodynamics(env=self, env_ids=env_ids, dr=dr, sampled=sampled)
+        randomize_body_mass(env=self, env_ids=env_ids, dr=dr, sampled=sampled)
+        randomize_payload(env=self, env_ids=env_ids, dr=dr, sampled=sampled)
+
+        if self._has_ocean_current:
+            randomize_ocean_current(env=self, env_ids=env_ids, sampled=sampled)
+            if self.cfg.ou_enable:
+                self._ou_base_current[env_ids] = self._hydro._current_velocity[env_ids, :3].clone()
+
+        if self._thruster is not None:
+            self._thruster.randomize_parameters(
+                env_ids=env_ids,
+                thrust_coeff_scale=rand_cfg.thrust_coefficient_scale,
+                time_constant_scale=rand_cfg.time_constant_scale,
+            )
+
     def get_eval_snapshot(self) -> dict[str, float]:
         """Return current evaluation metrics for play-mode diagnostics.
 

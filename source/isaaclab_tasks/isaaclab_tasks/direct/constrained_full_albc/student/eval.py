@@ -58,11 +58,11 @@ class StudentInLoopPolicy:
         self.student.load_state_dict(sd)
         self.student.eval()
 
-        # GRU-only: student was trained on obs normalized by teacher's
-        # actor_obs_normalizer. Eval must apply the same normalization.
-        # TCN checkpoints predating this change remain unnormalized.
+        # Both TCN and GRU are trained on obs normalized by teacher's
+        # actor_obs_normalizer; eval applies the same normalization for
+        # train/eval consistency. TCN checkpoints predating this change
+        # (trained on raw obs) are incompatible with this eval path.
         self.obs_normalizer = self.teacher.policy.actor_obs_normalizer
-        self._apply_obs_norm = cfg.encoder_type == "gru"
 
         if cfg.encoder_type == "tcn":
             self.ring = torch.zeros(num_envs, cfg.tcn_history, cfg.policy_obs_dim, device=device)
@@ -116,10 +116,13 @@ class StudentInLoopPolicy:
             # Then ring[:, -1] = o_{t+1}: [o_{t-H+2}, ..., o_t, o_{t+1}]
             self.ring = torch.roll(self.ring, shifts=-1, dims=1)
             self.ring[:, -1] = obs
-            l_hat = self.student(self.ring)
+            # Normalize ring per-step to match training (runner._compute_loss_tcn).
+            B, H, D = self.ring.shape
+            ring_n = self.obs_normalizer(self.ring.reshape(B * H, D)).reshape(B, H, D)
+            l_hat = self.student(ring_n)
         else:
             # Single-step forward. Normalize obs to match training distribution.
-            obs_for_student = self.obs_normalizer(obs) if self._apply_obs_norm else obs
+            obs_for_student = self.obs_normalizer(obs)
             obs_seq = obs_for_student.unsqueeze(1)  # (B, 1, 87)
             l_hat_seq, self.hidden = self.student(obs_seq, hidden=self.hidden)
             l_hat = l_hat_seq[:, -1]    # (B, 9)
