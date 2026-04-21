@@ -35,8 +35,13 @@ class _FullDOFChallengerEnc16PolicyCfg(_FullDOFPolicyCfg):
 
 @configclass
 class FullDOFTRPOChallengerEnc16RunnerCfg(FullDOFTRPORunnerCfg):
-    """Encoder + IPO + TRPO trained on hist5_act3 obs with doubled latent."""
+    """Encoder + IPO + TRPO trained on hist5_act3 obs with doubled latent.
 
+    Matches hist5_act3's saved agent.yaml exactly except `encoder_latent_dim`
+    (9 -> 16, the single variable under test).
+    """
+
+    save_interval = 50  # hist5_act3 used 50; main changed to 100
     policy = _FullDOFChallengerEnc16PolicyCfg()
 
 
