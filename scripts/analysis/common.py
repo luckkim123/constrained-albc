@@ -3,11 +3,10 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Shared constants and utilities for Hero Agent analysis scripts.
+"""Shared constants and utilities for Full-DOF ALBC analysis scripts.
 
-Imports authoritative values from hero_agent modules to eliminate
-hardcoded constants. Provides checkpoint-based fallback for
-environments without Isaac Lab installed.
+Provides DR constants, checkpoint-based encoder architecture inference,
+and sweep parameter builders derived from checkpoint normalizer bounds.
 """
 
 from __future__ import annotations
@@ -30,27 +29,6 @@ DR_COLORS: dict[str, str] = {
     "hard": "#F44336",
 }
 
-# ---------------------------------------------------------------------------
-# Isaac Lab imports (graceful fallback)
-# ---------------------------------------------------------------------------
-
-_ISAAC_AVAILABLE = False
-
-try:
-    from isaaclab_tasks.direct.hero_agent.agents.rsl_rl_ppo_cfg import (
-        _RslRlPpoEncoderBaseCfg,
-    )
-    from isaaclab_tasks.direct.hero_agent.config import DomainRandomizationCfg
-
-    from isaaclab_assets.robots.uuv import (
-        HeroAgentBuoyHydrodynamicsCfg,
-        HeroAgentHydrodynamicsCfg,
-    )
-
-    _ISAAC_AVAILABLE = True
-except ImportError:
-    pass
-
 
 # ---------------------------------------------------------------------------
 # Encoder architecture
@@ -65,26 +43,6 @@ class EncoderArchitecture:
     latent_dim: int = 13
     input_dim: int = 19
     output_activation: str = "tanh"
-
-
-def get_encoder_architecture() -> EncoderArchitecture:
-    """Return encoder architecture from Isaac Lab config.
-
-    Raises RuntimeError if Isaac Lab is not importable.
-    """
-    if not _ISAAC_AVAILABLE:
-        raise RuntimeError(
-            "Isaac Lab modules not importable. "
-            "Use get_encoder_architecture_from_checkpoint() instead, "
-            "or run via ./isaaclab.sh -p."
-        )
-    cfg = _RslRlPpoEncoderBaseCfg()
-    return EncoderArchitecture(
-        hidden_dims=list(cfg.encoder_hidden_dims),
-        latent_dim=cfg.encoder_latent_dim,
-        input_dim=cfg.privileged_dim,
-        output_activation=cfg.encoder_output_activation,
-    )
 
 
 def get_encoder_architecture_from_checkpoint(ckpt_path: str) -> EncoderArchitecture:
@@ -152,139 +110,6 @@ class SweepParam:
     low: float
     high: float
     unit: str = ""
-
-
-def build_nominal_obs() -> np.ndarray:
-    """Assemble nominal privileged observation from hydro configs.
-
-    19D structure:
-        Main hydro (5): volume, CoG_xyz, CoB_z
-        Buoy hydro (5): volume, CoG_xyz, CoB_z
-        Main inertia (2): Ixx, Iyy
-        Buoy inertia (2): Ixx, Iyy
-        Payload (4): mass, cog_offset_xyz
-        Main added mass surge (1)
-
-    Raises RuntimeError if Isaac Lab is not importable.
-    """
-    if not _ISAAC_AVAILABLE:
-        raise RuntimeError("Isaac Lab modules not importable. Cannot build nominal obs without physics configs.")
-    main = HeroAgentHydrodynamicsCfg()
-    buoy = HeroAgentBuoyHydrodynamicsCfg()
-    cfg = _RslRlPpoEncoderBaseCfg()
-
-    obs = [
-        # Main body hydro (5D)
-        main.volume,
-        *main.center_of_gravity,
-        main.center_of_buoyancy[2],
-        # Buoy hydro (5D)
-        buoy.volume,
-        *buoy.center_of_gravity,
-        buoy.center_of_buoyancy[2],
-        # Main inertia (2D)
-        main.rigid_body_inertia[0],
-        main.rigid_body_inertia[1],
-        # Buoy inertia (2D)
-        buoy.rigid_body_inertia[0],
-        buoy.rigid_body_inertia[1],
-        # Payload (4D) -- nominal values
-        0.5,
-        0.0,
-        0.0,
-        -0.015,
-        # Main added mass surge (1D)
-        main.added_mass[0],
-    ]
-    return np.array(obs[: cfg.privileged_dim], dtype=np.float32)
-
-
-def build_sweep_params() -> list[SweepParam]:
-    """Build sweep parameter definitions from DR config and hydro configs.
-
-    Sweep ranges are derived from DomainRandomizationCfg defaults
-    applied to nominal hydro values.
-
-    Raises RuntimeError if Isaac Lab is not importable.
-    """
-    if not _ISAAC_AVAILABLE:
-        raise RuntimeError("Isaac Lab modules not importable. Cannot build sweep params without DR config.")
-    dr = DomainRandomizationCfg()
-    main = HeroAgentHydrodynamicsCfg()
-    buoy = HeroAgentBuoyHydrodynamicsCfg()
-
-    return [
-        SweepParam(
-            "Main Volume",
-            0,
-            main.volume * dr.volume_scale[0],
-            main.volume * dr.volume_scale[1],
-            "m^3",
-        ),
-        SweepParam(
-            "Buoy Volume",
-            5,
-            buoy.volume * dr.volume_scale[0],
-            buoy.volume * dr.volume_scale[1],
-            "m^3",
-        ),
-        SweepParam(
-            "Main CoG Z",
-            3,
-            main.center_of_gravity[2] + dr.cog_offset_z[0],
-            main.center_of_gravity[2] + dr.cog_offset_z[1],
-            "m",
-        ),
-        SweepParam(
-            "Main Inertia Ixx",
-            10,
-            main.rigid_body_inertia[0] * dr.inertia_scale[0],
-            main.rigid_body_inertia[0] * dr.inertia_scale[1],
-            "kg*m^2",
-        ),
-        SweepParam(
-            "Main Inertia Iyy",
-            11,
-            main.rigid_body_inertia[1] * dr.inertia_scale[0],
-            main.rigid_body_inertia[1] * dr.inertia_scale[1],
-            "kg*m^2",
-        ),
-        SweepParam(
-            "Buoy Inertia Ixx",
-            12,
-            buoy.rigid_body_inertia[0] * dr.inertia_scale[0],
-            buoy.rigid_body_inertia[0] * dr.inertia_scale[1],
-            "kg*m^2",
-        ),
-        SweepParam(
-            "Buoy Inertia Iyy",
-            13,
-            buoy.rigid_body_inertia[1] * dr.inertia_scale[0],
-            buoy.rigid_body_inertia[1] * dr.inertia_scale[1],
-            "kg*m^2",
-        ),
-        SweepParam(
-            "Payload Mass",
-            14,
-            dr.payload_mass_range[0],
-            dr.payload_mass_range[1],
-            "kg",
-        ),
-        SweepParam(
-            "Payload CoG Z",
-            17,
-            dr.payload_cog_offset_z[0],
-            dr.payload_cog_offset_z[1],
-            "m",
-        ),
-        SweepParam(
-            "Main Added Mass Surge",
-            18,
-            main.added_mass[0] * dr.added_mass_scale[0],
-            main.added_mass[0] * dr.added_mass_scale[1],
-            "kg",
-        ),
-    ]
 
 
 def _build_constrained_albc_27d_sweep(

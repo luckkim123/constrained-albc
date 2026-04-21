@@ -7,7 +7,6 @@
 
 from .ablation_cfgs import (
     FullDOFPPOEncRunnerCfg,
-    FullDOFTRPOChallengerEnc16RunnerCfg,
     FullDOFTRPONoIPORunnerCfg,
 )
 from .rsl_rl_ppo_cfg import (
@@ -17,7 +16,6 @@ from .rsl_rl_ppo_cfg import (
 
 __all__ = [
     "FullDOFTRPORunnerCfg",
-    "FullDOFTRPOChallengerEnc16RunnerCfg",
     "FullDOFTRPONoIPORunnerCfg",
     "FullDOFPPOEncRunnerCfg",
     "RslRlConstraintTRPOAlgorithmCfg",

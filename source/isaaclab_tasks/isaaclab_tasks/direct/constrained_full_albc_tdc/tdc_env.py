@@ -39,9 +39,9 @@ import torch
 from isaaclab.utils.math import euler_xyz_from_quat
 
 from isaaclab_tasks.direct.constrained_full_albc.albc_env import ALBCEnv
-from isaaclab_tasks.direct.hero_agent.controllers.kinematics import ALBCKinematics
-from isaaclab_tasks.direct.hero_agent.controllers.tdc import TDCController
 
+from .controllers.kinematics import ALBCKinematics
+from .controllers.tdc import TDCController
 from .controllers.thruster_pd import ThrusterPDController
 
 if TYPE_CHECKING:

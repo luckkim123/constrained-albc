@@ -21,31 +21,6 @@ from .rsl_rl_ppo_cfg import (
 
 
 # =============================================================================
-# Phase 0.6: Baseline challenger (hist5_act3 obs + encoder_latent_dim=16)
-# =============================================================================
-
-
-@configclass
-class _FullDOFChallengerEnc16PolicyCfg(_FullDOFPolicyCfg):
-    """Encoder policy for challenger: obs=121, latent=16."""
-
-    policy_obs_dim: int = 121
-    encoder_latent_dim: int = 16
-
-
-@configclass
-class FullDOFTRPOChallengerEnc16RunnerCfg(FullDOFTRPORunnerCfg):
-    """Encoder + IPO + TRPO trained on hist5_act3 obs with doubled latent.
-
-    Matches hist5_act3's saved agent.yaml exactly except `encoder_latent_dim`
-    (9 -> 16, the single variable under test).
-    """
-
-    save_interval = 50  # hist5_act3 used 50; main changed to 100
-    policy = _FullDOFChallengerEnc16PolicyCfg()
-
-
-# =============================================================================
 # Variant #3: TRPO-NoIPO (encoder + TRPO, no IPO)
 # =============================================================================
 #
@@ -62,7 +37,7 @@ class FullDOFTRPOChallengerEnc16RunnerCfg(FullDOFTRPORunnerCfg):
 class FullDOFTRPONoIPORunnerCfg(FullDOFTRPORunnerCfg):
     """Encoder + TRPO without IPO. Uses ALBCNoConstraintEnvCfg."""
 
-    experiment_name: str = "fulldof_albc_noipo"
+    experiment_name: str = "full_dof_ablation"
 
 
 # =============================================================================
@@ -100,7 +75,7 @@ class FullDOFPPOEncRunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env: int = 64
     max_iterations: int = 2500
     save_interval: int = 100
-    experiment_name: str = "fulldof_albc_ppoenc"
+    experiment_name: str = "full_dof_ablation"
     obs_groups: dict[str, list[str]] = {
         "policy": ["policy", "privileged"],
         "critic": ["policy", "privileged"],

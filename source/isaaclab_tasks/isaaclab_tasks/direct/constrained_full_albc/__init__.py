@@ -61,17 +61,6 @@ gym.register(
     },
 )
 
-# Phase 0.6 baseline challenger: hist5_act3 obs + encoder_latent_dim=16
-gym.register(
-    id="Isaac-FullDOF-TRPO-ChallengerEnc16-v0",
-    entry_point="isaaclab_tasks.direct.constrained_full_albc:ALBCEnv",
-    disable_env_checker=True,
-    kwargs={
-        "env_cfg_entry_point": f"{__name__}.config_challenger_enc16:ALBCChallengerEnc16EnvCfg",
-        "rsl_rl_cfg_entry_point": f"{__name__}.agents.ablation_cfgs:FullDOFTRPOChallengerEnc16RunnerCfg",
-    },
-)
-
 # Variant #3: Encoder + TRPO without IPO (empty constraint list)
 gym.register(
     id="Isaac-FullDOF-TRPO-NoIPO-v0",

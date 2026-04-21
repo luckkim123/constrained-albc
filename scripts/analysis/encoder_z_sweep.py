@@ -37,8 +37,6 @@ import torch
 import torch.nn as nn
 from common import (
     SweepParam,
-    build_nominal_obs,
-    build_sweep_params,
     build_sweep_params_from_checkpoint,
     get_encoder_architecture_from_checkpoint,
 )
@@ -361,37 +359,20 @@ def main() -> None:
         print(f"  lower[:5]: {norm.lower[:5].tolist()}")
         print(f"  upper[:5]: {norm.upper[:5].tolist()}")
 
-    # Get nominal obs and sweep params
+    # Get nominal obs and sweep params from checkpoint normalizer bounds
     enc_lower_np = norm.lower.numpy() if norm.lower is not None else None
     enc_upper_np = norm.upper.numpy() if norm.upper is not None else None
 
-    try:
-        nominal_np = build_nominal_obs()
-        sweep_params = build_sweep_params()
-        if len(nominal_np) != ckpt_dim:
-            print(f"[WARN] Config dim ({len(nominal_np)}) != checkpoint dim ({ckpt_dim}).")
-            if norm.mode == "static_minmax":
-                assert norm.lower is not None and norm.upper is not None
-                nominal_np = ((norm.lower + norm.upper) / 2.0).numpy()
-                print("  Using static bounds midpoint as nominal.")
-            else:
-                nominal_np = norm.mean.squeeze().numpy()
-                print("  Using normalizer mean as nominal.")
-            sweep_params = build_sweep_params_from_checkpoint(
-                ckpt_dim, nominal_np, enc_lower_np, enc_upper_np,
-            )
-    except RuntimeError:
-        print("[INFO] Isaac Lab not available.")
-        if norm.mode == "static_minmax":
-            assert norm.lower is not None and norm.upper is not None
-            nominal_np = ((norm.lower + norm.upper) / 2.0).numpy()
-            print("  Using static bounds midpoint as nominal.")
-        else:
-            nominal_np = norm.mean.squeeze().numpy()
-            print("  Using normalizer mean as nominal.")
-        sweep_params = build_sweep_params_from_checkpoint(
-            ckpt_dim, nominal_np, enc_lower_np, enc_upper_np,
-        )
+    if norm.mode == "static_minmax":
+        assert norm.lower is not None and norm.upper is not None
+        nominal_np = ((norm.lower + norm.upper) / 2.0).numpy()
+        print("  Using static bounds midpoint as nominal.")
+    else:
+        nominal_np = norm.mean.squeeze().numpy()
+        print("  Using normalizer mean as nominal.")
+    sweep_params = build_sweep_params_from_checkpoint(
+        ckpt_dim, nominal_np, enc_lower_np, enc_upper_np,
+    )
 
     nominal = torch.tensor(nominal_np, dtype=torch.float32)
 

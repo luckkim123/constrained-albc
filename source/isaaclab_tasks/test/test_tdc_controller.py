@@ -98,8 +98,11 @@ sys.modules["isaaclab.utils"].configclass = lambda cls: cls
 # Load modules under test via importlib (avoids isaaclab_tasks.__init__)
 # ---------------------------------------------------------------------------
 
-_hero_dir = Path(__file__).resolve().parent.parent / "isaaclab_tasks" / "direct" / "hero_agent"
-_controllers_dir = _hero_dir / "controllers"
+_tdc_pkg_dir = (
+    Path(__file__).resolve().parent.parent
+    / "isaaclab_tasks" / "direct" / "constrained_full_albc_tdc"
+)
+_controllers_dir = _tdc_pkg_dir / "controllers"
 
 
 def _load_module(name: str, filepath: Path):
@@ -136,7 +139,7 @@ class TDCControllerCfg:
 # Build a fake package hierarchy so relative imports in tdc.py resolve correctly.
 # tdc.py imports from isaaclab.utils and isaaclab_assets.robots.uuv (mocked above).
 # TDCControllerCfg is defined in controllers/tdc.py itself (not in config.py).
-_PKG = "isaaclab_tasks.direct.hero_agent"
+_PKG = "isaaclab_tasks.direct.constrained_full_albc_tdc"
 _CTRL_PKG = f"{_PKG}.controllers"
 
 # Register package stubs
