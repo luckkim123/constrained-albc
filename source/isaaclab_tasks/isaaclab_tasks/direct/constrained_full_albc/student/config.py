@@ -32,6 +32,7 @@ class StudentCfg:
     tcn_conv_channels: tuple[int, ...] = (64, 128, 128)
     tcn_conv_kernels: tuple[int, ...] = (3, 3, 3)
     tcn_conv_strides: tuple[int, ...] = (1, 1, 1)
+    tcn_conv_dilations: tuple[int, ...] = (1, 1, 1)
     tcn_head_hidden: int = 128
 
     # GRU-specific
@@ -50,6 +51,9 @@ class StudentCfg:
     n_epochs: int = 5
     minibatch_size: int = 8192
     lr: float = 5e-4
+    lr_schedule: str = "none"       # "none" or "cosine"
+    lr_warmup_iters: int = 0        # linear warmup from lr*0.1 to lr over N iters
+    lr_min: float = 0.0             # cosine floor
     max_iterations: int = 1000
     grad_clip_norm: float = 1.0
     lambda_latent: float = 1.0

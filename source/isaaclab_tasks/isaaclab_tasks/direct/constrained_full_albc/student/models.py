@@ -31,14 +31,18 @@ class StudentEncoderTCN(nn.Module):
             nn.ELU(),
         )
 
-        # 1D conv stack
+        # 1D conv stack (supports dilation for larger receptive field).
         in_ch = cfg.tcn_input_channels
         convs: list[nn.Module] = []
         seq_len = cfg.tcn_history
-        for out_ch, k, s in zip(cfg.tcn_conv_channels, cfg.tcn_conv_kernels, cfg.tcn_conv_strides):
-            convs.append(nn.Conv1d(in_ch, out_ch, kernel_size=k, stride=s))
+        dilations = getattr(cfg, "tcn_conv_dilations", None) or (1,) * len(cfg.tcn_conv_channels)
+        assert len(dilations) == len(cfg.tcn_conv_channels), "dilations must match conv layer count"
+        for out_ch, k, s, d in zip(cfg.tcn_conv_channels, cfg.tcn_conv_kernels, cfg.tcn_conv_strides, dilations):
+            convs.append(nn.Conv1d(in_ch, out_ch, kernel_size=k, stride=s, dilation=d))
             convs.append(nn.ELU())
-            seq_len = (seq_len - k) // s + 1
+            eff_k = (k - 1) * d + 1
+            seq_len = (seq_len - eff_k) // s + 1
+            assert seq_len >= 1, f"TCN seq_len collapsed to {seq_len}; adjust kernels/dilations/history"
             in_ch = out_ch
         self.conv = nn.Sequential(*convs)
         self.flatten_dim = in_ch * seq_len
