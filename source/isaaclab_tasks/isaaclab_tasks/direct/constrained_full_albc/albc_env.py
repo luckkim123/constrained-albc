@@ -210,13 +210,7 @@ class ALBCEnv(DirectRLEnv):
         self._euler_cache: tuple[torch.Tensor, torch.Tensor, torch.Tensor] | None = None
 
     def _init_action_buffers(self) -> None:
-        """Action history (3-deep for smoothness penalty) and joint PD targets.
-
-        Also allocates the action-latency ring buffer when enabled via
-        ``randomization.action_latency_range`` (max > 0). The buffer stores
-        recent raw actions so that each env can retrieve a delayed action
-        indexed by its per-env latency (sampled at reset).
-        """
+        """Action history (3-deep for smoothness penalty) and joint PD targets."""
         self._actions = torch.zeros(self.num_envs, self.cfg.action_space, device=self.device)
         self._prev_actions = torch.zeros(self.num_envs, self.cfg.action_space, device=self.device)
         self._prev_prev_actions = torch.zeros(self.num_envs, self.cfg.action_space, device=self.device)
@@ -224,19 +218,6 @@ class ALBCEnv(DirectRLEnv):
         self._delta_scale = self.cfg.delta_scale
         self._joint_pos_targets = self._nominal_joint_pos.expand(self.num_envs, -1).clone()
         self._control_step_counter = 0
-
-        # Action latency ring buffer (r14, ported from hero_agent/base_env.py).
-        # max_latency > 0 allocates buffer; otherwise feature is disabled.
-        max_latency = self.cfg.randomization.action_latency_range[1]
-        self._max_action_latency = max_latency
-        if max_latency > 0:
-            self._action_history = torch.zeros(
-                self.num_envs, max_latency + 1, self.cfg.action_space, device=self.device
-            )
-            self._action_latency = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
-        else:
-            self._action_history = None
-            self._action_latency = None
 
     def _init_history_buffers(self) -> None:
         """Temporal history ring buffer: 21D per step (joint 4D + body 9D + action 8D)."""
@@ -356,28 +337,12 @@ class ALBCEnv(DirectRLEnv):
     def _update_action_buffers(self, actions: torch.Tensor) -> None:
         """Update action history buffers. Called at the start of _pre_physics_step().
 
-        When action-latency DR is enabled (``randomization.action_latency_range[1] > 0``),
-        applies a per-env delay: stores the current raw action into the ring buffer
-        and reads back the action N physics-steps old (N sampled per-env at reset).
-
         Args:
             actions: Raw actions from RL. Shape: (num_envs, action_space).
         """
-        clamped = actions.clamp(-1.0, 1.0)
-
-        # Apply action latency delay (r14, ported from hero_agent/base_env.py:540-561).
-        if self._action_history is not None and self.cfg.randomization.enable:
-            if self._action_history.shape[1] > 1:
-                self._action_history[:, 1:] = self._action_history[:, :-1].clone()
-            self._action_history[:, 0] = clamped
-            env_idx = torch.arange(self.num_envs, device=self.device)
-            delayed = self._action_history[env_idx, self._action_latency]
-        else:
-            delayed = clamped
-
         self._prev_prev_actions = self._prev_actions.clone()
         self._prev_actions = self._actions.clone()
-        self._actions = delayed.clone()
+        self._actions = actions.clone().clamp(-1.0, 1.0)
         self._control_step_counter += 1
 
     def _get_hist_features(self) -> torch.Tensor:
@@ -1174,15 +1139,6 @@ class ALBCEnv(DirectRLEnv):
         self._payload_toggle_counter[env_ids] = 0
         self._payload_toggled[env_ids] = False
 
-        # Reset action latency: clear history and resample per-env latency (r14).
-        # Ported from hero_agent/base_env.py:1143-1147.
-        if self._action_history is not None and self._action_latency is not None:
-            lo, hi = self.cfg.randomization.action_latency_range
-            self._action_history[env_ids] = 0.0
-            self._action_latency[env_ids] = torch.randint(
-                lo, hi + 1, (len(env_ids),), device=self.device
-            )
-
     def _reset_physics(self, env_ids: torch.Tensor) -> None:
         """Reset hydrodynamics, thrusters, payload, and apply domain randomization."""
         self._hydro.reset(env_ids)
@@ -1282,48 +1238,6 @@ class ALBCEnv(DirectRLEnv):
     # ------------------------------------------------------------------
     # Play-mode evaluation
     # ------------------------------------------------------------------
-
-    def randomize_physics_mid_episode(self, env_ids: torch.Tensor | None = None) -> None:
-        """Re-sample physics DR parameters without resetting motion state.
-
-        Used by eval_dr_switching.py: holds robot pose/velocity constant while
-        changing hydro/mass/payload/ocean/thruster params. Joint gains/friction
-        intentionally left unchanged (mid-episode actuator change destabilizes
-        control, not meaningful for policy-adaptation benchmark).
-
-        Args:
-            env_ids: Envs to randomize. Defaults to all envs.
-        """
-        if env_ids is None:
-            env_ids = torch.arange(self.num_envs, device=self.device)
-
-        rand_cfg = self.cfg.randomization
-        if not rand_cfg.enable:
-            return
-
-        dr = DRSampler(rand_cfg, num_envs=len(env_ids), device=self.device)
-
-        sampled: dict[str, torch.Tensor] | None = None
-        if self._doraemon is not None:
-            n = len(env_ids)
-            xi_physical, _ = self._doraemon.sample(n)
-            sampled = {spec.name: xi_physical[:, i] for i, spec in enumerate(self._doraemon.dist.params)}
-
-        randomize_hydrodynamics(env=self, env_ids=env_ids, dr=dr, sampled=sampled)
-        randomize_body_mass(env=self, env_ids=env_ids, dr=dr, sampled=sampled)
-        randomize_payload(env=self, env_ids=env_ids, dr=dr, sampled=sampled)
-
-        if self._has_ocean_current:
-            randomize_ocean_current(env=self, env_ids=env_ids, sampled=sampled)
-            if self.cfg.ou_enable:
-                self._ou_base_current[env_ids] = self._hydro._current_velocity[env_ids, :3].clone()
-
-        if self._thruster is not None:
-            self._thruster.randomize_parameters(
-                env_ids=env_ids,
-                thrust_coeff_scale=rand_cfg.thrust_coefficient_scale,
-                time_constant_scale=rand_cfg.time_constant_scale,
-            )
 
     def get_eval_snapshot(self) -> dict[str, float]:
         """Return current evaluation metrics for play-mode diagnostics.

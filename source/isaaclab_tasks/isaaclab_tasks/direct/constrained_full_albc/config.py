@@ -145,61 +145,45 @@ class DomainRandomizationCfg:
     # masters easier variants. Bounds mirrored in HardDomainRandomizationCfg.
     ocean_current_strength_range: tuple[float, float] = (0.0, 1.0)
 
-    # -- Action latency (physics steps delay on policy output before env application) --
-    # (0, 0) = disabled (no delay). Range (lo, hi) sampled per-env at reset.
-    # Physics dt = 5ms; 6 steps = 30ms delay, real-hardware communication scale.
-    # Implemented via ring buffer in albc_env.py (ported from hero_agent).
-    action_latency_range: tuple[int, int] = (0, 0)
-
 
 @configclass
 class HardDomainRandomizationCfg(DomainRandomizationCfg):
     """Aggressive DR for encoder training. Widens all ranges significantly.
 
-    Expanded 2026-04-21 (r14): r13_B achieved survival=100% + clean SS on all DR
-    levels, indicating policy capacity was under-utilized by previous ranges.
-    All spec-listed params widened 1.5-3x to stress beyond nominal robot limits.
-    Eval filters extreme tail (see spec for DR_SCALE rescaling strategy).
-
+    Expanded 2026-04-10: DORAEMON saturated all 15 parameters at Beta(1,1)=UNIFORM
+    in run 2026-04-09_16-41-45. All bounds widened by ~30-50% beyond prior limits.
     Physics stability constraints: added_mass/inertia ratio < 1.0 (init validation),
     post-DR per-axis clamp (0.95*I) ensures stability.
     """
 
     enable: bool = True
-    # -- Hydrodynamics --
-    added_mass_scale: tuple[float, float] = (0.3, 1.8)
-    linear_damping_scale: tuple[float, float] = (0.2, 2.2)
-    quadratic_damping_scale: tuple[float, float] = (0.2, 2.2)
-    volume_scale: tuple[float, float] = (0.6, 1.4)
-    # -- COB/COG --
+    added_mass_scale: tuple[float, float] = (0.5, 1.5)
+    linear_damping_scale: tuple[float, float] = (0.4, 1.7)
+    quadratic_damping_scale: tuple[float, float] = (0.4, 1.7)
+    volume_scale: tuple[float, float] = (0.75, 1.25)
     cob_offset_x: tuple[float, float] = (-0.02, 0.02)
     cob_offset_y: tuple[float, float] = (-0.02, 0.02)
     cob_offset_z: tuple[float, float] = (-0.04, 0.04)
     cog_offset_x: tuple[float, float] = (-0.02, 0.02)
     cog_offset_y: tuple[float, float] = (-0.02, 0.02)
     cog_offset_z: tuple[float, float] = (-0.04, 0.04)
-    # -- Inertia / Mass --
-    inertia_scale: tuple[float, float] = (0.3, 3.0)
-    body_mass_scale: tuple[float, float] = (0.5, 1.5)
-    water_density_range: tuple[float, float] = (970.0, 1050.0)
-    # -- Payload (radius kept at 0.08 per user decision) --
-    payload_mass_range: tuple[float, float] = (0.0, 5.0)
+    inertia_scale: tuple[float, float] = (0.4, 2.0)
+    body_mass_scale: tuple[float, float] = (0.75, 1.25)
+    payload_mass_range: tuple[float, float] = (0.0, 3.0)
+    # Reduced 2026-04-19 from 0.15 -> 0.08: outlier-env analysis of r9_tightrates
+    # (eval_dr hard) showed 3 kg payload at 0.15 m offset generates ~4.5 Nm
+    # gravitational torque, far exceeding roll TAM authority (4 x 50 N x 0.007 m
+    # = 1.4 Nm). Combinations in that regime are physically uncontrollable and
+    # dominated per-env SS_std (CV 2.18). 0.08 caps torque at ~2.4 Nm so roll
+    # can still stabilize within authority while keeping pitch/yaw challenge.
     payload_cog_offset_xy_radius: float = 0.08
     payload_cog_offset_z: tuple[float, float] = (-0.05, 0.0)
     # -- Joint Actuator --
-    joint_stiffness_range: tuple[float, float] = (20.0, 200.0)
-    joint_damping_range: tuple[float, float] = (0.1, 10.0)
-    yaw_damping_scale: tuple[float, float] = (0.2, 2.0)
-    joint_effort_limit_range: tuple[float, float] = (0.3, 1.0)
-    joint_static_friction_range: tuple[float, float] = (0.0, 0.1)
-    joint_viscous_friction_range: tuple[float, float] = (0.0, 0.5)
+    joint_stiffness_range: tuple[float, float] = (30.0, 150.0)
+    joint_damping_range: tuple[float, float] = (0.3, 7.0)
     # -- Thruster --
-    thrust_coefficient_scale: tuple[float, float] = (0.3, 1.5)
-    time_constant_scale: tuple[float, float] = (0.3, 2.0)
-    # -- Ocean current (parent (0,1) -> r14 widened to (0,2)) --
-    ocean_current_strength_range: tuple[float, float] = (0.0, 2.0)
-    # -- Action latency (new r14 DR, see albc_env.py port from hero_agent) --
-    action_latency_range: tuple[int, int] = (0, 6)
+    thrust_coefficient_scale: tuple[float, float] = (0.7, 1.3)
+    time_constant_scale: tuple[float, float] = (0.7, 1.3)
 
 
 # ==========================================================================
@@ -327,9 +311,7 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     buoy_hydrodynamics: HydrodynamicsCfg = HeroAgentBuoyHydrodynamicsCfg()
     ocean_current: OceanCurrentCfg = OceanCurrentCfg(
         max_velocity=(0.5, 0.5, 0.25, 0.0, 0.0, 0.0),
-        # r14: angular channels activated, linear widened 2x. Adds rotational current
-        # disturbance (torque DR). Previously zero-angular = purely translational.
-        noise_scale=(0.2, 0.2, 0.1, 0.05, 0.05, 0.05),
+        noise_scale=(0.1, 0.1, 0.05, 0.0, 0.0, 0.0),
     )
     thrusters: HeroAgentThrusterCfg | None = HeroAgentThrusterCfg()
 
@@ -371,11 +353,6 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     play_mode: bool = False
     """Play/eval mode: disable command resampling, fix all commands to zero (hovering)."""
 
-    play_init_attitude_noise_deg: float = 20.0
-    """Play mode only: uniform roll/pitch noise at reset (degrees). 0 disables (upright)."""
-    play_init_yaw_noise_deg: float = 180.0
-    """Play mode only: uniform yaw noise at reset (degrees). 180 = fully random heading."""
-
     reward: ALBCRewardCfg = ALBCRewardCfg(
         lin_vel=TrackingTermCfg(k=4.0, sigma=0.10, quad_ratio=1.0, tanh_coef=0.3, tanh_eps=0.10),
         yaw_vel=TrackingTermCfg(k=3.5, sigma=0.10, quad_ratio=1.0, tanh_coef=0.3, tanh_eps=0.10),
@@ -397,13 +374,13 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     """Probability that episode starts WITH payload (mass > 0)."""
     payload_no_toggle_prob: float = 0.2
     """Probability that payload stays constant (no mid-episode toggle)."""
-    # -- Ocean Current OU Drift (r14: enabled, doubled noise) --
+    # -- Ocean Current OU Drift --
     ou_theta: float = 0.15
     """OU mean reversion rate (1/s). 0.15 gives ~6.7s time constant."""
-    ou_sigma: float = 0.10
-    """OU noise scale (m/s per sqrt(s)). 0.10 gives steady-state std ~0.18 m/s (r14: 2x)."""
-    ou_enable: bool = True
-    """Enable OU process drift on ocean current (r14: True for mid-episode time-variance)."""
+    ou_sigma: float = 0.05
+    """OU noise scale (m/s per sqrt(s)). 0.05 gives steady-state std ~0.091 m/s."""
+    ou_enable: bool = False
+    """Enable OU process drift on ocean current (False = fixed per episode)."""
 
     # ==========================================================================
     # Termination
@@ -416,7 +393,7 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # Domain Randomization
     # ==========================================================================
     randomization: HardDomainRandomizationCfg = HardDomainRandomizationCfg()
-    doraemon: DoraemonCfg = DoraemonCfg(enable=True, kl_ub=0.06, performance_lb=90.0, step_interval=500)
+    doraemon: DoraemonCfg = DoraemonCfg(enable=True, kl_ub=0.06, performance_lb=90.0, step_interval=250)
 
     # ==========================================================================
     # Payload

@@ -37,8 +37,9 @@ except ImportError:
 def configure_env_for_student(env) -> None:
     """Disable DORAEMON and force HardDR on the env before learning starts.
 
-    Per spec section 4: student training uses r14 aggressive HardDR uniformly
-    and disables DORAEMON's Beta curriculum.
+    Student training uses r13_A-era HardDomainRandomizationCfg uniformly and
+    disables DORAEMON's Beta curriculum so the teacher is never queried outside
+    the DR region it was trained on.
     """
     env_cfg = env.unwrapped.cfg
     doraemon_cfg = getattr(env_cfg, "doraemon", None)

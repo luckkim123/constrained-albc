@@ -41,10 +41,21 @@ class StudentInLoopPolicy:
         self.num_envs = num_envs
 
         self.teacher = FrozenTeacher(cfg, device=device)
+        # Auto-infer GRU hidden / head_hidden from checkpoint to avoid eval cfg
+        # mismatch when students are trained with non-default architecture.
+        blob = torch.load(student_ckpt, map_location=device, weights_only=False)
+        sd = blob["student_state_dict"]
+        if cfg.encoder_type == "gru":
+            if "gru.weight_ih_l0" in sd:
+                cfg.gru_hidden = sd["gru.weight_ih_l0"].shape[0] // 3
+            # head.0.weight shape: (head_hidden, gru_hidden) for deep head,
+            # (latent_dim, gru_hidden) for shallow head.
+            if "head.0.weight" in sd:
+                out_dim = sd["head.0.weight"].shape[0]
+                cfg.gru_head_hidden = out_dim if out_dim != cfg.latent_dim else 0
         self.student = make_student_encoder(cfg).to(device)
         # Load student weights
-        blob = torch.load(student_ckpt, map_location=device, weights_only=False)
-        self.student.load_state_dict(blob["student_state_dict"])
+        self.student.load_state_dict(sd)
         self.student.eval()
 
         # GRU-only: student was trained on obs normalized by teacher's
