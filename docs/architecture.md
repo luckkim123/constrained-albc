@@ -1,5 +1,45 @@
 # constrained-albc Architecture
 
+## Overview
+
+### Three-layer dependency
+
+```
+isaaclab          (GPU sim core: Isaac Sim 5.1.0, RSL-RL fork, forked isaaclab_rl)
+    |
+    v
+marinelab         (public overlay: BlueROV2/Hero Agent assets, marine physics)
+    |
+    v
+constrained-albc  (this repo, private: constrained RL envs, student distillation, analysis)
+```
+
+Each layer is installed as an editable package into Isaac Lab's bundled Python via
+`./isaaclab.sh -p -m pip install -e <path>`. See `docs/installation.md` for the full
+sequence.
+
+### Package layout
+
+| Subdirectory | Contents |
+|---|---|
+| `constrained_albc/envs/` | RL environments: `constrained_full_albc` (TRPO+IPO+encoder, main) and `constrained_full_albc_tdc` (TDC controller variant) |
+| `constrained_albc/analysis/` | Evaluation and training-analysis tooling: `eval_dr` (4 DR modes), `eval_student`, `analyze`, `compare`, `monitor`, `encoder_tools`, shared `common` and `cli_args` |
+| `scripts/` | Student-distillation entry point (`train_student.py`) and launcher shell scripts |
+| `tests/` | Unit tests (TDC controller; Isaac Sim not required) |
+
+### Registered task IDs
+
+| Task ID | Description |
+|---|---|
+| `Isaac-FullDOF-TRPO-v0` | **Main** — ConstraintTRPO + IPO + asymmetric encoder, DORAEMON DR |
+| `Isaac-FullDOF-NoEncoder-v0` | TRPO + IPO, no encoder (ablation) |
+| `Isaac-FullDOF-PPO-v0` | Unconstrained PPO baseline |
+| `Isaac-FullDOF-TRPO-NoIPO-v0` | TRPO without IPO barrier (ablation) |
+| `Isaac-FullDOF-PPO-Enc-v0` | PPO with asymmetric encoder |
+| `Isaac-FullDOF-TDC-v0` | TDC controller variant |
+
+---
+
 ## RSL-RL cfg dependency
 
 constrained-albc depends on a **forked RSL-RL stack** that ships with Isaac Lab in
