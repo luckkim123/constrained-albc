@@ -71,8 +71,8 @@ app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 
 """Rest follows."""
-# Reuse eval_dr_fulldof sweep machinery
-import eval_dr_fulldof as edf  # type: ignore[import-not-found]
+# Reuse eval_dr sweep machinery (static-mode helpers live at module top)
+import eval_dr as edf  # type: ignore[import-not-found]
 import gymnasium as gym
 import numpy as np
 import torch
