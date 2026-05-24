@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "constrained-albc"
+version = "0.1.0"
+description = "Constrained full-DOF ALBC research (TRPO+IPO, TDC, student distillation) for Isaac Lab."
+requires-python = ">=3.10"
+dependencies = ["marinelab", "gymnasium", "torch", "numpy"]
+
+[tool.setuptools.packages.find]
+include = ["constrained_albc*"]
+
+[project.entry-points."isaaclab.extensions"]
+constrained_albc = "constrained_albc"
