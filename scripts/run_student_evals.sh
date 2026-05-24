@@ -3,6 +3,9 @@
 # Called after TCN eval_dr completes.
 set -e
 
+# Uses isaaclab's runtime (./isaaclab.sh) but the eval scripts now live in the
+# constrained-albc repo (post 2026-05-25 repo 3-split).
+ALBC=/workspace/constrained-albc
 cd /workspace/isaaclab
 TEACHER=logs/rsl_rl/fulldof_albc/2026-04-20_20-08-38_r13_A/model_4999.pt
 TCN_CKPT=logs/rsl_rl/student_policy/2026-04-21_04-33-51_student_tcn/models/student_999.pt
@@ -20,17 +23,17 @@ run() {
 }
 
 # 1. TCN switching (zero-cmd DR re-sample)
-run eval_tcn_switching ./isaaclab.sh -p scripts/analysis/eval_dr.py segmented \
+run eval_tcn_switching ./isaaclab.sh -p "$ALBC/constrained_albc/analysis/eval_dr.py" segmented \
     --teacher_ckpt "$TEACHER" --student_ckpt "$TCN_CKPT" \
     --encoder_type tcn --num_envs 64 --headless
 
 # 2. GRU command-tracking DR sweep
-run eval_gru_dr ./isaaclab.sh -p scripts/analysis/eval_student.py dr \
+run eval_gru_dr ./isaaclab.sh -p "$ALBC/constrained_albc/analysis/eval_student.py" dr \
     --teacher_ckpt "$TEACHER" --student_ckpt "$GRU_CKPT" \
     --encoder_type gru --num_envs 64 --headless
 
 # 3. GRU switching
-run eval_gru_switching ./isaaclab.sh -p scripts/analysis/eval_dr.py segmented \
+run eval_gru_switching ./isaaclab.sh -p "$ALBC/constrained_albc/analysis/eval_dr.py" segmented \
     --teacher_ckpt "$TEACHER" --student_ckpt "$GRU_CKPT" \
     --encoder_type gru --num_envs 64 --headless
 

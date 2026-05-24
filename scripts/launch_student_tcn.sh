@@ -3,6 +3,9 @@
 # Sequential with launch_student_gru.sh (runs AFTER TCN completes).
 set -e
 
+# Uses isaaclab's runtime (./isaaclab.sh) but the train_student.py script now lives
+# in the constrained-albc repo (post 2026-05-25 repo 3-split).
+ALBC=/workspace/constrained-albc
 cd /workspace/isaaclab
 
 RUN_NAME="student_tcn"
@@ -11,7 +14,7 @@ STDOUT_LOG="/workspace/isaaclab/logs/archive/launch_scripts/${RUN_NAME}_${STAMP}
 mkdir -p "$(dirname "$STDOUT_LOG")"
 
 echo "[${RUN_NAME} $(date)] START" | tee -a "$STDOUT_LOG"
-CUDA_VISIBLE_DEVICES=1 ./isaaclab.sh -p scripts/reinforcement_learning/rsl_rl/train_student.py \
+CUDA_VISIBLE_DEVICES=1 ./isaaclab.sh -p "$ALBC/scripts/train_student.py" \
     --encoder_type tcn \
     --task Isaac-FullDOF-TRPO-v0 \
     --teacher_run_dir logs/rsl_rl/fulldof_albc/2026-04-20_20-08-38_r13_A \

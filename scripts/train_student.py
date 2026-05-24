@@ -5,8 +5,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 """Train a student policy (TCN or GRU) via behavior cloning from a teacher checkpoint.
 
-Usage:
-    ./isaaclab.sh -p scripts/reinforcement_learning/rsl_rl/train_student.py \
+Usage (run via isaaclab's runtime; this script lives in the constrained-albc repo):
+    cd /workspace/isaaclab && ./isaaclab.sh -p /workspace/constrained-albc/scripts/train_student.py \
         --encoder_type tcn \
         --teacher_run_dir logs/rsl_rl/fulldof_albc/2026-04-20_20-08-38_r13_A \
         --teacher_checkpoint model_4999.pt \
