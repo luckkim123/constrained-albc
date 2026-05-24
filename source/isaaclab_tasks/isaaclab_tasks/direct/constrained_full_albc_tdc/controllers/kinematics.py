@@ -165,64 +165,55 @@ class ALBCKinematics:
         self,
         target_position: torch.Tensor,
         current_joint_angles: torch.Tensor,
-        lambda_dls: float = 0.15,
-        num_iterations: int = 1,
-        learning_rate: float = 1.0,
     ) -> torch.Tensor:
-        """Compute joint angle update from desired EE position using iterative DLS IK.
+        """Compute joint angles from desired EE position via closed-form 2-link IK.
 
-        Uses Jacobian DLS (Damped Least Squares) pseudo-inverse with
-        Yoshikawa-style adaptive damping. The DLS solver is dimension-independent
-        via torch.linalg.solve, so this method works for any arm geometry
-        without modification.
+        Analytic solution for 2-link planar arm (l1, l2). Single-shot O(1)
+        computation -- deployment-faithful equivalent of real-robot TDC without
+        the iterative DLS / realtime-budget tradeoffs. Elbow branch is selected
+        from the sign of the current g2 to preserve continuity across steps.
 
-        Iterative mode (num_iterations > 1, learning_rate < 1.0):
-            Recomputes FK, Jacobian, and adaptive lambda each iteration,
-            matching the C++ reference (learning_rate=0.02, 500-3000 iters).
-            Converges accurately even for large displacements where the single-step
-            linear Jacobian approximation would overshoot.
-
-        DLS formula (per iteration):
-            dp = p_target - FK(q)
-            delta_q = J^T (J J^T + lambda^2 I)^{-1} dp
-            q = q + learning_rate * delta_q
-
-        Adaptive lambda (Yoshikawa):
-            w = det(JJ^T)^(1/(2m))  (dimension-normalized manipulability)
-            lambda = lambda_base * clamp(1 - w/w_max, min=0)
-            Near singularity (w~0): lambda -> lambda_base (max damping)
-            Far from singularity (w~w_max): lambda -> 0 (full accuracy)
+        Formulas:
+            r^2 = x^2 + y^2 (clamped to workspace (|l1-l2|, l1+l2))
+            c2 = (r^2 - l1^2 - l2^2) / (2 l1 l2)
+            s2 = sign(current_g2) * sqrt(1 - c2^2)
+            g2 = atan2(s2, c2)
+            g1 = atan2(y, x) - atan2(l2 s2, l1 + l2 c2)
 
         Args:
-            target_position: Desired EE position in meters.
-                Shape: (num_envs, task_dim).
-            current_joint_angles: Current joint angles in radians.
-                Shape: (num_envs, num_joints).
-            lambda_dls: Base DLS damping factor. Larger = more damping near
-                singularity. Default 0.15 (from C++ reference).
-            num_iterations: Number of IK iterations. 1 = single-step (original
-                behavior). Higher values improve accuracy for large displacements.
-            learning_rate: Step size per iteration. 1.0 = full step (original
-                behavior). Smaller values (e.g. 0.02) with more iterations give
-                smoother convergence matching the C++ reference.
+            target_position: Desired EE position in meters. Shape: (N, 2).
+            current_joint_angles: Current joint angles in radians. Shape: (N, 2).
+                Only g2 sign is consulted (elbow continuity).
 
         Returns:
-            New joint angles in radians. Shape: (num_envs, num_joints).
+            Joint angles in radians. Shape: (N, 2).
         """
-        q = current_joint_angles.clone()
-        for _ in range(num_iterations):
-            p_current = self.forward(q)
-            dp = target_position - p_current
+        x = target_position[:, 0]
+        y = target_position[:, 1]
 
-            J = self.jacobian(q)
+        # Radial clamp to the reachable annulus (inner = |l1-l2|, outer = l1+l2).
+        # Slight epsilon inside boundaries avoids degenerate Jacobian at the limits.
+        eps = 1e-6
+        r = torch.sqrt(x * x + y * y)
+        r_max = self.l1 + self.l2 - eps
+        r_min = abs(self.l1 - self.l2) + eps
+        r_clamped = torch.clamp(r, min=r_min, max=r_max)
+        scale = r_clamped / torch.clamp(r, min=eps)
+        x = x * scale
+        y = y * scale
 
-            # Yoshikawa-style adaptive lambda (recomputed each iteration)
-            w = self.manipulability(J)
-            lam2 = (lambda_dls * torch.clamp(1.0 - w / self._w_max, min=0.0)) ** 2
+        r2 = x * x + y * y
+        c2 = (r2 - self.l1 * self.l1 - self.l2 * self.l2) / (2.0 * self.l1 * self.l2)
+        c2 = torch.clamp(c2, -1.0 + eps, 1.0 - eps)
 
-            dq = self._dls_solve(J, dp, lam2)
-            q = q + learning_rate * dq
-        return q
+        # Elbow continuity: preserve sign of current g2 (default +1 at g2 == 0).
+        sign_g2 = torch.where(current_joint_angles[:, 1] >= 0.0, 1.0, -1.0)
+        s2 = sign_g2 * torch.sqrt(1.0 - c2 * c2)
+
+        g2 = torch.atan2(s2, c2)
+        g1 = torch.atan2(y, x) - torch.atan2(self.l2 * s2, self.l1 + self.l2 * c2)
+
+        return torch.stack([g1, g2], dim=-1)
 
     def _dls_solve(
         self,

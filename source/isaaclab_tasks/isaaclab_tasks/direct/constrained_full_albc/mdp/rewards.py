@@ -75,6 +75,13 @@ class ALBCRewardCfg:
     k_thr: float = -0.35  # thruster energy penalty
     k_s: float = -0.1  # action smoothness penalty
     termination_penalty: float = 0.0
+    # EMA bias penalty (r11_emabias): penalize sustained per-env tracking offset that
+    # per-step reward cannot see. bias_ema = a * bias_ema + (1-a) * err per axis.
+    # Default k_bias=0 disables; r11_emabias overrides to nonzero.
+    k_bias: float = 0.0
+    bias_ema_alpha: float = 0.99  # effective window ~100 steps = 2 s at 50 Hz
+    # Per-axis weights for bias penalty so roll (weak authority) gets stronger bias signal.
+    bias_weights: tuple[float, float, float, float, float, float] = (1.5, 1.0, 1.0, 1.0, 1.0, 1.0)
 
 
 # --- Reward Functions ---
@@ -146,13 +153,25 @@ def action_smoothness(env: ALBCEnv) -> torch.Tensor:
     return da.pow(2).mean(dim=-1) + d2a.pow(2).mean(dim=-1)
 
 
+def bias_ema_penalty(env: ALBCEnv) -> torch.Tensor:
+    """r_bias = sum_i w_i * bias_ema_i^2. Sustained-offset penalty.
+
+    Uses env._bias_ema (6D, ungated EMA of tracking errors) updated each step.
+    Squared form so reward gradient grows with offset; per-axis weights let
+    roll (weak TAM authority) receive a stronger anti-bias signal than yaw.
+    """
+    cfg = env.cfg.reward
+    w = torch.tensor(cfg.bias_weights, device=env._bias_ema.device, dtype=env._bias_ema.dtype)
+    return (env._bias_ema.pow(2) * w).sum(dim=-1)
+
+
 # --- Reward Manager ---
 
 
 class RewardManager:
     """Computes 6-term tracking reward with dt-scaling and episode tracking."""
 
-    _NAMES = ["lin_vel", "att_rp", "yaw_vel", "torque", "thruster", "smoothness"]
+    _NAMES = ["lin_vel", "att_rp", "yaw_vel", "torque", "thruster", "smoothness", "bias"]
 
     def __init__(self, cfg: ALBCRewardCfg, num_envs: int, device: str) -> None:
         self._cfg = cfg
@@ -171,6 +190,7 @@ class RewardManager:
             ("torque", cfg.k_tau, joint_torque(robot, env)),
             ("thruster", cfg.k_thr, thruster_energy(env)),
             ("smoothness", cfg.k_s, action_smoothness(env)),
+            ("bias", cfg.k_bias, bias_ema_penalty(env)),
         ]
         for name, weight, value in terms:
             scaled = value * weight * dt

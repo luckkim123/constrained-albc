@@ -38,21 +38,23 @@ class ThrusterPDCfg:
     overshoot from Kd damping.
     """
 
-    kp_lin: float = 100.0
+    kp_lin: float = 120.0
     """P gain for linear velocity tracking (Fx, Fy, Fz; body frame).
 
-    SS error formula: v_err = F_drag / kp_lin. With nominal quadratic drag
-    ~3 N at 0.25 m/s, kp_lin=100 yields ~0.03 m/s residual.
+    Tuned 2026-04-22 from 100 -> 120 (+20%) to reduce SS error under OOD
+    payload/drag. SS error formula: v_err = F_drag / kp_lin.
     """
 
-    kp_att: float = 20.0
-    """P gain for roll/pitch attitude tracking (Tx, Ty)."""
+    kp_att: float = 24.0
+    """P gain for roll/pitch attitude tracking (Tx, Ty). Tuned 20->24 (+20%)
+    to maintain bandwidth under OOD inertia scaling (2.3x)."""
 
-    kd_att: float = 5.0
-    """D gain on body angular velocity for roll/pitch (rate damping)."""
+    kd_att: float = 6.0
+    """D gain on body angular velocity for roll/pitch (rate damping).
+    Tuned 5->6 to keep zeta near original design point after kp bump."""
 
-    kp_yaw: float = 25.0
-    """P gain for yaw rate tracking (Tz)."""
+    kp_yaw: float = 30.0
+    """P gain for yaw rate tracking (Tz). Tuned 25->30 (+20%)."""
 
     thrust_coefficient: float = 40.0
     """Per-thruster force magnitude at a normalized command of 1.0 (Newtons).

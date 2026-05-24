@@ -18,7 +18,8 @@ import torch
 import isaaclab.sim as sim_utils
 from isaaclab.assets import Articulation
 from isaaclab.envs import DirectRLEnv
-from isaaclab.utils.math import euler_xyz_from_quat, quat_apply_inverse
+from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
+from isaaclab.utils.math import euler_xyz_from_quat, quat_apply, quat_apply_inverse
 
 from isaaclab_tasks.models import HydrodynamicsModel
 
@@ -103,6 +104,7 @@ class ALBCEnv(DirectRLEnv):
         self._init_state_buffers()
         self._init_thrusters()
         self._init_doraemon()
+        self._init_payload_viz()
 
         # DR sampler shared between _reset_physics() and _reset_task_and_state()
         self._current_dr_sampler: DRSampler | None = None
@@ -458,6 +460,8 @@ class ALBCEnv(DirectRLEnv):
         if self._thruster is not None:
             self._thruster.apply_dynamics(self._actions[:, 2:], self.physics_dt)
 
+        self._update_payload_viz()
+
     def _apply_joint_pd_action(self, actions: torch.Tensor) -> None:
         """Accumulate delta joint targets: q_des += delta_scale * a_t.
 
@@ -745,6 +749,113 @@ class ALBCEnv(DirectRLEnv):
         effective_offset = self._payload_attachment_offset + self._payload_cog_offset
         payload_torque_b = torch.cross(effective_offset, payload_weight_b, dim=-1)
         return payload_weight_b, payload_torque_b
+
+    def _init_payload_viz(self) -> None:
+        """Create markers for payload CoG sphere and attachment->CoG bar. No-op unless
+        cfg.enable_payload_viz is True."""
+        self._payload_viz_markers: VisualizationMarkers | None = None
+        if not getattr(self.cfg, "enable_payload_viz", False):
+            return
+        cfg = VisualizationMarkersCfg(
+            prim_path="/Visuals/PayloadCoG",
+            markers={
+                "sphere": sim_utils.SphereCfg(
+                    radius=1.0,
+                    visual_material=sim_utils.PreviewSurfaceCfg(
+                        diffuse_color=(0.9, 0.1, 0.1), opacity=0.5
+                    ),
+                ),
+                "bar": sim_utils.CylinderCfg(
+                    radius=1.0,
+                    height=1.0,
+                    axis="Z",
+                    visual_material=sim_utils.PreviewSurfaceCfg(
+                        diffuse_color=(0.7, 0.7, 0.7), opacity=0.6
+                    ),
+                ),
+            },
+        )
+        self._payload_viz_markers = VisualizationMarkers(cfg)
+
+    def _update_payload_viz(self) -> None:
+        """Refresh marker translations/orientations/scales. No-op when disabled."""
+        if self._payload_viz_markers is None:
+            return
+        gripper_idx = self._gripper_body_id[0]
+        gripper_pos_w = self._robot.data.body_pos_w[:, gripper_idx, :]
+        gripper_quat_w = self._robot.data.body_quat_w[:, gripper_idx, :]
+
+        attach_w = gripper_pos_w + quat_apply(gripper_quat_w, self._payload_attachment_offset)
+        cog_offset_w = quat_apply(gripper_quat_w, self._payload_cog_offset)
+        cog_w = attach_w + cog_offset_w
+
+        cfg = self.cfg
+        m = self._payload_mass.clamp(min=0.0)
+        mass_frac = (m / max(cfg.payload_viz_mass_ref, 1e-6)).clamp(0.0, 1.0)
+        sphere_r = cfg.payload_viz_sphere_r_min + (
+            cfg.payload_viz_sphere_r_max - cfg.payload_viz_sphere_r_min
+        ) * mass_frac
+        visible = m >= cfg.payload_viz_min_mass
+        sphere_scale = torch.where(
+            visible.unsqueeze(-1),
+            sphere_r.unsqueeze(-1).expand(-1, 3),
+            torch.zeros(self.num_envs, 3, device=self.device),
+        )
+
+        bar_len = cog_offset_w.norm(dim=-1)
+        bar_visible = visible & (bar_len >= cfg.payload_viz_min_bar_len)
+        bar_r = torch.full((self.num_envs,), cfg.payload_viz_bar_radius, device=self.device)
+        bar_scale = torch.where(
+            bar_visible.unsqueeze(-1),
+            torch.stack([bar_r, bar_r, bar_len], dim=-1),
+            torch.zeros(self.num_envs, 3, device=self.device),
+        )
+        bar_center = attach_w + 0.5 * cog_offset_w
+        bar_quat = self._quat_align_z_to(cog_offset_w)
+
+        identity_quat = torch.zeros(self.num_envs, 4, device=self.device)
+        identity_quat[:, 0] = 1.0
+
+        translations = torch.cat([cog_w, bar_center], dim=0)
+        orientations = torch.cat([identity_quat, bar_quat], dim=0)
+        scales = torch.cat([sphere_scale, bar_scale], dim=0)
+        marker_indices = torch.cat(
+            [
+                torch.zeros(self.num_envs, dtype=torch.long, device=self.device),
+                torch.ones(self.num_envs, dtype=torch.long, device=self.device),
+            ],
+            dim=0,
+        )
+        self._payload_viz_markers.visualize(
+            translations=translations,
+            orientations=orientations,
+            scales=scales,
+            marker_indices=marker_indices,
+        )
+
+    def _quat_align_z_to(self, v: torch.Tensor) -> torch.Tensor:
+        """Quaternion (w,x,y,z) rotating +Z to direction of v. Identity when |v|~0."""
+        eps = 1e-8
+        norm = v.norm(dim=-1, keepdim=True)
+        v_unit = v / norm.clamp(min=eps)
+        z = torch.zeros_like(v)
+        z[:, 2] = 1.0
+        dot = (z * v_unit).sum(-1).clamp(-1.0, 1.0)
+        axis = torch.cross(z, v_unit, dim=-1)
+        axis_norm = axis.norm(dim=-1, keepdim=True)
+        fallback_axis = torch.zeros_like(v)
+        fallback_axis[:, 0] = 1.0
+        axis_unit = torch.where(axis_norm > eps, axis / axis_norm.clamp(min=eps), fallback_axis)
+        angle = torch.acos(dot)
+        half = 0.5 * angle
+        w = torch.cos(half).unsqueeze(-1)
+        xyz = axis_unit * torch.sin(half).unsqueeze(-1)
+        quat = torch.cat([w, xyz], dim=-1)
+        small = (norm.squeeze(-1) < eps)
+        identity = torch.zeros_like(quat)
+        identity[:, 0] = 1.0
+        quat = torch.where(small.unsqueeze(-1), identity, quat)
+        return quat
 
     def _get_observations(self) -> dict:
         """Compute unified observation o_t (87D) and privileged p_t (24D).

@@ -402,6 +402,25 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     payload_attachment_offset: tuple[float, float, float] = (0.0, 0.0, -0.05)
 
     # ==========================================================================
+    # Payload Visualization (play/debug only; ignored during training)
+    # ==========================================================================
+    enable_payload_viz: bool = False
+    """Render a translucent red sphere at payload CoG and a grey cylinder bar from
+    attachment to CoG. Gated so training runs are unaffected."""
+    payload_viz_min_mass: float = 0.05
+    """Hide markers when |payload_mass| < this value (kg)."""
+    payload_viz_sphere_r_min: float = 0.02
+    """Sphere radius (m) at payload_mass = payload_viz_min_mass."""
+    payload_viz_sphere_r_max: float = 0.06
+    """Sphere radius (m) at payload_mass = payload_viz_mass_ref."""
+    payload_viz_mass_ref: float = 3.0
+    """Reference mass (kg) mapped to sphere_r_max (HardDR upper bound)."""
+    payload_viz_bar_radius: float = 0.005
+    """Cylinder radius (m) for attachment->CoG bar."""
+    payload_viz_min_bar_len: float = 0.001
+    """Hide bar when |cog_offset| < this value (m)."""
+
+    # ==========================================================================
     # Observation Noise (87D)
     # ==========================================================================
     observation_noise_model: NoiseModelWithAdditiveBiasCfg = NoiseModelWithAdditiveBiasCfg(

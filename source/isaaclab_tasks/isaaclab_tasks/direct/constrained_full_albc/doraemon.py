@@ -82,8 +82,18 @@ _PARAM_DEFS: list[tuple[str, str, float, float]] = [
     ("inertia_scale", "inertia_scale", 0.75, 1.3),
     ("body_mass_scale", "body_mass_scale", 0.9, 1.1),
     ("payload_cog_offset_z", "payload_cog_offset_z", -0.03, 0.0),
+    # r13: ocean current strength managed by DORAEMON.
+    # Nominal=0 (_NOMINAL_OVERRIDES below) so curriculum starts with no current
+    # and expands to full range (up to cfg.ocean_current.max_velocity) as policy
+    # learns simpler variants.
+    ("ocean_current_strength", "ocean_current_strength_range", 0.0, 1.0),
 ]
 NDIMS = len(_PARAM_DEFS)
+
+# Per-parameter nominal overrides. Defaults to midpoint of [lo, hi] when absent.
+_NOMINAL_OVERRIDES: dict[str, float] = {
+    "ocean_current_strength": 0.0,
+}
 
 
 def build_param_specs(dr_cfg) -> list[ParamSpec]:
@@ -96,7 +106,11 @@ def build_param_specs(dr_cfg) -> list[ParamSpec]:
     specs: list[ParamSpec] = []
     for param_name, field_name, _, _ in _PARAM_DEFS:
         lo, hi = getattr(dr_cfg, field_name)
-        specs.append(ParamSpec(param_name, lo, hi, (lo + hi) / 2.0))
+        if param_name in _NOMINAL_OVERRIDES:
+            nominal = _NOMINAL_OVERRIDES[param_name]
+        else:
+            nominal = (lo + hi) / 2.0
+        specs.append(ParamSpec(param_name, lo, hi, nominal))
     return specs
 
 

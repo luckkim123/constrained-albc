@@ -286,10 +286,24 @@ def randomize_hydrodynamics(
 def randomize_ocean_current(
     env: ALBCEnv,
     env_ids: torch.Tensor | None,
+    sampled: dict[str, torch.Tensor] | None = None,
 ) -> None:
-    """Randomize ocean current (same velocity for main body and buoy)."""
+    """Randomize ocean current (same velocity for main body and buoy).
+
+    Strength resolution order (per-env scale applied to sampled velocity):
+    1. ``sampled['ocean_current_strength']`` (DORAEMON-managed, training-time)
+    2. Uniform sample from ``cfg.randomization.ocean_current_strength_range``
+       (eval-time: eval_dr_fulldof interpolates this range per DR level)
+    3. None (legacy: full range sampled without scaling)
+    """
     env_ids = _ensure_env_ids(env, env_ids)
-    env._hydro.set_ocean_current(env_ids)
+    strength = sampled.get("ocean_current_strength") if sampled else None
+    if strength is None:
+        rng = getattr(env.cfg.randomization, "ocean_current_strength_range", None)
+        if rng is not None:
+            lo, hi = rng
+            strength = torch.rand(len(env_ids), device=env.device) * (hi - lo) + lo
+    env._hydro.set_ocean_current(env_ids, strength=strength)
 
     # Share current with buoy (same water volume)
     if env._buoy_hydro is not None:
@@ -303,16 +317,46 @@ def reset_robot_pose_default(
     env: ALBCEnv,
     env_ids: torch.Tensor | None,
 ) -> None:
-    """Reset robot to default pose: env_origin, upright, zero velocity."""
+    """Reset robot to default pose: env_origin, upright, zero velocity.
+
+    In play_mode, if cfg.play_init_attitude_noise_deg or play_init_yaw_noise_deg
+    is nonzero, orientation is sampled uniformly instead of identity.
+    """
     env_ids = _ensure_env_ids(env, env_ids)
 
     default_root_state = env._robot.data.default_root_state[env_ids].clone()
     # Position = env_origin (no offset)
     default_root_state[:, :3] = env.scene.env_origins[env_ids]
-    # Orientation = identity (upright)
+    # Orientation = identity (upright) by default
     default_root_state[:, 3:7] = torch.tensor([1.0, 0.0, 0.0, 0.0], device=env.device)
     # Velocity = zero
     default_root_state[:, 7:] = 0.0
+
+    # Play-mode: sample initial attitude from uniform bounds (recovery-from-tilt demo)
+    if getattr(env.cfg, "play_mode", False):
+        rp_deg = float(getattr(env.cfg, "play_init_attitude_noise_deg", 0.0))
+        yaw_deg = float(getattr(env.cfg, "play_init_yaw_noise_deg", 0.0))
+        if rp_deg > 0.0 or yaw_deg > 0.0:
+            n = len(env_ids)
+            import math
+
+            rp_rad = math.radians(rp_deg)
+            yaw_rad = math.radians(yaw_deg)
+            roll = torch.empty(n, device=env.device).uniform_(-rp_rad, rp_rad)
+            pitch = torch.empty(n, device=env.device).uniform_(-rp_rad, rp_rad)
+            yaw = torch.empty(n, device=env.device).uniform_(-yaw_rad, yaw_rad)
+            # ZYX euler -> quaternion (w, x, y, z)
+            cr, sr = torch.cos(roll / 2), torch.sin(roll / 2)
+            cp, sp = torch.cos(pitch / 2), torch.sin(pitch / 2)
+            cy, sy = torch.cos(yaw / 2), torch.sin(yaw / 2)
+            qw = cr * cp * cy + sr * sp * sy
+            qx = sr * cp * cy - cr * sp * sy
+            qy = cr * sp * cy + sr * cp * sy
+            qz = cr * cp * sy - sr * sp * cy
+            default_root_state[:, 3] = qw
+            default_root_state[:, 4] = qx
+            default_root_state[:, 5] = qy
+            default_root_state[:, 6] = qz
 
     env._robot.write_root_pose_to_sim(default_root_state[:, :7], env_ids)
     env._robot.write_root_velocity_to_sim(default_root_state[:, 7:], env_ids)

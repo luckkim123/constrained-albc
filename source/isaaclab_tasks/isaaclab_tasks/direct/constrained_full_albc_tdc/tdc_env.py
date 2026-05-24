@@ -129,13 +129,9 @@ class FullDOFTDCEnv(ALBCEnv):
         # the 8D action lets the parent's delta integration reproduce the
         # rate-limited absolute target exactly.
         current_joints = self._joint_pos_targets.clone()
-        tdc_cfg = self.cfg.tdc_controller
         joint_target = self._kinematics.inverse(
             target_position=p_ee_desired,
             current_joint_angles=current_joints,
-            lambda_dls=tdc_cfg.ik_dls_lambda,
-            num_iterations=tdc_cfg.ik_num_iterations,
-            learning_rate=tdc_cfg.ik_learning_rate,
         )
 
         # Rate-limit to the TDC velocity budget, then feed the anti-windup FK back.

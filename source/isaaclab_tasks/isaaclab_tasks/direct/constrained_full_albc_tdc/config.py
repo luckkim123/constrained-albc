@@ -32,15 +32,7 @@ class FullDOFTDCEnvCfg(ALBCEnvCfg):
     parent action pipeline.
     """
 
-    tdc_controller: TDCControllerCfg = TDCControllerCfg(
-        # Single-step DLS IK for fast eval (overrides the C++ reference's
-        # 100-iteration accurate mode used by hero_agent). Single-step is the
-        # ALBCKinematics function default and accurate enough for the small
-        # delta-per-step that the rate limiter (max_joint_velocity * step_dt
-        # = 0.05 rad) lets through.
-        ik_num_iterations=1,
-        ik_learning_rate=1.0,
-    )
+    tdc_controller: TDCControllerCfg = TDCControllerCfg()
     """Arm TDC controller for roll/pitch attitude stabilization.
 
     Other parameters inherit from the hero_agent reference implementation

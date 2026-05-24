@@ -44,9 +44,9 @@ class TDCControllerCfg:
     # Design inertia [roll, pitch] in kg*m^2
     m_hat: tuple[float, float] = (0.15, 0.16)
 
-    # PD gains
-    kp: float = 40.0  # omega_n = sqrt(40/0.15) = 16.3 rad/s
-    kd: float = 12.0  # zeta = 12/(2*sqrt(40*0.15)) = 2.45 (overdamped)
+    # PD gains (tuned 2026-04-22 for OOD robustness: +20% kp, scaled kd)
+    kp: float = 48.0  # omega_n = sqrt(48/0.15) = 17.9 rad/s (was 40, +20%)
+    kd: float = 14.0  # zeta = 14/(2*sqrt(48*0.15)) = 2.61 (overdamped, was 2.45)
 
     # Physical geometry
     h: float = 0.180  # CoG-to-ABPC vertical offset (m), CoG at -0.05m
@@ -60,13 +60,9 @@ class TDCControllerCfg:
     # EE offset at zero error (avoids origin singularity)
     base_position: tuple[float, float] = (0.002, 0.002)
 
-    # IK DLS damping (Yoshikawa-style adaptive)
-    ik_dls_lambda: float = 0.15
-
-    # Iterative IK: C++ reference uses learning_rate=0.02 with 500-3000 iterations.
-    # num_iterations=1, learning_rate=1.0 reverts to single-step behavior.
-    ik_num_iterations: int = 100
-    ik_learning_rate: float = 0.02
+    # IK: closed-form 2-link planar solver (O(1), deployment-faithful).
+    # Iterative DLS removed 2026-04-22: realtime-budget fairness requires non-iterative
+    # IK, and the 2-link arm has an exact analytic solution.
 
     # Joint rate limiting (rad/s)
     max_joint_velocity: float = 2.5
