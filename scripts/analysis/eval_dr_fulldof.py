@@ -60,6 +60,46 @@ parser.add_argument(
          "Used to evaluate all ablation variants on the r13_A baseline's learned DR "
          "distribution (common test distribution). Overrides --doraemon-dr auto-load.",
 )
+parser.add_argument(
+    "--ood-scale",
+    type=float,
+    default=None,
+    help="Run OOD eval at this scale factor (e.g. 2.0 = 2x hard DR). Skips the "
+         "usual none/soft/medium/hard loop and runs ONLY one level at this scale. "
+         "Extrapolates DR bounds beyond training distribution.",
+)
+parser.add_argument(
+    "--deterministic-dr",
+    action="store_true",
+    default=False,
+    help="Force deterministic physics: collapse every DR range to its midpoint "
+         "AND disable DORAEMON Beta sampling. Guarantees identical physics "
+         "across independent runs -- required for 1-env policy comparison "
+         "where seed alone doesn't ensure identical DR draws between different "
+         "policy networks (different RNG consumption order).",
+)
+parser.add_argument(
+    "--extreme-ood",
+    action="store_true",
+    default=False,
+    help="Apply an explicit extreme-OOD physics preset (every DR param pushed "
+         "~30%% beyond r13_A's learned training bounds, fixed value). Disables "
+         "DORAEMON and overrides DR config. See _EXTREME_OOD_PHYSICS below.",
+)
+parser.add_argument(
+    "--ood-preset",
+    choices=["v1", "v2"],
+    default="v2",
+    help="Extreme-OOD preset: v1 = training hard DR upper bound, v2 = +20-30%% beyond (default).",
+)
+parser.add_argument(
+    "--ood-range-scale",
+    type=float,
+    default=None,
+    help="v3 mode: widen each training DR tuple range by this factor about its midpoint "
+         "(e.g. 1.2 = +20%% wider). Random sample per env, combining Hard-DR randomness with "
+         "OOD extrapolation. Disables DORAEMON.",
+)
 cli_args.add_rsl_rl_args(parser)
 AppLauncher.add_app_launcher_args(parser)
 args_cli, hydra_args = parser.parse_known_args()
@@ -120,7 +160,11 @@ from isaaclab_tasks.direct.constrained_full_albc.algorithms import ConstraintTRP
 from isaaclab_tasks.direct.constrained_full_albc.runners import ConstraintEncoderRunner
 from isaaclab_tasks.direct.constrained_full_albc.doraemon import build_param_specs
 
-from common import DR_LEVELS, DR_COLORS, DR_SCALE
+from common import DR_LEVELS as _DEFAULT_DR_LEVELS, DR_COLORS, DR_SCALE as _DEFAULT_DR_SCALE
+
+# Runtime-mutable copies (overridden by --ood-scale)
+DR_LEVELS: list[str] = list(_DEFAULT_DR_LEVELS)
+DR_SCALE: dict[str, float] = dict(_DEFAULT_DR_SCALE)
 
 # Module-level: DORAEMON-learned distribution as the hard-DR anchor.
 # `_DORAEMON_FULL_DR` is the DR config (mean +/- 2*std clamped to PARAM_SPEC bounds).
@@ -353,7 +397,8 @@ def build_dr_config(scale: float) -> DomainRandomizationCfg:
         return nominal
 
     full: DomainRandomizationCfg = _DORAEMON_FULL_DR if _DORAEMON_FULL_DR is not None else HardDomainRandomizationCfg()
-    f = min(scale, 1.0)
+    # Allow scale > 1.0 for OOD eval (extrapolate bounds beyond training distribution).
+    f = scale
 
     cfg = DomainRandomizationCfg()
     cfg.enable = True
@@ -373,9 +418,91 @@ def build_dr_config(scale: float) -> DomainRandomizationCfg:
     return cfg
 
 
+def _collapse_dr_to_midpoint(cfg: DomainRandomizationCfg) -> None:
+    """Collapse each tuple DR range to its midpoint (lo=hi=mid).
+
+    Uniform sampling over (mid, mid) returns mid deterministically, giving
+    reproducible physics for 1-env comparisons across independent runs.
+    """
+    for field_name in _DR_TUPLE_FIELDS:
+        lo, hi = getattr(cfg, field_name)
+        mid = (lo + hi) / 2.0
+        setattr(cfg, field_name, (mid, mid))
+
+
+# Set True by --deterministic-dr to collapse DR bounds inside apply_dr_config.
+_DETERMINISTIC_DR: bool = False
+# Set True by --extreme-ood to overwrite DR with fixed OOD preset values.
+_APPLY_EXTREME_OOD: bool = False
+
+
+# Extreme-OOD physics presets. Selectable via --ood-preset {v1,v2}.
+# v1 = r13_A training hard DR upper bound ("at edge"). v2 = +20-30% beyond (true OOD).
+_EXTREME_OOD_PHYSICS_V1: dict[str, float] = {
+    "payload_mass_range":       3.00,
+    "added_mass_scale":         1.50,
+    "linear_damping_scale":     1.70,
+    "quadratic_damping_scale":  1.70,
+    "water_density_range":      1025.0,
+    "volume_scale":             1.25,
+    "inertia_scale":            2.00,
+    "body_mass_scale":          1.25,
+    "cog_offset_x": 0.020, "cog_offset_y": 0.020, "cog_offset_z": 0.040,
+    "cob_offset_x": 0.020, "cob_offset_y": 0.020, "cob_offset_z": 0.040,
+    "payload_cog_offset_z":    -0.050,
+}
+_EXTREME_OOD_PHYSICS_V1_FLOATS: dict[str, float] = {
+    "payload_cog_offset_xy_radius": 0.08,
+}
+
+_EXTREME_OOD_PHYSICS_V2: dict[str, float] = {
+    "payload_mass_range":       3.50,
+    "added_mass_scale":         1.80,
+    "linear_damping_scale":     2.05,
+    "quadratic_damping_scale":  2.05,
+    "water_density_range":      1045.0,
+    "volume_scale":             1.45,
+    "inertia_scale":            2.50,
+    "body_mass_scale":          1.50,
+    "cog_offset_x": 0.028, "cog_offset_y": 0.028, "cog_offset_z": 0.055,
+    "cob_offset_x": 0.028, "cob_offset_y": 0.028, "cob_offset_z": 0.055,
+    "payload_cog_offset_z":    -0.075,
+}
+_EXTREME_OOD_PHYSICS_V2_FLOATS: dict[str, float] = {
+    "payload_cog_offset_xy_radius": 0.10,
+}
+
+# Default preset (v2); overridden at CLI parse time by --ood-preset.
+_EXTREME_OOD_PHYSICS: dict[str, float] = _EXTREME_OOD_PHYSICS_V2
+_EXTREME_OOD_PHYSICS_FLOATS: dict[str, float] = _EXTREME_OOD_PHYSICS_V2_FLOATS
+
+
+def _apply_extreme_ood_physics(env_cfg) -> None:
+    """Overwrite env_cfg.randomization: tuples -> (v,v); floats -> v (scalar)."""
+    dr = env_cfg.randomization
+    applied = 0
+    for field_name, value in _EXTREME_OOD_PHYSICS.items():
+        if not hasattr(dr, field_name):
+            print(f"[WARN] extreme-ood: DR has no field '{field_name}', skipping.")
+            continue
+        setattr(dr, field_name, (value, value))  # collapse to fixed value
+        applied += 1
+    for field_name, value in _EXTREME_OOD_PHYSICS_FLOATS.items():
+        if not hasattr(dr, field_name):
+            print(f"[WARN] extreme-ood: DR has no float field '{field_name}', skipping.")
+            continue
+        setattr(dr, field_name, value)
+        applied += 1
+    print(f"[INFO] extreme-ood: applied {applied} fixed OOD physics values")
+
+
 def apply_dr_config(env_cfg, scale: float) -> None:
     """Apply interpolated DR config to the environment config."""
     env_cfg.randomization = build_dr_config(scale)
+    if _DETERMINISTIC_DR:
+        _collapse_dr_to_midpoint(env_cfg.randomization)
+    if _APPLY_EXTREME_OOD:
+        _apply_extreme_ood_physics(env_cfg)
 
 
 # ============================================================================
@@ -1996,11 +2123,66 @@ def main(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
                 print(f"[WARN] Could not load run agent params, using task registry: {e}")
                 run_agent_dict = None
 
+    # ---- OOD scale override: replace 4-level loop with single OOD level ----
+    # NOTE: preserve "none" key in DR_SCALE -- apply_dr_config(env_cfg, DR_SCALE["none"])
+    # is used below as the initial (nominal) DR before rollout starts.
+    if args_cli.ood_scale is not None:
+        global DR_LEVELS, DR_SCALE
+        ood_name = f"ood_{args_cli.ood_scale:.1f}x"
+        if args_cli.deterministic_dr:
+            ood_name += "_det"
+        DR_LEVELS = [ood_name]
+        DR_SCALE = {"none": 0.0, ood_name: args_cli.ood_scale}
+        DR_COLORS[ood_name] = "#FF00FF"  # magenta for OOD
+        print(f"\n[INFO] OOD eval mode: single level '{ood_name}' at scale={args_cli.ood_scale:.2f}\n")
+
+    # ---- Deterministic DR: disable DORAEMON + collapse tuple DR ranges to midpoint ----
+    # Applied AFTER env_cfg is built but BEFORE gym.make(...) so env init uses fixed values.
+    if args_cli.deterministic_dr or args_cli.extreme_ood:
+        if hasattr(env_cfg, "doraemon"):
+            env_cfg.doraemon.enable = False
+            print("[INFO] DORAEMON disabled")
+    if args_cli.deterministic_dr:
+        global _DETERMINISTIC_DR
+        _DETERMINISTIC_DR = True  # apply_dr_config will now collapse tuples to midpoint
+        print("[INFO] deterministic-dr: DR tuple ranges collapsed to midpoint -> fixed physics")
+
+    # ---- Extreme OOD preset: overwrite DR with explicit out-of-training values ----
+    if args_cli.extreme_ood:
+        global _APPLY_EXTREME_OOD, _EXTREME_OOD_PHYSICS, _EXTREME_OOD_PHYSICS_FLOATS
+        _APPLY_EXTREME_OOD = True
+        if args_cli.ood_preset == "v1":
+            _EXTREME_OOD_PHYSICS = _EXTREME_OOD_PHYSICS_V1
+            _EXTREME_OOD_PHYSICS_FLOATS = _EXTREME_OOD_PHYSICS_V1_FLOATS
+        else:
+            _EXTREME_OOD_PHYSICS = _EXTREME_OOD_PHYSICS_V2
+            _EXTREME_OOD_PHYSICS_FLOATS = _EXTREME_OOD_PHYSICS_V2_FLOATS
+        print(f"[INFO] extreme-ood preset={args_cli.ood_preset}: will apply {len(_EXTREME_OOD_PHYSICS)} fixed OOD physics values\n")
+
+    # ---- v3: widen training DR ranges by `ood_range_scale` factor (random sample per env) ----
+    if args_cli.ood_range_scale is not None:
+        if hasattr(env_cfg, "doraemon"):
+            env_cfg.doraemon.enable = False
+            print("[INFO] DORAEMON disabled (v3 mode)")
+        scale = args_cli.ood_range_scale
+        dr = env_cfg.randomization
+        widened = 0
+        for field_name in list(vars(dr).keys()):
+            val = getattr(dr, field_name)
+            if isinstance(val, tuple) and len(val) == 2 and all(isinstance(v, (int, float)) for v in val):
+                lo, hi = val
+                mid = (lo + hi) / 2.0
+                half = (hi - lo) / 2.0 * scale
+                setattr(dr, field_name, (mid - half, mid + half))
+                widened += 1
+        print(f"[INFO] v3 ood-range-scale {scale:.2f}: widened {widened} DR ranges by {(scale-1)*100:+.0f}%\n")
+
     # ---- Output directory ----
     if args_cli.output_dir:
         output_dir = args_cli.output_dir
     elif resume_path:
-        output_dir = os.path.join(os.path.dirname(resume_path), "eval_dr")
+        suffix = f"eval_dr_ood_{args_cli.ood_scale:.1f}x" if args_cli.ood_scale else "eval_dr"
+        output_dir = os.path.join(os.path.dirname(resume_path), suffix)
     else:
         ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         folder_name = task_name.removeprefix("Isaac-").lower().replace("-", "_").removesuffix("_v0")

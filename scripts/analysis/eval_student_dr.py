@@ -217,25 +217,25 @@ def main(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         for lvl in DR_LEVELS:
             m = all_metrics[lvl]
             summary[lvl] = {}
-            # attitude
+            att_ss = np.asarray(m["att_ss_errors"])
+            att_jit = np.asarray(m["att_ss_jitters"])
+            att_os = np.asarray(m["att_overshoot_pcts"])
             for i, ax in enumerate(["roll", "pitch"]):
                 summary[lvl][ax] = {
-                    "ss_error": float(np.nanmean(m["att_ss_errors"][:, i]) if m["att_ss_errors"].ndim > 1 else np.nanmean(m["att_ss_errors"])),
-                    "ss_jitter": float(np.nanmean(m["att_ss_jitters"][:, i]) if m["att_ss_jitters"].ndim > 1 else np.nanmean(m["att_ss_jitters"])),
-                    "os_env_mean": float(np.nanmean(m["att_overshoot_pcts"])),
+                    "ss_error": float(np.nanmean(att_ss[:, i]) if att_ss.ndim > 1 else np.nanmean(att_ss)),
+                    "ss_jitter": float(np.nanmean(att_jit[:, i]) if att_jit.ndim > 1 else np.nanmean(att_jit)),
+                    "os_env_mean": float(np.nanmean(att_os)),
                 }
-            # lin vel
             for ax in ["vx", "vy", "vz"]:
                 summary[lvl][ax] = {
-                    "ss_error": float(np.nanmean(m["lin_vel_ss_errors"][ax])),
-                    "ss_jitter": float(np.nanmean(m["lin_vel_ss_jitters"][ax])),
-                    "os_env_mean": float(np.nanmean(m["lin_vel_overshoot_pcts"][ax])),
+                    "ss_error": float(np.nanmean(np.asarray(m["lin_vel_ss_errors"][ax]))),
+                    "ss_jitter": float(np.nanmean(np.asarray(m["lin_vel_ss_jitters"][ax]))),
+                    "os_env_mean": float(np.nanmean(np.asarray(m["lin_vel_overshoot_pcts"][ax]))),
                 }
-            # yaw
             summary[lvl]["yaw"] = {
-                "ss_error": float(np.nanmean(m["yaw_ss_errors"])),
-                "ss_jitter": float(np.nanmean(m["yaw_ss_jitters"])),
-                "os_env_mean": float(np.nanmean(m["yaw_overshoot_pcts"])),
+                "ss_error": float(np.nanmean(np.asarray(m["yaw_ss_errors"]))),
+                "ss_jitter": float(np.nanmean(np.asarray(m["yaw_ss_jitters"]))),
+                "os_env_mean": float(np.nanmean(np.asarray(m["yaw_overshoot_pcts"]))),
             }
         with open(summary_path, "w") as f:
             json.dump(summary, f, indent=2)
