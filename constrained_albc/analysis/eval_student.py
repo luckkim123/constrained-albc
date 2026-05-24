@@ -18,8 +18,7 @@ import argparse
 import os
 import sys
 
-# Dependencies in sibling/parent script dirs
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "reinforcement_learning", "rsl_rl"))
+# cli_args is vendored locally (was scripts/reinforcement_learning/rsl_rl/ in isaaclab, not migrated)
 sys.path.insert(0, os.path.dirname(__file__))
 
 import cli_args  # noqa: E402, F401

@@ -21,9 +21,8 @@ import argparse
 import os
 import sys
 
-# cli_args lives in scripts/reinforcement_learning/rsl_rl/
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "reinforcement_learning", "rsl_rl"))
-# common.py lives in scripts/analysis/
+# cli_args is vendored locally (was scripts/reinforcement_learning/rsl_rl/ in isaaclab, not migrated)
+# common.py and cli_args.py both live alongside this file
 sys.path.insert(0, os.path.dirname(__file__))
 
 from isaaclab.app import AppLauncher
