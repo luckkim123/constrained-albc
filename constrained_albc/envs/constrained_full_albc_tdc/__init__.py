@@ -26,14 +26,14 @@ from .tdc_env import FullDOFTDCEnv
 
 gym.register(
     id="Isaac-FullDOF-TDC-v0",
-    entry_point="isaaclab_tasks.direct.constrained_full_albc_tdc:FullDOFTDCEnv",
+    entry_point="constrained_albc.envs.constrained_full_albc_tdc:FullDOFTDCEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": f"{__name__}.config:FullDOFTDCEnvCfg",
         # Play/eval scripts require an rsl_rl cfg. The classical baseline does
         # not train, so reuse the RL runner cfg purely for script compatibility.
         "rsl_rl_cfg_entry_point": (
-            "isaaclab_tasks.direct.constrained_full_albc.agents.rsl_rl_ppo_cfg:FullDOFTRPORunnerCfg"
+            "constrained_albc.envs.constrained_full_albc.agents.rsl_rl_ppo_cfg:FullDOFTRPORunnerCfg"
         ),
     },
 )

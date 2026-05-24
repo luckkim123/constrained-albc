@@ -1,7 +1,7 @@
 """Student-in-the-loop wrapper for eval_dr_fulldof.
 
 Usage from a separate eval script:
-    from isaaclab_tasks.direct.constrained_full_albc.student.eval import (
+    from constrained_albc.envs.constrained_full_albc.student.eval import (
         build_student_policy_fn,
     )
 

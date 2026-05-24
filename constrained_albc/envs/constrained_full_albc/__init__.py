@@ -33,7 +33,7 @@ from .config import (
 
 gym.register(
     id="Isaac-FullDOF-TRPO-v0",
-    entry_point="isaaclab_tasks.direct.constrained_full_albc:ALBCEnv",
+    entry_point="constrained_albc.envs.constrained_full_albc:ALBCEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": f"{__name__}.config:ALBCEnvCfg",
@@ -43,7 +43,7 @@ gym.register(
 
 gym.register(
     id="Isaac-FullDOF-NoEncoder-v0",
-    entry_point="isaaclab_tasks.direct.constrained_full_albc:ALBCEnv",
+    entry_point="constrained_albc.envs.constrained_full_albc:ALBCEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": f"{__name__}.config:ALBCEnvCfg",
@@ -53,7 +53,7 @@ gym.register(
 
 gym.register(
     id="Isaac-FullDOF-PPO-v0",
-    entry_point="isaaclab_tasks.direct.constrained_full_albc:ALBCEnv",
+    entry_point="constrained_albc.envs.constrained_full_albc:ALBCEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": f"{__name__}.config:ALBCEnvCfg",
@@ -64,7 +64,7 @@ gym.register(
 # Variant #3: Encoder + TRPO without IPO (empty constraint list)
 gym.register(
     id="Isaac-FullDOF-TRPO-NoIPO-v0",
-    entry_point="isaaclab_tasks.direct.constrained_full_albc:ALBCEnv",
+    entry_point="constrained_albc.envs.constrained_full_albc:ALBCEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": f"{__name__}.config_noconstraint:ALBCNoConstraintEnvCfg",
@@ -75,7 +75,7 @@ gym.register(
 # Variant #4: Encoder + PPO (no IPO)
 gym.register(
     id="Isaac-FullDOF-PPO-Enc-v0",
-    entry_point="isaaclab_tasks.direct.constrained_full_albc:ALBCEnv",
+    entry_point="constrained_albc.envs.constrained_full_albc:ALBCEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": f"{__name__}.config_noconstraint:ALBCNoConstraintEnvCfg",

@@ -1,4 +1,4 @@
-# source/isaaclab_tasks/isaaclab_tasks/direct/constrained_full_albc/student/teacher.py
+# constrained_albc/envs/constrained_full_albc/student/teacher.py
 """FrozenTeacher: loads r13_A checkpoint, exposes frozen encoder + actor + normalizer.
 
 Uses FullDOFActorCriticEncoder from the teacher's training registry so the
@@ -36,10 +36,10 @@ class FrozenTeacher(nn.Module):
         # Build a teacher policy with the same arch as r13_A. We use the registry
         # class rather than instantiating ActorCriticEncoder directly to ensure
         # the exact arch (e.g. FullDOFActorCriticEncoder overrides).
-        from isaaclab_tasks.direct.constrained_full_albc.encoder import (
+        from constrained_albc.envs.constrained_full_albc.encoder import (
             ActorCriticEncoder,
         )
-        from isaaclab_tasks.direct.constrained_full_albc.agents.rsl_rl_ppo_cfg import (
+        from constrained_albc.envs.constrained_full_albc.agents.rsl_rl_ppo_cfg import (
             _PRIV_OBS_LOWER,
             _PRIV_OBS_UPPER,
         )

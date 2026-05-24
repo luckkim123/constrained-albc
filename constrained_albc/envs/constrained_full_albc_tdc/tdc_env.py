@@ -38,7 +38,7 @@ import torch
 
 from isaaclab.utils.math import euler_xyz_from_quat
 
-from isaaclab_tasks.direct.constrained_full_albc.albc_env import ALBCEnv
+from constrained_albc.envs.constrained_full_albc.albc_env import ALBCEnv
 
 from .controllers.kinematics import ALBCKinematics
 from .controllers.tdc import TDCController

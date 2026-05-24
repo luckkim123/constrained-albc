@@ -216,21 +216,21 @@ from isaaclab.utils.math import euler_xyz_from_quat, quat_rotate_inverse
 from isaaclab_rl.rsl_rl import RslRlBaseRunnerCfg, RslRlVecEnvWrapper
 
 import isaaclab_tasks  # noqa: F401
-from isaaclab_tasks.direct.constrained_full_albc.algorithms import ConstraintTRPO
-from isaaclab_tasks.direct.constrained_full_albc.config import (
+from constrained_albc.envs.constrained_full_albc.algorithms import ConstraintTRPO
+from constrained_albc.envs.constrained_full_albc.config import (
     DomainRandomizationCfg,
     HardDomainRandomizationCfg,
 )
-from isaaclab_tasks.direct.constrained_full_albc.doraemon import build_param_specs
-from isaaclab_tasks.direct.constrained_full_albc.encoder import ActorCriticEncoder
-from isaaclab_tasks.direct.constrained_full_albc.mdp import (
+from constrained_albc.envs.constrained_full_albc.doraemon import build_param_specs
+from constrained_albc.envs.constrained_full_albc.encoder import ActorCriticEncoder
+from constrained_albc.envs.constrained_full_albc.mdp import (
     DRSampler,
     randomize_body_mass,
     randomize_hydrodynamics,
     randomize_ocean_current,
     randomize_payload,
 )
-from isaaclab_tasks.direct.constrained_full_albc.runners import ConstraintEncoderRunner
+from constrained_albc.envs.constrained_full_albc.runners import ConstraintEncoderRunner
 from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
@@ -3731,7 +3731,7 @@ def run_segmented(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
 
     # Policy: student mode uses StudentInLoopPolicy (student encoder + frozen teacher actor)
     if is_student_mode:
-        from isaaclab_tasks.direct.constrained_full_albc.student.eval import build_student_policy_fn
+        from constrained_albc.envs.constrained_full_albc.student.eval import build_student_policy_fn
 
         student_policy = build_student_policy_fn(
             teacher_ckpt=args_cli.teacher_ckpt,
@@ -3921,10 +3921,10 @@ def run_sudden(env_cfg, agent_cfg):
     runner_device = agent_cfg.device
 
     if runner_cls_name == "FullDOFConstraintEncoderRunner":
-        from isaaclab_tasks.direct.constrained_full_albc.runners import ConstraintEncoderRunner as _Runner
+        from constrained_albc.envs.constrained_full_albc.runners import ConstraintEncoderRunner as _Runner
         runner = _Runner(env, agent_cfg.to_dict(), log_dir=None, device=runner_device)
     elif runner_cls_name == "OnPolicyDoraemonRunner":
-        from isaaclab_tasks.direct.constrained_full_albc.runners import OnPolicyDoraemonRunner as _Runner
+        from constrained_albc.envs.constrained_full_albc.runners import OnPolicyDoraemonRunner as _Runner
         runner = _Runner(env, agent_cfg.to_dict(), log_dir=None, device=runner_device)
     else:
         runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=runner_device)

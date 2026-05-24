@@ -15,7 +15,7 @@ import torch
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from isaaclab_tasks.models import HydrodynamicsModel
+    from marinelab.physics import HydrodynamicsModel
 
     from ..albc_env import ALBCEnv
     from ..config import DomainRandomizationCfg

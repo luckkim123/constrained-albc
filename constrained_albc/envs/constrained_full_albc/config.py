@@ -21,7 +21,7 @@ from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.noise import GaussianNoiseCfg, NoiseModelWithAdditiveBiasCfg, UniformNoiseCfg
 
-from isaaclab_assets.robots.uuv import (
+from marinelab.assets import (
     HERO_AGENT_ALBC_JOINT_NAMES,
     HERO_AGENT_CFG,
     HeroAgentBuoyHydrodynamicsCfg,

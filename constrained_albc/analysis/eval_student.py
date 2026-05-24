@@ -83,7 +83,7 @@ from isaaclab.envs import DirectRLEnvCfg
 from isaaclab_rl.rsl_rl import RslRlBaseRunnerCfg, RslRlVecEnvWrapper
 
 import isaaclab_tasks  # noqa: F401
-from isaaclab_tasks.direct.constrained_full_albc.student.eval import (
+from constrained_albc.envs.constrained_full_albc.student.eval import (
     StudentInLoopPolicy,
     build_student_policy_fn,
 )

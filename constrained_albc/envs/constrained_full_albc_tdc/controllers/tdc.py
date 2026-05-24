@@ -27,7 +27,7 @@ import torch
 
 from isaaclab.utils import configclass
 
-from isaaclab_assets.robots.uuv import (
+from marinelab.assets import (
     HERO_AGENT_ALBC_LINK1_LENGTH,
     HERO_AGENT_ALBC_LINK2_LENGTH,
 )

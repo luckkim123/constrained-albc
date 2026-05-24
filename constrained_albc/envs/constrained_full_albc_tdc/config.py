@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from isaaclab.utils import configclass
 
-from isaaclab_tasks.direct.constrained_full_albc.config import ALBCEnvCfg
+from constrained_albc.envs.constrained_full_albc.config import ALBCEnvCfg
 
 from .controllers.tdc import TDCControllerCfg
 from .controllers.thruster_pd import ThrusterPDCfg

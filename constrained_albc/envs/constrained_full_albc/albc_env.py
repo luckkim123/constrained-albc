@@ -21,7 +21,7 @@ from isaaclab.envs import DirectRLEnv
 from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
 from isaaclab.utils.math import euler_xyz_from_quat, quat_apply, quat_apply_inverse
 
-from isaaclab_tasks.models import HydrodynamicsModel
+from marinelab.physics import HydrodynamicsModel
 
 from .config import ALBCEnvCfg
 from .mdp.constraints import compute_all_costs
@@ -291,7 +291,7 @@ class ALBCEnv(DirectRLEnv):
         if self.cfg.thrusters is None:
             self._thruster = None
             return
-        from isaaclab_tasks.models import ThrusterModel
+        from marinelab.physics import ThrusterModel
 
         self._thruster = ThrusterModel(
             cfg=self.cfg.thrusters,
@@ -481,7 +481,7 @@ class ALBCEnv(DirectRLEnv):
         w = sqrt(|l1 * l2 * sin(theta2)|), normalized by w_max = l1 * l2.
         Result in [0, 1]: 1.0 = max manipulability, 0.0 = singularity.
         """
-        from isaaclab_assets.robots.uuv import HERO_AGENT_ALBC_LINK1_LENGTH, HERO_AGENT_ALBC_LINK2_LENGTH
+        from marinelab.assets import HERO_AGENT_ALBC_LINK1_LENGTH, HERO_AGENT_ALBC_LINK2_LENGTH
 
         l1 = HERO_AGENT_ALBC_LINK1_LENGTH  # 0.233
         l2 = HERO_AGENT_ALBC_LINK2_LENGTH  # 0.233

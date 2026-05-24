@@ -51,8 +51,8 @@ class _MockModule(types.ModuleType):
         return child
 
 
-# Mock isaaclab_assets.robots.uuv with real link-length constants
-_uuv_mock = _MockModule("isaaclab_assets.robots.uuv")
+# Mock marinelab.assets with real link-length constants
+_uuv_mock = _MockModule("marinelab.assets")
 _uuv_mock.HERO_AGENT_ALBC_LINK1_LENGTH = 0.233
 _uuv_mock.HERO_AGENT_ALBC_LINK2_LENGTH = 0.233
 _uuv_mock.HERO_AGENT_ALBC_JOINT_NAMES = ["joint1", "joint2"]
@@ -64,12 +64,11 @@ _uuv_mock.OceanCurrentCfg = type("OceanCurrentCfg", (), {})
 
 # Build parent packages
 for pkg_name in [
-    "isaaclab_assets",
-    "isaaclab_assets.robots",
+    "marinelab",
 ]:
     if pkg_name not in sys.modules:
         sys.modules[pkg_name] = types.ModuleType(pkg_name)
-sys.modules["isaaclab_assets.robots.uuv"] = _uuv_mock
+sys.modules["marinelab.assets"] = _uuv_mock
 
 # Mock isaaclab and other Isaac Sim packages
 for pkg_name in [
@@ -95,12 +94,12 @@ for pkg_name in [
 sys.modules["isaaclab.utils"].configclass = lambda cls: cls
 
 # ---------------------------------------------------------------------------
-# Load modules under test via importlib (avoids isaaclab_tasks.__init__)
+# Load modules under test via importlib (avoids constrained_albc.__init__)
 # ---------------------------------------------------------------------------
 
 _tdc_pkg_dir = (
     Path(__file__).resolve().parent.parent
-    / "isaaclab_tasks" / "direct" / "constrained_full_albc_tdc"
+    / "constrained_albc" / "envs" / "constrained_full_albc_tdc"
 )
 _controllers_dir = _tdc_pkg_dir / "controllers"
 
@@ -116,7 +115,7 @@ def _load_module(name: str, filepath: Path):
 
 # TDCControllerCfg is a plain dataclass (decorated with @configclass which is
 # a no-op in test context). Replicate it here to avoid loading the full
-# config.py which triggers the entire isaaclab_tasks package chain.
+# config.py which triggers the entire constrained_albc package chain.
 class TDCControllerCfg:
     """Mirror of config.TDCControllerCfg for testing."""
 
@@ -137,13 +136,13 @@ class TDCControllerCfg:
 
 
 # Build a fake package hierarchy so relative imports in tdc.py resolve correctly.
-# tdc.py imports from isaaclab.utils and isaaclab_assets.robots.uuv (mocked above).
+# tdc.py imports from isaaclab.utils and marinelab.assets (mocked above).
 # TDCControllerCfg is defined in controllers/tdc.py itself (not in config.py).
-_PKG = "isaaclab_tasks.direct.constrained_full_albc_tdc"
+_PKG = "constrained_albc.envs.constrained_full_albc_tdc"
 _CTRL_PKG = f"{_PKG}.controllers"
 
 # Register package stubs
-for pkg_name in ["isaaclab_tasks.direct", _PKG, _CTRL_PKG]:
+for pkg_name in ["constrained_albc.envs", _PKG, _CTRL_PKG]:
     if pkg_name not in sys.modules:
         sys.modules[pkg_name] = types.ModuleType(pkg_name)
 

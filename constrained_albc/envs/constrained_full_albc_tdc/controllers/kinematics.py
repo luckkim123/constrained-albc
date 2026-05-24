@@ -35,7 +35,7 @@ from __future__ import annotations
 
 import torch
 
-from isaaclab_assets.robots.uuv import (
+from marinelab.assets import (
     HERO_AGENT_ALBC_LINK1_LENGTH,
     HERO_AGENT_ALBC_LINK2_LENGTH,
 )
