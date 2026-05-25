@@ -230,6 +230,7 @@ from constrained_albc.envs.constrained_full_albc.mdp import (
     randomize_payload,
 )
 from constrained_albc.envs.constrained_full_albc.runners import ConstraintEncoderRunner
+from constrained_albc.envs.constrained_full_albc.utils import update_latest_symlink
 from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
@@ -2286,6 +2287,8 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         folder_name = task_name.removeprefix("Isaac-").lower().replace("-", "_").removesuffix("_v0")
         output_dir = os.path.join("logs", "eval_dr", folder_name, ts)
+        os.makedirs(output_dir, exist_ok=True)
+        update_latest_symlink(output_dir)  # logs/eval_dr/<folder>/latest -> newest eval
     os.makedirs(output_dir, exist_ok=True)
     print(f"[INFO] Output directory: {output_dir}")
 
@@ -2980,6 +2983,8 @@ def run_periodic(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         folder_name = task_name.removeprefix("Isaac-").lower().replace("-", "_").removesuffix("_v0")
         output_dir = os.path.join("logs", "eval_dr_robustness", folder_name, ts)
+        os.makedirs(output_dir, exist_ok=True)
+        update_latest_symlink(output_dir)  # logs/eval_dr_robustness/<folder>/latest -> newest eval
     os.makedirs(output_dir, exist_ok=True)
     print(f"[INFO] Output directory: {output_dir}")
 

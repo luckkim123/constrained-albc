@@ -1,4 +1,10 @@
 __pycache__/
+*.pyc
 *.egg-info/
+.venv/
 logs/
+outputs/
+wandb/
+experiments/
 .omc/
+docs/superpowers/

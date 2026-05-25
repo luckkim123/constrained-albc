@@ -160,8 +160,7 @@ def bias_ema_penalty(env: ALBCEnv) -> torch.Tensor:
     Squared form so reward gradient grows with offset; per-axis weights let
     roll (weak TAM authority) receive a stronger anti-bias signal than yaw.
     """
-    cfg = env.cfg.reward
-    w = torch.tensor(cfg.bias_weights, device=env._bias_ema.device, dtype=env._bias_ema.dtype)
+    w = env._reward_manager._bias_w
     return (env._bias_ema.pow(2) * w).sum(dim=-1)
 
 
@@ -177,6 +176,8 @@ class RewardManager:
         self._cfg = cfg
         self._buf = torch.zeros(num_envs, dtype=torch.float32, device=device)
         self._episode_sums = {n: torch.zeros(num_envs, dtype=torch.float32, device=device) for n in self._NAMES}
+        # Preallocated per-axis bias weights (used by bias_ema_penalty each step).
+        self._bias_w = torch.tensor(cfg.bias_weights, dtype=torch.float32, device=device)
 
     def compute(self, robot: Articulation, dt: float, env: ALBCEnv, **_ctx: Any) -> torch.Tensor:
         """Compute total reward (dt-scaled)."""

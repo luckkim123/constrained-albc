@@ -199,6 +199,13 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         log_dir += f"_{agent_cfg.run_name}"
     log_dir = os.path.join(log_root_path, log_dir)
 
+    # Point <experiment>/latest at this run so tools reach the newest run without
+    # knowing its timestamp (e.g. tensorboard --logdir logs/rsl_rl/<exp>/latest).
+    from constrained_albc.envs.constrained_full_albc.utils import update_latest_symlink
+
+    os.makedirs(log_dir, exist_ok=True)
+    update_latest_symlink(log_dir)
+
     # set the IO descriptors export flag if requested
     if isinstance(env_cfg, ManagerBasedRLEnvCfg):
         env_cfg.export_io_descriptors = args_cli.export_io_descriptors

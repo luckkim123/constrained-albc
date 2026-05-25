@@ -1,0 +1,120 @@
+# run_id Single Tree Design (Unifying Training, Evaluation, and Config)
+
+> Status: **Design finalized, implementation on hold** (2026-05-25). Since it is adjacent to training behavior (changing train.py path rules),
+> implementation is deferred until separate user approval (`feedback_training_control`).
+> All supporting code has been verified in its current state (file:line specified).
+
+## 1. Problem — The Same Run Is Scattered Across 4 Places
+
+Currently the outputs of a single policy are scattered across different trees. To trace "from which training config
+this eval PNG's policy came", one must visually cross-reference timestamps.
+
+| Output | Current path | Generation location (verified) |
+|:---|:---|:---|
+| Training (model/tb/doraemon/params/git) | `logs/rsl_rl/<exp>/<ts>_<run>/` | `scripts/train.py:193-200` |
+| static eval | `logs/eval_dr/<folder>/<ts>/` | `eval_dr.py:2288` |
+| periodic eval | `logs/eval_dr_robustness/<folder>/<ts>/` | `eval_dr.py:2982` |
+| sudden eval | `<ckpt_dir>/eval_single_switch/` | `eval_dr.py:4004` |
+| student training | `logs/rsl_rl/student_policy/` | `student/config.py:59` |
+| Hydra config | `outputs/<date>/<time>/.hydra/` | `@hydra_task_config` (automatic) |
+
+Key point: training is grouped by `experiment_name` (= fixed per task), and eval branches off into a
+**separate top-level tree** called `eval_dr/`. The only thing connecting the two is the timestamp.
+
+## 2. Solution — run_id as a Single Key
+
+### 2-A. run_id Convention
+
+```
+run_id = <YYYY-MM-DD_HH-MM-SS>_<task_short>[_<tag>]
+  e.g.: 2026-05-25_16-02-48_trpo
+        2026-05-25_17-00-12_ppo-enc_ablation
+```
+
+- The timestamp format is **identical to the current train.py** (`%Y-%m-%d_%H-%M-%S`, train.py:196) — compatible with existing runs.
+- `task_short`: extracted from the task ID. `Isaac-FullDOF-TRPO-v0`→`trpo`, `-PPO-Enc-`→`ppo-enc`,
+  `-NoEncoder-`→`noenc`, `-TRPO-NoIPO-`→`trpo-noipo`, `-PPO-`→`ppo`, `-TDC-`→`tdc`.
+  → task_short resolves the problem where the current 4 ablations are mixed into one folder under
+     `experiment_name="full_dof_ablation"` (rsl_rl_ppo_cfg.py:298/381 + ablation_cfgs.py:40/79).
+- `tag`: reuses the existing `run_name` (train.py:199) as is.
+
+### 2-B. Directory Layout (Sibling to legacy)
+
+```
+experiments/                              # .gitignore'd (large outputs)
+├── legacy/                               # past frozen outputs (already moved 2026-05-25)
+│   ├── plots/  final_models/  README.md
+└── <run_id>/                             # NEW: active run single tree
+    ├── manifest.json                     # ★ run meta — entry point for all tracing (§3)
+    ├── config/
+    │   ├── env.yaml                      # existing params/env.yaml (train.py already dumps it)
+    │   ├── agent.yaml                    # existing params/agent.yaml
+    │   ├── hydra_config.yaml             # moved from outputs/.hydra/config.yaml
+    │   └── git_state.txt                 # existing git/ (runner.add_git_repo_to_log)
+    ├── train/
+    │   ├── tb/                           # events.out.tfevents.*
+    │   ├── checkpoints/                  # model_*.pt (numeric sort — feedback_model_trim_disaster)
+    │   └── doraemon_state.pt
+    └── eval/
+        └── <mode>_<eval_ts>/             # static / periodic / segmented / sudden
+            ├── raw/                      # eval_<level>.npz (+ .mat option, INFRA §2-D)
+            ├── figures/                  # diagnostic PNG
+            └── enhanced_summary.json     # output of analyze.py recompute
+```
+
+Key point: **the training folder name (run_id) and the eval folder (eval/<mode>_<ts>/) share the same parent** →
+training, evaluation, and config are all reachable with a single run_id. No timestamp cross-referencing needed.
+
+### 2-C. student Linkage
+
+The student is a child of the teacher. Instead of a separate top-level (`logs/rsl_rl/student_policy/`):
+- Option A (nested): `experiments/<teacher_run_id>/student/<student_run_id>/`
+- Option B (sibling + reference): `experiments/<student_run_id>/` + linked via the manifest's `parent_run_id`.
+  → **B recommended** (teacher/student can run independently, replacing the hardcoded teacher_run_dir at student/config.py:17).
+
+## 3. manifest.json — Entry Point for Tracing
+
+```json
+{
+  "run_id": "2026-05-25_16-02-48_trpo",
+  "kind": "teacher | student",
+  "parent_run_id": "<teacher run_id>",        // only when student
+  "task": "Isaac-FullDOF-TRPO-v0",
+  "created": "2026-05-25T16:02:48",
+  "git": {"sha": "...", "branch": "...", "dirty": false},
+  "config": {"num_envs": 4096, "max_iterations": 2500, "seed": 30,
+             "algorithm": "ConstraintTRPO+IPO", "encoder_latent_dim": 9},
+  "wandb": {"project": "constrained-albc", "run_path": ".../runs/<id>", "url": "..."},
+  "paths": {"tb": "train/tb", "checkpoints": "train/checkpoints",
+            "evals": ["eval/static_2026-05-25_18-00-00", ...]},
+  "status": "running | completed | failed",
+  "repro": {"seed": 30, "rng_seeded": false, "dr_distribution_source": "tb",
+            "value_norm_persisted": false},   // INFRA §14 self-records the reproducibility grade
+  "final_metrics": {"att_ss_error_hard_deg": 8.2, ...}
+}
+```
+
+Instead of grepping timestamp directories, post-hoc tools (analyze/compare) read the manifest to
+resolve paths. Knowing only the run_id, training, evaluation, config, and wandb URL are all reachable.
+
+## 4. Modification Points at Implementation Time (On Hold — After Approval)
+
+| # | file:line | Change | Risk |
+|:--|:---|:---|:---|
+| 1 | `train.py:193-200` | `logs/rsl_rl/<exp>/<ts>` → `experiments/<run_id>` + manifest creation | Training-adjacent (approval) |
+| 2 | `eval_dr.py:2288,2982,4004` | `logs/eval_dr*/` → `experiments/<run_id>/eval/<mode>_<ts>/` | Medium (output path) |
+| 3 | `student/config.py:17,59,61` | Hardcoded teacher_run_dir/log_root → run_id resolution | Medium |
+| 4 | `analysis/paths.py` (NEW) | `resolve_run(run_id)`/`resolve_eval()` — manifest-based | New |
+| 5 | `common.py:377,395` | `resolve_run_path` → delegate to paths.py (already done a first pass to make it cwd-relative) | Low |
+| 6 | `@hydra_task_config` | Verify whether `hydra.run.dir` can be overridden to `experiments/<run_id>/config` | Unverified |
+
+## 5. Migration
+
+- Past runs: already frozen into `experiments/legacy/` (move completed). The run_id tree applies from new runs onward.
+- legacy has no manifest — paths.py scans directories for legacy and prioritizes the manifest for active.
+
+## 6. Open Questions (User Confirmation Before Starting Implementation)
+
+1. Whether Hydra `run.dir` override is possible (if not, copy after training).
+2. Whether to move new runs in the past `logs/rsl_rl/` to experiments/, or apply only from new ones onward.
+3. Whether to include git_sha[:7] in run_id (preventing same-timestamp collisions vs. length).

@@ -375,7 +375,7 @@ def smooth(values: np.ndarray, window: int = 15) -> np.ndarray:
 
 
 def find_hero_agent_runs(
-    logs_root: str = "/workspace/isaaclab/logs/rsl_rl",
+    logs_root: str = "logs/rsl_rl",
 ) -> list[Path]:
     """Find Hero Agent training runs, sorted newest first."""
     root = Path(logs_root)
@@ -392,7 +392,7 @@ def find_hero_agent_runs(
     return runs
 
 
-def resolve_run_path(run_spec: str, logs_root: str = "/workspace/isaaclab/logs/rsl_rl") -> Path:
+def resolve_run_path(run_spec: str, logs_root: str = "logs/rsl_rl") -> Path:
     """Resolve a run specifier to a Path.
 
     Accepts:

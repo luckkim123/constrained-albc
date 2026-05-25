@@ -63,8 +63,8 @@ from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper
 import isaaclab_tasks  # noqa: F401
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
-from isaaclab_tasks.direct.constrained_full_albc.student.config import StudentCfg
-from isaaclab_tasks.direct.constrained_full_albc.student.runner import StudentRunner
+from constrained_albc.envs.constrained_full_albc.student.config import StudentCfg
+from constrained_albc.envs.constrained_full_albc.student.runner import StudentRunner
 
 logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger("train_student")
