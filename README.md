@@ -41,30 +41,34 @@ cd /workspace/isaaclab && ./isaaclab.sh -p -m pip install -e /workspace/marinela
 cd /workspace/isaaclab && ./isaaclab.sh -p -m pip install -e /workspace/constrained-albc
 ```
 
-> **RSL-RL fork required.** This repo needs a forked `rsl_rl` and forked `isaaclab_rl`
-> (custom ctor kwargs + encoder-LR param groups). A stock `rsl-rl-lib` from PyPI will fail.
-> See [`docs/architecture.md`](docs/architecture.md) for the exact fields and why they matter.
+> **Stock RSL-RL, no fork.** This repo runs on stock `rsl-rl-lib==3.1.2` and stock
+> `isaaclab_rl`. `ConstraintTRPO` is a standalone algorithm (it does not subclass
+> `rsl_rl.PPO`), so no forked `rsl_rl` is needed.
+> See [`docs/architecture.md`](docs/architecture.md) for why.
 
 ## Quickstart: training
 
-Training uses Isaac Lab's shared `train.py` entry point:
+Training uses the **overlay-owned** entry point. `isaaclab` stays a pristine
+upstream fork, so its stock `train.py` does not know the `Isaac-FullDOF-*` tasks —
+the overlay entry owns env registration (`import constrained_albc`) and the custom
+runner dispatch (`FullDOFConstraintEncoderRunner`):
 
 ```bash
 cd /workspace/isaaclab
-./isaaclab.sh -p scripts/reinforcement_learning/rsl_rl/train.py \
+./isaaclab.sh -p /workspace/constrained-albc/scripts/train.py \
     --task Isaac-FullDOF-TRPO-v0 \
     --num_envs 4096 --max_iterations 5000 \
     --logger wandb --log_project_name full_dof_trpo
 ```
 
-Student distillation has its own entry point:
+Student distillation has its own overlay entry point:
 
 ```bash
-cd /workspace/constrained-albc
-/workspace/isaaclab/isaaclab.sh -p scripts/train_student.py --help
+cd /workspace/isaaclab
+./isaaclab.sh -p /workspace/constrained-albc/scripts/train_student.py --help
 # or use the launcher scripts:
-bash scripts/launch_student_tcn.sh
-bash scripts/launch_student_gru.sh
+bash /workspace/constrained-albc/scripts/launch_student_tcn.sh
+bash /workspace/constrained-albc/scripts/launch_student_gru.sh
 ```
 
 ## Quickstart: evaluation
