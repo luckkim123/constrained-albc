@@ -2,7 +2,7 @@
 
 > **Status**: 2026-02-11 | Standalone theory document
 >
-> TDC 이론 및 문헌 조사. 이 시스템에 대한 구체적인 구현은 [tdc-control-law.md](tdc-control-law.md)를, 튜닝 과정은 [debug-history.md](../reference/debug-history.md)를 참조.
+> TDC theory and literature survey. For the concrete implementation for this system, see [tdc-control-law.md](tdc-control-law.md); for the tuning process, see [debug-history.md](../reference/debug-history.md).
 
 ---
 
@@ -10,7 +10,7 @@
 
 TDC was independently proposed by Youcef-Toumi & Ito (1990) and Hsia & Gao (1990).
 
-**Core idea**: 시스템 동역학을 모르더라도, 직전 time step의 제어 입력(torque)과 상태(acceleration)를 이용하여 미지의 동역학을 추정할 수 있다. 이 메커니즘을 **Time Delay Estimation (TDE)** 이라 한다.
+**Core idea**: Even without knowing the system dynamics, the unknown dynamics can be estimated using the control input (torque) and state (acceleration) of the immediately preceding time step. This mechanism is called **Time Delay Estimation (TDE)**.
 
 ### Key References
 
@@ -58,7 +58,7 @@ $N$ is unknown, but assuming **N changes negligibly over one sampling period $L$
 
 $$\hat{N}(t) \approx N(t - L) = \tau(t - L) - \bar{M} \ddot{q}(t - L)$$
 
-TDE의 핵심: 과거 torque $\tau(t-L)$와 과거 acceleration $\ddot{q}(t-L)$만으로 현재의 미지 동역학을 추정할 수 있다.
+The crux of TDE: the current unknown dynamics can be estimated using only the past torque $\tau(t-L)$ and past acceleration $\ddot{q}(t-L)$.
 
 ### Step 4: TDC Control Law
 
@@ -75,7 +75,7 @@ Where:
 - $K_p$: Proportional gain matrix (diagonal)
 - $\ddot{q}_d$: Desired trajectory acceleration
 
-Ideal case (zero TDE error)에서 error dynamics:
+Error dynamics in the ideal case (zero TDE error):
 
 $$\ddot{e} + K_d \dot{e} + K_p e = 0$$
 
@@ -108,13 +108,13 @@ Standard 2nd-order linear damped system. Gain selection:
 
 ## 3. M-bar Selection
 
-$\bar{M}$은 TDC에서 가장 중요한 설계 파라미터이다.
+$\bar{M}$ is the most important design parameter in TDC.
 
 ### Stability Condition
 
 $$\| I - \bar{M}^{-1} M(q) \| < 1 \quad \text{(spectral norm)}$$
 
-Workspace 전체에서 성립해야 한다.
+It must hold over the entire workspace.
 
 ### Practical Guidelines
 
@@ -128,14 +128,14 @@ Workspace 전체에서 성립해야 한다.
 
 ### Effect on Closed-Loop
 
-- $\bar{M}$은 **bandwidth limiter** 역할: 큰 $\bar{M}$은 sensitivity를 낮추지만 responsiveness도 감소.
-- $\bar{M}^{-1} M(q)$ 비율이 TDE의 동역학 상쇄 정도를 결정. $\bar{M} = M(q)$이면 완벽 상쇄 (하지만 그러면 이미 모델을 알고 있는 것).
+- $\bar{M}$ acts as a **bandwidth limiter**: a large $\bar{M}$ lowers sensitivity but also reduces responsiveness.
+- The $\bar{M}^{-1} M(q)$ ratio determines the degree of dynamics cancellation by TDE. If $\bar{M} = M(q)$, cancellation is perfect (but then the model is already known).
 
 ---
 
 ## 4. TDE Error Analysis
 
-실제로는 $N(t) \neq N(t-L)$이므로 TDE error $\epsilon$이 존재:
+In practice $N(t) \neq N(t-L)$, so a TDE error $\epsilon$ exists:
 
 $$\epsilon(t) = N(t) - N(t-L)$$
 
@@ -149,20 +149,20 @@ $$\epsilon(t) = N(t) - N(t-L)$$
 
 ### Stability Under TDE Error
 
-TDE error가 있는 closed-loop error dynamics:
+Closed-loop error dynamics with TDE error:
 
 $$\ddot{e} + K_d \dot{e} + K_p e = \bar{M}^{-1} \epsilon(t)$$
 
 **Ultimate boundedness** (Lyapunov-based):
-- Tracking error는 bounded이지만 asymptotically zero가 아니다.
-- Bound는 $\| \bar{M}^{-1} \epsilon \|$에 비례.
+- The tracking error is bounded but not asymptotically zero.
+- The bound is proportional to $\| \bar{M}^{-1} \epsilon \|$.
 
 ### Mitigation Strategies
 
-1. **Minimize L**: 가능한 한 빠른 sampling rate 사용.
-2. **Sliding mode compensation**: TDE error 보상을 위한 switching term 추가.
-3. **Adaptive $\bar{M}$**: $\| I - \bar{M}^{-1} M(q) \|$을 줄이도록 $\bar{M}$을 온라인 조정.
-4. **Disturbance observer**: TDE error 추정을 위한 보조 observer 추가.
+1. **Minimize L**: use as fast a sampling rate as possible.
+2. **Sliding mode compensation**: add a switching term to compensate for the TDE error.
+3. **Adaptive $\bar{M}$**: adjust $\bar{M}$ online to reduce $\| I - \bar{M}^{-1} M(q) \|$.
+4. **Disturbance observer**: add an auxiliary observer to estimate the TDE error.
 
 ---
 
@@ -172,16 +172,16 @@ $$\ddot{e} + K_d \dot{e} + K_p e = \bar{M}^{-1} \epsilon(t)$$
 
 $$\tau = \bar{M}(\ddot{q}_d + K_d \dot{e} + K_p e) + \tau(t-L) - \bar{M} \ddot{q}(t-L)$$
 
-단순하고 효과적이지만 TDE error가 보상되지 않는다.
+Simple and effective, but the TDE error is not compensated.
 
 ### 5.2 TDC + Sliding Mode
 
-TDE error 처리를 위한 switching term 추가:
+Add a switching term to handle the TDE error:
 
 $$\tau = \bar{M} \ddot{q}_{ref} + \hat{N} + \bar{M} K_s \text{sign}(s)$$
 
-여기서 $s$는 sliding surface (e.g., $s = \dot{e} + \lambda e$).
-Tracking error bound를 줄이지만 chattering이 발생할 수 있다.
+Here $s$ is the sliding surface (e.g., $s = \dot{e} + \lambda e$).
+It reduces the tracking error bound but can introduce chattering.
 
 ### 5.3 Enhanced TDC (IETDC, Cho et al. 2017)
 
@@ -190,46 +190,46 @@ Three components:
 2. Nonlinear desired error dynamics (DED)
 3. TDE error correction via nonlinear sliding surface
 
-Chattering 없이 robustness를 개선.
+Improves robustness without chattering.
 
 ### 5.4 Adaptive TDC
 
-- **Adaptive $\bar{M}$**: Nussbaum function 또는 gradient 기반 $\bar{M}$ 온라인 튜닝.
-- **Adaptive gains**: Tracking performance 기반 $K_p$, $K_d$ 조정.
+- **Adaptive $\bar{M}$**: online tuning of $\bar{M}$ based on a Nussbaum function or gradient.
+- **Adaptive gains**: adjust $K_p$, $K_d$ based on tracking performance.
 
 ### 5.5 TDC + Disturbance Observer
 
-보조 observer로 TDE error $\epsilon(t)$를 추정하여 보상. 더 tight한 tracking bound 제공.
+Estimate and compensate for the TDE error $\epsilon(t)$ with an auxiliary observer. Provides a tighter tracking bound.
 
 ---
 
 ## 6. Underwater Vehicle Applications
 
-TDC는 수중 로봇에 특히 적합하다:
+TDC is particularly well-suited to underwater robots:
 
-1. **Complex hydrodynamics**: Added mass, nonlinear damping, Coriolis force는 정밀 모델링이 어렵다. TDC는 이 요구를 우회한다.
-2. **Environmental disturbances**: 해류와 파랑은 lumped uncertainty $N$의 일부로 자연스럽게 처리된다.
-3. **Parameter variation**: 부력과 added mass는 깊이, 페이로드, 자세에 따라 변한다. TDC는 TDE를 통해 암묵적으로 적응한다.
+1. **Complex hydrodynamics**: Added mass, nonlinear damping, and Coriolis force are difficult to model precisely. TDC bypasses this requirement.
+2. **Environmental disturbances**: Ocean currents and waves are naturally handled as part of the lumped uncertainty $N$.
+3. **Parameter variation**: Buoyancy and added mass change with depth, payload, and attitude. TDC adapts implicitly through TDE.
 
 ### Hero Agent ALBC Application
 
-Hero Agent의 ALBC (Arm-Linked Buoyancy Control) arm은 이 문서의 이론을 roll/pitch 자세 제어에 적용한다. 주요 특징:
+The ALBC (Arm-Linked Buoyancy Control) arm of Hero Agent applies the theory of this document to roll/pitch attitude control. Key features:
 
-- 2-DOF planar arm이 buoy의 위치를 조절하여 복원 토크를 생성
-- Anti-diagonal Lambda 행렬이 roll/pitch를 coupled torque로 변환
-- TDE가 hydrodynamic coupling, payload 변동, buoyancy 불확실성을 보상
-- RL encoder가 $\bar{M}$을 온라인으로 추정하여 Section 5.4의 Adaptive TDC를 실현
+- A 2-DOF planar arm adjusts the buoy's position to generate restoring torque
+- An anti-diagonal Lambda matrix converts roll/pitch into coupled torque
+- TDE compensates for hydrodynamic coupling, payload variation, and buoyancy uncertainty
+- The RL encoder estimates $\bar{M}$ online, realizing the Adaptive TDC of Section 5.4
 
-구현 상세는 [tdc-control-law.md](tdc-control-law.md), 튜닝 과정은 [debug-history.md](../reference/debug-history.md) 참조.
+For implementation details, see [tdc-control-law.md](tdc-control-law.md); for the tuning process, see [debug-history.md](../reference/debug-history.md).
 
 ### Relevant Work
 
 - **Nonlinear robust control of UVMS based on TDE** (IEEE ICRA 2017):
-  Underwater vehicle-manipulator system의 coupled dynamics에 적용.
+  Applied to the coupled dynamics of an underwater vehicle-manipulator system.
 - **Robust trajectory control of underwater vehicles using TDC** (Ocean Engineering 2006):
-  AUV의 6-DOF trajectory tracking에서 TDC를 실증.
+  Demonstrated TDC in 6-DOF trajectory tracking of an AUV.
 - **Chattering-suppression SMC with TDE for underwater manipulator** (JMSE 2023):
-  TDE와 continuous sliding mode를 결합하여 smooth control 달성.
+  Combined TDE with continuous sliding mode to achieve smooth control.
 
 ---
 
@@ -247,7 +247,7 @@ Hero Agent의 ALBC (Arm-Linked Buoyancy Control) arm은 이 문서의 이론을 
 
 ### Acceleration Measurement
 
-TDE의 주요 실용적 과제: $\ddot{q}(t-L)$을 얻어야 한다.
+The main practical challenge of TDE: $\ddot{q}(t-L)$ must be obtained.
 
 | Method | Pros | Cons |
 |:-------|:-----|:-----|
@@ -276,10 +276,10 @@ tau[k] = M_bar * q_ddot_ref + N_hat                 # TDC control law
 
 ## 8. Key Takeaways for Implementation
 
-1. **Model-free**: 동역학 식별이 불필요. $\bar{M}$ (대략적 관성 추정)만 있으면 된다.
+1. **Model-free**: dynamics identification is unnecessary. Only $\bar{M}$ (a rough inertia estimate) is needed.
 2. **Three design parameters**: $\bar{M}$, $K_p/K_d$, $L$.
-3. **Acceleration estimation**이 주요 실용적 과제. 시뮬레이션에서는 물리 엔진에서 trivially 얻을 수 있다.
-4. **Standard TDC is sufficient** as a starting point. TDE error가 문제를 일으키면 sliding mode나 adaptive extension을 추가할 수 있다.
+3. **Acceleration estimation** is the main practical challenge. In simulation it can be obtained trivially from the physics engine.
+4. **Standard TDC is sufficient** as a starting point. If the TDE error causes problems, a sliding mode or adaptive extension can be added.
 5. **Stability is guaranteed** as long as $\| I - \bar{M}^{-1} M(q) \| < 1$ and $L$ is sufficiently small.
 
 ---
@@ -297,6 +297,6 @@ tau[k] = M_bar * q_ddot_ref + N_hat                 # TDC control law
 
 ## Related Documents
 
-- [tdc-control-law.md](tdc-control-law.md): Hero Agent ALBC의 TDC 제어 법칙 유도 및 구현
-- [debug-history.md](../reference/debug-history.md): TDC 튜닝 과정 전체 기록
-- [dynamics.md](dynamics.md): ALBC 동역학 분석 및 added mass coupling
+- [tdc-control-law.md](tdc-control-law.md): Derivation and implementation of the TDC control law for Hero Agent ALBC
+- [debug-history.md](../reference/debug-history.md): Full record of the TDC tuning process
+- [dynamics.md](dynamics.md): ALBC dynamics analysis and added mass coupling

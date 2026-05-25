@@ -2,7 +2,7 @@
 
 > **Status**: 2026-02-11 | **Source**: `config.py`, `mdp/events.py`
 >
-> Hero Agent ALBC arm의 simulation-reality gap 분석 및 배포 전략.
+> Simulation-reality gap analysis and deployment strategy for the Hero Agent ALBC arm.
 
 ---
 
@@ -54,22 +54,22 @@ actuators={
 },
 ```
 
-PhysX 내부에서 연속 PD를 계산한다. 명령이 즉시 반영되며 delay가 없다.
+PhysX computes continuous PD internally. Commands are applied immediately with no delay.
 
 | Environment | Kp Center | Kd Center | DR Range |
 |:---|:---|:---|:---|
 | Base RL (v0, Base-v0) | 100.0 | 3.0 | +-20% ([80,120], [2.4,3.6]) |
 | TDC (TDC-v0) | 200.0 | 10.0 | +-20% ([160,240], [8,12]) |
 
-TDC 환경에서 Kp/Kd가 높은 이유: TDC controller가 빠른 position tracking을 요구한다.
-DLS IK의 small delta position commands를 정확히 추종하려면 높은 강성이 필요.
+Reason Kp/Kd are high in the TDC environment: the TDC controller requires fast position tracking.
+High stiffness is needed to accurately track the small delta position commands of DLS IK.
 
-### 2.2 DelayedPDActuator -- 실패 기록 (2026-02-10)
+### 2.2 DelayedPDActuator -- Failure record (2026-02-10)
 
-`ImplicitActuatorCfg` -> `DelayedPDActuatorCfg` 마이그레이션을 시도했으나 훈련이 완전히 실패했다.
+A migration from `ImplicitActuatorCfg` -> `DelayedPDActuatorCfg` was attempted, but training failed completely.
 
 ```python
-# 시도한 설정 (현재 미사용)
+# Attempted configuration (currently unused)
 actuators={
     "arm": DelayedPDActuatorCfg(
         joint_names_expr=["joint.*"],
@@ -81,20 +81,20 @@ actuators={
 },
 ```
 
-핵심 차이:
+Key differences:
 
 | | ImplicitActuator | DelayedPDActuator |
 |:---|:---|:---|
-| PD 계산 | PhysX 내부 (연속) | Isaac Lab explicit (200Hz discrete) |
-| Delay | 없음 | 0-50ms configurable |
-| Gain 해석 | 연속 PD | 200Hz discrete PD |
+| PD computation | PhysX internal (continuous) | Isaac Lab explicit (200Hz discrete) |
+| Delay | none | 0-50ms configurable |
+| Gain interpretation | continuous PD | 200Hz discrete PD |
 
-실패 원인 (미진단):
-- Gain 튜닝: 연속 PD에 적합한 값이 discrete 200Hz PD에서는 다르게 동작
-- Delay buffer와 env reset 간의 상호작용
-- Kp=100에서 bandwidth ~9Hz (Nyquist 100Hz의 9%로 이론상 안전하지만, 실제 비선형 dynamics에서는 불충분할 가능성)
+Failure causes (undiagnosed):
+- Gain tuning: values suitable for continuous PD behave differently in discrete 200Hz PD
+- Interaction between the delay buffer and env reset
+- At Kp=100, bandwidth ~9Hz (9% of the Nyquist 100Hz, theoretically safe, but possibly insufficient under real nonlinear dynamics)
 
-현재 상태: `ImplicitActuatorCfg`로 복귀. DelayedPDActuator는 미래 과제로 남겨둠.
+Current status: reverted to `ImplicitActuatorCfg`. DelayedPDActuator is left as future work.
 
 ### 2.3 Per-Environment Actuator Configuration
 
@@ -107,7 +107,7 @@ actuators={
 
 ## 3. Isaac Gym Reference
 
-Isaac Gym 원래 구현의 actuator 설정:
+Actuator configuration of the original Isaac Gym implementation:
 
 | Parameter | Final (heroagent.py) | Early (heroagent_welldone.py) |
 |:---|:---|:---|
@@ -117,15 +117,15 @@ Isaac Gym 원래 구현의 actuator 설정:
 | dt | 0.005 | 0.005 |
 | substeps | 6 | 2 |
 
-`substeps=6`: PD가 매 substep마다 재계산 -> 1200Hz effective PD rate.
-Isaac Lab에서는 TGS iterations이 이 역할을 부분적으로 대체하지만,
-TGS는 constraints refinement이지 true time advance가 아니므로 동작이 다르다.
+`substeps=6`: PD is recomputed every substep -> 1200Hz effective PD rate.
+In Isaac Lab, TGS iterations partially replace this role, but
+since TGS is constraints refinement rather than true time advance, the behavior is different.
 
 ---
 
 ## 4. Dynamixel Step Response Measurement
 
-실물 calibration을 위한 step response 측정 절차.
+Step response measurement procedure for real-hardware calibration.
 
 ### 4.1 Equipment
 
@@ -136,21 +136,21 @@ TGS는 constraints refinement이지 true time advance가 아니므로 동작이 
 
 ### 4.2 Procedure
 
-1. Servo를 position mode로 설정 (Profile Velocity = 0 for step input)
+1. Set the servo to position mode (Profile Velocity = 0 for step input)
 2. Initial position: 0 deg
 3. Step command: +30 deg
-4. Bulk read로 feedback 기록 (~100Hz)
-5. 측정 항목:
-   - Rise time (10% -> 90%): 예상 50-100ms
-   - Overshoot: 예상 5-15%
-   - Settling time (+-2%): 예상 200-400ms
+4. Record feedback via bulk read (~100Hz)
+5. Measured items:
+   - Rise time (10% -> 90%): expected 50-100ms
+   - Overshoot: expected 5-15%
+   - Settling time (+-2%): expected 200-400ms
    - Steady-state error: < 0.088 deg (1 encoder count)
 
 ### 4.3 Repeat Conditions
 
-- 여러 position 구간에서 반복 (0->30, 30->60, 60->0)
-- Load 유무 (buoy attached vs detached)
-- 수중/수상 (물의 점성 감쇠 효과)
+- Repeat over several position ranges (0->30, 30->60, 60->0)
+- With/without load (buoy attached vs detached)
+- Underwater/above-water (water viscous damping effect)
 
 ---
 
@@ -158,17 +158,17 @@ TGS는 constraints refinement이지 true time advance가 아니므로 동작이 
 
 ### 5.1 Settling Time Matching
 
-Settling time은 주로 Kp에 의존한다.
+Settling time depends mainly on Kp.
 
 $$t_s = \frac{4}{\zeta \cdot \omega_n}, \quad \omega_n = \sqrt{K_p / J}$$
 
-Real settling time이 300ms이고 J ~ 0.03 kg*m^2이면:
+If the real settling time is 300ms and J ~ 0.03 kg*m^2:
 
 $$\omega_n = \frac{4}{0.87 \times 0.3} = 15.3 \text{ rad/s}, \quad K_p = \omega_n^2 \cdot J = 7.0$$
 
 ### 5.2 Overshoot Matching
 
-Overshoot는 damping ratio ($\zeta$)에 의존한다:
+Overshoot depends on the damping ratio ($\zeta$):
 
 $$\% \text{OS} = \exp\!\left(\frac{-\pi \zeta}{\sqrt{1 - \zeta^2}}\right) \times 100$$
 
@@ -180,17 +180,17 @@ $$\% \text{OS} = \exp\!\left(\frac{-\pi \zeta}{\sqrt{1 - \zeta^2}}\right) \times
 
 ### 5.3 Delay Matching
 
-Real에서 측정한 "0 -> first movement" 시간을 physics step 수로 환산:
+Convert the "0 -> first movement" time measured on the real robot into a number of physics steps:
 
 $$\text{delay\_steps} = \text{round}(\text{delay\_time} / \text{physics\_dt})$$
 
-예: 15ms / 5ms = 3 steps.
+Example: 15ms / 5ms = 3 steps.
 
 ### 5.4 Dynamixel PID Register vs SI Units
 
-Dynamixel의 PID gain register는 SI 단위가 아니다.
+The Dynamixel PID gain register is not in SI units.
 PWM = Kp_dxl * pos_error + Ki_dxl * integral + Kd_dxl * vel.
-환산 계수는 모터 모델마다 다르므로, step response 기반 system identification이 더 실용적이다.
+Since the conversion coefficient differs per motor model, step-response-based system identification is more practical.
 
 ---
 
@@ -207,19 +207,19 @@ new_pos = current_pos + clamped_vel * dt
 controller.update_ee_position(FK(actual_joint_pos))
 ```
 
-핵심: TDC controller의 EE position은 항상 **실제 관절 위치**의 FK에서 계산된다.
-rate-limiting된 desired position과 actual position의 차이가 쌓여도,
-다음 step에서 실제 위치 기준으로 재계산하므로 windup이 누적되지 않는다.
+Key point: the TDC controller's EE position is always computed from the FK of the **actual joint position**.
+Even if the difference between the rate-limited desired position and the actual position accumulates,
+windup does not accumulate because it is recomputed based on the actual position at the next step.
 
 ### 6.2 Real Robot Adaptation
 
-Dynamixel의 경우:
-1. Profile Velocity register를 max_vel로 설정 (하드웨어 rate limiting)
-2. Position command를 직접 전송 (velocity integration 불필요)
-3. TDC controller의 EE position을 bulk read의 present position에서 FK로 계산
+For Dynamixel:
+1. Set the Profile Velocity register to max_vel (hardware rate limiting)
+2. Send the position command directly (velocity integration unnecessary)
+3. Compute the TDC controller's EE position via FK from the present position of the bulk read
 
-Simulation에서는 velocity command를 적분하여 position target을 생성하지만,
-real에서는 Dynamixel이 내부적으로 trajectory를 생성하므로 position command를 직접 사용한다.
+In simulation, the velocity command is integrated to generate the position target, but
+on the real robot, Dynamixel generates the trajectory internally, so the position command is used directly.
 
 ---
 
@@ -227,19 +227,19 @@ real에서는 Dynamixel이 내부적으로 trajectory를 생성하므로 positio
 
 ### 7.1 Pre-deployment
 
-- [ ] Dynamixel step response 측정 완료
-- [ ] Simulation PD gain을 step response에 맞춰 튜닝
-- [ ] Delay range를 measured delay에 기반하여 조정
-- [ ] DR 범위를 실물 편차에 맞춰 조정
-- [ ] 수중 테스트 환경 준비 (water tank)
+- [ ] Dynamixel step response measurement completed
+- [ ] Tune simulation PD gain to match the step response
+- [ ] Adjust delay range based on the measured delay
+- [ ] Adjust DR range to match the real-hardware variation
+- [ ] Prepare the underwater test environment (water tank)
 
 ### 7.2 Hardware Setup
 
-- [ ] Dynamixel Wizard로 servo ID, baudrate, operating mode 확인
-- [ ] Profile Velocity 설정 (rate limiting)
-- [ ] Return Delay Time 최소화 (0 or 1)
-- [ ] Torque limit 설정 (안전)
-- [ ] Emergency stop 메커니즘 확인
+- [ ] Verify servo ID, baudrate, operating mode with Dynamixel Wizard
+- [ ] Set Profile Velocity (rate limiting)
+- [ ] Minimize Return Delay Time (0 or 1)
+- [ ] Set torque limit (safety)
+- [ ] Verify emergency stop mechanism
 
 ### 7.3 Software Integration
 
@@ -271,9 +271,9 @@ real에서는 Dynamixel이 내부적으로 trajectory를 생성하므로 positio
 
 ## Related Documents
 
-- [system-overview.md](../explanation/system-overview.md): 시뮬레이션 설정 상세
-- [domain-randomization.md](domain-randomization.md): DR 범위 및 센서 노이즈
-- [tdc-control-law.md](../explanation/tdc-control-law.md): TDC 제어기 수식
+- [system-overview.md](../explanation/system-overview.md): Simulation configuration details
+- [domain-randomization.md](domain-randomization.md): DR ranges and sensor noise
+- [tdc-control-law.md](../explanation/tdc-control-law.md): TDC controller equations
 
 ---
 

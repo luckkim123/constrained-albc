@@ -1,276 +1,276 @@
-# constrained-albc 진단 리포트
+# constrained-albc Diagnostic Report
 
-> 작성: 2026-05-25. 6개 영역(env/physics, algorithm, encoder/runners/student, TDC, analysis, structure)을
-> 읽기 전용 에이전트로 병렬 진단 후, **CRITICAL 항목은 코드로 직접 재검증**했다.
-> 각 항목에 검증 상태를 표기한다: `[검증됨]` = 코드/데이터로 확인, `[미검증]` = 에이전트 보고이나 직접 확인 안 함,
-> `[기각]` = 검증 결과 사실이 아님.
+> Written: 2026-05-25. Six areas (env/physics, algorithm, encoder/runners/student, TDC, analysis, structure) were
+> diagnosed in parallel by read-only agents, and then **CRITICAL items were re-verified directly against the code**.
+> Each item is tagged with a verification status: `[verified]` = confirmed by code/data, `[unverified]` = agent report not directly confirmed,
+> `[rejected]` = verification showed it is not true.
 >
-> **이 리포트는 진단만 담는다. 수정은 항목별 승인 후 별도 진행한다.**
+> **This report contains diagnosis only. Fixes proceed separately after per-item approval.**
 
 ---
 
-## 0. 요약 — 옥석 가리기
+## 0. Summary — Separating Signal from Noise
 
-진단 에이전트가 올린 "CRITICAL" 2건은 **직접 검증 결과 모두 과잉판정으로 기각**했다.
-이는 `03-analysis-quality.md`(근거 없는 주장 금지)와 `feedback_no_baseless_claims`가 경계하는 패턴이라
-리포트 전반에서 검증 상태를 명시한다.
+The 2 "CRITICAL" items raised by the diagnostic agents were **all rejected as over-classifications upon direct verification**.
+This is the pattern that `03-analysis-quality.md` (no baseless claims) and `feedback_no_baseless_claims` warn against,
+so the verification status is stated explicitly throughout the report.
 
-| 영역 | 실제 CRITICAL | HIGH | MEDIUM | 비고 |
+| Area | Actual CRITICAL | HIGH | MEDIUM | Notes |
 |:---|:---:|:---:|:---:|:---|
-| env / physics | 0 | 1 | 4 | 에이전트 CRITICAL 2건 → 기각/다운그레이드 |
-| algorithm | 0 | 1 | 3 | 에이전트 CRITICAL 1건 → 기각 (표준화 전제 무시) |
-| encoder/runner/student | 0 | 0 | 2 | 구조 양호, 중복만 존재 |
-| TDC | 0 | 0 | 2 | 제어 수학 정확, C++ 후보 1건 |
-| analysis | 0 | 1 | 3 | eval_dr.py 4041줄 분해가 최대 기회 |
-| structure | 0 | 2 | 4 | config 중복 + 테스트 부재가 핵심 |
+| env / physics | 0 | 1 | 4 | 2 agent CRITICALs → rejected/downgraded |
+| algorithm | 0 | 1 | 3 | 1 agent CRITICAL → rejected (ignored standardization premise) |
+| encoder/runner/student | 0 | 0 | 2 | Structure sound, only duplication exists |
+| TDC | 0 | 0 | 2 | Control math correct, 1 C++ candidate |
+| analysis | 0 | 1 | 3 | Decomposing the 4041-line eval_dr.py is the biggest opportunity |
+| structure | 0 | 2 | 4 | config duplication + absence of tests are the core issues |
 
-**가장 높은 ROI 세 가지** (상세는 §7):
-1. `analysis/eval_dr.py` (4041줄) 모듈 분해 + 공통 metric/plotting 라이브러리화
-2. config 9개 클래스의 base-template 리팩토링 (중복 25~40%)
-3. 환경/config/runner 스모크 테스트 추가 (현재 테스트는 TDC 1개뿐)
+**The three highest-ROI items** (details in §7):
+1. Decompose `analysis/eval_dr.py` (4041 lines) into modules + extract a shared metric/plotting library
+2. Refactor the 9 config classes into base templates (25~40% duplication)
+3. Add smoke tests for env/config/runner (currently only 1 test, for TDC)
 
 ---
 
-## 1. 기각·다운그레이드된 항목 (먼저 정리)
+## 1. Rejected / Downgraded Items (cleared up first)
 
-### [기각] constraints.py:88 — attitude cost `torch.max`는 버그 아님
-에이전트는 CRITICAL로 분류했으나, `torch.max(a, b)`는 인자가 **두 텐서**이면 element-wise maximum이
-PyTorch 표준 동작이다 (reduction은 단일 텐서일 때만). `(roll.abs(), pitch.abs())` 두 (N,) 텐서가 들어가므로
-per-env max가 정확히 계산된다. "우연히 맞다"가 아니라 **명세상 맞다**.
-→ 실제 등급: **LOW (가독성)**. `torch.maximum`으로 바꾸면 의도가 더 명확해지는 nit일 뿐.
+### [rejected] constraints.py:88 — attitude cost `torch.max` is not a bug
+The agent classified this as CRITICAL, but `torch.max(a, b)` with **two tensors** as arguments performs an element-wise maximum,
+which is standard PyTorch behavior (reduction occurs only with a single tensor). Since two (N,) tensors `(roll.abs(), pitch.abs())` are passed,
+the per-env max is computed exactly. It is not "accidentally correct" but **correct by specification**.
+→ Actual grade: **LOW (readability)**. Switching to `torch.maximum` would only make the intent clearer; it is a mere nit.
 
-### [기각] constraint_trpo.py:462 — cost surrogate `1/(1-γ)` 스케일이 margin을 폭주시킨다
-에이전트는 "100× 부풀려 log(margin) 폭발 → CRITICAL"이라 했으나 **전제가 코드와 모순**된다.
-`constraint_trpo.py:437-438`에서 `cost_advantages_flat`는 surrogate 진입 **전에 per-constraint std 표준화**된다
-(mean≈0, std≈1). 462행은 그 표준화된 advantage에 ratio를 곱해 평균낸다. on-policy 시작점 ratio≈1이므로
-`cost_surrs ≈ mean(정규화 advantage) ≈ 0`. 따라서 `100 × ≈0 ≈ 0`이지 "100×50"이 아니다.
-에이전트는 표준화를 무시하고 advantage를 O(1)로 가정했다.
-→ **margin 폭주 주장은 기각.** 단, `1/(1-γ)` 스케일이 NORBC 수식과 정확히 일치하는지는 논문 대조가 필요한데
-`references/NORBC`에 Python 구현이 없어 **현 시점 단정 불가** (아래 §3-A1에서 별도 표기).
+### [rejected] constraint_trpo.py:462 — cost surrogate `1/(1-γ)` scale blows up the margin
+The agent claimed "inflated 100× → log(margin) explodes → CRITICAL", but **the premise contradicts the code**.
+At `constraint_trpo.py:437-438`, `cost_advantages_flat` is **standardized per-constraint by std before entering the surrogate**
+(mean≈0, std≈1). Line 462 multiplies that standardized advantage by the ratio and averages it. Since the on-policy starting ratio≈1,
+`cost_surrs ≈ mean(normalized advantage) ≈ 0`. Therefore it is `100 × ≈0 ≈ 0`, not "100×50".
+The agent ignored the standardization and assumed the advantage was O(1).
+→ **The margin-blowup claim is rejected.** However, whether the `1/(1-γ)` scale exactly matches the NORBC formula requires a paper cross-check, and
+since `references/NORBC` contains no Python implementation it **cannot be settled at this time** (tagged separately in §3-A1 below).
 
 ---
 
 ## 2. env / physics (`albc_env.py`, `mdp/`)
 
-### [미검증·HIGH] 쿼터니언 정규화 gradient 비안전 — `albc_env.py:847`
-`_quat_align_z_to()`에서 `axis / axis_norm.clamp(min=eps)`가 양 분기 모두 평가돼 `axis_norm`이 작을 때
-gradient가 폭주할 수 있다. 단, 이 함수는 payload **시각화 마커** 용도라 학습 gradient 경로에 실제로
-포함되는지 확인 필요. `torch.nn.functional.normalize` 또는 분모에 `+eps`로 안전화 권장.
-→ 학습에 영향 없으면 LOW로 강등. **수정 전 호출 경로 확인 필수.**
+### [unverified·HIGH] quaternion normalization gradient unsafe — `albc_env.py:847`
+In `_quat_align_z_to()`, `axis / axis_norm.clamp(min=eps)` evaluates both branches, so when `axis_norm` is small the
+gradient can blow up. However, this function is for the payload **visualization marker**, so it must be confirmed whether it is
+actually included in the training gradient path. Recommend making it safe via `torch.nn.functional.normalize` or `+eps` in the denominator.
+→ Downgrade to LOW if it does not affect training. **Confirming the call path before fixing is mandatory.**
 
-### [미검증·MEDIUM] added-mass 안정성 clamp가 DR된 inertia 사용 — `events.py:267`
-post-DR clamp가 `hydro.rigid_body_inertia`(이미 `inertia_scale` 적용됨)를 기준으로 `M_a < 0.95*I`를
-검사한다. PhysX 실제 inertia는 `inertia_scale`로 randomize되지 않으면 둘이 어긋나 forward-Euler 발산 위험.
-메모리(`added mass stability: init validation + post-DR per-axis clamp 0.95*I`)와 연결됨.
-→ **물리적으로 가장 점검 가치 높은 항목.** base inertia 기준으로 clamp하거나 PhysX inertia도 같이 scale.
+### [unverified·MEDIUM] added-mass stability clamp uses DR'd inertia — `events.py:267`
+The post-DR clamp checks `M_a < 0.95*I` against `hydro.rigid_body_inertia` (which already has `inertia_scale` applied).
+If the actual PhysX inertia is not randomized by `inertia_scale`, the two diverge, risking forward-Euler divergence.
+Linked to memory (`added mass stability: init validation + post-DR per-axis clamp 0.95*I`).
+→ **The item with the highest physical inspection value.** Either clamp against the base inertia or scale the PhysX inertia too.
 
-### [검증됨·MEDIUM] obs 차원 silent mismatch — `albc_env.py:883`
-`use_integral_obs`/`integral_dims`에 따라 obs가 87↔84↔81로 바뀌는데 런타임 assert 없음.
-메모리도 "docstring 81D vs observation_space=87 authoritative"로 과거 혼란 기록.
-→ `_get_observations()` 끝에 `assert policy_obs.shape[-1] == cfg.observation_space` 추가. 저비용 고효율.
+### [verified·MEDIUM] silent obs dimension mismatch — `albc_env.py:883`
+Depending on `use_integral_obs`/`integral_dims` the obs changes 87↔84↔81, but there is no runtime assert.
+Memory also records past confusion as "docstring 81D vs observation_space=87 authoritative".
+→ Add `assert policy_obs.shape[-1] == cfg.observation_space` at the end of `_get_observations()`. Low cost, high benefit.
 
-### [검증됨·MEDIUM] hot-loop 텐서 재생성 — `albc_env.py:940`
-`torch.tensor(sigmas, device=...)`를 매 step 생성. `__init__`에서 1회 할당하면 됨. 4096 env에서 소폭 이득.
+### [verified·MEDIUM] hot-loop tensor recreation — `albc_env.py:940`
+`torch.tensor(sigmas, device=...)` is created every step. Allocating it once in `__init__` would suffice. Small gain at 4096 envs.
 
-### [미검증·MEDIUM] ocean current OU가 max_velocity를 5% 초과 — `config.py:312`, `albc_env.py:674`
-`clamp_bound = max_vel * 1.05`로 명세(`max_velocity=(0.5,...)`)를 5% 위반. encoder 입력 분포에
-영향 가능. 의도면 주석화, 아니면 정확 clamp.
+### [unverified·MEDIUM] ocean current OU exceeds max_velocity by 5% — `config.py:312`, `albc_env.py:674`
+`clamp_bound = max_vel * 1.05` violates the spec (`max_velocity=(0.5,...)`) by 5%. May affect the encoder input distribution.
+If intended, annotate it; otherwise clamp exactly.
 
-### [미검증·LOW] in-place 누적오차 (`_error_integral.mul_`, `:913`), yaw wrap edge(`:501`), manipulability 정규화(`:489`), control decimation 미문서화(`:457`), euler 캐시 매 step(`:1150`) — 모두 정확성 영향 적음, 정리 단계에서 일괄.
+### [unverified·LOW] in-place accumulation error (`_error_integral.mul_`, `:913`), yaw wrap edge (`:501`), manipulability normalization (`:489`), control decimation undocumented (`:457`), euler cache every step (`:1150`) — all have low correctness impact, batch them in the cleanup phase.
 
 ---
 
 ## 3. algorithm (`constraint_trpo.py`, `doraemon.py`, `constraints.py`)
 
-### [검증됨] TRPO/IPO 핵심 수학 — 정확
-직접 읽어 확인: gaussian KL(`:329`), Fisher-vector product 이중 backprop(`:354`), CG+damping(`:367`),
-step size `sqrt(2δ/sHs)`, line search가 surrogate 개선 **AND** KL≤δ 동시 검사(`:406`),
-IPO adaptive threshold `max(d_k, J+α·d_k)`(`:308`), per-constraint cost adv 표준화(`:437`). **표준 구현과 일치.**
+### [verified] TRPO/IPO core math — correct
+Confirmed by direct reading: gaussian KL (`:329`), Fisher-vector product double backprop (`:354`), CG+damping (`:367`),
+step size `sqrt(2δ/sHs)`, line search checks surrogate improvement **AND** KL≤δ simultaneously (`:406`),
+IPO adaptive threshold `max(d_k, J+α·d_k)` (`:308`), per-constraint cost adv standardization (`:437`). **Matches the standard implementation.**
 
-### A1. [미검증·HIGH] cost surrogate `1/(1-γ)` 스케일의 수식 정합성 — `:462`
-margin 폭주는 §1에서 기각했으나, **이 스케일이 NORBC 정의와 맞는지**는 미확정.
-일반적으로 `1/(1-γ)`는 (a) budget→threshold 초기화 변환에 쓰거나 (b) undiscounted cost를 discounted로
-변환할 때 쓴다. 여기선 이미 GAE로 discounted된 cost advantage에 다시 곱하므로 **이중 적용 의심**이 있다.
-단 advantage가 정규화돼 있어 실효는 "barrier gradient의 스케일 상수"로 흡수됨 (barrier_t=100과 상쇄 가능).
-→ **논문 대조 또는 저자(유저) 확인 필요.** 단독으로는 무죄/유죄 판정 보류.
+### A1. [unverified·HIGH] formula consistency of the cost surrogate `1/(1-γ)` scale — `:462`
+The margin blowup was rejected in §1, but **whether this scale matches the NORBC definition** is unsettled.
+Generally `1/(1-γ)` is used for (a) the budget→threshold initialization conversion or (b) converting undiscounted cost to discounted.
+Here it is multiplied again onto a cost advantage already discounted via GAE, so there is **suspicion of double application**.
+However, since the advantage is normalized, the effective result is absorbed as a "scale constant on the barrier gradient" (can be cancelled with barrier_t=100).
+→ **Requires paper cross-check or author (user) confirmation.** On its own, the guilty/not-guilty verdict is on hold.
 
-### B. [검증됨·HIGH] barrier log clamp floor 1e-8 — `:464`
-`margin.clamp(min=1e-8)` 후 log. margin이 음수로 내려가면(제약 위반) log(1e-8)=-18.4가 되고 gradient는
-~1e8로 폭주. 현 하이퍼파라미터에선 드물지만 outlier cost 1건으로 트리거 가능. floor 상향 또는 soft-barrier
-권장. (단 §1에서 본 대로 평소엔 margin이 안정적이라 CRITICAL 아닌 HIGH.)
+### B. [verified·HIGH] barrier log clamp floor 1e-8 — `:464`
+log after `margin.clamp(min=1e-8)`. If the margin drops below zero (constraint violation), log(1e-8)=-18.4 and the gradient blows up
+to ~1e8. Rare with the current hyperparameters but can be triggered by a single outlier cost. Recommend raising the floor or a soft-barrier.
+(But as seen in §1, the margin is normally stable, so this is HIGH, not CRITICAL.)
 
-### [검증됨] DORAEMON — 정확
-Beta KL(`:125`), reverse-KL trust region, IS 성공률 추정 + ESS 검증(`:516`), entropy 최대화 + KL≤ε 제약.
-표준 구현과 일치.
+### [verified] DORAEMON — correct
+Beta KL (`:125`), reverse-KL trust region, IS success-rate estimation + ESS verification (`:516`), entropy maximization + KL≤ε constraint.
+Matches the standard implementation.
 
-### [미검증·MEDIUM] cost returns `clamp(min=0)`이 버그 은폐 — `:443` / monitoring 텐서 detach 누락 `:466` / hot-path assert(-O 시 무력화) `:473` / CG damping 0.1 약할 수 있음
-모두 robustness·관측성 개선. 정확성 치명 아님. 로깅 추가 + assert를 `__init__`으로 이동 권장.
+### [unverified·MEDIUM] cost returns `clamp(min=0)` hides bugs — `:443` / missing detach on monitoring tensor `:466` / hot-path assert (disabled under -O) `:473` / CG damping 0.1 may be too weak
+All are robustness/observability improvements. Not fatal to correctness. Recommend adding logging + moving the assert into `__init__`.
 
 ---
 
 ## 4. encoder / runners / student
 
-### [검증됨] 아키텍처·gradient flow — 정확, aux loss 0건
-encoder 입력(privileged 24D → MLP → LayerNorm → softsign → z9D), actor=[obs87+z9], critic asymmetric,
-z gradient flow 정상, BPTT truncation 정상. **`reconstruction/contrastive/z_bounds/auxiliary` grep 0건** —
-`03-analysis-quality.md`의 "No Encoder Auxiliary Losses" 규칙 준수 확인.
+### [verified] architecture · gradient flow — correct, 0 aux losses
+encoder input (privileged 24D → MLP → LayerNorm → softsign → z9D), actor=[obs87+z9], critic asymmetric,
+z gradient flow normal, BPTT truncation normal. **0 grep hits for `reconstruction/contrastive/z_bounds/auxiliary`** —
+confirms compliance with the "No Encoder Auxiliary Losses" rule in `03-analysis-quality.md`.
 
-### [검증됨·MEDIUM] 두 actor-critic 클래스 80% 중복 — `actor_critic_encoder.py` vs `actor_critic_asym_constrained.py`
-ablation 분리 의도는 타당하나 `act/act_inference/update_normalization/load_state_dict`가 거의 동일.
-`PolicyBase` 활용도를 높이거나 obs-composition을 strategy로 추출하면 통합 가능. **긴급도 낮음** (둘 다 frozen).
+### [verified·MEDIUM] two actor-critic classes 80% duplicated — `actor_critic_encoder.py` vs `actor_critic_asym_constrained.py`
+The intent to separate them for ablation is valid, but `act/act_inference/update_normalization/load_state_dict` are nearly identical.
+They could be unified by raising the utilization of `PolicyBase` or extracting obs-composition as a strategy. **Low urgency** (both frozen).
 
-### [검증됨·LOW] runner 헬퍼 중복 — `constraint_encoder_runner` vs `on_policy_doraemon_runner`
-`_should_log/_save_aux_state/_load_aux_state` 중복. 코드 주석이 "TRPO-specific 상속 회피용 의도적 중복"이라
-명시. mixin으로 추출 가능하나 의도적이므로 우선순위 낮음.
-
----
-
-## 5. TDC controllers (C++ 후보 포함)
-
-### [검증됨] 제어 수학 — 정확
-TDC 법칙(one-step delay 버퍼 인덱싱 정확, off-by-one 없음, 첫 step PD fallback), Lambda 결합행렬+DLS,
-2-link FK/IK/Jacobian, restoring torque 부호. 기존 테스트(`test_tdc_controller.py` 478줄)가
-Lambda/IK round-trip/reset 등 커버.
-
-### [검증됨·C++ HIGH] `tdc.py` compute() hot-path → C++/CUDA 전환 후보
-50Hz × num_envs, autograd 불필요, 순수 텐서 연산, 인터페이스 안정. 5~20× 추정. **유저가 C++ 허용**한
-영역과 정확히 일치. 단 kinematics(분석해)·thruster_pd는 이득 적어 Python 유지 권장 (프로파일 후 결정).
-
-### [검증됨·MEDIUM] `compute_M_bb()` 미사용 — `tdc.py:499`
-`__init__.py`에서 export되나 호출처 0건. encoder-adaptive M_hat용으로 예약된 듯. 문서화하거나 제거.
-
-### [미검증·테스트 갭] TDE delay 버퍼 1-step 정확성, rate-limit anti-windup, OOD robustness, `update_gains`는 미테스트.
+### [verified·LOW] runner helper duplication — `constraint_encoder_runner` vs `on_policy_doraemon_runner`
+`_should_log/_save_aux_state/_load_aux_state` duplicated. A code comment states it is "intentional duplication to avoid TRPO-specific inheritance".
+Could be extracted into a mixin, but since it is intentional the priority is low.
 
 ---
 
-## 6. analysis (최대 정리 기회)
+## 5. TDC controllers (including C++ candidate)
 
-### [검증됨·HIGH] `eval_dr.py` 4041줄 모놀리스 → 6모듈 분해
-하위명령(static/periodic/segmented/sudden)별로 metric 계산 / plotting / DR config / trajectory / CLI가
-한 파일에 뭉쳐 있음. 제안 구조: `cli.py`, `dr_config.py`, `trajectory.py`, `metrics/`, `plotting/`, `modes/`.
-**도메인 로직은 보존**하고 경계만 분리 — analyze.py/compare.py/encoder_tools.py에서 재사용 가능.
+### [verified] control math — correct
+TDC law (one-step delay buffer indexing correct, no off-by-one, first-step PD fallback), Lambda coupling matrix + DLS,
+2-link FK/IK/Jacobian, restoring torque sign. The existing test (`test_tdc_controller.py`, 478 lines) covers
+Lambda/IK round-trip/reset, etc.
 
-### [검증됨·MEDIUM] metric 계산 5중 중복 + magic number 산재
-SS window 0.5, heavy-tail 임계 5.0°/0.1m 등이 3~5곳에 하드코딩. `common.py`에 `MetricsConfig` dataclass로
-중앙화. matplotlib `use("Agg")`도 5곳 반복 → `plotting/common.py:setup_matplotlib()`.
+### [verified·C++ HIGH] `tdc.py` compute() hot-path → candidate for C++/CUDA migration
+50Hz × num_envs, no autograd needed, pure tensor operations, stable interface. Estimated 5~20×. Matches exactly the
+area where **the user permitted C++**. However, kinematics (analytic solution) and thruster_pd have small gains, so keeping them in Python is recommended (decide after profiling).
 
-### [미검증·MEDIUM] matplotlib figure leak / YAML 예외 삼킴 — `eval_dr.py:2221` 등
-plot 함수 대부분 `plt.close()` 하나 try/finally 미적용. YAML 로드 실패 시 `run_agent_dict` 미정의 참조 위험.
-→ `save_and_close()` 헬퍼 + `run_agent_dict={}` 초기화.
+### [verified·MEDIUM] `compute_M_bb()` unused — `tdc.py:499`
+Exported from `__init__.py` but with 0 call sites. Seems reserved for encoder-adaptive M_hat. Document it or remove it.
+
+### [unverified·test gap] TDE delay buffer 1-step accuracy, rate-limit anti-windup, OOD robustness, and `update_gains` are untested.
+
+---
+
+## 6. analysis (the biggest cleanup opportunity)
+
+### [verified·HIGH] `eval_dr.py` 4041-line monolith → decompose into 6 modules
+Per subcommand (static/periodic/segmented/sudden), metric computation / plotting / DR config / trajectory / CLI are
+all clumped into one file. Proposed structure: `cli.py`, `dr_config.py`, `trajectory.py`, `metrics/`, `plotting/`, `modes/`.
+**Preserve the domain logic** and only separate the boundaries — reusable from analyze.py/compare.py/encoder_tools.py.
+
+### [verified·MEDIUM] metric computation 5x duplicated + scattered magic numbers
+SS window 0.5, heavy-tail thresholds 5.0°/0.1m, etc. are hardcoded in 3~5 places. Centralize in `common.py` as a `MetricsConfig` dataclass.
+matplotlib `use("Agg")` is also repeated in 5 places → `plotting/common.py:setup_matplotlib()`.
+
+### [unverified·MEDIUM] matplotlib figure leak / YAML exception swallowing — `eval_dr.py:2221` etc.
+Most plot functions call `plt.close()` but without try/finally. On YAML load failure there is a risk of referencing an undefined `run_agent_dict`.
+→ `save_and_close()` helper + initialize `run_agent_dict={}`.
 
 ---
 
 ## 7. structure / enterprise standards
 
-### [검증됨·HIGH] config 9개 클래스 중복 25~40% — `rsl_rl_ppo_cfg.py` / `ablation_cfgs.py` / `config_noconstraint.py`
-`seed=30, num_steps_per_env=64, max_iterations=2500` 등 100% 중복, policy/algo cfg 25~40% 중복.
-6개 task가 문자열 경로로 cross-ref. → `_Base*Cfg` 정의 후 상속·override만. **가장 높은 ROI 구조 개선** (§0).
+### [verified·HIGH] 9 config classes 25~40% duplicated — `rsl_rl_ppo_cfg.py` / `ablation_cfgs.py` / `config_noconstraint.py`
+`seed=30, num_steps_per_env=64, max_iterations=2500` etc. are 100% duplicated, policy/algo cfg 25~40% duplicated.
+6 tasks cross-ref via string paths. → Define `_Base*Cfg` then only inherit/override. **The highest-ROI structural improvement** (§0).
 
-### [검증됨·HIGH] 테스트 부재 — `tests/`에 TDC 1개뿐
-env step/reset, config 로드, constraint 평가, runner init, encoder forward 전부 무커버.
-→ 스모크 테스트(env+10step, config load, runner+1iter) 추가. CI 없음도 함께.
+### [verified·HIGH] absence of tests — only 1 in `tests/`, for TDC
+env step/reset, config load, constraint evaluation, runner init, encoder forward are all uncovered.
+→ Add smoke tests (env+10step, config load, runner+1iter). Also the absence of CI.
 
-### [검증됨·MEDIUM] print 365 vs logger 54 (7:1)
-분석/env 코드에 ad-hoc print 다수. logging 표준화 권장.
+### [verified·MEDIUM] print 365 vs logger 54 (7:1)
+Many ad-hoc prints in analysis/env code. Recommend standardizing on logging.
 
-### [검증됨·MEDIUM] deps 버전 핀 없음 — `pyproject.toml`
-`["marinelab","gymnasium","torch","numpy"]` 상·하한 없음. 재현성 위험. 핀 권장.
+### [verified·MEDIUM] no deps version pins — `pyproject.toml`
+`["marinelab","gymnasium","torch","numpy"]` have no upper/lower bounds. Reproducibility risk. Pins recommended.
 
-### [미검증·MEDIUM] train.py builtins `__import__` 후크 / num_constraints 자동 동기화 silent mutation / IPO barrier 재사용 불가 구조 — 동작은 하나 암묵적. 문서화·명시화 권장.
+### [unverified·MEDIUM] train.py builtins `__import__` hook / num_constraints auto-sync silent mutation / IPO barrier non-reusable structure — they work but are implicit. Recommend documenting/making them explicit.
 
 ---
 
-## 7.5 범용 도구의 marinelab 승격 (유저 제안 — 검증 완료)
+## 7.5 Promoting general-purpose tools to marinelab (user proposal — verification complete)
 
-> 유저 제안: "DORAEMON은 범용 툴이니 marinelab로 옮기고 constrained-albc는 import해서 쓰자.
-> 다른 범용 알고리즘도 같은 방식으로."
+> User proposal: "DORAEMON is a general-purpose tool, so move it to marinelab and have constrained-albc import and use it.
+> Apply the same approach to other general-purpose algorithms."
 
-### [검증됨] DORAEMON은 승격 적격 — 연구 코드에 0 결합
-`doraemon.py`의 import는 `numpy/torch/scipy/isaaclab.utils.configclass`뿐. **`constrained_albc` 내부 참조 0건**
-(grep 확인). 레이어 의존 방향(isaaclab ← marinelab ← constrained-albc)을 깨지 않는다.
+### [verified] DORAEMON is eligible for promotion — 0 coupling to research code
+The imports in `doraemon.py` are only `numpy/torch/scipy/isaaclab.utils.configclass`. **0 references inside `constrained_albc`**
+(confirmed by grep). It does not break the layer dependency direction (isaaclab ← marinelab ← constrained-albc).
 
-**유일한 연구-결합점 = `_PARAM_DEFS` (`doraemon.py:69`)** — 15개 DR 파라미터 이름이 ALBC의
-`DomainRandomizationCfg` 필드명에 하드코딩됨. 엔진(`DoraemonScheduler`/`BetaDistribution`/`EpisodeBuffer`)은
-완전 범용. 결합은 `build_param_specs(dr_cfg)`가 `getattr(dr_cfg, field_name)`로 (lo,hi)를 읽는 것뿐.
+**The only research-coupling point = `_PARAM_DEFS` (`doraemon.py:69`)** — the names of 15 DR parameters are hardcoded to ALBC's
+`DomainRandomizationCfg` field names. The engine (`DoraemonScheduler`/`BetaDistribution`/`EpisodeBuffer`) is
+fully general-purpose. The coupling is only that `build_param_specs(dr_cfg)` reads (lo,hi) via `getattr(dr_cfg, field_name)`.
 
-**승격 설계 (엔진=marinelab, 파라미터 정의=overlay 주입):**
+**Promotion design (engine=marinelab, parameter definitions injected from overlay):**
 ```
-marinelab/marinelab/algorithms/doraemon/   (NEW — 범용 엔진)
+marinelab/marinelab/algorithms/doraemon/   (NEW — general-purpose engine)
   ├── scheduler.py   # DoraemonScheduler, DoraemonCfg
   ├── distribution.py# BetaDistribution
   ├── buffer.py      # EpisodeBuffer
-  └── spec.py        # ParamSpec, build_param_specs(dr_cfg, param_defs)  ← param_defs를 인자로
+  └── spec.py        # ParamSpec, build_param_specs(dr_cfg, param_defs)  ← param_defs as an argument
 constrained-albc/.../constrained_full_albc/
-  └── doraemon_params.py  # _PARAM_DEFS (ALBC 15개 파라미터) + nominal overrides만 남김
+  └── doraemon_params.py  # leave only _PARAM_DEFS (ALBC's 15 parameters) + nominal overrides
                           # from marinelab.algorithms.doraemon import DoraemonScheduler
 ```
-핵심 변경: `build_param_specs`가 `_PARAM_DEFS`를 모듈 전역이 아니라 **인자로** 받게 한다.
-그러면 marinelab 엔진이 BlueROV 등 다른 로봇/연구의 DR cfg와도 동작.
+Key change: make `build_param_specs` receive `_PARAM_DEFS` as **an argument** rather than as a module global.
+Then the marinelab engine works with the DR cfg of other robots/research such as BlueROV.
 
-### 다른 승격 후보 (예비 평가 — 미검증, 승격 시 동일 절차로 import 경계 확인 필요)
-| 후보 | 승격 적격성 | 근거 |
+### Other promotion candidates (preliminary assessment — unverified; on promotion, verify import boundaries via the same procedure)
+| Candidate | Promotion eligibility | Basis |
 |:---|:---|:---|
-| **DORAEMON** | ✅ 적격 (검증됨) | 연구코드 0 참조, 인터페이스 깔끔 |
-| TDC controller (`controllers/`) | △ 조건부 | UUV 부력제어 일반론이나 2-link arm/buoy 특화. `kinematics.py`는 범용, `tdc.py`는 ALBC 특화 결합 점검 필요 |
-| ConstraintTRPO + IPO barrier | △ 조건부 | rsl_rl 인터페이스엔 범용이나 cost critic/storage 결합 큼. IPO barrier만 떼어내면 범용 가능 |
-| BetaDistribution 단독 | ✅ 적격 | DORAEMON 일부, 독립 유틸로도 유용 |
+| **DORAEMON** | ✅ eligible (verified) | 0 research-code references, clean interface |
+| TDC controller (`controllers/`) | △ conditional | A generic UUV buoyancy-control concept, but specialized to the 2-link arm/buoy. `kinematics.py` is general-purpose, `tdc.py`'s ALBC-specific coupling needs inspection |
+| ConstraintTRPO + IPO barrier | △ conditional | General-purpose at the rsl_rl interface, but heavy cost critic/storage coupling. Could be general if only the IPO barrier is detached |
+| BetaDistribution standalone | ✅ eligible | Part of DORAEMON, also useful as a standalone util |
 
-→ **권장**: DORAEMON 먼저 승격(가장 깔끔, 즉시 가능). TDC/TRPO는 import 경계 별도 진단 후 결정.
-
----
-
-## 8. 권고 실행 순서 (승인 후)
-
-```
-Phase A (저위험·학습 무영향) — 바로 가능
-  A1. obs 차원 assert 추가 (§2)              → verify: 잘못된 obs로 즉시 raise
-  A2. hot-loop sigma 텐서 사전할당 (§2)       → verify: 동일 결과 + 미세 속도
-  A3. analysis MetricsConfig + plotting 공통화 (§6) → verify: 기존 plot 재현
-  A4. 환경/config 스모크 테스트 추가 (§7)      → verify: pytest 통과
-
-Phase B (구조 리팩토링·동작 보존) — 검증 게이트 필요
-  B1. eval_dr.py 4041줄 6모듈 분해 (§6)       → verify: 4개 mode 출력 before/after 동일
-  B2. config base-template 리팩토링 (§7)      → verify: 6 task cfg.to_dict() 동일
-  B3. deps 핀 + logging 표준화 (§7)
-
-Phase C (수식·물리 — 유저 확인/논문 대조 필요)
-  C1. cost surrogate 1/(1-γ) 정합성 (§3-A1)   → NORBC 논문 대조 or 저자 확인
-  C2. added-mass clamp inertia 기준 (§2)      → 학습 안정성 영향 검토
-  C3. barrier log clamp floor (§3-B)          → soft-barrier 실험
-
-Phase D (성능 — 선택)
-  D1. TDC compute() C++/CUDA 포팅 (§5)        → verify: Python 대비 수치 동일 + 속도
-```
-
-**원칙**: 각 항목은 독립 검증 가능. Phase C는 학습 동작을 바꾸므로 메모리·rule상 **유저 승인 + before/after 데이터**
-없이 손대지 않는다 (`feedback_no_unauthorized_changes`, `feedback_training_control`).
+→ **Recommendation**: promote DORAEMON first (cleanest, immediately possible). For TDC/TRPO, decide after separately diagnosing the import boundaries.
 
 ---
 
-## 9. 재검증 보강 (2026-05-25, marinelab v0.2.0 호환 작업 중)
+## 8. Recommended execution order (after approval)
 
-이 리포트는 marinelab API 변경 **이전**에 작성됐다. 호환 작업을 진행하며 코드를 재독한 결과,
-DIAGNOSIS가 다루지 못한 P0 항목과, 이미 반영돼 있던 Phase A 항목을 확인했다.
+```
+Phase A (low-risk · no training impact) — immediately possible
+  A1. add obs dimension assert (§2)              → verify: raise immediately on wrong obs
+  A2. pre-allocate hot-loop sigma tensor (§2)    → verify: identical result + minor speedup
+  A3. analysis MetricsConfig + plotting commonization (§6) → verify: reproduces existing plots
+  A4. add env/config smoke tests (§7)            → verify: pytest passes
 
-### P0 (DIAGNOSIS 미수록) — marinelab.core API 비호환 = 런타임 크래시 [수정 완료]
-marinelab v0.2.0이 ocean current를 독립 `OceanCurrent` 컴포넌트로 분리하면서
-`HydrodynamicsModel._current_velocity` / `._max_current_vel` 버퍼를 제거했다.
-albc는 이 버퍼를 8곳 이상에서 read/write해 **env reset / OU step에서 즉시 AttributeError**로 죽었다.
-→ `hydro.current.velocity_w` / `.max_velocity` / `.set`로 경로 교체 + buoy에 main의 `OceanCurrent`
-주입(공유)으로 수정 완료. OU 수학 불변.
+Phase B (structural refactor · behavior-preserving) — verification gate required
+  B1. decompose eval_dr.py 4041 lines into 6 modules (§6) → verify: 4-mode output identical before/after
+  B2. refactor config base-template (§7)         → verify: 6 task cfg.to_dict() identical
+  B3. deps pins + logging standardization (§7)
 
-### Phase A 재확인 — 일부 이미 반영됨
-- **A1 obs assert**: `albc_env.py:138-143`에 construction-time assert가 이미 존재
-  (config vs computed obs dim). 이번에 `_get_observations()` 반환 텐서 런타임 assert만 보완.
-- **A2 hot-loop sigma**: `albc_env.py:153`에서 이미 `__init__` 사전할당 (주석 "Avoids re-allocating
-  ... every step"). no-op이었다.
-- **dead code 재판정**: `randomize_ocean_current`는 **live** (albc_env.py:1327,1412, eval_dr.py:601).
-  미사용은 `compute_M_bb`(tdc.py)뿐이라 이번에 제거.
+Phase C (formula · physics — requires user confirmation/paper cross-check)
+  C1. cost surrogate 1/(1-γ) consistency (§3-A1) → NORBC paper cross-check or author confirmation
+  C2. added-mass clamp inertia basis (§2)        → review training-stability impact
+  C3. barrier log clamp floor (§3-B)             → soft-barrier experiment
 
-### Phase C (학습 동작 변경, 별도 승인 필요) 재확인 — 여전히 유효
-- **added-mass clamp** (`mdp/events.py:258-271`): marinelab core는 base-inertia `_clamp_inertia`
-  버퍼로 자체 clamp를 안전화했으나, **albc events.py의 clamp는 별개 경로**로 여전히 DR된
-  `rigid_body_inertia` 기준. forward-Euler 발산 위험 미해결. 가장 점검 가치 높음.
-- barrier log clamp floor 1e-8 (§3-B), cost surrogate 1/(1-γ) (§3-A1), OU 5% 초과 (§2): 그대로 유효.
+Phase D (performance — optional)
+  D1. port TDC compute() to C++/CUDA (§5)        → verify: numerically identical to Python + speed
+```
 
-> 이 4개 Phase C 항목은 학습 동작을 바꾸므로 **유저 승인 + before/after 데이터 없이 손대지 않는다.**
+**Principle**: each item is independently verifiable. Phase C changes training behavior, so per memory and rules it is **not touched
+without user approval + before/after data** (`feedback_no_unauthorized_changes`, `feedback_training_control`).
+
+---
+
+## 9. Re-verification supplement (2026-05-25, during marinelab v0.2.0 compatibility work)
+
+This report was written **before** the marinelab API change. As a result of re-reading the code while doing the compatibility work,
+a P0 item that DIAGNOSIS did not cover, and Phase A items that were already in place, were identified.
+
+### P0 (not in DIAGNOSIS) — marinelab.core API incompatibility = runtime crash [fix complete]
+As marinelab v0.2.0 split the ocean current into an independent `OceanCurrent` component, it removed the
+`HydrodynamicsModel._current_velocity` / `._max_current_vel` buffers.
+albc read/wrote these buffers in 8+ places, so it died with an immediate **AttributeError at env reset / OU step**.
+→ Fixed by switching the paths to `hydro.current.velocity_w` / `.max_velocity` / `.set` + injecting (sharing) main's `OceanCurrent`
+into the buoy. OU math unchanged.
+
+### Phase A re-check — some already in place
+- **A1 obs assert**: a construction-time assert already exists at `albc_env.py:138-143`
+  (config vs computed obs dim). This time only the `_get_observations()` return-tensor runtime assert was added.
+- **A2 hot-loop sigma**: already pre-allocated in `__init__` at `albc_env.py:153` (comment "Avoids re-allocating
+  ... every step"). It was a no-op.
+- **dead code re-judgment**: `randomize_ocean_current` is **live** (albc_env.py:1327,1412, eval_dr.py:601).
+  The only unused one is `compute_M_bb` (tdc.py), removed this time.
+
+### Phase C (training behavior change, separate approval required) re-check — still valid
+- **added-mass clamp** (`mdp/events.py:258-271`): marinelab core made its own clamp safe via the base-inertia `_clamp_inertia`
+  buffer, but **albc events.py's clamp is on a separate path** and is still based on the DR'd
+  `rigid_body_inertia`. The forward-Euler divergence risk is unresolved. Highest inspection value.
+- barrier log clamp floor 1e-8 (§3-B), cost surrogate 1/(1-γ) (§3-A1), OU 5% exceedance (§2): valid as-is.
+
+> Since these 4 Phase C items change training behavior, **they are not touched without user approval + before/after data.**

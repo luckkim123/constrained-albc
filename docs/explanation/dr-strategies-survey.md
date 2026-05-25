@@ -2,48 +2,48 @@
 
 Date: 2026-02-24
 
-Hero Agent 훈련에서 DR이 강해질수록 attitude error가 단조 증가하는 문제를 해결하기 위해,
-선도 연구들의 DR 대응 전략을 조사. Adaptive entropy, DR 커리큘럼, privileged info 활용,
-contrastive learning 등 주요 접근법을 비교 분석.
+To address the problem in Hero Agent training where attitude error increases monotonically as DR becomes stronger,
+we survey the DR-handling strategies of leading studies. We compare and analyze major approaches such as
+adaptive entropy, DR curriculum, use of privileged info, and contrastive learning.
 
 ---
 
-## 1. DR 커리큘럼 접근법
+## 1. DR Curriculum Approaches
 
 ### 1.1 Fixed DR (Uniform)
 
-가장 단순한 방식. 처음부터 전체 DR 범위에서 균일 샘플링.
+The simplest method. Uniform sampling over the entire DR range from the start.
 
-- 장점: 구현 단순, 하이퍼파라미터 없음
-- 단점: DR 범위가 넓으면 초기 학습 실패 또는 overly conservative policy
-- 사용 사례: RMA, HORA (대신 privileged info로 DR 보상)
+- Pros: simple implementation, no hyperparameters
+- Cons: if the DR range is wide, early training fails or yields an overly conservative policy
+- Use cases: RMA, HORA (instead compensate for DR with privileged info)
 
-### 1.2 Manual Linear Curriculum (현재 Hero Agent)
+### 1.2 Manual Linear Curriculum (current Hero Agent)
 
-좁은 DR 범위에서 시작, iteration에 비례하여 선형 확장.
+Start from a narrow DR range and expand linearly in proportion to iteration.
 
 ```
 param_range(iter) = start + (end - start) * min(1, iter / end_iter)
 ```
 
-- 장점: 구현 단순, 예측 가능한 진행
-- 단점: **Policy 준비 여부와 무관하게 DR이 확장**됨
-- 문제: reward 커리큘럼과 동시 진행 시 death spiral 가능 (Hero Agent에서 확인)
+- Pros: simple implementation, predictable progression
+- Cons: **DR expands regardless of whether the policy is ready**
+- Problem: when run concurrently with the reward curriculum, a death spiral is possible (observed in Hero Agent)
 
 ### 1.3 ADR (Automatic Domain Randomization) - OpenAI, 2019
 
 > Solving Rubik's Cube with a Robot Hand. OpenAI, 2019.
 > https://openai.com/index/solving-rubiks-cube/
 
-**성능 기반 DR 확장/수축.** 핵심 알고리즘:
+**Performance-based DR expansion/contraction.** Core algorithm:
 
-1. 비랜덤 환경에서 시작 (모든 파라미터 = nominal)
-2. 매 iteration: DR 파라미터 하나를 랜덤 선택
-3. **Boundary sampling**: 해당 파라미터를 경계값 (상한 또는 하한)에 고정, 나머지는 현재 범위에서 샘플링
-4. 해당 환경에서 N 에피소드 성능 평가 -> 버퍼에 축적
-5. 평균 성능 > threshold_H -> **경계 확장** (DR 더 어렵게)
-6. 평균 성능 < threshold_L -> **경계 수축** (DR 쉽게)
-7. 반복
+1. Start in a non-randomized environment (all parameters = nominal)
+2. Each iteration: randomly select one DR parameter
+3. **Boundary sampling**: fix that parameter at a boundary value (upper or lower limit), sample the rest from the current range
+4. Evaluate performance over N episodes in that environment -> accumulate into a buffer
+5. Mean performance > threshold_H -> **expand boundary** (make DR harder)
+6. Mean performance < threshold_L -> **contract boundary** (make DR easier)
+7. Repeat
 
 ```
 For each iteration:
@@ -57,11 +57,11 @@ For each iteration:
         contract boundary by delta
 ```
 
-핵심 특성:
-- **Policy가 준비되면 확장, 실패하면 수축** (선형 커리큘럼과의 결정적 차이)
-- Human intervention 불필요 (자동 범위 결정)
-- ADR entropy = 분포 다양성 지표, 전이 성능과 상관
-- Dactyl에서 루빅큐브 풀기까지 확장 (100+ DR 파라미터)
+Key characteristics:
+- **Expand when the policy is ready, contract when it fails** (the decisive difference from the linear curriculum)
+- No human intervention required (automatic range determination)
+- ADR entropy = a distribution-diversity metric, correlated with transfer performance
+- Scaled from Dactyl up to solving the Rubik's Cube (100+ DR parameters)
 
 ### 1.4 DORAEMON (ICLR 2024)
 
@@ -69,17 +69,17 @@ For each iteration:
 > Tiboni et al., ICLR 2024.
 > https://arxiv.org/abs/2311.01885
 
-**Constrained entropy maximization으로 DR 분포 최적화.**
+**Optimize the DR distribution via constrained entropy maximization.**
 
 ```
-max  H(p_phi)                    # DR 분포의 엔트로피 최대화
-s.t. E_phi[success(pi)] >= eta   # 현재 policy 성공률 >= threshold
+max  H(p_phi)                    # maximize the entropy of the DR distribution
+s.t. E_phi[success(pi)] >= eta   # current policy success rate >= threshold
 ```
 
-- ADR보다 더 원리적: 분포 자체를 최적화 (경계만 조절하는 ADR과 달리)
-- 고정 DR 대비 항상 우수 (wider generalization)
-- 자연스럽게 커리큘럼 유도: 성공률 제약이 점진적 확장을 강제
-- Sim-to-Real 제로샷 전이 성공 (robotic manipulation)
+- More principled than ADR: optimizes the distribution itself (unlike ADR, which only adjusts boundaries)
+- Always superior to fixed DR (wider generalization)
+- Naturally induces a curriculum: the success-rate constraint forces gradual expansion
+- Successful sim-to-real zero-shot transfer (robotic manipulation)
 
 ### 1.5 Active Domain Randomization (CoRL 2019)
 
@@ -87,21 +87,21 @@ s.t. E_phi[success(pi)] >= eta   # 현재 policy 성공률 >= threshold
 > Mehta et al., CoRL 2019.
 > https://arxiv.org/abs/1904.04762
 
-- ADR과 다른 접근: "가장 informative한" DR 환경을 능동적으로 탐색
-- Discriminator로 randomized vs reference 환경의 trajectory 구분
-- Discriminator output을 reward로 사용 -> SVPG로 sampling policy 최적화
-- 결과: policy에게 어려운 환경을 더 많이 샘플링 (curriculum 자동 유도)
+- An approach different from ADR: actively search for the "most informative" DR environments
+- Use a discriminator to distinguish trajectories of randomized vs. reference environments
+- Use the discriminator output as a reward -> optimize the sampling policy with SVPG
+- Result: sample more from environments that are difficult for the policy (automatically induces a curriculum)
 
 ---
 
-## 2. Exploration / Adaptive Entropy 전략
+## 2. Exploration / Adaptive Entropy Strategies
 
 ### 2.1 axPPO (2024)
 
 > Proximal Policy Optimization with Adaptive Exploration.
 > 2024. https://arxiv.org/abs/2405.04664
 
-**Recent return 기반 entropy 스케일링.**
+**Entropy scaling based on recent return.**
 
 ```
 L(theta) = E[L_CLIP - c1*L_VF + G_recent * c2 * S[pi](s)]
@@ -109,10 +109,10 @@ L(theta) = E[L_CLIP - c1*L_VF + G_recent * c2 * S[pi](s)]
 G_recent = (1/G_max) * mean(recent tau steps batch returns)
 ```
 
-- G_recent in [0, 1]: 성능 좋을 때 높음, 나쁠 때 낮음
-- **성능 좋을 때 entropy 증가** (exploit 강화) -- Hero Agent와 반대 방향
-- 고정 c2 대비 성능 변동에 덜 민감
-- 주의: DR 환경이 아닌 순수 exploration 환경 (sparse reward) 타겟
+- G_recent in [0, 1]: high when performance is good, low when it is bad
+- **Increase entropy when performance is good** (strengthen exploit) -- the opposite direction from Hero Agent
+- Less sensitive to performance fluctuations compared to a fixed c2
+- Note: targets pure exploration environments (sparse reward), not DR environments
 
 ### 2.2 SAC Automatic Alpha Tuning
 
@@ -120,76 +120,76 @@ G_recent = (1/G_max) * mean(recent tau steps batch returns)
 > Haarnoja et al., 2018. + Meta-SAC, 2020.
 > https://arxiv.org/abs/2007.01932
 
-**Target entropy로 alpha 자동 조절.**
+**Automatically adjust alpha via a target entropy.**
 
 ```
 min_alpha  E[-alpha * log pi(a|s) - alpha * H_target]
-H_target = -dim(action_space)   # 일반적 default
+H_target = -dim(action_space)   # common default
 ```
 
-- Off-policy 특성상 DR 환경에서도 안정적
-- Alpha가 자동으로 올바른 수준 유지 (DR 강도에 무관)
-- PPO와 달리 entropy가 objective에 직접 포함
+- Stable even in DR environments due to its off-policy nature
+- Alpha automatically maintains the correct level (independent of DR strength)
+- Unlike PPO, entropy is directly included in the objective
 
 ### 2.3 Entropy-Controlled Intrinsic Motivation (2024)
 
 > Entropy-Controlled Intrinsic Motivation for Quadruped Robot Locomotion.
 > 2024. https://arxiv.org/html/2512.06486
 
-- 복잡 terrain에서 entropy 기반 intrinsic motivation
-- Entropy 낮아지면 (exploitation 과다) -> intrinsic reward 증가 -> exploration 강제
-- Terrain curriculum과 결합
+- Entropy-based intrinsic motivation on complex terrain
+- When entropy drops (excessive exploitation) -> increase intrinsic reward -> force exploration
+- Combined with a terrain curriculum
 
-### 2.4 선도 연구들의 공통점
+### 2.4 Commonalities Among Leading Studies
 
-**대부분 entropy를 명시적으로 조절하지 않음.**
+**Most do not explicitly adjust entropy.**
 
-| 방법 | Entropy 전략 | DR 대응 |
+| Method | Entropy Strategy | DR Handling |
 |------|-------------|---------|
-| ADR (OpenAI) | 고정 | DR 범위를 policy 성능에 맞춤 |
-| DORAEMON | 고정 | DR 분포 자체를 최적화 |
-| RMA/HORA | 고정 | Privileged info로 DR 보상 |
-| HIM | 고정 | Contrastive embedding으로 DR 보상 |
-| Extreme Parkour | 고정 | Terrain curriculum (성능 기반) |
-| axPPO | Adaptive | 성능 좋을 때 entropy 증가 (반대 방향) |
-| Hero Agent (현재) | Adaptive | 성능 나빠지면 entropy 증가 |
+| ADR (OpenAI) | Fixed | Fit the DR range to policy performance |
+| DORAEMON | Fixed | Optimize the DR distribution itself |
+| RMA/HORA | Fixed | Compensate for DR with privileged info |
+| HIM | Fixed | Compensate for DR with a contrastive embedding |
+| Extreme Parkour | Fixed | Terrain curriculum (performance-based) |
+| axPPO | Adaptive | Increase entropy when performance is good (opposite direction) |
+| Hero Agent (current) | Adaptive | Increase entropy when performance worsens |
 
 ---
 
-## 3. Privileged Info / Adaptation 전략
+## 3. Privileged Info / Adaptation Strategies
 
 ### 3.1 RMA (Rapid Motor Adaptation)
 
 > Kumar et al., RSS 2021.
 > https://ar5iv.labs.arxiv.org/html/2107.04034
 
-**2-Phase regression 기반 adaptation.**
+**2-phase regression-based adaptation.**
 
 Phase 1 (RL + Encoder):
-- Policy + encoder(mu) 동시 학습 (PPO)
+- Train policy + encoder(mu) jointly (PPO)
 - Encoder: privileged env parameters -> extrinsics vector z
 - Policy: [proprioception, z] -> actions
-- **풀 DR, 커리큘럼 없음** (privileged info가 DR을 보상)
+- **Full DR, no curriculum** (privileged info compensates for DR)
 
 Phase 2 (Adaptation):
-- Policy + encoder 동결
-- Adaptation module(phi) 학습: proprio history -> z_hat (supervised)
-- z_hat이 z를 대체하여 실제 환경에서 작동
+- Freeze policy + encoder
+- Train the adaptation module(phi): proprio history -> z_hat (supervised)
+- z_hat replaces z to operate in the real environment
 
-핵심 통찰:
-- Privileged info가 있으면 DR이 어려워도 학습 가능 (policy가 환경을 "안다")
-- Regression target (z)이 DR noise에 오염될 수 있음 (HIM에서 지적)
+Key insight:
+- With privileged info, learning is possible even when DR is hard (the policy "knows" the environment)
+- The regression target (z) can be contaminated by DR noise (pointed out in HIM)
 
 ### 3.2 HIM (Hybrid Internal Model, ICLR 2024)
 
 > Long et al., ICLR 2024.
 > https://arxiv.org/abs/2312.11460
 
-**Contrastive learning 기반 환경 embedding. RMA regression의 대안.**
+**Contrastive-learning-based environment embedding. An alternative to RMA regression.**
 
 Architecture:
 ```
-과거 5스텝 proprioception history
+past 5-step proprioception history
     |
 Embedding Extractor (MLP 512->256->128)
     |
@@ -197,25 +197,25 @@ Embedding Extractor (MLP 512->256->128)
     +-- Implicit: l_hat in R^16   -- SwAV contrastive learning
     |
 Policy: [partial_obs, v_hat, l_hat] -> actions
-Critic: [privileged_obs] -> value (학습 시에만)
+Critic: [privileged_obs] -> value (only during training)
 ```
 
 SwAV Contrastive Learning:
 ```
 J_SwAV = -1/2 * sum(q_source * log(p_target) + q_target * log(p_source))
 ```
-- Source: 과거 관측 history -> encoder -> embedding
-- Target: 미래 관측 (successor state) -> encoder -> embedding
-- Prototype: K개의 learnable cluster center
-- Sinkhorn-Knopp: batch 내 균등 할당 강제 (collapse 방지)
+- Source: past observation history -> encoder -> embedding
+- Target: future observation (successor state) -> encoder -> embedding
+- Prototype: K learnable cluster centers
+- Sinkhorn-Knopp: enforce uniform assignment within a batch (prevent collapse)
 
-2-Phase 최적화 (매 iteration):
+2-phase optimization (each iteration):
 ```
-Phase A (HIO): SwAV + velocity MSE로 embedding 업데이트, policy frozen
-Phase B (PPO): Embedding frozen, actor/critic만 PPO 업데이트
+Phase A (HIO): update embedding with SwAV + velocity MSE, policy frozen
+Phase B (PPO): embedding frozen, PPO updates actor/critic only
 ```
 
-DR 파라미터 (커리큘럼 없이 전체 범위):
+DR parameters (full range, without a curriculum):
 | Parameter | Range |
 |-----------|-------|
 | Body/Link mass | +/-20% |
@@ -228,134 +228,134 @@ DR 파라미터 (커리큘럼 없이 전체 범위):
 | System delay | 0~3dt |
 | External force | +/-30N |
 
-성능 (vs RMA):
-| 환경 | HIM | RMA |
+Performance (vs RMA):
+| Environment | HIM | RMA |
 |------|-----|-----|
-| Short stairs 성공률 | 100% | 60% |
+| Short stairs success rate | 100% | 60% |
 | Long stairs (cm) | 176.5 | 75.4 |
-| 복합 terrain | 85% | 45% |
-| 변형 경사면 | 55% | 10% |
+| Composite terrain | 85% | 45% |
+| Deformed slope | 55% | 10% |
 
-핵심 차이점 (vs RMA):
-- RMA: "마찰이 0.5, 질량이 1.2배" 추정 (regression)
-- HIM: "이 환경은 A와 비슷, B와 다르다" 구분 (contrastive)
-- Regression은 DR noise에 target 오염, contrastive는 상대적 차이만 학습
+Key differences (vs RMA):
+- RMA: estimate "friction is 0.5, mass is 1.2x" (regression)
+- HIM: distinguish "this environment is similar to A, different from B" (contrastive)
+- Regression has target contamination from DR noise, while contrastive learns only relative differences
 
 ### 3.3 Extreme Parkour (ICRA 2024)
 
 > Cheng et al., ICRA 2024.
 > https://ar5iv.labs.arxiv.org/html/2309.14341
 
-**Teacher-Student distillation + 성능 기반 terrain curriculum.**
+**Teacher-Student distillation + performance-based terrain curriculum.**
 
 Phase 1 (Teacher, RL):
-- 입력: proprioception + scandots(특권) + heading + flag
-- ROA (Regularized Online Adaptation): 환경 파라미터 estimator 동시 학습
-- PPO로 학습
+- Input: proprioception + scandots (privileged) + heading + flag
+- ROA (Regularized Online Adaptation): jointly train an environment-parameter estimator
+- Train with PPO
 
 Phase 2 (Student, DAgger):
-- 입력: proprioception + depth image(58x87, 10Hz) + heading prediction
-- Teacher action을 MSE로 모방
-- Student 자신의 action으로 환경 step (distribution shift 해결)
+- Input: proprioception + depth image (58x87, 10Hz) + heading prediction
+- Imitate the teacher action with MSE
+- Step the environment with the student's own action (resolves distribution shift)
 
-Curriculum (성능 기반):
+Curriculum (performance-based):
 ```python
 if distance_traveled > 0.5 * terrain_length:
-    difficulty += 1  # 승격
+    difficulty += 1  # promote
 elif distance_traveled < 0.5 * v_cmd * T:
-    difficulty -= 1  # 강등
+    difficulty -= 1  # demote
 ```
 
 MTS (Mixture of Teacher and Student):
-- Heading prediction이 oracle과 0.6 rad 이내 -> student prediction 사용
-- 그 외 -> oracle heading 강제 (학습 안정성)
+- Heading prediction within 0.6 rad of the oracle -> use the student prediction
+- Otherwise -> force the oracle heading (training stability)
 
-달성 성능:
-- High jump: 0.5m (로봇 높이 2배)
-- Long jump: 0.8m (로봇 길이 2배)
-- 경사면: 37도
-- Handstand 보행 가능
+Achieved performance:
+- High jump: 0.5m (2x robot height)
+- Long jump: 0.8m (2x robot length)
+- Slope: 37 degrees
+- Capable of handstand walking
 
-Exploration: **명시적 메커니즘 없음.** Terrain diversity가 자연 exploration 역할.
+Exploration: **no explicit mechanism.** Terrain diversity serves the role of natural exploration.
 
 ---
 
-## 4. Isaac Lab 커뮤니티 실전 권장사항
+## 4. Isaac Lab Community Practical Recommendations
 
 > https://github.com/isaac-sim/IsaacLab/discussions/2813
 
-### 단계적 도입 순서
-1. DR 없이 / 최소 DR로 안정적 학습 확인
-2. Friction, actuator gains부터 점진적 도입
-3. Sensor noise, perturbation 등 복잡 요인 확장
+### Staged Introduction Order
+1. Confirm stable learning with no DR / minimal DR
+2. Introduce gradually, starting with friction and actuator gains
+3. Expand to complex factors such as sensor noise and perturbation
 
-### 구체적 범위 예시 (AnymalC)
+### Concrete Range Examples (AnymalC)
 - Static friction: 0.7~1.3
 - Stiffness scale: 0.75~1.5
 - Damping scale: 0.3~3.0
 
-### 핵심 원칙
-- DR 범위를 줄여서 학습을 쉽게 만들지 말 것 (실제 환경 대응력 저하)
-- 대신 하이퍼파라미터 튜닝으로 해결
-- 실제 센서/환경 측정값으로 현실적 범위 설정
+### Core Principles
+- Do not make learning easier by reducing the DR range (degrades real-environment robustness)
+- Instead, solve it via hyperparameter tuning
+- Set realistic ranges using actual sensor/environment measurements
 
 ---
 
-## 5. Hero Agent에 대한 시사점
+## 5. Implications for Hero Agent
 
-### 현재 문제
+### Current Problem
 
-DR 커리큘럼(선형)이 policy 준비와 무관하게 확장 -> attitude error 단조 증가.
-Adaptive entropy로 대응 중이나, 문헌에서 이 접근은 드묾.
+The (linear) DR curriculum expands regardless of policy readiness -> monotonically increasing attitude error.
+We are handling it with adaptive entropy, but this approach is rare in the literature.
 
-### 문헌 기반 대안 분석
+### Literature-Based Alternative Analysis
 
-#### Option A: ADR 스타일 성능 기반 커리큘럼 (추천도: ★★★)
+#### Option A: ADR-style performance-based curriculum (recommendation: ★★★)
 
-현재 선형 ramp -> boundary sampling + threshold 기반 확장으로 전환.
+Switch the current linear ramp -> to boundary sampling + threshold-based expansion.
 
-장점:
-- Policy가 준비 안 됐으면 DR이 확장되지 않음 (death spiral 원천 방지)
-- Adaptive entropy 불필요해질 수 있음
-- OpenAI에서 100+ 파라미터까지 검증됨
+Pros:
+- DR does not expand if the policy is not ready (prevents the death spiral at its source)
+- Adaptive entropy may become unnecessary
+- Validated up to 100+ parameters at OpenAI
 
-구현 복잡도: 중간
-- 각 DR 파라미터에 boundary sampling + performance buffer 필요
-- Threshold 설정 필요 (phi_H, phi_L)
-- BaseRunner.log() 수정
+Implementation complexity: medium
+- Each DR parameter needs boundary sampling + a performance buffer
+- Threshold settings required (phi_H, phi_L)
+- Modify BaseRunner.log()
 
-#### Option B: Encoder 학습 안정화 (추천도: ★★☆)
+#### Option B: Stabilize encoder learning (recommendation: ★★☆)
 
-HORA 원논문은 커리큘럼 없이 풀 DR + encoder로 작동.
-우리 encoder가 불안정한 이유를 진단하고 안정화에 집중.
+The original HORA paper works with full DR + encoder, without a curriculum.
+Diagnose why our encoder is unstable and focus on stabilization.
 
-장점:
-- 커리큘럼 자체가 불필요해질 수 있음
-- 원논문의 검증된 파이프라인
+Pros:
+- The curriculum itself may become unnecessary
+- The validated pipeline of the original paper
 
-단점:
-- 수중 로봇은 legged보다 control authority가 낮아 동일 적용이 어려울 수 있음
-- Encoder 불안정 원인이 DR noise에 의한 regression target 오염이면 근본적 한계
+Cons:
+- Underwater robots have lower control authority than legged robots, so the same application may be difficult
+- If the cause of encoder instability is regression-target contamination by DR noise, it is a fundamental limitation
 
-#### Option C: HIM 스타일 Contrastive Encoder (추천도: ★★☆)
+#### Option C: HIM-style contrastive encoder (recommendation: ★★☆)
 
-Regression encoder -> contrastive encoder로 교체.
+Replace the regression encoder -> with a contrastive encoder.
 
-장점:
-- DR noise에 robust한 representation
-- HIM 논문에서 RMA 대비 큰 성능 우위 입증
+Pros:
+- A representation robust to DR noise
+- The HIM paper demonstrates a large performance advantage over RMA
 
-단점:
-- 구현 복잡도 높음 (SwAV, Sinkhorn-Knopp, prototype 관리)
-- 2-phase 최적화 (HIO + PPO) 필요
-- 기존 파이프라인 대폭 변경
+Cons:
+- High implementation complexity (SwAV, Sinkhorn-Knopp, prototype management)
+- Requires 2-phase optimization (HIO + PPO)
+- A major change to the existing pipeline
 
-#### Option D: 현재 접근 유지 + 파라미터 튜닝 (추천도: ★☆☆)
+#### Option D: Keep the current approach + tune parameters (recommendation: ★☆☆)
 
-Adaptive entropy + linear DR curriculum 유지, 파라미터만 조절.
+Keep adaptive entropy + linear DR curriculum, adjust only the parameters.
 
-장점: 코드 변경 최소
-단점: 문헌에서 이 조합의 성공 사례 부재, 근본 해결이 아닐 수 있음
+Pros: minimal code change
+Cons: no success cases for this combination in the literature, and it may not be a fundamental solution
 
 ---
 

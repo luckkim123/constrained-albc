@@ -1,20 +1,20 @@
 # Domain Randomization
 
-> **Status**: 2026-02-14 (4차 극단 강화: TDE stability boundary 초과) | **Source**: `config.py`, `base_env.py`, `mdp/events.py`
+> **Status**: 2026-02-14 (4th extreme strengthening: exceeds TDE stability boundary) | **Source**: `config.py`, `base_env.py`, `mdp/events.py`
 >
-> Hero Agent ALBC 환경의 Domain Randomization(DR) 구현 전체 검토.
-> 12개 카테고리, 35+ 파라미터, Fossen 모델 기반 물리적 랜덤화.
-> BIR Survey (Zhu et al. 2023) 및 Sim-to-Real Locomotion (Tan et al. 2018) 분석 반영.
-> **2026-02-14 4차 극단 강화**: inertia [0.4,2.5], added_mass [0.3,2.0], volume/body_mass +-30%, payload 5kg. TDE stability boundary M_true/M_hat > 2를 의도적으로 초과하여 adaptive M_hat 학습 유도.
+> Full review of the Domain Randomization (DR) implementation for the Hero Agent ALBC environment.
+> 12 categories, 35+ parameters, physical randomization based on the Fossen model.
+> Reflects analysis from the BIR Survey (Zhu et al. 2023) and Sim-to-Real Locomotion (Tan et al. 2018).
+> **2026-02-14 4th extreme strengthening**: inertia [0.4,2.5], added_mass [0.3,2.0], volume/body_mass +-30%, payload 5kg. Intentionally exceeds the TDE stability boundary M_true/M_hat > 2 to induce learning of an adaptive M_hat.
 
 ---
 
 ## Overview
 
-DR은 두 가지 시간 스케일로 적용된다:
+DR is applied at two time scales:
 
-1. **Reset-time DR**: 에피소드 시작 시 파라미터 샘플링 (수력학, 질량, 관절 게인, 센서 바이어스 등). "다른 로봇 인스턴스"를 나타냄.
-2. **Per-step DR**: 에피소드 진행 중 동적 변동 (random perturbation, action latency). "환경 변동 및 하드웨어 불확실성"을 나타냄.
+1. **Reset-time DR**: parameter sampling at episode start (hydrodynamics, mass, joint gains, sensor bias, etc.). Represents "different robot instances".
+2. **Per-step DR**: dynamic variation during the episode (random perturbation, action latency). Represents "environment variation and hardware uncertainty".
 
 ---
 
@@ -24,38 +24,38 @@ DR은 두 가지 시간 스케일로 적용된다:
 
 | Item | Range | Distribution | Physical Meaning |
 |:---|:---|:---|:---|
-| position_x | [-0.5, 0.5] m | Uniform | 수평 오프셋 |
-| position_y | [-0.5, 0.5] m | Uniform | 수평 오프셋 |
-| position_z | [4.0, 5.0] m | Uniform | 초기 깊이 |
-| roll | [-0.785, 0.785] rad (+-45deg) | Uniform | 초기 roll 기울기 |
-| pitch | [-0.785, 0.785] rad (+-45deg) | Uniform | 초기 pitch 기울기 |
-| yaw | [-pi, pi] rad | Uniform | 초기 방향 |
+| position_x | [-0.5, 0.5] m | Uniform | Horizontal offset |
+| position_y | [-0.5, 0.5] m | Uniform | Horizontal offset |
+| position_z | [4.0, 5.0] m | Uniform | Initial depth |
+| roll | [-0.785, 0.785] rad (+-45deg) | Uniform | Initial roll tilt |
+| pitch | [-0.785, 0.785] rad (+-45deg) | Uniform | Initial pitch tilt |
+| yaw | [-pi, pi] rad | Uniform | Initial heading |
 
-Quaternion 기반 회전 (gimbal lock 방지). Position은 기본값에 대한 additive offset.
+Quaternion-based rotation (prevents gimbal lock). Position is an additive offset relative to the default value.
 
-+-45deg 범위는 의도적으로 공격적이다. DLS IK가 singularity 근처를 자연스럽게 처리하므로, 넓은 초기 자세에서의 robust policy 학습이 가능하다.
+The +-45deg range is intentionally aggressive. Since DLS IK naturally handles regions near singularities, learning a robust policy from a wide range of initial attitudes is feasible.
 
-### B. Hydrodynamic Parameters (7 categories, main body + buoy 각각 적용)
+### B. Hydrodynamic Parameters (7 categories, applied to main body + buoy separately)
 
 | Item | Range | Method | DOF | Physical Meaning |
 |:---|:---|:---|:---|:---|
-| added_mass_scale | **[0.3, 2.0]** | Multiplicative | 6 (independent) | Added mass 불확실성 (+-70/+100%) |
-| linear_damping_scale | [0.7, 1.3] | Multiplicative | 6 (independent) | 마찰 감쇠 불확실성 (+-30%) |
-| quadratic_damping_scale | [0.6, 1.4] | Multiplicative | 6 (independent) | 형상 항력 불확실성 (+-40%) |
-| volume_scale | **[0.7, 1.3]** | Multiplicative | scalar | 부력 불확실성 (+-30%) |
-| cob_offset | +-1cm (xy), +-4cm (z) | Additive | 3 | 부력 중심 오차 |
-| cog_offset | +-1cm (xy), **+-6cm (z)** | Additive | 3 | 질량 중심 오차 |
-| inertia_scale | **[0.4, 2.5]** | Multiplicative | 3 (independent) | 관성 모멘트 불확실성 (-60/+150%, TDE stability boundary 초과 의도) |
+| added_mass_scale | **[0.3, 2.0]** | Multiplicative | 6 (independent) | Added mass uncertainty (+-70/+100%) |
+| linear_damping_scale | [0.7, 1.3] | Multiplicative | 6 (independent) | Friction damping uncertainty (+-30%) |
+| quadratic_damping_scale | [0.6, 1.4] | Multiplicative | 6 (independent) | Form drag uncertainty (+-40%) |
+| volume_scale | **[0.7, 1.3]** | Multiplicative | scalar | Buoyancy uncertainty (+-30%) |
+| cob_offset | +-1cm (xy), +-4cm (z) | Additive | 3 | Center of buoyancy error |
+| cog_offset | +-1cm (xy), **+-6cm (z)** | Additive | 3 | Center of gravity error |
+| inertia_scale | **[0.4, 2.5]** | Multiplicative | 3 (independent) | Moment of inertia uncertainty (-60/+150%, intentionally exceeds TDE stability boundary) |
 
-**Inertia 범위 근거**: Tan et al. (2018)은 관성을 "균일 밀도 가정으로 추정"하여 [50%, 150%]의 넓은 범위를 사용. Hero Agent도 URDF 기반 균일밀도 추정이므로 +-40%로 확대. TDE가 관성 변화를 보상하므로 넓은 범위에서도 안정적.
+**Rationale for inertia range**: Tan et al. (2018) "estimated inertia under a uniform-density assumption" and used a wide range of [50%, 150%]. The Hero Agent also estimates inertia from URDF under uniform density, so it is expanded to +-40%. Since TDE compensates for inertia variation, it is stable even over a wide range.
 
-**Added mass 범위 근거 (2026-02-14 강화)**: +-30% -> +-50%. 벽/바닥 근접 시 ground effect로 added mass가 크게 변하며, 부착물/fouling에 의한 형상 변화도 크다. Added mass는 수력학 파라미터 중 불확실성이 가장 큰 항목.
+**Rationale for added mass range (2026-02-14 strengthening)**: +-30% -> +-50%. Near walls/floors, ground effect causes added mass to vary greatly, and shape changes due to attachments/fouling are also large. Added mass is the hydrodynamic parameter with the greatest uncertainty.
 
-**Volume/body mass 범위 근거 (2026-02-14 강화)**: +-10% -> +-15%. 수분 흡수, 생물 부착(fouling), 하우징 내 공기량 변화, 수압에 의한 미세 변형 모델링.
+**Rationale for volume/body mass range (2026-02-14 strengthening)**: +-10% -> +-15%. Models water absorption, biofouling, changes in the air volume inside the housing, and minute deformation due to water pressure.
 
-**CoG offset z 범위 근거 (2026-02-14 강화)**: +-4cm -> +-6cm. 페이로드 부착, 케이블 배선 변화, 내부 부품 재배치에 의한 질량 중심 이동. 정적 안정성(복원 토크)에 직접 영향하므로 robustness에 중요.
+**Rationale for CoG offset z range (2026-02-14 strengthening)**: +-4cm -> +-6cm. Center-of-gravity shift due to payload attachment, cable routing changes, and internal component rearrangement. It directly affects static stability (restoring torque), so it is important for robustness.
 
-Implementation: `_randomize_hydro_model()` in `mdp/events.py`. Base tensor는 `_HydroBaseCache`로 캐싱하여 4096 병렬 환경에서의 성능 보장.
+Implementation: `_randomize_hydro_model()` in `mdp/events.py`. The base tensor is cached via `_HydroBaseCache` to ensure performance with 4096 parallel environments.
 
 ### C. Ocean Current (3 active + 3 disabled)
 
@@ -65,32 +65,32 @@ Implementation: `_randomize_hydro_model()` in `mdp/events.py`. Base tensor는 `_
 | linear_z | **[-0.375, 0.375] m/s** + N(0, 0.075) | Uniform + Gaussian |
 | angular_x/y/z | 0 (disabled) | - |
 
-Main body와 buoy에 동일한 해류 적용 (동일 수역). 에피소드 중 일정 (reset-time only). 에피소드 길이 (~15s)가 해류 변동 시간 스케일보다 짧으므로 시변 모델링은 불필요. **0.75 m/s는 약 1.5 knots로, 연안/항만 운용 환경의 중-강 해류 속도.**
+The same ocean current is applied to the main body and buoy (same body of water). Constant during the episode (reset-time only). Since the episode length (~15s) is shorter than the time scale of current variation, time-varying modeling is unnecessary. **0.75 m/s is about 1.5 knots, a medium-to-strong current speed in coastal/harbor operating environments.**
 
 ### D. Joint Initial State (2 parameters)
 
 | Item | Range | Note |
 |:---|:---|:---|
-| joint1_pos | [-pi, pi] rad | 관절 한계 내 클램핑, 전 범위 |
-| joint2_pos | [-pi, pi] rad | Target buffer도 동기화 |
+| joint1_pos | [-pi, pi] rad | Clamped within joint limits, full range |
+| joint2_pos | [-pi, pi] rad | Target buffer is also synchronized |
 
-### E. Payload (4 parameters, `enable_payload=True`일 때만)
+### E. Payload (4 parameters, only when `enable_payload=True`)
 
-Payload는 **gripper body**에 적용된다 (base에 고정 조인트로 연결, 오프셋 (0, 0.0881, -0.185)). PhysX가 고정 조인트를 통해 힘을 자동 전파한다.
+The payload is applied to the **gripper body** (connected to the base by a fixed joint, offset (0, 0.0881, -0.185)). PhysX automatically propagates forces through the fixed joint.
 
 | Item | Range | Note |
 |:---|:---|:---|
-| mass | **[0.0, 5.0] kg** | Weight 모델만 (drag 없음), 0=페이로드 없음 (체중 50%) |
-| cog_offset_x | **[-0.30, 0.30] m** | 부착점 기준 CoG 오프셋 |
-| cog_offset_y | **[-0.30, 0.30] m** | 부착점 기준 CoG 오프셋 |
-| cog_offset_z | [-0.20, 0.0] m | 부착점 아래 방향 오프셋 |
+| mass | **[0.0, 5.0] kg** | Weight model only (no drag), 0 = no payload (50% of body weight) |
+| cog_offset_x | **[-0.30, 0.30] m** | CoG offset relative to the attachment point |
+| cog_offset_y | **[-0.30, 0.30] m** | CoG offset relative to the attachment point |
+| cog_offset_z | [-0.20, 0.0] m | Downward offset below the attachment point |
 
-**CoG offset 범위 근거 (2026-02-14 변경)**: 33cm 차체 대비 +-50cm는 물리적으로 극단적 (50cm 길이의 막대형 도구 의미). +-30cm로 축소하여 robustness-optimality trade-off 개선 (Tan et al. 참조: 너무 넓은 범위는 정책이 극단적 케이스에 대비하느라 중간 범위에서의 최적성을 희생).
+**Rationale for CoG offset range (2026-02-14 change)**: +-50cm relative to the 33cm body is physically extreme (meaning a 50cm-long rod-shaped tool). Reduced to +-30cm to improve the robustness-optimality trade-off (cf. Tan et al.: an overly wide range causes the policy to sacrifice optimality in the mid-range while preparing for extreme cases).
 
 Implementation: `randomize_payload()` in `mdp/events.py`.
-- Payload force: $F = mg$, gripper body frame으로 변환
+- Payload force: $F = mg$, transformed into the gripper body frame
 - Payload torque: $\tau = (\mathbf{r}_{attach} + \mathbf{r}_{cog}) \times F$
-- CoG offset은 페이로드의 질량 분포 불확실성 모델링 (비대칭 도구, 긴 막대 등)
+- The CoG offset models the payload's mass distribution uncertainty (asymmetric tools, long rods, etc.)
 
 ### F. Joint Actuator Gains (2 parameters)
 
@@ -99,90 +99,90 @@ Implementation: `randomize_payload()` in `mdp/events.py`.
 | stiffness (Kp) | [80.0, 120.0] | [160.0, 240.0] | Asset default: 100.0 / TDC optimal: 200.0 |
 | damping (Kd) | [2.4, 3.6] | [8.0, 12.0] | Asset default: 3.0 / TDC optimal: 10.0 |
 
-동일 환경 내 두 ALBC 관절에 같은 값 적용. TDC 환경은 별도 게인 범위 사용.
+The same value is applied to both ALBC joints within an environment. The TDC environment uses a separate gain range.
 
 ### G. Body Mass (1 parameter, multiplicative scale)
 
 | Item | Range | Note |
 |:---|:---|:---|
-| body_mass_scale | **[0.7, 1.3]** | 모든 rigid body에 동일 스케일 (+-30%) |
+| body_mass_scale | **[0.7, 1.3]** | Same scale applied to all rigid bodies (+-30%) |
 
-PhysX `set_masses()` API 사용. 제조 공차 모델링. 관성은 hydro DR의 `inertia_scale`로 별도 랜덤화.
+Uses the PhysX `set_masses()` API. Models manufacturing tolerance. Inertia is randomized separately via the hydro DR `inertia_scale`.
 
 ### H. Water Density (1 parameter)
 
 | Item | Range | Note |
 |:---|:---|:---|
-| water_density | [995.0, 1025.0] kg/m^3 | 담수~해수 전 범위 |
+| water_density | [995.0, 1025.0] kg/m^3 | Full range from fresh water to sea water |
 
-Per-env tensor. 부력 ($F_b = \rho V g$)과 항력 ($F_d = 0.5 \rho C_d A v^2$) 모두에 영향.
+Per-env tensor. Affects both buoyancy ($F_b = \rho V g$) and drag ($F_d = 0.5 \rho C_d A v^2$).
 
 ### I. Sensor Noise (IMU bias + white noise)
 
 | Item | Range | Note |
 |:---|:---|:---|
 | euler noise (3D) | **N(0, 0.02 rad)** | White noise per step |
-| euler bias (3D) | **U(-0.02, 0.02 rad)** | Per-episode 샘플링 |
+| euler bias (3D) | **U(-0.02, 0.02 rad)** | Per-episode sampling |
 | ang_vel noise (3D) | **N(0, 0.04 rad/s)** | White noise per step |
-| ang_vel bias (3D) | **U(-0.03, 0.03 rad/s)** | Per-episode 샘플링 |
-| other dims (7D) | 0 | att_error, joint_pos, prev_actions에는 노이즈 없음 |
+| ang_vel bias (3D) | **U(-0.03, 0.03 rad/s)** | Per-episode sampling |
+| other dims (7D) | 0 | No noise on att_error, joint_pos, prev_actions |
 
-**IMU 노이즈 범위 근거 (2026-02-14 변경)**: 일반 MEMS IMU 수준으로 확대 (이전: high-precision IMU 가정). Tan et al. (2018)은 euler bias +-0.05 rad, noise std 0.05 rad를 사용. 현재 값은 그 중간 수준으로, 일반 상업용 MEMS를 보수적으로 모델링.
+**Rationale for IMU noise range (2026-02-14 change)**: expanded to a general MEMS IMU level (previously: assumed a high-precision IMU). Tan et al. (2018) used euler bias +-0.05 rad, noise std 0.05 rad. The current value is an intermediate level, conservatively modeling a general commercial MEMS.
 
-`NoiseModelWithAdditiveBiasCfg` 사용. Bias는 리셋 시 샘플링 (per-episode gyro drift 모델), white noise는 매 스텝 추가. Obs dims 0-5 (IMU)에만 적용, dims 6-12는 정확.
+Uses `NoiseModelWithAdditiveBiasCfg`. Bias is sampled at reset (per-episode gyro drift model), and white noise is added every step. Applied only to obs dims 0-5 (IMU); dims 6-12 are exact.
 
 ### J. Joint Friction (2 parameters)
 
 | Item | Range | Note |
 |:---|:---|:---|
-| static_friction | [0.0, 0.05] | Coulomb 마찰 계수 |
-| viscous_friction | [0.0, 0.3] | 속도 비례 저항 |
+| static_friction | [0.0, 0.05] | Coulomb friction coefficient |
+| viscous_friction | [0.0, 0.3] | Velocity-proportional resistance |
 
-두 ALBC 관절에 동일 값 적용.
+The same value is applied to both ALBC joints.
 
 ### K. Random Perturbation (per-step, Tan et al. 2018)
 
-**Per-step DR**: 에피소드 진행 중 주기적 외란 인가. Reset-time DR과 달리 매 physics step 업데이트.
+**Per-step DR**: periodic external disturbance applied during the episode. Unlike reset-time DR, it updates every physics step.
 
 | Item | Value | Note |
 |:---|:---|:---|
-| enable_perturbation | True | DR 활성화 시 자동 적용 |
-| force_range | **[0.0, 30.0] N** | ~10kg 차체에 최대 3.0 m/s^2 가속 |
+| enable_perturbation | True | Applied automatically when DR is enabled |
+| force_range | **[0.0, 30.0] N** | Up to 3.0 m/s^2 acceleration on a ~10kg body |
 | torque_range | **[0.0, 4.5] Nm** | 30N x 0.15m (half-body moment arm) |
-| interval | **100 physics steps (~0.5s)** | 이벤트 간 쿨다운 (난류 환경) |
-| duration | **20 physics steps (~0.1s)** | 충격 지속 시간 |
+| interval | **100 physics steps (~0.5s)** | Cooldown between events (turbulent environment) |
+| duration | **20 physics steps (~0.1s)** | Impulse duration |
 
-**근거**: Tan et al. (2018)은 200스텝마다 130-220N의 랜덤 외력을 인가하여 균형 회복 능력을 학습시켰다 (25kg 로봇, 5.2-8.8 m/s^2). Hero Agent는 ~10kg 수중 차량으로, 최대 15N (1.5 m/s^2)은 수중 환경에서 발생하는 비정상 외란을 모델링:
-- 해류 급변 (해류는 reset-time에 상수로 설정되나, 실제로는 변동)
-- 테더(tether) 장력 변동
-- 물체 파지 순간 반작용력
-- 구조물 접촉 반작용
+**Rationale**: Tan et al. (2018) applied a random external force of 130-220N every 200 steps to train balance recovery (25kg robot, 5.2-8.8 m/s^2). The Hero Agent is a ~10kg underwater vehicle, and the maximum 15N (1.5 m/s^2) models the irregular disturbances that occur in underwater environments:
+- Sudden current changes (the current is set as a constant at reset-time, but in reality it varies)
+- Tether tension variation
+- Reaction force at the moment of grasping an object
+- Reaction from structure contact
 
-**Implementation**: `base_env._update_perturbation()` (per-step 호출).
-- Per-env 타이머로 비동기 perturbation 트리거 (환경간 위상 랜덤화)
-- 랜덤 방향 (unit sphere) x 균일 크기 -> 3D wrench 생성
-- Main body의 hydro forces에 additive로 적용
-- Reset 시 타이머 위상 재랜덤화 (환경 동기화 방지)
+**Implementation**: `base_env._update_perturbation()` (called per-step).
+- Asynchronous perturbation triggering via per-env timers (phase randomization across environments)
+- Random direction (unit sphere) x uniform magnitude -> 3D wrench generation
+- Applied additively to the main body's hydro forces
+- Timer phase re-randomized at reset (prevents environment synchronization)
 
 ### L. Action Latency (per-step, Tan et al. 2018)
 
-**Per-step DR**: RL action 적용에 지연을 추가. 실제 하드웨어의 통신/연산 지연 모델링.
+**Per-step DR**: adds delay to RL action application. Models the communication/computation latency of real hardware.
 
 | Item | Value | Note |
 |:---|:---|:---|
 | action_latency_range | **[0, 4] physics steps** | 0-20ms at 200Hz |
 
-**근거**: Tan et al. (2018) Table I에서 control latency를 [0, 40ms]로 명시적 랜덤화. Hero Agent에서는:
-- 통신 지연: ROV 하드웨어의 RS-485/Ethernet 통신 0~10ms
-- 연산 지연: 정책 추론 + 전처리 ~2-10ms (임베디드 시스템)
-- TDC 영향: TDE 추정 오차 상한이 sampling period에 비례하므로, 실효 지연이 TDE 정확도에 직접 영향
+**Rationale**: Tan et al. (2018) Table I explicitly randomizes control latency over [0, 40ms]. For the Hero Agent:
+- Communication latency: 0-10ms over the ROV hardware's RS-485/Ethernet communication
+- Computation latency: policy inference + preprocessing ~2-10ms (embedded system)
+- TDC impact: since the upper bound of the TDE estimation error is proportional to the sampling period, the effective delay directly affects TDE accuracy
 
 **Implementation**: `base_env._get_delayed_actions()`.
 - Ring buffer `_action_history`: (num_envs, max_latency+1, action_dim)
-- Per-env latency `_action_latency`: reset시 uniform 샘플링, 에피소드 중 고정
-- `self._actions`는 raw (비지연) 값 유지 -> observation/reward에는 영향 없음
-- Control에만 delayed actions 사용 -> 에이전트가 지연을 인지하지 못하는 상황 모델링
-- TDC env는 `_pre_physics_step()` 전체를 오버라이드하므로 영향 없음
+- Per-env latency `_action_latency`: uniformly sampled at reset, fixed during the episode
+- `self._actions` retains the raw (undelayed) value -> no effect on observation/reward
+- Delayed actions are used only for control -> models a situation where the agent is unaware of the delay
+- The TDC env overrides the entire `_pre_physics_step()`, so it is unaffected
 
 ---
 
@@ -248,7 +248,7 @@ _pre_physics_step() per-step events:
 
 ## Privileged Observations (Encoder)
 
-Encoder 훈련을 위한 24D privileged information:
+24D privileged information for encoder training:
 
 ```
 Hydrodynamics (7D):    CoG(3), CoB(3), + 1
@@ -264,11 +264,11 @@ Environment (4D)
 
 | Category | Included | Excluded | Rationale |
 |:---|:---|:---|:---|
-| Hydrostatic | Volume, CoB, CoG, inertia, body_mass | - | 자세 제어의 핵심 파라미터 |
-| Hydrodynamic | Surge added mass | Sway/heave added mass, damping | Surge M_a가 effective inertia에 지배적 |
-| External | Payload (mass + CoG) | Ocean current | 페이로드는 복원 토크 직접 변경 |
-| Sensor | - | Noise/bias | 관측 노이즈는 policy robustness로 처리 |
-| Perturbation | - | Force/torque | 비예측적 외란으로 robust policy에 기여 |
+| Hydrostatic | Volume, CoB, CoG, inertia, body_mass | - | Core parameters for attitude control |
+| Hydrodynamic | Surge added mass | Sway/heave added mass, damping | Surge M_a dominates effective inertia |
+| External | Payload (mass + CoG) | Ocean current | The payload directly changes the restoring torque |
+| Sensor | - | Noise/bias | Observation noise is handled by policy robustness |
+| Perturbation | - | Force/torque | Unpredictable disturbance contributes to a robust policy |
 
 ---
 
@@ -276,50 +276,50 @@ Environment (4D)
 
 ### Strengths
 
-1. **물리적 원칙 기반**: Fossen 모델의 질량, 감쇠, Coriolis, 부력을 정확히 분리
-2. **이중 수력학 DR**: Main body와 buoy를 독립적으로 랜덤화 (buoy 부력 = 제어 권한)
-3. **CoG 보정 토크**: PhysX nominal CoG와 DR CoG 차이를 정확히 보상
-4. **Caching**: `_HydroBaseCache`로 텐서 재생성 방지 (4096 병렬 환경 성능)
-5. **이중 시간 스케일 DR**: Reset-time (인스턴스 변동) + Per-step (환경 변동)
-6. **Episode decorrelation**: 초기 분산 + jitter + perturbation 위상 랜덤화
+1. **Grounded in physical principles**: precisely separates the mass, damping, Coriolis, and buoyancy of the Fossen model
+2. **Dual hydrodynamic DR**: randomizes the main body and buoy independently (buoy buoyancy = control authority)
+3. **CoG correction torque**: precisely compensates for the difference between the PhysX nominal CoG and the DR CoG
+4. **Caching**: `_HydroBaseCache` prevents tensor regeneration (4096 parallel environment performance)
+5. **Dual time-scale DR**: Reset-time (instance variation) + Per-step (environment variation)
+6. **Episode decorrelation**: initial dispersion + jitter + perturbation phase randomization
 
 ### Parameter Range Justification (Tan et al. 2018 comparison)
 
 | Parameter | Hero Agent | Tan et al. | Rationale |
 |:---|:---|:---|:---|
-| Body mass | **+-30%** | +-20% | 수분 흡수, fouling, 케이블 변동 |
-| Added mass | **-70/+100%** | N/A | 가장 불확실한 파라미터, ground effect, TDE 경계 초과 의도 |
-| Volume | **+-30%** | N/A | 하우징 공기, 수압 변형, 부력 불확실성 강화 |
-| Inertia | **-60/+150%** | +-50% | TDE stability boundary 초과 의도 (M_true/M_hat > 2) |
-| IMU noise std | **0.02 rad** | 0.05 rad | 일반 MEMS (소비자급보다 양호) |
-| IMU bias | **+-0.02 rad** | +-0.05 rad | 일반 MEMS gyro drift |
-| Control latency | **0-20ms** | 0-40ms | 임베디드 시스템 Ethernet/serial |
-| Perturbation force | **0-30N** | 130-220N | 체중 비례 (10kg: 3.0 m/s^2 vs 25kg: 5.2-8.8 m/s^2) |
-| Ocean current | **0.75 m/s (~1.5kt)** | N/A | 연안/항만 중-강 해류 |
-| Payload mass | **0-5.0 kg (50%)** | N/A | 수중 샘플, 센서 장비, 중형 도구 |
-| Payload CoG | **+-0.3m** | N/A | 33cm 차체 대비 현실적 범위 |
+| Body mass | **+-30%** | +-20% | Water absorption, fouling, cable variation |
+| Added mass | **-70/+100%** | N/A | Most uncertain parameter, ground effect, intentionally exceeds the TDE boundary |
+| Volume | **+-30%** | N/A | Housing air, water-pressure deformation, strengthened buoyancy uncertainty |
+| Inertia | **-60/+150%** | +-50% | Intentionally exceeds the TDE stability boundary (M_true/M_hat > 2) |
+| IMU noise std | **0.02 rad** | 0.05 rad | General MEMS (better than consumer grade) |
+| IMU bias | **+-0.02 rad** | +-0.05 rad | General MEMS gyro drift |
+| Control latency | **0-20ms** | 0-40ms | Embedded system Ethernet/serial |
+| Perturbation force | **0-30N** | 130-220N | Proportional to body weight (10kg: 3.0 m/s^2 vs 25kg: 5.2-8.8 m/s^2) |
+| Ocean current | **0.75 m/s (~1.5kt)** | N/A | Medium-to-strong coastal/harbor current |
+| Payload mass | **0-5.0 kg (50%)** | N/A | Underwater samples, sensor equipment, medium-sized tools |
+| Payload CoG | **+-0.3m** | N/A | Realistic range relative to the 33cm body |
 
 ### Resolved Issues
 
 | Issue | Description | Resolution |
 |:---|:---|:---|
-| Body mass 미랜덤화 | Net buoyancy 불확실성 비대칭 | Section G: PhysX `set_masses()` (+-10%) |
-| Water density 고정 | 담수/해수 간 전이 불가 | Section H: Per-env tensor (995-1025) |
-| Sensor noise 없음 | Sim-to-real gap 주요 원인 | Section I: IMU bias + white noise |
-| Joint friction 없음 | 관절 저항 미모델링 | Section J: Static + viscous friction |
-| Random perturbation 없음 | 비정상 외란 미모델링 | Section K: Per-step wrench (2026-02-14) |
-| Control latency 없음 | 하드웨어 지연 미모델링 | Section L: Action delay buffer (2026-02-14) |
-| Inertia 범위 보수적 | URDF 추정 불확실성 과소평가 | Section B: +-20% -> +-40% (2026-02-14) |
-| Payload CoG 과도 | 33cm 차체 대비 +-50cm 비현실적 | Section E: +-50cm -> +-30cm (2026-02-14) |
-| IMU 노이즈 과소 | High-precision 가정 | Section I: MEMS 수준으로 확대 (2026-02-14) |
+| Body mass not randomized | Asymmetric net buoyancy uncertainty | Section G: PhysX `set_masses()` (+-10%) |
+| Water density fixed | No transfer between fresh/sea water | Section H: Per-env tensor (995-1025) |
+| No sensor noise | Major cause of the sim-to-real gap | Section I: IMU bias + white noise |
+| No joint friction | Joint resistance not modeled | Section J: Static + viscous friction |
+| No random perturbation | Irregular disturbance not modeled | Section K: Per-step wrench (2026-02-14) |
+| No control latency | Hardware delay not modeled | Section L: Action delay buffer (2026-02-14) |
+| Conservative inertia range | Underestimated URDF estimation uncertainty | Section B: +-20% -> +-40% (2026-02-14) |
+| Excessive payload CoG | +-50cm unrealistic relative to the 33cm body | Section E: +-50cm -> +-30cm (2026-02-14) |
+| Underestimated IMU noise | Assumed high-precision | Section I: expanded to MEMS level (2026-02-14) |
 
 ### Remaining Minor Issues
 
 | Issue | Description | Verdict |
 |:---|:---|:---|
-| Main/buoy 동일 DR 범위 | Scale factor가 multiplicative이므로 base 값 차이가 자동 반영 | Minor, 필요시 `BuoyDRCfg` 분리 |
-| Ocean current 시불변 | 에피소드 ~15s < 해류 변동 시간 | Acceptable |
-| Damping 미포함 (privileged obs) | 자세 제어에는 hydrostatic이 지배적 | Design choice |
+| Same DR range for main/buoy | Since the scale factor is multiplicative, the base value difference is automatically reflected | Minor, split into `BuoyDRCfg` if needed |
+| Time-invariant ocean current | Episode ~15s < current variation time | Acceptable |
+| Damping not included (privileged obs) | Hydrostatic dominates for attitude control | Design choice |
 
 ---
 
@@ -373,10 +373,10 @@ Environment (4D)
 
 ## Related Documents
 
-- [system-overview.md](../explanation/system-overview.md): 환경 구조 + encoder의 privileged obs 사용
-- [sim-to-real.md](sim-to-real.md): Sim-to-real gap 분석 및 배포
+- [system-overview.md](../explanation/system-overview.md): Environment structure + encoder's use of privileged obs
+- [sim-to-real.md](sim-to-real.md): Sim-to-real gap analysis and deployment
 
 ---
 
 **Created**: 2026-02-11
-**Updated**: 2026-02-14 (4차 극단 강화: inertia [0.4,2.5], added_mass [0.3,2.0], volume/body_mass +-30%, payload 5kg -- TDE stability boundary 초과 의도. 3차: perturbation 30N/4.5Nm, ocean current 0.75m/s, target +-0.5rad. 2차: perturbation 20N/3Nm, payload 3kg. 1차: perturbation 15N/2Nm, ocean current 0.5m/s)
+**Updated**: 2026-02-14 (4th extreme strengthening: inertia [0.4,2.5], added_mass [0.3,2.0], volume/body_mass +-30%, payload 5kg -- intentionally exceeds the TDE stability boundary. 3rd: perturbation 30N/4.5Nm, ocean current 0.75m/s, target +-0.5rad. 2nd: perturbation 20N/3Nm, payload 3kg. 1st: perturbation 15N/2Nm, ocean current 0.5m/s)
