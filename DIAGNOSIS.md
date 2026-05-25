@@ -244,3 +244,33 @@ Phase D (성능 — 선택)
 
 **원칙**: 각 항목은 독립 검증 가능. Phase C는 학습 동작을 바꾸므로 메모리·rule상 **유저 승인 + before/after 데이터**
 없이 손대지 않는다 (`feedback_no_unauthorized_changes`, `feedback_training_control`).
+
+---
+
+## 9. 재검증 보강 (2026-05-25, marinelab v0.2.0 호환 작업 중)
+
+이 리포트는 marinelab API 변경 **이전**에 작성됐다. 호환 작업을 진행하며 코드를 재독한 결과,
+DIAGNOSIS가 다루지 못한 P0 항목과, 이미 반영돼 있던 Phase A 항목을 확인했다.
+
+### P0 (DIAGNOSIS 미수록) — marinelab.core API 비호환 = 런타임 크래시 [수정 완료]
+marinelab v0.2.0이 ocean current를 독립 `OceanCurrent` 컴포넌트로 분리하면서
+`HydrodynamicsModel._current_velocity` / `._max_current_vel` 버퍼를 제거했다.
+albc는 이 버퍼를 8곳 이상에서 read/write해 **env reset / OU step에서 즉시 AttributeError**로 죽었다.
+→ `hydro.current.velocity_w` / `.max_velocity` / `.set`로 경로 교체 + buoy에 main의 `OceanCurrent`
+주입(공유)으로 수정 완료. OU 수학 불변.
+
+### Phase A 재확인 — 일부 이미 반영됨
+- **A1 obs assert**: `albc_env.py:138-143`에 construction-time assert가 이미 존재
+  (config vs computed obs dim). 이번에 `_get_observations()` 반환 텐서 런타임 assert만 보완.
+- **A2 hot-loop sigma**: `albc_env.py:153`에서 이미 `__init__` 사전할당 (주석 "Avoids re-allocating
+  ... every step"). no-op이었다.
+- **dead code 재판정**: `randomize_ocean_current`는 **live** (albc_env.py:1327,1412, eval_dr.py:601).
+  미사용은 `compute_M_bb`(tdc.py)뿐이라 이번에 제거.
+
+### Phase C (학습 동작 변경, 별도 승인 필요) 재확인 — 여전히 유효
+- **added-mass clamp** (`mdp/events.py:258-271`): marinelab core는 base-inertia `_clamp_inertia`
+  버퍼로 자체 clamp를 안전화했으나, **albc events.py의 clamp는 별개 경로**로 여전히 DR된
+  `rigid_body_inertia` 기준. forward-Euler 발산 위험 미해결. 가장 점검 가치 높음.
+- barrier log clamp floor 1e-8 (§3-B), cost surrogate 1/(1-γ) (§3-A1), OU 5% 초과 (§2): 그대로 유효.
+
+> 이 4개 Phase C 항목은 학습 동작을 바꾸므로 **유저 승인 + before/after 데이터 없이 손대지 않는다.**
