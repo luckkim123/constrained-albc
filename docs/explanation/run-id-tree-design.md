@@ -105,8 +105,8 @@ resolve paths. Knowing only the run_id, training, evaluation, config, and wandb 
 | # | file:line | Change | Risk |
 |:--|:---|:---|:---|
 | 1 | `train.py` (after params dump) | **DONE** (commit d0d4588, minimal-touch): training output stays in `logs/rsl_rl/<exp>/<ts>/`; `experiments/<run_id>/` added as a tracing entry (manifest + config copy + `train` symlink). Physical path replacement (moving tb/ckpt under experiments) deferred. | Done (training-neutral) |
-| 2 | `eval_dr.py:2288,2982,4004` | `logs/eval_dr*/` → `experiments/<run_id>/eval/<mode>_<ts>/` | Medium (output path) |
-| 3 | `student/config.py:17,59,61` | Hardcoded teacher_run_dir/log_root → run_id resolution | Medium |
+| 2 | `eval_dr.py` (4 modes) | **DONE** (commit 1a5d591): `eval_dir_for_checkpoint()` routes eval into `experiments/<run_id>/eval/<mode>_<ts>/` when the checkpoint is in a run_id tree; legacy checkpoints + explicit `--output_dir` unchanged. | Done |
+| 3 | `train_student.py` (after StudentRunner) | **DONE** (commit d074fad): `emit_run_manifest(kind="student", parent_run_id=...)`; teacher resolved via `run_id_from_path(cfg.teacher_run_dir)`, omitted if legacy. Section 2-C Option B. | Done |
 | 4 | `analysis/paths.py` (NEW) | `resolve_run(run_id)`/`resolve_eval()` — manifest-based | **DONE** (commit c903f12, training-neutral; imported by nothing yet) |
 | 5 | `common.py:377,395` | `resolve_run_path` → delegate to paths.py (already done a first pass to make it cwd-relative) | Low |
 | 6 | `train.py` (overlay, NOT isaaclab) | Inject `hydra.run.dir=experiments/<run_id>/config` into `hydra_args` | **Verified possible** (see section 6 #1) |
