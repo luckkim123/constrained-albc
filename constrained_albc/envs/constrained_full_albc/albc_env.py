@@ -921,6 +921,10 @@ class ALBCEnv(DirectRLEnv):
             policy_obs = torch.cat([policy_obs, self._error_integral], dim=-1)
 
         observations = {"policy": policy_obs}
+        assert policy_obs.shape[-1] == self.cfg.observation_space, (
+            f"emitted policy obs dim {policy_obs.shape[-1]} != "
+            f"cfg.observation_space {self.cfg.observation_space}"
+        )
         if self.cfg.state_space > 0:
             observations["privileged"] = compute_privileged_obs(self)
         return observations

@@ -6,7 +6,7 @@
 """Classical controllers for the Full-DOF ALBC TDC baseline."""
 
 from .kinematics import ALBCKinematics
-from .tdc import TDCController, TDCControllerCfg, compute_M_bb
+from .tdc import TDCController, TDCControllerCfg
 from .thruster_pd import ThrusterPDCfg, ThrusterPDController
 
 __all__ = [
@@ -15,5 +15,4 @@ __all__ = [
     "TDCControllerCfg",
     "ThrusterPDCfg",
     "ThrusterPDController",
-    "compute_M_bb",
 ]
