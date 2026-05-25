@@ -23,7 +23,7 @@ sequence.
 | Subdirectory | Contents |
 |---|---|
 | `constrained_albc/envs/` | RL environments: `constrained_full_albc` (TRPO+IPO+encoder, main) and `constrained_full_albc_tdc` (TDC controller variant) |
-| `constrained_albc/analysis/` | Evaluation and training-analysis tooling: `eval_dr` (4 DR modes), `eval_student`, `analyze`, `compare`, `monitor`, `encoder_tools`, shared `common` and `cli_args` |
+| `constrained_albc/analysis/` | Evaluation and training-analysis tooling: `eval_dr` (single ~4000-line module, 4 sub-modes: `static` / `periodic` / `segmented` / `sudden`; `static` is the required mode for `Isaac-FullDOF-TRPO-v0`), `eval_student`, `analyze`, `compare`, `monitor`, `encoder_tools`, shared `common` and `cli_args` |
 | `scripts/` | Student-distillation entry point (`train_student.py`) and launcher shell scripts |
 | `tests/` | Unit tests (TDC controller; Isaac Sim not required) |
 

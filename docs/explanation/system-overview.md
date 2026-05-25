@@ -4,8 +4,8 @@
 > `mdp/observations.py`, [`experiments-index.json`](../reference/experiments-index.json)
 
 Conceptual overview of the constrained full-DOF ALBC system. For package layout and the
-RSL-RL fork dependency see [`../architecture.md`](../architecture.md); for registered
-task IDs see the [README](../README.md).
+RSL-RL dependency (stock, no fork) see [`../architecture.md`](../architecture.md); for
+registered task IDs see the [README](../README.md).
 
 ## The robot
 
@@ -61,6 +61,18 @@ The policy tracks a mixed command:
   standardization (NORBC Sec IV-B), IPO log-barrier.
 - **DR curriculum**: DORAEMON adaptive Beta (`kl_ub=0.04`, `performance_lb=90`,
   `step_interval=250`). Ocean current enabled.
+
+## Deployment constraint: the encoder latent z
+
+The teacher actor reads `[o_t, z]`, where `z` is the encoder latent computed from
+the **privileged** observation `p_t` (24D). Real hardware has no `p_t`, so the
+teacher policy cannot run on-robot as-is. Deployment requires either:
+
+- a distilled **student** network (TCN/GRU) that reconstructs `z` from the
+  observation history (`student/` package), or
+- an ablation variant that does not depend on the encoder.
+
+See [`../how-to/deploy.md`](../how-to/deploy.md) for the export pipeline.
 
 ## Package layout
 
