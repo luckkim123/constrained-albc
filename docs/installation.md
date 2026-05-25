@@ -68,24 +68,18 @@ Isaac-FullDOF-TRPO-NoIPO-v0
 Isaac-FullDOF-TRPO-v0
 ```
 
-## RSL-RL fork — critical dependency
+## RSL-RL dependency (stock)
 
-> **A stock `rsl-rl-lib` from PyPI will fail at runtime.**
+constrained-albc runs on **stock `rsl-rl-lib==3.1.2`** — no fork is required.
 
-This repo requires **two** forks to be present; both ship with the workspace and are
-installed as part of Isaac Lab's bundled environment:
+```bash
+/isaac-sim/python.sh -m pip install rsl-rl-lib==3.1.2 --no-deps
+```
 
-1. **Forked `isaaclab_rl`** — adds `state_dependent_std` and `weight_decay` fields to
-   the runner cfg classes. A stock `isaaclab_rl` raises `TypeError` when the agent cfgs
-   in `constrained_albc/envs/*/agents/` are constructed.
-
-2. **Forked `rsl_rl` package** — adds `state_dependent_std` ctor kwarg to
-   `actor_critic.py` and encoder-aware learning-rate param groups to `ppo.py`. Without
-   this fork the encoder LR is silently merged with actor/critic, breaking the
-   asymmetric-encoder training.
-
-See [`architecture.md`](architecture.md) (RSL-RL cfg dependency section) for the exact
-file paths and line numbers in the forked packages.
+`isaaclab_rl` is the clean isaaclab fork-point version (no local cfg fields added).
+The main TRPO pipeline ships its own `ConstraintTRPO` algorithm and `ActorCriticEncoder`
+policy (custom, injected into the runner namespace), so it does not depend on any
+rsl_rl modification. See [`architecture.md`](architecture.md) → "RSL-RL dependency".
 
 ## Reinstalling after a worktree swap
 

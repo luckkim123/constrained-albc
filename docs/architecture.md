@@ -5,7 +5,7 @@
 ### Three-layer dependency
 
 ```
-isaaclab          (GPU sim core: Isaac Sim 5.1.0, RSL-RL fork, forked isaaclab_rl)
+isaaclab          (GPU sim core: Isaac Sim 5.1.0, stock RSL-RL, stock isaaclab_rl)
     |
     v
 marinelab         (public overlay: BlueROV2/Hero Agent assets, marine physics)
@@ -40,41 +40,24 @@ sequence.
 
 ---
 
-## RSL-RL cfg dependency
+## RSL-RL dependency (stock, no fork)
 
-constrained-albc depends on a **forked RSL-RL stack** that ships with Isaac Lab in
-this workspace. A fresh-machine install must provide **both** of the following forks;
-the upstream/PyPI `rsl-rl-lib` and stock `isaaclab_rl` are insufficient.
+constrained-albc runs on **stock `rsl-rl-lib==3.1.2`** and **stock `isaaclab_rl`**.
+There are no forks: a fresh-machine install is `pip install rsl-rl-lib==3.1.2` plus
+the clean isaaclab fork-point checkout.
 
-### 1. The `isaaclab_rl` fork's cfg fields
+The main pipeline does not subclass stock rsl_rl. `Isaac-FullDOF-TRPO-v0` uses:
+- `ConstraintTRPO` — a standalone algorithm (own `optim.Adam`), NOT an `rsl_rl.PPO`
+  subclass. Injected into `rsl_rl.runners.on_policy_runner`'s namespace by the overlay
+  runner so `OnPolicyRunner`'s `eval(class_name)` resolves it.
+- `ActorCriticEncoder(PolicyBase)` — a custom policy base, NOT `rsl_rl.ActorCritic`.
 
-The agent config classes in `constrained_albc/.../agents/` set fields that exist only
-in the forked `isaaclab_rl` wrapper cfgs:
+The PPO ablations (`Isaac-FullDOF-PPO-v0`, `Isaac-FullDOF-PPO-Enc-v0`) use stock
+`rsl_rl.PPO` with `class_name="PPO"`; they set only stock algorithm fields.
 
-- `state_dependent_std` in `RslRlPpoActorCriticCfg`
-  (`source/isaaclab_rl/isaaclab_rl/rsl_rl/rl_cfg.py:34`, default `False`).
-- `weight_decay` in `RslRlPpoAlgorithmCfg`
-  (`source/isaaclab_rl/isaaclab_rl/rsl_rl/rl_cfg.py:125`, default `0.0`).
-
-Constructing the runner cfg against a stock `isaaclab_rl` raises `TypeError` on these
-unknown kwargs.
-
-### 2. The forked `rsl_rl` package itself
-
-Beyond the cfg fields, the runtime depends on a forked `rsl_rl` package with custom
-constructor kwargs and encoder-aware learning-rate logic:
-
-- `actor_critic.py` accepts a `state_dependent_std` ctor kwarg and branches on it
-  (e.g. `modules/actor_critic.py:32,52,55,81,125`).
-- `ppo.py` accepts `encoder_grad_scale` and `use_encoder_update` ctor kwargs
-  (`algorithms/ppo.py:43-44`) and builds **separate optimizer param groups for
-  encoder vs actor/critic** params (`algorithms/ppo.py:109-123`). This encoder-LR
-  separation is required by the asymmetric-encoder training; stock `rsl_rl` puts all
-  params in one group and will not honor the encoder learning-rate logic.
-
-### Implication for a fresh install
-
-A clean environment must install both forks (the in-repo `isaaclab_rl` and the forked
-`rsl_rl` that ships under Isaac Lab's bundled Python). Installing constrained-albc plus
-upstream RSL-RL is **not** enough — the cfg construction and the actor-critic / PPO
-constructors will fail or silently lose the encoder-LR behavior.
+Notes on fields that previously looked fork-specific:
+- `state_dependent_std` is a STOCK `RslRlPpoActorCriticCfg` field (present upstream at
+  the fork point); our cfgs do not set it.
+- `weight_decay` was a former local addition to `RslRlPpoAlgorithmCfg`; it has been
+  removed. The PPO ablation never set it, so stock PPO (which lacks the kwarg) is
+  fully compatible.
