@@ -152,7 +152,7 @@ def compute_privileged_obs(
             time_const.unsqueeze(-1),
             # Environment (4D)
             env._hydro.water_density.unsqueeze(-1),
-            env._hydro._current_velocity[:, :3],  # ocean current linear xyz (world frame)
+            env._hydro.current.velocity_w[:, :3],  # ocean current linear xyz (world frame)
         ],
         dim=-1,
     )

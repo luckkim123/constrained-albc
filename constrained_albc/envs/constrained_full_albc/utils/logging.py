@@ -112,10 +112,9 @@ def log_dr_metrics(
         if env._payload_mass is not None:
             log["DR/payload_mass_mean"] = env._payload_mass.mean().item()
 
-        # Ocean current (if model has current velocity)
-        if hasattr(hydro, "_current_velocity") and hydro._current_velocity is not None:
-            current_mag = torch.linalg.norm(hydro._current_velocity[:, :3], dim=-1)
-            log["DR/ocean_current_mag_mean"] = current_mag.mean().item()
+        # Ocean current (always present as the shared OceanCurrent component)
+        current_mag = torch.linalg.norm(hydro.current.velocity_w[:, :3], dim=-1)
+        log["DR/ocean_current_mag_mean"] = current_mag.mean().item()
 
 
 # =============================================================================

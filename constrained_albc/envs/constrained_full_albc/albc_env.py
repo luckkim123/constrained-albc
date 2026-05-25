@@ -202,9 +202,10 @@ class ALBCEnv(DirectRLEnv):
             num_envs=self.num_envs,
             device=self.device,
             cfg=self.cfg.buoy_hydrodynamics,
-            current_cfg=None,  # Buoy shares current with main body
+            current_cfg=None,  # buoy shares main body's current (injected below)
             dt=self.physics_dt,
             articulation_prim_path=prim_path,
+            current=self._hydro.current,  # shared OceanCurrent component
         )
 
     def _init_payload(self) -> None:
@@ -690,14 +691,15 @@ class ALBCEnv(DirectRLEnv):
 
         dx = -theta * (x - mu) * dt + sigma * sqrt(dt) * N(0,1)
 
-        Only linear components (xyz). Angular stays zero.
-        Both main_hydro and buoy_hydro share the same current.
+        Only linear components (xyz). Angular stays zero. main_hydro and
+        buoy_hydro share one OceanCurrent component, so a single write covers both.
         """
         theta = self.cfg.ou_theta
         sigma = self.cfg.ou_sigma
         dt = self.step_dt
 
-        current = self._hydro._current_velocity[:, :3]
+        velocity_w = self._hydro.current.velocity_w  # (num_envs, 6) shared buffer
+        current = velocity_w[:, :3]
         mu = self._ou_base_current
 
         drift = -theta * (current - mu) * dt
@@ -706,12 +708,11 @@ class ALBCEnv(DirectRLEnv):
 
         # Clamp to slightly beyond max_velocity (within encoder bounds).
         # Note: axes with max_velocity=0 have OU drift clamped to zero.
-        max_vel = self._hydro._max_current_vel[:3]
+        max_vel = self._hydro.current.max_velocity[:3]
         clamp_bound = max_vel * 1.05
         new_current = new_current.clamp(-clamp_bound, clamp_bound)
 
-        self._hydro._current_velocity[:, :3] = new_current
-        self._buoy_hydro._current_velocity[:, :3] = new_current
+        velocity_w[:, :3] = new_current  # shared buffer -> buoy sees it too
 
     def _apply_action(self):
         """Apply joint position targets and hydrodynamic forces."""
@@ -1126,7 +1127,7 @@ class ALBCEnv(DirectRLEnv):
         if self.cfg.payload_toggle_steps != 0:
             log["Episode/payload_toggled"] = self._payload_toggled[env_ids].float().mean().item()
         if self.cfg.ou_enable:
-            current = self._hydro._current_velocity[env_ids, :3]
+            current = self._hydro.current.velocity_w[env_ids, :3]
             base = self._ou_base_current[env_ids]
             log["Episode/current_drift"] = (current - base).norm(dim=-1).mean().item()
             log["Episode/current_mag"] = current.norm(dim=-1).mean().item()
@@ -1298,7 +1299,7 @@ class ALBCEnv(DirectRLEnv):
             # Non-DR path: setup mid-episode dynamics with default values
             self._setup_payload_toggle(env_ids)
             if self.cfg.ou_enable:
-                self._ou_base_current[env_ids] = self._hydro._current_velocity[env_ids, :3].clone()
+                self._ou_base_current[env_ids] = self._hydro.current.velocity_w[env_ids, :3].clone()
             return
 
         # Create DRSampler (bundles rand_cfg + num_envs + device)
@@ -1329,7 +1330,7 @@ class ALBCEnv(DirectRLEnv):
         # Mid-episode dynamics setup with DR'd values (once, after randomization)
         self._setup_payload_toggle(env_ids)
         if self.cfg.ou_enable:
-            self._ou_base_current[env_ids] = self._hydro._current_velocity[env_ids, :3].clone()
+            self._ou_base_current[env_ids] = self._hydro.current.velocity_w[env_ids, :3].clone()
 
         if self._thruster is not None:
             self._thruster.randomize_parameters(
@@ -1411,7 +1412,7 @@ class ALBCEnv(DirectRLEnv):
         if self._has_ocean_current:
             randomize_ocean_current(env=self, env_ids=env_ids, sampled=sampled)
             if self.cfg.ou_enable:
-                self._ou_base_current[env_ids] = self._hydro._current_velocity[env_ids, :3].clone()
+                self._ou_base_current[env_ids] = self._hydro.current.velocity_w[env_ids, :3].clone()
 
         if self._thruster is not None:
             self._thruster.randomize_parameters(

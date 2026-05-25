@@ -304,10 +304,8 @@ def randomize_ocean_current(
             lo, hi = rng
             strength = torch.rand(len(env_ids), device=env.device) * (hi - lo) + lo
     env._hydro.set_ocean_current(env_ids, strength=strength)
-
-    # Share current with buoy (same water volume)
-    if env._buoy_hydro is not None:
-        env._buoy_hydro.set_ocean_current(env_ids, velocity=env._hydro._current_velocity[env_ids])
+    # Buoy shares the same OceanCurrent component (injected at construction),
+    # so the set above already applies to the buoy. No manual sync needed.
 
 
 # --- Robot Pose Reset ---
