@@ -337,6 +337,8 @@ def emit_run_manifest(
     config: dict | None = None,
     experiments_root: str | Path = EXPERIMENTS_ROOT,
     run_id: str | None = None,
+    kind: str = "teacher",
+    parent_run_id: str | None = None,
 ) -> RunHandle:
     """Create the single-tree entry point for a run without moving its training output.
 
@@ -361,6 +363,8 @@ def emit_run_manifest(
         config: Optional config snapshot for manifest.config (num_envs, seed, ...).
         experiments_root: Root for the run_id tree.
         run_id: Override the computed run_id (else derived from task + log_dir timestamp).
+        kind: "teacher" (default) or "student" (design section 2-C Option B).
+        parent_run_id: For a student, the teacher's run_id (manifest link to the teacher).
 
     Returns:
         The created run's :class:`RunHandle`.
@@ -390,12 +394,32 @@ def emit_run_manifest(
     manifest = Manifest(
         run_id=rid,
         task=task,
+        kind=kind,
+        parent_run_id=parent_run_id,
         config=config or {},
         git=_git_state(),
         paths={"tb": "train", "checkpoints": "train", "evals": []},
     )
     write_manifest(run_root, manifest)
     return RunHandle(run_id=rid, root=run_root, manifest=manifest.to_dict())
+
+
+def run_id_from_path(
+    path: str | Path, experiments_root: str | Path = EXPERIMENTS_ROOT,
+) -> str | None:
+    """Extract a run_id from a path that passes through ``experiments/<run_id>/``, else None.
+
+    Used to resolve a teacher's run_id from its run directory so a student manifest can
+    link to it via ``parent_run_id`` (design section 2-C Option B). A teacher in the old
+    ``logs/rsl_rl`` layout (not in a run_id tree) returns None -> the student omits the link.
+    Matches on the unresolved path, consistent with :func:`eval_dir_for_checkpoint`.
+    """
+    exp_name = Path(experiments_root).name
+    parts = Path(path).parts
+    for i, part in enumerate(parts):
+        if part == exp_name and i + 1 < len(parts):
+            return parts[i + 1]
+    return None
 
 
 # ---------------------------------------------------------------------------

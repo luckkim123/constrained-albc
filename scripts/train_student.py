@@ -115,6 +115,32 @@ def main(env_cfg: DirectRLEnvCfg, _agent_cfg) -> None:
     device = torch.device(cfg.device)
     runner = StudentRunner(env=env, cfg=cfg, log_dir=log_dir, device=device)
 
+    # --- overlay: run_id single-tree manifest for the student (minimal-touch) ---
+    # Student is a child of the teacher: emit experiments/<student_run_id>/ with kind="student"
+    # and link to the teacher via parent_run_id when the teacher lives in a run_id tree
+    # (design section 2-C Option B). Training output stays in log_dir. Best-effort: a manifest
+    # failure must never abort training.
+    try:
+        from constrained_albc.analysis.paths import emit_run_manifest, run_id_from_path
+
+        parent = run_id_from_path(cfg.teacher_run_dir)
+        run = emit_run_manifest(
+            task=args_cli.task,
+            log_dir=log_dir,
+            tag=cfg.run_name or None,
+            kind="student",
+            parent_run_id=parent,
+            config={
+                "num_envs": cfg.num_envs,
+                "seed": cfg.seed,
+                "experiment_name": cfg.experiment_name,
+                "teacher_run_dir": cfg.teacher_run_dir,
+            },
+        )
+        logger.info("run_id tree: experiments/%s (student, parent=%s)", run.run_id, parent)
+    except Exception as exc:  # noqa: BLE001  manifest is auxiliary; never block training
+        logger.warning("run_id manifest emission failed (training continues): %s", exc)
+
     t0 = time.time()
     try:
         runner.learn()

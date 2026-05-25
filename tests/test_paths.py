@@ -340,3 +340,44 @@ def test_eval_dir_for_checkpoint_detects_via_unresolved_symlink_path(tmp_path):
     ckpt_via_tree = run_root / "train" / "model_4999.pt"
     out = P.eval_dir_for_checkpoint(ckpt_via_tree, "periodic", experiments_root=str(exp), eval_ts="2026-05-25_18-00-00")
     assert out == run_root / "eval" / "periodic_2026-05-25_18-00-00"
+
+
+# ---------------------------------------------------------------------------
+# run_id_from_path + student manifest linkage (#3, design section 2-C Option B)
+# ---------------------------------------------------------------------------
+def test_run_id_from_path_in_tree(tmp_path):
+    exp = tmp_path / "experiments"
+    teacher_dir = exp / "2026-05-25_16-02-48_trpo" / "train"
+    assert P.run_id_from_path(teacher_dir, experiments_root=str(exp)) == "2026-05-25_16-02-48_trpo"
+
+
+def test_run_id_from_path_legacy_returns_none(tmp_path):
+    legacy = tmp_path / "logs" / "rsl_rl" / "fulldof_albc" / "2026-04-20_r13_A"
+    assert P.run_id_from_path(legacy, experiments_root=str(tmp_path / "experiments")) is None
+
+
+def test_emit_manifest_student_links_parent(tmp_path):
+    log_dir = _fake_log_dir(tmp_path, leaf="2026-05-25_20-00-00_student", with_params=False)
+    exp = tmp_path / "experiments"
+    h = P.emit_run_manifest(
+        "Isaac-FullDOF-TRPO-v0", log_dir, tag="student",
+        kind="student", parent_run_id="2026-05-25_16-02-48_trpo",
+        config={"teacher_run_dir": "experiments/2026-05-25_16-02-48_trpo/train"},
+        experiments_root=str(exp),
+    )
+    loaded = P.read_manifest(h.root)
+    assert loaded["kind"] == "student"
+    assert loaded["parent_run_id"] == "2026-05-25_16-02-48_trpo"
+
+
+def test_emit_manifest_student_without_parent_omits_link(tmp_path):
+    """A teacher in the legacy layout (run_id_from_path -> None) -> student omits parent_run_id."""
+    log_dir = _fake_log_dir(tmp_path, leaf="2026-05-25_20-00-00_student", with_params=False)
+    exp = tmp_path / "experiments"
+    h = P.emit_run_manifest(
+        "Isaac-FullDOF-TRPO-v0", log_dir, tag="student",
+        kind="student", parent_run_id=None, experiments_root=str(exp),
+    )
+    loaded = P.read_manifest(h.root)
+    assert loaded["kind"] == "student"
+    assert "parent_run_id" not in loaded  # omitted when None (Manifest.to_dict drops it)
