@@ -104,9 +104,9 @@ resolve paths. Knowing only the run_id, training, evaluation, config, and wandb 
 | 1 | `train.py:193-200` | `logs/rsl_rl/<exp>/<ts>` → `experiments/<run_id>` + manifest creation | Training-adjacent (approval) |
 | 2 | `eval_dr.py:2288,2982,4004` | `logs/eval_dr*/` → `experiments/<run_id>/eval/<mode>_<ts>/` | Medium (output path) |
 | 3 | `student/config.py:17,59,61` | Hardcoded teacher_run_dir/log_root → run_id resolution | Medium |
-| 4 | `analysis/paths.py` (NEW) | `resolve_run(run_id)`/`resolve_eval()` — manifest-based | New |
+| 4 | `analysis/paths.py` (NEW) | `resolve_run(run_id)`/`resolve_eval()` — manifest-based | **DONE** (commit c903f12, training-neutral; imported by nothing yet) |
 | 5 | `common.py:377,395` | `resolve_run_path` → delegate to paths.py (already done a first pass to make it cwd-relative) | Low |
-| 6 | `@hydra_task_config` | Verify whether `hydra.run.dir` can be overridden to `experiments/<run_id>/config` | Unverified |
+| 6 | `train.py` (overlay, NOT isaaclab) | Inject `hydra.run.dir=experiments/<run_id>/config` into `hydra_args` | **Verified possible** (see section 6 #1) |
 
 ## 5. Migration
 
@@ -115,6 +115,17 @@ resolve paths. Knowing only the run_id, training, evaluation, config, and wandb 
 
 ## 6. Open Questions (User Confirmation Before Starting Implementation)
 
-1. Whether Hydra `run.dir` override is possible (if not, copy after training).
+1. **RESOLVED (2026-05-25): Hydra `run.dir` override is possible — no copy-after needed, isaaclab stays pristine.**
+   - `hydra_task_config` (isaaclab `isaaclab_tasks/utils/hydra.py:83`) uses a standard
+     `@hydra.main(config_path=None, config_name=..., version_base="1.3")`. train.py forwards
+     `hydra_args` to it via `sys.argv = [argv0] + hydra_args` (train.py:91), so the standard
+     Hydra override `hydra.run.dir=<path>` reaches the run as a normal CLI arg.
+   - Verified empirically (Hydra 1.3.2): reproducing the exact decorator pattern with
+     `sys.argv=[argv0, "hydra.run.dir=<TARGET>"]` makes `HydraConfig.get().run.dir == TARGET`
+     and writes `<TARGET>/.hydra/{config,hydra,overrides}.yaml`.
+   - Implication: at implementation time, train.py (the overlay, NOT isaaclab) injects
+     `hydra.run.dir=experiments/<run_id>/config` into `hydra_args` before calling the decorated
+     main. No edit to isaaclab `hydra.py` (`feedback_isaaclab_pristine` preserved).
+     `HydraConfig.get().run.dir` is also readable inside the run for a copy-after fallback if ever needed.
 2. Whether to move new runs in the past `logs/rsl_rl/` to experiments/, or apply only from new ones onward.
 3. Whether to include git_sha[:7] in run_id (preventing same-timestamp collisions vs. length).
