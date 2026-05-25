@@ -454,10 +454,14 @@ class TestUpdateParams:
         torch.testing.assert_close(controller._F_bu, new_fbu)
 
     def test_update_buoyancy_force_subset(self, controller):
-        """update_controller_params(F_bu=..., env_ids=...) should only update those envs."""
+        """update_controller_params(F_bu=..., env_ids=...) should only update those envs.
+
+        Contract (matches the sole caller, tdc_env._reset_idx): F_bu is already
+        sliced to env_ids, so it has shape (len(env_ids),) -- not the full batch.
+        """
         original = controller._F_bu.clone()
-        new_fbu = torch.tensor([30.0, 31.0, 32.0, 33.0])
         env_ids = torch.tensor([0, 2])
+        new_fbu = torch.tensor([30.0, 32.0])  # one value per env in env_ids
         controller.update_controller_params(F_bu=new_fbu, env_ids=env_ids)
 
         assert controller._F_bu[0].item() == pytest.approx(30.0)
