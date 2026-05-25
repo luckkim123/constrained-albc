@@ -1,11 +1,14 @@
 # run_id Single Tree Design (Unifying Training, Evaluation, and Config)
 
-> Status: **Foundation done; wiring on hold pending training approval** (2026-05-25).
-> Training-neutral pieces are complete: resolver `analysis/paths.py` (modification point #4, commit c903f12),
-> Hydra `run.dir` override verified (#6), and all 3 Open Questions (section 6) resolved.
-> What remains is the training-adjacent wiring (#1 train.py path + manifest, #2 eval_dr output paths,
-> #3 student/config.py, #5 common delegation), deferred until separate user approval
-> (`feedback_training_control`). All supporting code verified in its current state (file:line specified).
+> Status: **Implemented (minimal-touch)** (2026-05-25). All 6 modification points (section 4) and
+> all 3 Open Questions (section 6) are done. The minimal-touch approach was chosen: training/eval
+> output stays in `logs/`, and `experiments/<run_id>/` is added as a tracing entry point
+> (manifest.json + copied config + a `train` symlink). Physical relocation of tb/checkpoints under
+> `experiments/` (the literal "path replacement" of #1) was intentionally deferred -- it is a separate,
+> higher-risk change (resume compatibility) and not needed for the unified-tracing goal.
+> Commits: c903f12 (#4 paths.py) · fce9685 (#6 Hydra) · 6eac3d6 (Open Q) · d0d4588 (#1 train.py) ·
+> 1a5d591 (#2 eval_dr) · d074fad (#3 student) · df64cf8 (#5 common). Verified GPU-free via 39 unit
+> tests in tests/test_paths.py; end-to-end manifest emission still wants one real smoke run to confirm.
 
 ## 1. Problem — The Same Run Is Scattered Across 4 Places
 
@@ -108,7 +111,7 @@ resolve paths. Knowing only the run_id, training, evaluation, config, and wandb 
 | 2 | `eval_dr.py` (4 modes) | **DONE** (commit 1a5d591): `eval_dir_for_checkpoint()` routes eval into `experiments/<run_id>/eval/<mode>_<ts>/` when the checkpoint is in a run_id tree; legacy checkpoints + explicit `--output_dir` unchanged. | Done |
 | 3 | `train_student.py` (after StudentRunner) | **DONE** (commit d074fad): `emit_run_manifest(kind="student", parent_run_id=...)`; teacher resolved via `run_id_from_path(cfg.teacher_run_dir)`, omitted if legacy. Section 2-C Option B. | Done |
 | 4 | `analysis/paths.py` (NEW) | `resolve_run(run_id)`/`resolve_eval()` — manifest-based | **DONE** (commit c903f12, training-neutral; imported by nothing yet) |
-| 5 | `common.py:377,395` | `resolve_run_path` → delegate to paths.py (already done a first pass to make it cwd-relative) | Low |
+| 5 | `common.py` | **DONE** (commit df64cf8): `resolve_run_path` delegates to `paths.resolve_run`, returning `tb_dir` so monitor/encoder-debug work for both run_id-tree and legacy runs. | Done |
 | 6 | `train.py` (overlay, NOT isaaclab) | Inject `hydra.run.dir=experiments/<run_id>/config` into `hydra_args` | **Verified possible** (see section 6 #1) |
 
 ## 5. Migration
