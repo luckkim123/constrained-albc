@@ -118,6 +118,42 @@ class ALBCEnv(DirectRLEnv):
         self._term_bad_state = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
         self._term_excessive_tilt = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
 
+        # Validate observation dimension contract (fails loud at construction, not first step).
+        # observation_space (config) must equal the actual o_t assembled in _get_observations():
+        #   proprio (26D, compute_policy_obs) + history (13*hist_len + 8*hist_action_len) + integral.
+        # Mirrors the existing state_space / control_freq guards above. Runs once -- obs dim is
+        # step-invariant -- and survives `python -O` (unlike assert; cf. constraint_trpo hot-path assert).
+        # TODO(user): implement the dimension check below.
+        #   - PROPRIO_DIM = 26 is the documented compute_policy_obs() contract (6 cmd + 9 body + 5 arm + 6 thruster).
+        #   - history contributes 0 when self._hist_buf is None (hist_len == 0).
+        #   - integral contributes self.cfg.integral_dims only when self.cfg.use_integral_obs.
+        #   - On mismatch, raise ValueError with expected vs computed and the relevant cfg flags,
+        #     matching the f-string style of the state_space / control_freq guards.
+        PROPRIO_DIM = 26
+        expected_obs_dim = PROPRIO_DIM
+        if self._hist_buf is not None:
+            expected_obs_dim += 13 * self._hist_len + 8 * self._hist_action_len
+        if self.cfg.use_integral_obs:
+            expected_obs_dim += self.cfg.integral_dims
+        if expected_obs_dim != self.cfg.observation_space:
+            raise ValueError(
+                f"observation_space={self.cfg.observation_space} != computed obs dim {expected_obs_dim} "
+                f"(proprio={PROPRIO_DIM}, hist_len={self._hist_len}, hist_action_len={self._hist_action_len}, "
+                f"use_integral_obs={self.cfg.use_integral_obs}, integral_dims={self.cfg.integral_dims})"
+            )
+
+        # Pre-build the integral error-gating sigma tensor once (step-invariant cfg constants).
+        # Avoids re-allocating torch.tensor(...) every step in _get_rewards (hot loop).
+        if self.cfg.use_integral_obs and self.cfg.integral_gated:
+            sigmas = [self.cfg.reward.att_rp.sigma, self.cfg.reward.att_rp.sigma]
+            if self.cfg.integral_dims == 6:
+                sigmas += [self.cfg.reward.lin_vel.sigma] * 3 + [self.cfg.reward.yaw_vel.sigma]
+            else:
+                sigmas.append(self.cfg.reward.lin_vel.sigma)
+            self._integral_gate_sigmas = torch.tensor(sigmas, device=self.device)
+        else:
+            self._integral_gate_sigmas = None
+
     @staticmethod
     def _iter_noise_params(cfg: ALBCEnvCfg):
         """Yield (sub_cfg, param_name, value) for all tuple/list noise params."""
@@ -930,15 +966,10 @@ class ALBCEnv(DirectRLEnv):
                 ]
 
             if self.cfg.integral_gated:
-                # Error-gated: only accumulate when |error| < reward sigma
-                sigmas = [self.cfg.reward.att_rp.sigma, self.cfg.reward.att_rp.sigma]
-                if self.cfg.integral_dims == 6:
-                    sigmas += [self.cfg.reward.lin_vel.sigma] * 3 + [self.cfg.reward.yaw_vel.sigma]
-                else:
-                    sigmas.append(self.cfg.reward.lin_vel.sigma)
+                # Error-gated: only accumulate when |error| < reward sigma.
+                # Sigma tensor is pre-built in __init__ (step-invariant cfg constants).
                 err_stack = torch.stack(errs, dim=-1)
-                sigma_t = torch.tensor(sigmas, device=self.device)
-                gate = (err_stack.abs() < sigma_t).float()
+                gate = (err_stack.abs() < self._integral_gate_sigmas).float()
                 self._error_integral += gate * err_stack * self.step_dt
             else:
                 self._error_integral += torch.stack(errs, dim=-1) * self.step_dt
