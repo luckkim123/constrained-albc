@@ -226,6 +226,52 @@ def resolve_eval(run: RunHandle, mode: str, eval_ts: str | None = None) -> Path:
     return run.eval_root / f"{mode}_{ts}"
 
 
+def eval_dir_for_checkpoint(
+    checkpoint_path: str | Path,
+    mode: str,
+    *,
+    experiments_root: str | Path = EXPERIMENTS_ROOT,
+    eval_ts: str | None = None,
+) -> Path | None:
+    """Return ``experiments/<run_id>/eval/<mode>_<ts>/`` if *checkpoint_path* lives in a
+    run_id tree, else ``None`` (caller keeps its legacy default).
+
+    A checkpoint belongs to a run_id tree when one of its ancestor directories is
+    ``<experiments_root>/<run_id>/`` (i.e. the path passes through ``experiments/``).
+    The match is on the **unresolved** path so the run_id tree is detected even when its
+    ``train`` entry is a symlink back to ``logs/`` (the minimal-touch layout, design #1):
+    a checkpoint loaded as ``experiments/<run_id>/train/.../model.pt`` is recognized, while
+    one loaded directly from ``logs/rsl_rl/<exp>/<ts>/model.pt`` returns None.
+
+    Args:
+        checkpoint_path: Path the evaluator resolved the checkpoint to.
+        mode: static / periodic / segmented / sudden.
+        experiments_root: Root of the run_id tree.
+        eval_ts: Optional explicit eval timestamp.
+
+    Returns:
+        The eval output dir under the run_id tree, or None when not in a tree.
+    """
+    ckpt = Path(checkpoint_path)
+    exp_root = Path(experiments_root)
+    exp_name = exp_root.name  # "experiments"
+
+    # Walk ancestors looking for <experiments_root>/<run_id>/ ; the run_id is the child
+    # of the experiments dir on the path.
+    parts = ckpt.parts
+    for i, part in enumerate(parts):
+        if part == exp_name and i + 1 < len(parts):
+            run_id = parts[i + 1]
+            run_root = exp_root / run_id if not exp_root.is_absolute() else Path(*parts[: i + 2])
+            handle = RunHandle(
+                run_id=run_id,
+                root=run_root,
+                manifest=_read_manifest_if_present(run_root),
+            )
+            return resolve_eval(handle, mode, eval_ts=eval_ts)
+    return None
+
+
 # ---------------------------------------------------------------------------
 # manifest.json read/write (design section 3). write_manifest is the hook
 # train.py will call once approved; provided now so the schema lives in one place.

@@ -306,3 +306,37 @@ def test_emit_manifest_without_params_still_writes_manifest(tmp_path):
     assert (h.root / P.MANIFEST_NAME).is_file()
     # No params to copy -> config dir exists but is empty of yamls.
     assert not (h.root / "config" / "env.yaml").exists()
+
+
+# ---------------------------------------------------------------------------
+# eval_dir_for_checkpoint: run_id-tree detection for eval output (#2)
+# ---------------------------------------------------------------------------
+def test_eval_dir_for_checkpoint_in_run_tree(tmp_path):
+    exp = tmp_path / "experiments"
+    ckpt = exp / "2026-05-25_16-02-48_trpo" / "train" / "checkpoints" / "model_4999.pt"
+    out = P.eval_dir_for_checkpoint(ckpt, "static", experiments_root=str(exp), eval_ts="2026-05-25_18-00-00")
+    assert out == exp / "2026-05-25_16-02-48_trpo" / "eval" / "static_2026-05-25_18-00-00"
+
+
+def test_eval_dir_for_checkpoint_legacy_returns_none(tmp_path):
+    # A checkpoint under logs/rsl_rl (not in the run_id tree) -> None (keep legacy default).
+    ckpt = tmp_path / "logs" / "rsl_rl" / "full_dof_trpo" / "2026-05-25_16-02-48" / "model_0.pt"
+    out = P.eval_dir_for_checkpoint(ckpt, "static", experiments_root=str(tmp_path / "experiments"))
+    assert out is None
+
+
+def test_eval_dir_for_checkpoint_detects_via_unresolved_symlink_path(tmp_path):
+    """The minimal-touch layout loads ckpts via experiments/<run_id>/train (a symlink to
+    logs/). Detection must use the unresolved path, so the run_id is still recognized."""
+    exp = tmp_path / "experiments"
+    # train is a symlink to a real logs dir; checkpoint accessed through the symlink path.
+    real_logs = tmp_path / "logs" / "rsl_rl" / "full_dof_trpo" / "2026-05-25_16-02-48_trpo"
+    (real_logs).mkdir(parents=True)
+    (real_logs / "model_4999.pt").write_text("")
+    run_root = exp / "2026-05-25_16-02-48_trpo"
+    run_root.mkdir(parents=True)
+    (run_root / "train").symlink_to(os.path.relpath(real_logs, run_root))
+    # Path as the evaluator would see it (through the run_id tree).
+    ckpt_via_tree = run_root / "train" / "model_4999.pt"
+    out = P.eval_dir_for_checkpoint(ckpt_via_tree, "periodic", experiments_root=str(exp), eval_ts="2026-05-25_18-00-00")
+    assert out == run_root / "eval" / "periodic_2026-05-25_18-00-00"

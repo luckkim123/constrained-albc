@@ -223,6 +223,7 @@ from common import DR_COLORS
 from common import DR_LEVELS as _DEFAULT_DR_LEVELS
 from common import DR_SCALE as _DEFAULT_DR_SCALE
 from matplotlib.ticker import MultipleLocator
+from paths import eval_dir_for_checkpoint  # type: ignore[import-not-found]  # noqa: E402  run_id-tree eval output (#2)
 from rsl_rl.runners import OnPolicyRunner
 
 from isaaclab.envs import DirectRLEnvCfg
@@ -1750,6 +1751,9 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     # ---- Output directory ----
     if args_cli.output_dir:
         output_dir = args_cli.output_dir
+    elif resume_path and (_run_eval_dir := eval_dir_for_checkpoint(resume_path, "static")) is not None:
+        # Checkpoint lives in a run_id tree -> write eval under experiments/<run_id>/eval/ (#2).
+        output_dir = str(_run_eval_dir)
     elif resume_path:
         suffix = f"eval_dr_ood_{args_cli.ood_scale:.1f}x" if args_cli.ood_scale else "eval_dr"
         output_dir = os.path.join(os.path.dirname(resume_path), suffix)
@@ -2318,6 +2322,9 @@ def run_periodic(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     # ---- Output directory ----
     if args_cli.output_dir:
         output_dir = args_cli.output_dir
+    elif resume_path and (_run_eval_dir := eval_dir_for_checkpoint(resume_path, "periodic")) is not None:
+        # Checkpoint lives in a run_id tree -> write eval under experiments/<run_id>/eval/ (#2).
+        output_dir = str(_run_eval_dir)
     elif resume_path:
         output_dir = os.path.join(os.path.dirname(resume_path), "eval_dr_robustness")
     else:
@@ -2996,6 +3003,9 @@ def run_segmented(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     # Output dir -- student: put under <student_ckpt_dir>/../eval_dr_switching
     if args_cli.output_dir:
         output_dir = args_cli.output_dir
+    elif (_run_eval_dir := eval_dir_for_checkpoint(resume_path, "switching")) is not None:
+        # Checkpoint lives in a run_id tree -> write eval under experiments/<run_id>/eval/ (#2).
+        output_dir = str(_run_eval_dir)
     elif is_student_mode:
         output_dir = os.path.join(os.path.dirname(os.path.dirname(resume_path)), "eval_dr_switching")
     else:
@@ -3299,6 +3309,9 @@ def run_sudden(env_cfg, agent_cfg):
     # --- Save ---
     if args_cli.output_dir:
         out_dir = args_cli.output_dir
+    elif (_run_eval_dir := eval_dir_for_checkpoint(args_cli.checkpoint, "sudden")) is not None:
+        # Checkpoint lives in a run_id tree -> write eval under experiments/<run_id>/eval/ (#2).
+        out_dir = str(_run_eval_dir)
     else:
         out_dir = os.path.join(os.path.dirname(args_cli.checkpoint), "eval_single_switch")
     os.makedirs(out_dir, exist_ok=True)
