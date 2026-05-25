@@ -11,10 +11,10 @@ Kept separate from rsl_rl_ppo_cfg.py so main is untouched.
 from __future__ import annotations
 
 from isaaclab.utils import configclass
-from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg
 
 from .rsl_rl_ppo_cfg import (
     FullDOFTRPORunnerCfg,
+    _BaseFullDOFRunnerCfg,
     _FullDOFPolicyCfg,
     _FullDOFPPOAlgorithmCfg,
 )
@@ -67,7 +67,7 @@ class _FullDOFPPOEncPolicyCfg(_FullDOFPolicyCfg):
 
 
 @configclass
-class FullDOFPPOEncRunnerCfg(RslRlOnPolicyRunnerCfg):
+class FullDOFPPOEncRunnerCfg(_BaseFullDOFRunnerCfg):
     """Encoder + PPO. No IPO. Uses ALBCNoConstraintEnvCfg.
 
     Runs under OnPolicyDoraemonRunner so DORAEMON curriculum is stepped
@@ -75,10 +75,7 @@ class FullDOFPPOEncRunnerCfg(RslRlOnPolicyRunnerCfg):
     """
 
     class_name: str = "OnPolicyDoraemonRunner"
-    seed: int = 30
-    num_steps_per_env: int = 64
-    max_iterations: int = 2500
-    save_interval: int = 100
+    save_interval: int = 100  # intentional: ablation checkpoints less often than main (50)
     experiment_name: str = "full_dof_ablation"
     obs_groups: dict[str, list[str]] = {
         "policy": ["policy", "privileged"],

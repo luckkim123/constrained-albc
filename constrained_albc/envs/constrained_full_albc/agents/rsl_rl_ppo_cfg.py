@@ -222,17 +222,27 @@ class RslRlConstraintTRPOAlgorithmCfg:
 
 
 @configclass
-class FullDOFTRPORunnerCfg(RslRlOnPolicyRunnerCfg):
+class _BaseFullDOFRunnerCfg(RslRlOnPolicyRunnerCfg):
+    """Shared FullDOF runner constants (de-dup base; no behavior change).
+
+    Runners below inherit these and override only what differs (class_name,
+    experiment_name, obs_groups, algorithm, policy, normalize_value).
+    """
+
+    seed = 30
+    num_steps_per_env = 64
+    max_iterations = 2500
+    save_interval = 50
+
+
+@configclass
+class FullDOFTRPORunnerCfg(_BaseFullDOFRunnerCfg):
     """Velocity tracking TRPO + IPO + Asymmetric Encoder runner.
 
     8D action (2D arm + 6D wrench), 81D policy obs, 24D privileged obs.
     """
 
     class_name: str = "FullDOFConstraintEncoderRunner"
-    seed = 30
-    num_steps_per_env = 64
-    max_iterations = 2500
-    save_interval = 50
     experiment_name = "full_dof_trpo"
     obs_groups: dict[str, list[str]] = {
         "policy": ["policy", "privileged"],
@@ -276,7 +286,7 @@ class _FullDOFNoEncoderPolicyCfg(RslRlPpoActorCriticCfg):
 
 
 @configclass
-class FullDOFNoEncoderRunnerCfg(RslRlOnPolicyRunnerCfg):
+class FullDOFNoEncoderRunnerCfg(_BaseFullDOFRunnerCfg):
     """NoEncoder ablation baseline: TRPO + IPO without encoder.
 
     Removes encoder only. DR, reward, constraints, action space, and DORAEMON
@@ -285,10 +295,6 @@ class FullDOFNoEncoderRunnerCfg(RslRlOnPolicyRunnerCfg):
     """
 
     class_name: str = "FullDOFConstraintEncoderRunner"
-    seed = 30
-    num_steps_per_env = 64
-    max_iterations = 2500
-    save_interval = 50
     experiment_name = "full_dof_ablation"
     obs_groups: dict[str, list[str]] = {
         "policy": ["policy", "privileged"],
@@ -352,7 +358,7 @@ class _FullDOFPPOAlgorithmCfg(RslRlPpoAlgorithmCfg):
 
 
 @configclass
-class FullDOFPPORunnerCfg(RslRlOnPolicyRunnerCfg):
+class FullDOFPPORunnerCfg(_BaseFullDOFRunnerCfg):
     """PPO baseline: standard PPO + asymmetric critic, no encoder, no constraint.
 
     Uses OnPolicyDoraemonRunner (OnPolicyRunner + DORAEMON curriculum hook)
@@ -372,10 +378,6 @@ class FullDOFPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     """
 
     class_name: str = "OnPolicyDoraemonRunner"
-    seed = 30
-    num_steps_per_env = 64
-    max_iterations = 2500
-    save_interval = 50
     experiment_name = "full_dof_ablation"
     obs_groups: dict[str, list[str]] = {
         "policy": ["policy"],
