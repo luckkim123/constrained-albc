@@ -5,10 +5,11 @@
 """Post-hoc analysis of main eval outputs.
 
 Subcommands:
-    recompute       <run>            npz -> enhanced_summary.json (pipeline prerequisite)
+    recompute       <run>            npz -> summary.json (pipeline prerequisite)
     eval_dr         <runs> --labels  heavy-tail / sample-mean divergence metrics
-    switching       <runs> --labels  summary_switching.json analysis
+    switching       <runs> --labels  summary_segmented.json analysis
     student_latent  <diag_dirs>      per-dim MSE / env-var / confidence ratio from latent logs
+    export          <path> --format  eval artifacts -> MATLAB .mat / long-format CSV
 
 Pure Python (no Isaac Sim). Run with plain python3.
 
@@ -24,6 +25,7 @@ import argparse
 from common import DR_LEVELS  # type: ignore[import-not-found]
 
 from .eval_dr import _ED_AXES, _ED_DEFAULT_LEVELS, cmd_eval_dr
+from .export import cmd_export
 from .recompute import cmd_recompute
 from .student_latent import cmd_student_latent
 from .switching import cmd_switching
@@ -39,8 +41,8 @@ def build_parser() -> argparse.ArgumentParser:
     # -- recompute --
     p_rc = sub.add_parser(
         "recompute",
-        help="npz -> enhanced_summary.json (pipeline prerequisite)",
-        description="Read eval_{none,soft,medium,hard}.npz from <run>/eval_dr/ and produce enhanced_summary.json.",
+        help="npz -> summary.json (pipeline prerequisite)",
+        description="Read data_{none,soft,medium,hard}.npz from <run>/eval_dr/ and produce summary.json.",
     )
     p_rc.add_argument(
         "run",
@@ -73,8 +75,8 @@ def build_parser() -> argparse.ArgumentParser:
     # -- switching --
     p_sw = sub.add_parser(
         "switching",
-        help="summary_switching.json analysis",
-        description="Analyze eval_dr_switching outputs (cascade PID, target xyz=0 rpy=0).",
+        help="summary_segmented.json analysis",
+        description="Analyze segmented-mode outputs (cascade PID, target xyz=0 rpy=0).",
     )
     p_sw.add_argument("runs", nargs="+", help="Run dirs or eval_dr_switching dirs")
     p_sw.add_argument("--labels", nargs="+", default=None)
@@ -86,16 +88,30 @@ def build_parser() -> argparse.ArgumentParser:
         "student_latent",
         help="per-dim MSE / env-var / confidence ratio from latent logs",
         description=(
-            "Load latent_log_*.npz from one or more diagnose_student_latent runs and "
+            "Load latent_*.npz from one or more diagnose_student_latent runs and "
             "produce per-dim MSE / env-var tables / over-under-confidence ratio."
         ),
     )
     p_sl.add_argument(
         "diag_dirs",
         nargs="+",
-        help="Diagnostic directories containing latent_log_{none,soft,medium,hard}.npz",
+        help="Diagnostic directories containing latent_{none,soft,medium,hard}.npz",
     )
     p_sl.set_defaults(func=cmd_student_latent)
+
+    # -- export --
+    p_ex = sub.add_parser(
+        "export",
+        help="eval artifacts -> MATLAB .mat / long-format CSV",
+        description="Convert trajectory npz -> .mat and/or summary.json -> long-format CSV.",
+    )
+    p_ex.add_argument("path", help="A data_*.npz file, a summary.json, or a run/eval_dr dir")
+    p_ex.add_argument(
+        "--format", choices=["mat", "csv", "both"], default="both",
+        help="Output formats to emit (default: both)",
+    )
+    p_ex.add_argument("--output-dir", default=None, help="Where to write outputs (default: alongside input)")
+    p_ex.set_defaults(func=cmd_export)
 
     return top
 

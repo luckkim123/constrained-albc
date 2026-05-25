@@ -2,7 +2,7 @@
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
-"""`recompute` subcommand: npz -> enhanced_summary.json (merged from recompute_eval_summary.py)."""
+"""`recompute` subcommand: npz -> summary.json (merged from recompute_eval_summary.py)."""
 
 from __future__ import annotations
 
@@ -256,7 +256,7 @@ def _process_run(run_dir: str) -> dict:
     eval_dir = os.path.join(run_dir, "eval_dr")
     result = {}
     for level in _RC_DR_LEVELS:
-        path = os.path.join(eval_dir, f"eval_{level}.npz")
+        path = os.path.join(eval_dir, f"data_{level}.npz")
         if not os.path.exists(path):
             print(f"  [WARN] {path} missing, skip"); continue
         result[level] = _compute_enhanced_metrics(path)
@@ -384,7 +384,7 @@ def _make_summary_att(run_dir: str, metrics: dict) -> str:
         run_dir, metrics,
         axes=["roll", "pitch"], ss_unit="deg",
         title="Attitude Summary (per-env metrics)",
-        filename="summary_att.png")
+        filename="summary_attitude.png")
 
 
 def _make_summary_lin_vel(run_dir: str, metrics: dict) -> str:
@@ -392,7 +392,7 @@ def _make_summary_lin_vel(run_dir: str, metrics: dict) -> str:
         run_dir, metrics,
         axes=["vx", "vy", "vz"], ss_unit="m/s",
         title="Linear Velocity Summary (per-env metrics)",
-        filename="summary_lin_vel.png")
+        filename="summary_linvel.png")
 
 
 def _make_summary_yaw(run_dir: str, metrics: dict) -> str:
@@ -425,7 +425,7 @@ def _print_run_summary(run_name: str, metrics: dict) -> None:
 
 
 def _write_run_json(run_dir: str, metrics: dict) -> None:
-    out = os.path.join(run_dir, "eval_dr", "enhanced_summary.json")
+    out = os.path.join(run_dir, "eval_dr", "summary.json")
     with open(out, "w") as f:
         json.dump(metrics, f, indent=2,
                   default=lambda o: None if (isinstance(o, float) and np.isnan(o)) else o)

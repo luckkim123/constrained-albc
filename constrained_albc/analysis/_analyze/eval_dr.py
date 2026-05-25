@@ -34,13 +34,13 @@ def _ed_resolve_eval_dir(run: str) -> str:
         return os.path.join(run, "eval_dr")
     if os.path.basename(run.rstrip("/")) == "eval_dr":
         return run
-    if os.path.isdir(run) and any(f.startswith("eval_") and f.endswith(".npz") for f in os.listdir(run)):
+    if os.path.isdir(run) and any(f.startswith("data_") and f.endswith(".npz") for f in os.listdir(run)):
         return run
     raise FileNotFoundError(f"no eval_dr found under {run}")
 
 
 def _ed_load_level(eval_dir: str, level: str) -> dict[str, np.ndarray] | None:
-    p = os.path.join(eval_dir, f"eval_{level}.npz")
+    p = os.path.join(eval_dir, f"data_{level}.npz")
     if not os.path.exists(p):
         return None
     return _load_npz(p)

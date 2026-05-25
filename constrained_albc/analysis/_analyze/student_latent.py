@@ -16,7 +16,7 @@ _SL_DR_LEVELS = ["none", "soft", "medium", "hard"]
 
 
 def _sl_load_level(diag_dir: Path, level: str) -> tuple[np.ndarray, np.ndarray] | None:
-    f = Path(diag_dir) / f"latent_log_{level}.npz"
+    f = Path(diag_dir) / f"latent_{level}.npz"
     if not f.exists():
         return None
     z = np.load(f)

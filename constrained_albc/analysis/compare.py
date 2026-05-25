@@ -34,7 +34,7 @@ def load_eval_data(eval_dir: str) -> dict[str, dict]:
     """Load all DR level .npz files from an eval directory."""
     data = {}
     for level in DR_LEVELS:
-        path = os.path.join(eval_dir, f"eval_{level}.npz")
+        path = os.path.join(eval_dir, f"data_{level}.npz")
         if os.path.exists(path):
             data[level] = dict(np.load(path, allow_pickle=True))
     return data

@@ -753,7 +753,7 @@ def _plot_dr_distributions(
     ax.grid(True, alpha=0.3, axis="x")
 
     plt.tight_layout()
-    out = os.path.join(output_dir, "dr_distributions.png")
+    out = os.path.join(output_dir, "summary_drdist.png")
     plt.savefig(out, dpi=120, bbox_inches="tight")
     plt.close()
     print(f"  Saved: {out}")
@@ -868,7 +868,7 @@ def _plot_attitude_interactive(all_data: dict, levels: list[str], output_dir: st
         fig.update_yaxes(title_text="Pitch (deg)", row=row, col=2)
     fig.update_xaxes(title_text="Time (s)", row=len(levels), col=1)
     fig.update_xaxes(title_text="Time (s)", row=len(levels), col=2)
-    fig.write_html(os.path.join(output_dir, "attitude.html"), include_plotlyjs="cdn")
+    fig.write_html(os.path.join(output_dir, "traj_attitude.html"), include_plotlyjs="cdn")
 
 
 def _plot_lin_vel_interactive(all_data: dict, levels: list[str], output_dir: str) -> None:
@@ -941,7 +941,7 @@ def _plot_lin_vel_interactive(all_data: dict, levels: list[str], output_dir: str
             fig.update_yaxes(title_text=label, row=row, col=col_idx)
     for col_idx in range(1, 4):
         fig.update_xaxes(title_text="Time (s)", row=len(levels), col=col_idx)
-    fig.write_html(os.path.join(output_dir, "lin_vel.html"), include_plotlyjs="cdn")
+    fig.write_html(os.path.join(output_dir, "traj_linvel.html"), include_plotlyjs="cdn")
 
 
 def _plot_yaw_rate_interactive(all_data: dict, levels: list[str], output_dir: str) -> None:
@@ -1002,7 +1002,7 @@ def _plot_yaw_rate_interactive(all_data: dict, levels: list[str], output_dir: st
     for row in range(1, len(levels) + 1):
         fig.update_yaxes(title_text="Yaw Rate (rad/s)", row=row, col=1)
     fig.update_xaxes(title_text="Time (s)", row=len(levels), col=1)
-    fig.write_html(os.path.join(output_dir, "yaw_rate.html"), include_plotlyjs="cdn")
+    fig.write_html(os.path.join(output_dir, "traj_yaw.html"), include_plotlyjs="cdn")
 
 
 def _plot_error_interactive(all_data: dict, levels: list[str], output_dir: str) -> None:
@@ -1084,7 +1084,7 @@ def _plot_error_interactive(all_data: dict, levels: list[str], output_dir: str) 
     if has_actions:
         fig.update_yaxes(title_text="Action Magnitude", row=3, col=1)
     fig.update_xaxes(title_text="Time (s)", row=n_rows, col=1)
-    fig.write_html(os.path.join(output_dir, "error.html"), include_plotlyjs="cdn")
+    fig.write_html(os.path.join(output_dir, "traj_error.html"), include_plotlyjs="cdn")
 
 
 # ---------------------------------------------------------------------------
@@ -1141,7 +1141,7 @@ def _plot_attitude_tracking(all_data: dict, levels: list[str], output_dir: str) 
                 ax.set_xlabel("Time (s)")
 
     fig.tight_layout()
-    fig.savefig(os.path.join(output_dir, "attitude.png"), dpi=150)
+    fig.savefig(os.path.join(output_dir, "traj_attitude.png"), dpi=150)
     plt.close(fig)
 
 
@@ -1197,7 +1197,7 @@ def _plot_lin_vel(all_data: dict, levels: list[str], output_dir: str) -> None:
                 ax.set_xlabel("Time (s)")
 
     fig.tight_layout()
-    fig.savefig(os.path.join(output_dir, "lin_vel.png"), dpi=150)
+    fig.savefig(os.path.join(output_dir, "traj_linvel.png"), dpi=150)
     plt.close(fig)
 
 
@@ -1249,7 +1249,7 @@ def _plot_yaw_rate(all_data: dict, levels: list[str], output_dir: str) -> None:
             ax.set_xlabel("Time (s)")
 
     fig.tight_layout()
-    fig.savefig(os.path.join(output_dir, "yaw_rate.png"), dpi=150)
+    fig.savefig(os.path.join(output_dir, "traj_yaw.png"), dpi=150)
     plt.close(fig)
 
 
@@ -1312,7 +1312,7 @@ def _plot_error(all_data: dict, levels: list[str], output_dir: str) -> None:
         ax_pe.set_xlabel("Time (s)")
 
     fig.tight_layout()
-    fig.savefig(os.path.join(output_dir, "error.png"), dpi=150)
+    fig.savefig(os.path.join(output_dir, "traj_error.png"), dpi=150)
     plt.close(fig)
 
 
@@ -1359,7 +1359,7 @@ def _plot_summary_attitude(all_metrics: dict, levels: list[str], output_dir: str
     _bar_subplot(axes[2, 1], x, zx_means, bar_colors, xlabels, "Count", "Zero Crossings (oscillation)", yerr=zx_stds)
 
     fig.tight_layout()
-    fig.savefig(os.path.join(output_dir, "summary_att.png"), dpi=150)
+    fig.savefig(os.path.join(output_dir, "summary_attitude.png"), dpi=150)
     plt.close(fig)
 
 
@@ -1406,7 +1406,7 @@ def _plot_summary_lin_vel(all_metrics: dict, levels: list[str], output_dir: str)
     )
 
     fig.tight_layout()
-    fig.savefig(os.path.join(output_dir, "summary_lin_vel.png"), dpi=150)
+    fig.savefig(os.path.join(output_dir, "summary_linvel.png"), dpi=150)
     plt.close(fig)
 
 
@@ -1487,7 +1487,7 @@ def _plot_failure_time(all_data: dict, levels: list[str], output_dir: str) -> No
             ax.set_ylabel("Count")
         ax.grid(True, alpha=0.3)
     fig.tight_layout()
-    fig.savefig(os.path.join(output_dir, "failure_time.png"), dpi=150)
+    fig.savefig(os.path.join(output_dir, "summary_failuretime.png"), dpi=150)
     plt.close(fig)
 
 
@@ -1889,7 +1889,7 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         all_data[level] = data
 
         np.savez_compressed(
-            os.path.join(output_dir, f"eval_{level}.npz"),
+            os.path.join(output_dir, f"data_{level}.npz"),
             **{k: v for k, v in data.items() if isinstance(v, np.ndarray)},
         )
 
@@ -2206,7 +2206,7 @@ def _periodic_generate_plots(data: dict, metrics: dict, output_dir: str) -> None
         axes[0].text(t_mid, axes[0].get_ylim()[1], f"DR{dr_i}", ha="center", va="bottom", fontsize=7, color="gray")
 
     plt.tight_layout()
-    path = os.path.join(output_dir, "dr_robustness_timeseries.png")
+    path = os.path.join(output_dir, "traj_periodic.png")
     plt.savefig(path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     print(f"[INFO] Saved: {path}")
@@ -2254,7 +2254,7 @@ def _periodic_generate_plots(data: dict, metrics: dict, output_dir: str) -> None
          "#CE93D8", f"Settle Time (s) [<{yr_thresh}]", f"Settling Time (Yaw, <{yr_thresh}rad/s)", ".2f")
 
     plt.tight_layout()
-    path = os.path.join(output_dir, "dr_robustness_summary.png")
+    path = os.path.join(output_dir, "summary_periodic.png")
     plt.savefig(path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     print(f"[INFO] Saved: {path}")
@@ -2418,7 +2418,7 @@ def run_periodic(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
 
     # Save raw data
     np.savez_compressed(
-        os.path.join(output_dir, "eval_robustness.npz"),
+        os.path.join(output_dir, "data_periodic.npz"),
         **{k: v for k, v in data.items() if isinstance(v, np.ndarray)},
     )
 
@@ -2722,14 +2722,14 @@ def _plot_position_drift(all_data: dict, levels: list[str], output_dir: str) -> 
         ax.grid(True, alpha=0.3)
     axes[-1].set_xlabel("Time (s)")
     fig.tight_layout()
-    fig.savefig(os.path.join(output_dir, "pos_drift.png"), dpi=150)
+    fig.savefig(os.path.join(output_dir, "traj_position.png"), dpi=150)
     plt.close(fig)
 
 
 def _plot_attitude_drift(all_data: dict, levels: list[str], output_dir: str) -> None:
     """Per-DR-level roll/pitch/yaw drift from target rpy=0, env mean ± std, seg boundaries.
 
-    Analogous to pos_drift.png but for attitude. Single plot with all three angles.
+    Analogous to traj_position.png but for attitude. Single plot with all three angles.
     """
     fig, axes = plt.subplots(len(levels), 1, figsize=(12, 2.4 * len(levels)), sharex=True)
     if len(levels) == 1:
@@ -2755,7 +2755,7 @@ def _plot_attitude_drift(all_data: dict, levels: list[str], output_dir: str) -> 
         ax.grid(True, alpha=0.3)
     axes[-1].set_xlabel("Time (s)")
     fig.tight_layout()
-    fig.savefig(os.path.join(output_dir, "att_drift.png"), dpi=150)
+    fig.savefig(os.path.join(output_dir, "traj_attitude.png"), dpi=150)
     plt.close(fig)
 
 
@@ -2824,7 +2824,7 @@ def _plot_summary_pos(all_metrics: dict, all_data: dict, levels: list[str], outp
     _seg_bar_subplot(axes[2, 1], x, pct, colors, xlabels, "% env×seg", "Heavy-tail: %env peak>0.1m")
 
     fig.tight_layout()
-    fig.savefig(os.path.join(output_dir, "summary_pos.png"), dpi=150)
+    fig.savefig(os.path.join(output_dir, "summary_position.png"), dpi=150)
     plt.close(fig)
 
 
@@ -2885,7 +2885,7 @@ def _plot_seg_summary_attitude(all_metrics: dict, levels: list[str], output_dir:
     axes[2, 1].grid(True, alpha=0.3, axis="y")
 
     fig.tight_layout()
-    fig.savefig(os.path.join(output_dir, "summary_att.png"), dpi=150)
+    fig.savefig(os.path.join(output_dir, "summary_attitude.png"), dpi=150)
     plt.close(fig)
 
 
@@ -2942,7 +2942,7 @@ def _plot_transient_overlay(all_data: dict, levels: list[str], output_dir: str) 
     for ax in axes.flat:
         ax.legend(fontsize=9)
     fig.tight_layout()
-    fig.savefig(os.path.join(output_dir, "transient_overlay.png"), dpi=150)
+    fig.savefig(os.path.join(output_dir, "traj_transient.png"), dpi=150)
     plt.close(fig)
 
 
@@ -3003,7 +3003,7 @@ def run_segmented(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     # Output dir -- student: put under <student_ckpt_dir>/../eval_dr_switching
     if args_cli.output_dir:
         output_dir = args_cli.output_dir
-    elif (_run_eval_dir := eval_dir_for_checkpoint(resume_path, "switching")) is not None:
+    elif (_run_eval_dir := eval_dir_for_checkpoint(resume_path, "segmented")) is not None:
         # Checkpoint lives in a run_id tree -> write eval under experiments/<run_id>/eval/ (#2).
         output_dir = str(_run_eval_dir)
     elif is_student_mode:
@@ -3089,7 +3089,7 @@ def run_segmented(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         )
         all_data[level] = data
         np.savez_compressed(
-            os.path.join(output_dir, f"eval_{level}.npz"),
+            os.path.join(output_dir, f"data_{level}.npz"),
             **{k: v for k, v in data.items() if isinstance(v, np.ndarray)},
         )
         all_metrics[level] = compute_seg_metrics(data)
@@ -3103,7 +3103,7 @@ def run_segmented(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     _plot_transient_overlay(all_data, DR_LEVELS, output_dir)
 
     # Save summary JSON
-    with open(os.path.join(output_dir, "switching_summary.json"), "w") as f:
+    with open(os.path.join(output_dir, "summary_segmented.json"), "w") as f:
         json.dump({"metrics": all_metrics, "config": {
             "num_segments": args_cli.num_segments,
             "segment_duration": args_cli.segment_duration,
@@ -3317,7 +3317,7 @@ def run_sudden(env_cfg, agent_cfg):
     os.makedirs(out_dir, exist_ok=True)
 
     np.savez(
-        os.path.join(out_dir, "trajectory.npz"),
+        os.path.join(out_dir, "data_sudden.npz"),
         time=t_arr, switch_step=physics_switch_step,
         actual_roll_deg=actual_roll, actual_pitch_deg=actual_pitch,
         lin_vel_x=lin_vel_x, lin_vel_y=lin_vel_y, lin_vel_z=lin_vel_z,
@@ -3325,7 +3325,7 @@ def run_sudden(env_cfg, agent_cfg):
         pos_x=pos_x, pos_y=pos_y, pos_z=pos_z,
         action_magnitude=action_magnitude,
     )
-    print(f"\n[INFO] Saved trajectory to: {out_dir}/trajectory.npz")
+    print(f"\n[INFO] Saved trajectory to: {out_dir}/data_sudden.npz")
 
     env.close()
 

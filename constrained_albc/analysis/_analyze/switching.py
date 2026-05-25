@@ -17,12 +17,12 @@ from common import DR_LEVELS  # type: ignore[import-not-found]
 def _sw_load_run(run_dir: str) -> dict:
     eval_dir = (os.path.join(run_dir, "eval_dr_switching")
                 if not run_dir.rstrip("/").endswith("eval_dr_switching") else run_dir)
-    summary_path = os.path.join(eval_dir, "switching_summary.json")
+    summary_path = os.path.join(eval_dir, "summary_segmented.json")
     with open(summary_path) as f:
         summary = json.load(f)
     data = {}
     for lvl in DR_LEVELS:
-        p = os.path.join(eval_dir, f"eval_{lvl}.npz")
+        p = os.path.join(eval_dir, f"data_{lvl}.npz")
         if os.path.isfile(p):
             d = np.load(p, allow_pickle=True)
             data[lvl] = {k: d[k] for k in d.files}

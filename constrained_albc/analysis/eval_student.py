@@ -211,7 +211,7 @@ def run_dr(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         all_data[level] = data
 
         np.savez_compressed(
-            os.path.join(output_dir, f"eval_{level}.npz"),
+            os.path.join(output_dir, f"data_{level}.npz"),
             **{k: v for k, v in data.items() if isinstance(v, np.ndarray)},
         )
 
@@ -235,11 +235,11 @@ def run_dr(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     print("\n[INFO] Generating plots...")
     edf.generate_plots(all_data, all_metrics, output_dir)
 
-    # ---- Save summary (delegate to edf's enhanced_summary mechanism via the all_metrics structure) ----
-    # eval_dr.py static writes enhanced_summary.json inside generate_plots or a sibling call.
+    # ---- Save summary (delegate to edf's summary mechanism via the all_metrics structure) ----
+    # eval_dr.py static writes summary.json inside generate_plots or a sibling call.
     # If not, write a minimal summary here as a safety net.
     import json
-    summary_path = os.path.join(output_dir, "enhanced_summary.json")
+    summary_path = os.path.join(output_dir, "summary.json")
     if not os.path.exists(summary_path):
         # Minimal summary: per-level per-metric aggregates keyed by axis name.
         summary = {}
@@ -426,7 +426,7 @@ def run_latent(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         l_hat_arr = np.stack(policy.l_hat_log, axis=0)    # (T, E, 9)
         l_true_arr = np.stack(policy.l_true_log, axis=0)  # (T, E, 9)
         np.savez_compressed(
-            os.path.join(args_cli.output_dir, f"latent_log_{level}.npz"),
+            os.path.join(args_cli.output_dir, f"latent_{level}.npz"),
             l_hat=l_hat_arr,
             l_true=l_true_arr,
         )
@@ -440,9 +440,9 @@ def run_latent(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         print(f"  l_hat  tvar   (mean dim/e): {s['l_hat_tvar_mean']:.5f}")
         print(f"  per-env RMSE: mean={s['per_env_rmse_mean']:.4f} std={s['per_env_rmse_std']:.4f}")
 
-    with open(os.path.join(args_cli.output_dir, "latent_summary.json"), "w") as f:
+    with open(os.path.join(args_cli.output_dir, "summary_latent.json"), "w") as f:
         json.dump(summary, f, indent=2)
-    print(f"\n[INFO] Summary written: {os.path.join(args_cli.output_dir, 'latent_summary.json')}")
+    print(f"\n[INFO] Summary written: {os.path.join(args_cli.output_dir, 'summary_latent.json')}")
     env.close()
 
 

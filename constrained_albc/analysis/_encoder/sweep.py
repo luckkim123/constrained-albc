@@ -307,7 +307,7 @@ def cmd_sweep(args: argparse.Namespace) -> None:
         all_results.append((param, values, z))
 
     # Generate plots
-    heatmap_path = os.path.join(output_dir, "z_sensitivity_heatmap.png")
+    heatmap_path = os.path.join(output_dir, "sweep_heatmap.png")
 
     print(f"\nGenerating per-parameter plots -> {output_dir}/sweep_*.png")
     _plot_per_parameter(all_results, nominal, output_dir, latent_dim, activation)
