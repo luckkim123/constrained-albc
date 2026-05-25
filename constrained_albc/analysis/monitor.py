@@ -26,8 +26,8 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 
 DEFAULT_METRICS = [
-    "Attitude_Error/roll_deg",
-    "Attitude_Error/pitch_deg",
+    "Track/att/roll_err_deg",
+    "Track/att/pitch_err_deg",
     "Train/mean_reward",
     "Loss/value_function",
     "Loss/surrogate",
@@ -197,7 +197,7 @@ def cmd_plot(args: argparse.Namespace) -> None:
 
     # -- Panel 2: Encoder grad norm --
     ax = axes[0, 1]
-    sv = _steps_vals("Encoder/grad_norm")
+    sv = _steps_vals("Policy/encoder_grad_norm")
     if sv is not None:
         steps, vals = sv
         ax.plot(steps, vals, alpha=0.25, color="#9C27B0", linewidth=0.5)
@@ -210,8 +210,8 @@ def cmd_plot(args: argparse.Namespace) -> None:
     # -- Panel 3: Attitude Error --
     ax = axes[1, 0]
     for tag, label, color in [
-        ("Attitude_Error/roll_deg", "Roll Error", "#E91E63"),
-        ("Attitude_Error/pitch_deg", "Pitch Error", "#3F51B5"),
+        ("Track/att/roll_err_deg", "Roll Error", "#E91E63"),
+        ("Track/att/pitch_err_deg", "Pitch Error", "#3F51B5"),
     ]:
         sv = _steps_vals(tag)
         if sv is not None:
@@ -229,7 +229,7 @@ def cmd_plot(args: argparse.Namespace) -> None:
     ax = axes[1, 1]
     for tag, label, color in [
         ("Train/mean_reward", "mean_reward", "#009688"),
-        ("Episode_Reward/total", "episode_total", "#FF5722"),
+        ("Reward/total", "episode_total", "#FF5722"),
     ]:
         sv = _steps_vals(tag)
         if sv is not None:
@@ -265,12 +265,13 @@ def cmd_plot(args: argparse.Namespace) -> None:
     # -- Panel 6: Reward Breakdown --
     ax = axes[2, 1]
     reward_tags = [
-        ("Episode_Reward/tracking", "tracking", "#4CAF50"),
-        ("Episode_Reward/settling", "settling", "#2196F3"),
-        ("Episode_Reward/linear_error", "linear_error", "#F44336"),
-        ("Episode_Reward/progress", "progress", "#FF9800"),
-        ("Episode_Reward/joint_velocity", "joint_vel", "#9C27B0"),
-        ("Episode_Reward/joint_oscillation", "joint_osc", "#795548"),
+        ("Reward/lin_vel", "lin_vel", "#4CAF50"),
+        ("Reward/att_rp", "att_rp", "#2196F3"),
+        ("Reward/yaw_vel", "yaw_vel", "#F44336"),
+        ("Reward/torque", "torque", "#FF9800"),
+        ("Reward/thruster", "thruster", "#9C27B0"),
+        ("Reward/smoothness", "smoothness", "#795548"),
+        ("Reward/bias", "bias", "#00BCD4"),
     ]
     for tag, label, color in reward_tags:
         sv = _steps_vals(tag)
