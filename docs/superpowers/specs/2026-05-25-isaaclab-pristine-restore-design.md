@@ -35,6 +35,17 @@ encoder ctor kwargs). These two statements conflict.
   This matches `architecture.md` and the project CLAUDE.md note ("isaaclab_rl retains
   state_dependent_std/weight_decay cfg fields — constrained-albc depends on them").
 
+**Restore baseline = the fork point (`cbf51abb`), NOT current `upstream/main`
+(learned during execution).** Our `isaaclab_rl` is an OLD fork; `upstream/main` has since
+added symbols our fork lacks (e.g. `handle_deprecated_rsl_rl_cfg`). Restoring `scripts/`
+from `upstream/main` makes even stock `Isaac-Cartpole-v0` fail at import
+(`ImportError: cannot import name 'handle_deprecated_rsl_rl_cfg'`). The pristine baseline
+must be the upstream tree contemporaneous with our `isaaclab_rl` — i.e. the merge-base
+`cbf51abb` (equivalently, what a fresh clone at our fork point would contain). So:
+`git checkout cbf51abb -- scripts/...`, not `git checkout upstream/main -- ...`.
+"Pristine" = our-code-free AND compatible with our forked `isaaclab_rl`, not
+"byte-identical to today's upstream/main".
+
 ### Audit verdict (merge-base `cbf51abb` .. HEAD)
 
 | File | Action | Rationale |
@@ -104,6 +115,15 @@ triggers `gym.register()` for the overlay envs. The launcher still uses the upst
 **Drift control:** the launcher's docstring states "main() body replicated from
 upstream/main `scripts/reinforcement_learning/rsl_rl/train.py`" so future upstream rebases
 can diff against it. The replicated section is a stable, rarely-changed part of upstream.
+
+**Caveat — target our forked isaaclab_rl, not upstream/main (learned during execution):**
+the replicated main() must use only symbols our INSTALLED (forked) `isaaclab_rl` exports,
+not whatever upstream/main's train.py imports. Our fork sits at merge-base `cbf51abb`, which
+predates upstream/main's `handle_deprecated_rsl_rl_cfg` helper — that symbol does not exist
+in our `isaaclab_rl.rsl_rl`. The launcher therefore drops both the
+`handle_deprecated_rsl_rl_cfg` import and its call (our agent cfgs need no deprecation shim).
+Rule of thumb: when replicating upstream main(), reconcile imports against
+`git show HEAD:source/isaaclab_rl/.../rsl_rl/__init__.py`, not against upstream/main.
 
 ### Components
 
