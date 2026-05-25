@@ -6,7 +6,7 @@
 """Configuration for velocity + attitude tracking ALBC environment.
 
 8D action (2D arm + 6D thruster). Roll/pitch: attitude command, yaw: rate command,
-linear: velocity command. Single registered task: Isaac-FullDOF-TRPO-v0
+linear: velocity command. Single registered task: Isaac-ConstrainedALBC-TRPO-v0
 """
 
 from __future__ import annotations
@@ -22,10 +22,10 @@ from isaaclab.utils import configclass
 from isaaclab.utils.noise import GaussianNoiseCfg, NoiseModelWithAdditiveBiasCfg, UniformNoiseCfg
 
 from marinelab.assets import (
-    HERO_AGENT_ALBC_JOINT_NAMES,
-    HERO_AGENT_CFG,
-    HeroAgentBuoyHydrodynamicsCfg,
-    HeroAgentHydrodynamicsCfg,
+    ALBC_JOINT_NAMES,
+    ALBC_CFG,
+    ALBCBuoyHydrodynamicsCfg,
+    ALBCHydrodynamicsCfg,
     HydrodynamicsCfg,
     OceanCurrentCfg,
     ThrusterCfg,
@@ -70,10 +70,10 @@ _FULL_DOF_CONSTRAINT_TERMS: list[ConstraintTermCfg] = [
 
 
 @configclass
-class HeroAgentThrusterCfg(ThrusterCfg):
-    """Hero Agent 6-thruster configuration.
+class ALBCThrusterCfg(ThrusterCfg):
+    """ALBC 6-thruster configuration.
 
-    TAM from hero_agent_control/config/TAM.yaml (verified against actuators.xacro).
+    TAM from the ALBC ROS control package (config/TAM.yaml) (verified against actuators.xacro).
     Thruster parameters use BlueROV T200 as baseline; DR covers real-robot differences.
 
     Layout:
@@ -306,19 +306,19 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # ==========================================================================
     # Robot and Hydrodynamics
     # ==========================================================================
-    robot = HERO_AGENT_CFG.replace(prim_path="/World/envs/env_.*/Robot")
-    hydrodynamics: HydrodynamicsCfg = HeroAgentHydrodynamicsCfg()
-    buoy_hydrodynamics: HydrodynamicsCfg = HeroAgentBuoyHydrodynamicsCfg()
+    robot = ALBC_CFG.replace(prim_path="/World/envs/env_.*/Robot")
+    hydrodynamics: HydrodynamicsCfg = ALBCHydrodynamicsCfg()
+    buoy_hydrodynamics: HydrodynamicsCfg = ALBCBuoyHydrodynamicsCfg()
     ocean_current: OceanCurrentCfg = OceanCurrentCfg(
         max_velocity=(0.5, 0.5, 0.25, 0.0, 0.0, 0.0),
         noise_scale=(0.1, 0.1, 0.05, 0.0, 0.0, 0.0),
     )
-    thrusters: HeroAgentThrusterCfg | None = HeroAgentThrusterCfg()
+    thrusters: ALBCThrusterCfg | None = ALBCThrusterCfg()
 
     # ==========================================================================
     # ALBC Joint Control
     # ==========================================================================
-    albc_joint_names: list[str] = HERO_AGENT_ALBC_JOINT_NAMES
+    albc_joint_names: list[str] = ALBC_JOINT_NAMES
     control_decimation: int = 1
     initial_joint_pos_range: tuple[float, float] = (-math.pi, math.pi)
     nominal_joint_pos: tuple[float, float] = (0.0, math.pi / 2.0)

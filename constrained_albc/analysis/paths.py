@@ -37,7 +37,7 @@ MANIFEST_NAME = "manifest.json"
 
 # task_short extraction (design section 2-A). Ordered specific -> general so that
 # superset substrings match first: "-TRPO-NoIPO-" before "-TRPO-", "-PPO-Enc-" before
-# "-PPO-". A wrong order would classify Isaac-FullDOF-TRPO-NoIPO-v0 as "trpo".
+# "-PPO-". A wrong order would classify Isaac-ConstrainedALBC-TRPO-NoIPO-v0 as "trpo".
 _TASK_SHORT_PATTERNS: list[tuple[str, str]] = [
     ("-TRPO-NoIPO-", "trpo-noipo"),
     ("-PPO-Enc-", "ppo-enc"),
@@ -51,7 +51,7 @@ _TASK_SHORT_PATTERNS: list[tuple[str, str]] = [
 def task_short(task_id: str) -> str:
     """Map a registered task ID to its run_id short tag (design section 2-A).
 
-    e.g. ``Isaac-FullDOF-TRPO-v0`` -> ``trpo``, ``Isaac-FullDOF-PPO-Enc-v0`` -> ``ppo-enc``.
+    e.g. ``Isaac-ConstrainedALBC-TRPO-v0`` -> ``trpo``, ``Isaac-ConstrainedALBC-PPO-Enc-v0`` -> ``ppo-enc``.
     Falls back to a lowercased, dash-joined slug of the task ID if no pattern matches,
     so an unrecognized task still yields a usable (if verbose) tag rather than crashing.
     """
@@ -60,7 +60,7 @@ def task_short(task_id: str) -> str:
             return short
     # Fallback: strip the Isaac- prefix / -v0 suffix and slugify.
     slug = task_id
-    for prefix in ("Isaac-FullDOF-", "Isaac-"):
+    for prefix in ("Isaac-ConstrainedALBC-", "Isaac-"):
         if slug.startswith(prefix):
             slug = slug[len(prefix):]
             break
@@ -357,7 +357,7 @@ def emit_run_manifest(
     at runtime, after this is called).
 
     Args:
-        task: Full task ID (e.g. ``Isaac-FullDOF-TRPO-v0``).
+        task: Full task ID (e.g. ``Isaac-ConstrainedALBC-TRPO-v0``).
         log_dir: The training log directory train.py already created.
         tag: Optional run tag (reuses agent_cfg.run_name).
         config: Optional config snapshot for manifest.config (num_envs, seed, ...).

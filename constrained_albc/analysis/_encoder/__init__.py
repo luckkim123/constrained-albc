@@ -2,7 +2,7 @@
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
-"""Encoder inspection & training tools for constrained_full_albc (pure Python).
+"""Encoder inspection & training tools for ALBC (pure Python).
 
 Subcommands:
     debug   --checkpoint        encoder weight/gradient/forward-pass debug
@@ -31,7 +31,7 @@ from .train import cmd_train
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Encoder inspection & training tools for constrained_full_albc."
+        description="Encoder inspection & training tools for ALBC."
     )
     subparsers = parser.add_subparsers(dest="mode", required=True)
 

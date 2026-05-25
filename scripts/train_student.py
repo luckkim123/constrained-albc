@@ -20,7 +20,7 @@ import sys
 from isaaclab.app import AppLauncher
 
 parser = argparse.ArgumentParser(description="Train student policy from teacher checkpoint.")
-parser.add_argument("--task", type=str, default="Isaac-FullDOF-TRPO-v0")
+parser.add_argument("--task", type=str, default="Isaac-ConstrainedALBC-TRPO-v0")
 parser.add_argument("--encoder_type", type=str, choices=["tcn", "gru"], required=True)
 parser.add_argument("--run_name", type=str, default=None, help="Override auto-named run (default: student_<encoder_type>).")
 parser.add_argument("--teacher_run_dir", type=str, default="logs/rsl_rl/fulldof_albc/2026-04-20_20-08-38_r13_A")
@@ -63,8 +63,8 @@ from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper
 import isaaclab_tasks  # noqa: F401
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
-from constrained_albc.envs.constrained_full_albc.student.config import StudentCfg
-from constrained_albc.envs.constrained_full_albc.student.runner import StudentRunner
+from constrained_albc.envs.main.student.config import StudentCfg
+from constrained_albc.envs.main.student.runner import StudentRunner
 
 logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger("train_student")

@@ -53,12 +53,12 @@ class _MockModule(types.ModuleType):
 
 # Mock marinelab.assets with real link-length constants
 _uuv_mock = _MockModule("marinelab.assets")
-_uuv_mock.HERO_AGENT_ALBC_LINK1_LENGTH = 0.233
-_uuv_mock.HERO_AGENT_ALBC_LINK2_LENGTH = 0.233
-_uuv_mock.HERO_AGENT_ALBC_JOINT_NAMES = ["joint1", "joint2"]
-_uuv_mock.HERO_AGENT_CFG = _MockModule("HERO_AGENT_CFG")
-_uuv_mock.HeroAgentBuoyHydrodynamicsCfg = type("HeroAgentBuoyHydrodynamicsCfg", (), {})
-_uuv_mock.HeroAgentHydrodynamicsCfg = type("HeroAgentHydrodynamicsCfg", (), {})
+_uuv_mock.ALBC_LINK1_LENGTH = 0.233
+_uuv_mock.ALBC_LINK2_LENGTH = 0.233
+_uuv_mock.ALBC_JOINT_NAMES = ["joint1", "joint2"]
+_uuv_mock.ALBC_CFG = _MockModule("ALBC_CFG")
+_uuv_mock.ALBCBuoyHydrodynamicsCfg = type("ALBCBuoyHydrodynamicsCfg", (), {})
+_uuv_mock.ALBCHydrodynamicsCfg = type("ALBCHydrodynamicsCfg", (), {})
 _uuv_mock.HydrodynamicsCfg = type("HydrodynamicsCfg", (), {})
 _uuv_mock.OceanCurrentCfg = type("OceanCurrentCfg", (), {})
 
@@ -99,7 +99,7 @@ sys.modules["isaaclab.utils"].configclass = lambda cls: cls
 
 _tdc_pkg_dir = (
     Path(__file__).resolve().parent.parent
-    / "constrained_albc" / "envs" / "constrained_full_albc_tdc"
+    / "constrained_albc" / "envs" / "tdc"
 )
 _controllers_dir = _tdc_pkg_dir / "controllers"
 
@@ -138,7 +138,7 @@ class TDCControllerCfg:
 # Build a fake package hierarchy so relative imports in tdc.py resolve correctly.
 # tdc.py imports from isaaclab.utils and marinelab.assets (mocked above).
 # TDCControllerCfg is defined in controllers/tdc.py itself (not in config.py).
-_PKG = "constrained_albc.envs.constrained_full_albc_tdc"
+_PKG = "constrained_albc.envs.tdc"
 _CTRL_PKG = f"{_PKG}.controllers"
 
 # Register package stubs

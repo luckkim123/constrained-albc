@@ -38,7 +38,7 @@ sys.modules["isaaclab.utils"].configclass = lambda cls: cls  # no-op decorator
 
 _CONSTRAINTS_PATH = (
     Path(__file__).resolve().parent.parent
-    / "constrained_albc/envs/constrained_full_albc/mdp/constraints.py"
+    / "constrained_albc/envs/main/mdp/constraints.py"
 )
 _spec = importlib.util.spec_from_file_location("_albc_constraints_under_test", _CONSTRAINTS_PATH)
 C = importlib.util.module_from_spec(_spec)

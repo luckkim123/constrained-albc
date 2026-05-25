@@ -20,7 +20,7 @@ this main() body to catch drift.
 Usage (run via isaaclab's runtime):
     cd /workspace/isaaclab && ./isaaclab.sh -p \
         /workspace/constrained-albc/scripts/train.py \
-        --task Isaac-FullDOF-TRPO-v0 --num_envs 4 --headless
+        --task Isaac-ConstrainedALBC-TRPO-v0 --num_envs 4 --headless
 """
 
 """Launch Isaac Sim Simulator first."""
@@ -143,7 +143,7 @@ from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
 # Overlay-owned runner dispatch (the one divergence from upstream train.py).
-from constrained_albc.envs.constrained_full_albc.runners import (
+from constrained_albc.envs.main.runners import (
     ConstraintEncoderRunner,
     OnPolicyDoraemonRunner,
 )
@@ -152,7 +152,7 @@ from constrained_albc.envs.constrained_full_albc.runners import (
 logger = logging.getLogger(__name__)
 
 _RUNNER_MAP = {
-    "FullDOFConstraintEncoderRunner": ConstraintEncoderRunner,
+    "ALBCConstraintEncoderRunner": ConstraintEncoderRunner,
     "OnPolicyDoraemonRunner": OnPolicyDoraemonRunner,
 }
 
@@ -201,7 +201,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     # Point <experiment>/latest at this run so tools reach the newest run without
     # knowing its timestamp (e.g. tensorboard --logdir logs/rsl_rl/<exp>/latest).
-    from constrained_albc.envs.constrained_full_albc.utils import update_latest_symlink
+    from constrained_albc.envs.main.utils import update_latest_symlink
 
     os.makedirs(log_dir, exist_ok=True)
     update_latest_symlink(log_dir)

@@ -2,7 +2,7 @@
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
-"""Post-hoc analysis of constrained_full_albc eval outputs.
+"""Post-hoc analysis of main eval outputs.
 
 Subcommands:
     recompute       <run>            npz -> enhanced_summary.json (pipeline prerequisite)

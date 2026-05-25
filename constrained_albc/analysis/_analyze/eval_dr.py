@@ -92,7 +92,7 @@ def _ed_compute_heavy_tail(err_abs: np.ndarray, threshold: float, window_frac: f
 
 
 def _ed_pick_sample_env(d: dict[str, np.ndarray]) -> int | None:
-    """Replicate eval_dr_fulldof._pick_sample_env: median-attitude-error env."""
+    """Replicate eval_dr.py static._pick_sample_env: median-attitude-error env."""
     if "error_roll" not in d or "error_pitch" not in d:
         return None
     er = d["error_roll"]

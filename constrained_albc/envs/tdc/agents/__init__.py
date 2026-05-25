@@ -6,6 +6,6 @@
 """Agents sub-package.
 
 The classical TDC baseline does not train, so the runner cfg is reused from
-`constrained_full_albc.agents.rsl_rl_ppo_cfg:FullDOFTRPORunnerCfg` purely to
+`main.agents.rsl_rl_ppo_cfg:ALBCTRPORunnerCfg` purely to
 satisfy play/eval script entry points.
 """

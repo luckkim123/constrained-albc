@@ -43,7 +43,7 @@ _DORAEMON_PATH = (
     Path(__file__).resolve().parent.parent
     / "constrained_albc"
     / "envs"
-    / "constrained_full_albc"
+    / "main"
     / "doraemon.py"
 )
 _spec = importlib.util.spec_from_file_location("doraemon", _DORAEMON_PATH)

@@ -7,7 +7,7 @@
 
 Inherits every field from `ALBCEnvCfg` (DR, reward, constraints, observation,
 command sampling, thruster model, DORAEMON) so the baseline experiences the
-exact same training conditions as `Isaac-FullDOF-TRPO-v0`. Only adds the
+exact same training conditions as `Isaac-ConstrainedALBC-TRPO-v0`. Only adds the
 classical controller gains.
 """
 
@@ -15,14 +15,14 @@ from __future__ import annotations
 
 from isaaclab.utils import configclass
 
-from constrained_albc.envs.constrained_full_albc.config import ALBCEnvCfg
+from constrained_albc.envs.main.config import ALBCEnvCfg
 
 from .controllers.tdc import TDCControllerCfg
 from .controllers.thruster_pd import ThrusterPDCfg
 
 
 @configclass
-class FullDOFTDCEnvCfg(ALBCEnvCfg):
+class ALBCTDCEnvCfg(ALBCEnvCfg):
     """Full-DOF ALBC env with classical TDC (arm) + P controller (thruster).
 
     No RL training. The `action_space` stays at 8D so that observation
@@ -35,7 +35,7 @@ class FullDOFTDCEnvCfg(ALBCEnvCfg):
     tdc_controller: TDCControllerCfg = TDCControllerCfg()
     """Arm TDC controller for roll/pitch attitude stabilization.
 
-    Other parameters inherit from the hero_agent reference implementation
+    Other parameters inherit from the original ROS reference implementation
     (`m_hat=(0.15, 0.16)`, `kp=40.0`, `kd=12.0`, `h=0.180`,
     `max_joint_velocity=2.5 rad/s`).
     """

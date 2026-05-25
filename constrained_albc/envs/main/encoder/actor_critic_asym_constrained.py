@@ -5,7 +5,7 @@
 
 """Asymmetric actor-critic without encoder (NoEncoder ablation for Full-DOF ALBC).
 
-This is a baseline for Isaac-FullDOF-TRPO-v0 that removes only the encoder while
+This is a baseline for Isaac-ConstrainedALBC-TRPO-v0 that removes only the encoder while
 keeping the TRPO + IPO algorithm, DR, reward, and constraint configuration
 identical. The actor receives only the 87D policy observation (current proprio
 + temporal history), while the critic and cost critic receive the full

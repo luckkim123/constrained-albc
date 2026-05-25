@@ -5,7 +5,7 @@
 
 """2-Link planar arm kinematics for ALBC (Active Linear Buoyancy Controller).
 
-This module implements forward and inverse kinematics for the Hero Agent's
+This module implements forward and inverse kinematics for the ALBC vehicle's
 2-link planar arm that positions a buoyancy element for attitude control.
 
 ALBC Arm Geometry (from IROS 2026 paper):
@@ -36,8 +36,8 @@ from __future__ import annotations
 import torch
 
 from marinelab.assets import (
-    HERO_AGENT_ALBC_LINK1_LENGTH,
-    HERO_AGENT_ALBC_LINK2_LENGTH,
+    ALBC_LINK1_LENGTH,
+    ALBC_LINK2_LENGTH,
 )
 
 
@@ -56,8 +56,8 @@ class ALBCKinematics:
         self,
         num_envs: int,
         device: str,
-        link1_length: float = HERO_AGENT_ALBC_LINK1_LENGTH,
-        link2_length: float = HERO_AGENT_ALBC_LINK2_LENGTH,
+        link1_length: float = ALBC_LINK1_LENGTH,
+        link2_length: float = ALBC_LINK2_LENGTH,
     ) -> None:
         """Initialize ALBC kinematics model.
 

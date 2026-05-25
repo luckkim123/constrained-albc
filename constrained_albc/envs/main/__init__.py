@@ -13,9 +13,9 @@ for full position + attitude tracking with constrained RL.
 Error-gated 6D integral observation (Hwangbo 2017 pattern, validated R7/R8).
 
 Registered tasks:
-    Isaac-FullDOF-TRPO-v0:          TRPO + IPO + Asymmetric Encoder (production)
-    Isaac-FullDOF-NoEncoder-v0:     TRPO + IPO without encoder (ablation baseline 1)
-    Isaac-FullDOF-PPO-v0:           Standard PPO + asymmetric critic (ablation baseline 2)
+    Isaac-ConstrainedALBC-TRPO-v0:          TRPO + IPO + Asymmetric Encoder (production)
+    Isaac-ConstrainedALBC-NoEncoder-v0:     TRPO + IPO without encoder (ablation baseline 1)
+    Isaac-ConstrainedALBC-PPO-v0:           Standard PPO + asymmetric critic (ablation baseline 2)
 """
 
 import gymnasium as gym
@@ -32,53 +32,53 @@ from .config import (
 ##
 
 gym.register(
-    id="Isaac-FullDOF-TRPO-v0",
-    entry_point="constrained_albc.envs.constrained_full_albc:ALBCEnv",
+    id="Isaac-ConstrainedALBC-TRPO-v0",
+    entry_point="constrained_albc.envs.main:ALBCEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": f"{__name__}.config:ALBCEnvCfg",
-        "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:FullDOFTRPORunnerCfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:ALBCTRPORunnerCfg",
     },
 )
 
 gym.register(
-    id="Isaac-FullDOF-NoEncoder-v0",
-    entry_point="constrained_albc.envs.constrained_full_albc:ALBCEnv",
+    id="Isaac-ConstrainedALBC-NoEncoder-v0",
+    entry_point="constrained_albc.envs.main:ALBCEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": f"{__name__}.config:ALBCEnvCfg",
-        "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:FullDOFNoEncoderRunnerCfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:ALBCNoEncoderRunnerCfg",
     },
 )
 
 gym.register(
-    id="Isaac-FullDOF-PPO-v0",
-    entry_point="constrained_albc.envs.constrained_full_albc:ALBCEnv",
+    id="Isaac-ConstrainedALBC-PPO-v0",
+    entry_point="constrained_albc.envs.main:ALBCEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": f"{__name__}.config:ALBCEnvCfg",
-        "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:FullDOFPPORunnerCfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:ALBCPPORunnerCfg",
     },
 )
 
 # Variant #3: Encoder + TRPO without IPO (empty constraint list)
 gym.register(
-    id="Isaac-FullDOF-TRPO-NoIPO-v0",
-    entry_point="constrained_albc.envs.constrained_full_albc:ALBCEnv",
+    id="Isaac-ConstrainedALBC-TRPO-NoIPO-v0",
+    entry_point="constrained_albc.envs.main:ALBCEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": f"{__name__}.config_noconstraint:ALBCNoConstraintEnvCfg",
-        "rsl_rl_cfg_entry_point": f"{__name__}.agents.ablation_cfgs:FullDOFTRPONoIPORunnerCfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.agents.ablation_cfgs:ALBCTRPONoIPORunnerCfg",
     },
 )
 
 # Variant #4: Encoder + PPO (no IPO)
 gym.register(
-    id="Isaac-FullDOF-PPO-Enc-v0",
-    entry_point="constrained_albc.envs.constrained_full_albc:ALBCEnv",
+    id="Isaac-ConstrainedALBC-PPO-Enc-v0",
+    entry_point="constrained_albc.envs.main:ALBCEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": f"{__name__}.config_noconstraint:ALBCNoConstraintEnvCfg",
-        "rsl_rl_cfg_entry_point": f"{__name__}.agents.ablation_cfgs:FullDOFPPOEncRunnerCfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.agents.ablation_cfgs:ALBCPPOEncRunnerCfg",
     },
 )

@@ -6,7 +6,7 @@
 """Full-DOF ALBC environment driven by classical TDC + thruster P controller.
 
 This subclass replaces the RL policy with a fixed classical control pipeline:
-    - Arm 2D (roll/pitch): TDC + DLS IK (reuses `hero_agent.controllers.tdc`)
+    - Arm 2D (roll/pitch): TDC + DLS IK (reuses `tdc.controllers.tdc`)
     - Thruster 6D (surge/sway/heave/yaw): body-frame velocity/rate P control
 
 All other behaviour -- domain randomization, reward, constraints, observation,
@@ -38,27 +38,27 @@ import torch
 
 from isaaclab.utils.math import euler_xyz_from_quat
 
-from constrained_albc.envs.constrained_full_albc.albc_env import ALBCEnv
+from constrained_albc.envs.main.albc_env import ALBCEnv
 
 from .controllers.kinematics import ALBCKinematics
 from .controllers.tdc import TDCController
 from .controllers.thruster_pd import ThrusterPDController
 
 if TYPE_CHECKING:
-    from .config import FullDOFTDCEnvCfg
+    from .config import ALBCTDCEnvCfg
 
 
-class FullDOFTDCEnv(ALBCEnv):
+class ALBCTDCEnv(ALBCEnv):
     """Full-DOF ALBC environment driven by classical controllers (no RL)."""
 
-    cfg: FullDOFTDCEnvCfg
+    cfg: ALBCTDCEnvCfg
 
-    def __init__(self, cfg: FullDOFTDCEnvCfg, render_mode: str | None = None, **kwargs) -> None:
+    def __init__(self, cfg: ALBCTDCEnvCfg, render_mode: str | None = None, **kwargs) -> None:
         super().__init__(cfg, render_mode, **kwargs)
 
         if self._thruster is None:
             raise RuntimeError(
-                "FullDOFTDCEnv requires `cfg.thrusters` to be set; the thruster "
+                "ALBCTDCEnv requires `cfg.thrusters` to be set; the thruster "
                 "PD controller cannot operate without the ThrusterModel/TAM."
             )
 
@@ -123,7 +123,7 @@ class FullDOFTDCEnv(ALBCEnv):
         p_ee_desired = self._tdc.compute(roll, pitch, ang_vel_b, target_euler)
 
         # IK starting point is the accumulated joint target (the arm's
-        # commanded trajectory), matching `hero_agent/tdc_env.py:249`. Using
+        # commanded trajectory), matching the original tdc_env.py:249. Using
         # `_joint_pos_targets` here is required for the delta round-trip
         # below: encoding `(target - _joint_pos_targets) / delta_scale` into
         # the 8D action lets the parent's delta integration reproduce the
@@ -171,7 +171,7 @@ class FullDOFTDCEnv(ALBCEnv):
     def _reset_idx(self, env_ids: torch.Tensor | None) -> None:
         super()._reset_idx(env_ids)
         # Coerce None / full-batch env_ids to the canonical tensor form used
-        # by ALBCEnv. Matches the hero_agent/tdc_env.py reset pattern.
+        # by ALBCEnv. Matches the original tdc_env.py reset pattern.
         env_ids_ = self._coerce_env_ids(env_ids)
         self._tdc.reset(env_ids_)
         # DR randomizes volume -> buoyancy force changes every reset; push the

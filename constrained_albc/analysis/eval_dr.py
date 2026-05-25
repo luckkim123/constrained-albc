@@ -2,7 +2,7 @@
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
-"""DR-robustness evaluation for constrained_full_albc / Isaac-FullDOF-TRPO-v0 (Isaac Sim required).
+"""DR-robustness evaluation for ALBC / Isaac-ConstrainedALBC-TRPO-v0 (Isaac Sim required).
 
 Subcommands:
     static     evaluate policy across fixed DR levels (none/soft/medium/hard)  [main eval]
@@ -11,7 +11,7 @@ Subcommands:
     sudden     one-shot nominal -> extreme OOD shock, transient recovery
 
 Usage:
-    ./isaaclab.sh -p scripts/analysis/eval_dr.py static --task Isaac-FullDOF-TRPO-v0 --num_envs 64 --headless
+    ./isaaclab.sh -p scripts/analysis/eval_dr.py static --task Isaac-ConstrainedALBC-TRPO-v0 --num_envs 64 --headless
     ./isaaclab.sh -p scripts/analysis/eval_dr.py periodic --num_steps 4 --headless
     ./isaaclab.sh -p scripts/analysis/eval_dr.py segmented --segment_duration 5 --headless
     ./isaaclab.sh -p scripts/analysis/eval_dr.py sudden --switch_time 5 --headless
@@ -60,7 +60,7 @@ def _add_common(sp: argparse.ArgumentParser) -> None:
         AppLauncher.add_app_launcher_args(sp)
     finally:
         sys.argv = _saved_argv
-    sp.add_argument("--task", type=str, default="Isaac-FullDOF-TRPO-v0", help="Task name.")
+    sp.add_argument("--task", type=str, default="Isaac-ConstrainedALBC-TRPO-v0", help="Task name.")
     sp.add_argument("--num_envs", type=int, default=64, help="Number of parallel environments.")
     sp.add_argument("--output_dir", type=str, default=None, help="Output directory.")
     sp.add_argument("--seed", type=int, default=42, help="Random seed.")
@@ -68,7 +68,7 @@ def _add_common(sp: argparse.ArgumentParser) -> None:
     cli_args.add_rsl_rl_args(sp)
 
 
-parser = argparse.ArgumentParser(description="DR-robustness evaluation for constrained_full_albc.")
+parser = argparse.ArgumentParser(description="DR-robustness evaluation for ALBC.")
 subparsers = parser.add_subparsers(dest="mode", required=True)
 
 # ----------------------------------------------------------------------------
@@ -150,7 +150,7 @@ sp_periodic.add_argument(
 # ----------------------------------------------------------------------------
 # segmented: per-segment DR switch + student/teacher/cascade-PID compare
 # ----------------------------------------------------------------------------
-sp_segmented = subparsers.add_parser("segmented", description="Evaluate DR-switching adaptation of FullDOF-TRPO policies.")  # noqa: E501
+sp_segmented = subparsers.add_parser("segmented", description="Evaluate DR-switching adaptation of ALBC-TRPO policies.")  # noqa: E501
 _add_common(sp_segmented)
 sp_segmented.add_argument("--segment_duration", type=float, default=5.0)
 sp_segmented.add_argument("--num_segments", type=int, default=10)
@@ -194,7 +194,7 @@ else:
     # Imported mode: provide a minimal args_cli so the @hydra_task_config decorator
     # on main() can resolve args_cli.task/.agent at import time. The importer never
     # calls eval_dr.main(); it only uses the module-top helper functions.
-    args_cli = argparse.Namespace(task="Isaac-FullDOF-TRPO-v0", agent="rsl_rl_cfg_entry_point", mode=None)
+    args_cli = argparse.Namespace(task="Isaac-ConstrainedALBC-TRPO-v0", agent="rsl_rl_cfg_entry_point", mode=None)
     hydra_args = []
     app_launcher = None  # type: ignore[assignment]
     simulation_app = None  # type: ignore[assignment]
@@ -233,22 +233,22 @@ from isaaclab.utils.math import euler_xyz_from_quat, quat_rotate_inverse
 from isaaclab_rl.rsl_rl import RslRlBaseRunnerCfg, RslRlVecEnvWrapper
 
 import isaaclab_tasks  # noqa: F401
-from constrained_albc.envs.constrained_full_albc.algorithms import ConstraintTRPO
-from constrained_albc.envs.constrained_full_albc.config import (
+from constrained_albc.envs.main.algorithms import ConstraintTRPO
+from constrained_albc.envs.main.config import (
     DomainRandomizationCfg,
     HardDomainRandomizationCfg,
 )
-from constrained_albc.envs.constrained_full_albc.doraemon import build_param_specs
-from constrained_albc.envs.constrained_full_albc.encoder import ActorCriticEncoder
-from constrained_albc.envs.constrained_full_albc.mdp import (
+from constrained_albc.envs.main.doraemon import build_param_specs
+from constrained_albc.envs.main.encoder import ActorCriticEncoder
+from constrained_albc.envs.main.mdp import (
     DRSampler,
     randomize_body_mass,
     randomize_hydrodynamics,
     randomize_ocean_current,
     randomize_payload,
 )
-from constrained_albc.envs.constrained_full_albc.runners import ConstraintEncoderRunner
-from constrained_albc.envs.constrained_full_albc.utils import update_latest_symlink
+from constrained_albc.envs.main.runners import ConstraintEncoderRunner
+from constrained_albc.envs.main.utils import update_latest_symlink
 from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
@@ -263,9 +263,9 @@ _DORAEMON_FULL_DR: DomainRandomizationCfg | None = None
 _DORAEMON_RAW: dict[str, tuple[float, float]] = {}
 
 # Register custom classes in RSL-RL runner module namespace
-_runner_module.FullDOFActorCriticEncoder = ActorCriticEncoder
-_runner_module.FullDOFConstraintEncoderRunner = ConstraintEncoderRunner
-_runner_module.FullDOFConstraintTRPO = ConstraintTRPO
+_runner_module.ALBCActorCriticEncoder = ActorCriticEncoder
+_runner_module.ALBCConstraintEncoderRunner = ConstraintEncoderRunner
+_runner_module.ALBCConstraintTRPO = ConstraintTRPO
 
 MAX_ANGLE_DEG = 15.0  # kept for backward compat (episode_length_s calc)
 
@@ -370,7 +370,7 @@ def get_hard_dr_config() -> DomainRandomizationCfg:
 
 
 # ============================================================================
-# DR Configuration (constrained_full_albc-specific fields)
+# DR Configuration (main-specific fields)
 # ============================================================================
 
 # All tuple fields in DomainRandomizationCfg that should be interpolated.
@@ -622,7 +622,7 @@ def apply_dr_mid_episode(raw_env, dr_cfg: DomainRandomizationCfg) -> None:
 
 # ============================================================================
 # static mode: trajectory, metrics, plots, evaluation loop
-# (moved verbatim from eval_dr_fulldof.py)
+# (moved verbatim from eval_dr.py static.py)
 # ============================================================================
 
 # ============================================================================
@@ -1640,7 +1640,7 @@ def run_evaluation(
 
 
 # ============================================================================
-# static mode: run function (was eval_dr_fulldof main)
+# static mode: run function (was eval_dr.py static main)
 # ============================================================================
 
 def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
@@ -1824,7 +1824,7 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
 
     if use_checkpoint and resume_path:
         runner_cls_map = {
-            "FullDOFConstraintEncoderRunner": ConstraintEncoderRunner,
+            "ALBCConstraintEncoderRunner": ConstraintEncoderRunner,
         }
         runner_cls = runner_cls_map.get(runner_cls_name)
 
@@ -2371,7 +2371,7 @@ def run_periodic(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
 
     if use_checkpoint and resume_path:
         runner_cls_map = {
-            "FullDOFConstraintEncoderRunner": ConstraintEncoderRunner,
+            "ALBCConstraintEncoderRunner": ConstraintEncoderRunner,
         }
         runner_cls = runner_cls_map.get(runner_cls_name)
 
@@ -3039,7 +3039,7 @@ def run_segmented(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
 
     # Policy: student mode uses StudentInLoopPolicy (student encoder + frozen teacher actor)
     if is_student_mode:
-        from constrained_albc.envs.constrained_full_albc.student.eval import build_student_policy_fn
+        from constrained_albc.envs.main.student.eval import build_student_policy_fn
 
         student_policy = build_student_policy_fn(
             teacher_ckpt=args_cli.teacher_ckpt,
@@ -3066,7 +3066,7 @@ def run_segmented(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         agent_dict = run_agent_dict if run_agent_dict else agent_cfg.to_dict()
         runner_cls_name = agent_dict.get("class_name", getattr(agent_cfg, "class_name", "OnPolicyRunner"))
         runner_device = agent_dict.get("device", agent_cfg.device)
-        runner_cls_map = {"FullDOFConstraintEncoderRunner": ConstraintEncoderRunner}
+        runner_cls_map = {"ALBCConstraintEncoderRunner": ConstraintEncoderRunner}
         runner_cls = runner_cls_map.get(runner_cls_name, OnPolicyRunner)
         runner = runner_cls(env, agent_dict, log_dir=None, device=runner_device)
         runner.load(resume_path, load_optimizer=False)
@@ -3228,11 +3228,11 @@ def run_sudden(env_cfg, agent_cfg):
     runner_cls_name = getattr(agent_cfg, "class_name", "OnPolicyRunner")
     runner_device = agent_cfg.device
 
-    if runner_cls_name == "FullDOFConstraintEncoderRunner":
-        from constrained_albc.envs.constrained_full_albc.runners import ConstraintEncoderRunner as _Runner
+    if runner_cls_name == "ALBCConstraintEncoderRunner":
+        from constrained_albc.envs.main.runners import ConstraintEncoderRunner as _Runner
         runner = _Runner(env, agent_cfg.to_dict(), log_dir=None, device=runner_device)
     elif runner_cls_name == "OnPolicyDoraemonRunner":
-        from constrained_albc.envs.constrained_full_albc.runners import OnPolicyDoraemonRunner as _Runner
+        from constrained_albc.envs.main.runners import OnPolicyDoraemonRunner as _Runner
         runner = _Runner(env, agent_cfg.to_dict(), log_dir=None, device=runner_device)
     else:
         runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=runner_device)

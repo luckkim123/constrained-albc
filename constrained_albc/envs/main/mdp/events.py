@@ -293,7 +293,7 @@ def randomize_ocean_current(
     Strength resolution order (per-env scale applied to sampled velocity):
     1. ``sampled['ocean_current_strength']`` (DORAEMON-managed, training-time)
     2. Uniform sample from ``cfg.randomization.ocean_current_strength_range``
-       (eval-time: eval_dr_fulldof interpolates this range per DR level)
+       (eval-time: eval_dr.py static interpolates this range per DR level)
     3. None (legacy: full range sampled without scaling)
     """
     env_ids = _ensure_env_ids(env, env_ids)

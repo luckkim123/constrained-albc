@@ -18,7 +18,7 @@ overlay concerns that must NOT live in isaaclab (same as train.py):
 
 The policy-load path (runner_map + ``_runner_module`` monkeypatch +
 ``runner.load(..., load_optimizer=False)``) mirrors the VERIFIED loader in
-``analysis/eval_dr.py:2353-2360`` so play and eval agree on how a FullDOF policy
+``analysis/eval_dr.py:2353-2360`` so play and eval agree on how a ALBC policy
 is reconstructed. jit/onnx export is intentionally omitted (the encoder +
 asymmetric-critic structure is not export-validated; eval_dr does not export
 either).
@@ -26,7 +26,7 @@ either).
 Usage (run via isaaclab's runtime):
     cd /workspace/isaaclab && ./isaaclab.sh -p \
         /workspace/constrained-albc/scripts/play.py \
-        --task Isaac-FullDOF-TRPO-v0 --num_envs 16 \
+        --task Isaac-ConstrainedALBC-TRPO-v0 --num_envs 16 \
         --checkpoint /path/to/model_4999.pt
 """
 
@@ -70,7 +70,7 @@ parser = argparse.ArgumentParser(description="Play a trained RL agent with RSL-R
 parser.add_argument("--video", action="store_true", default=False, help="Record a video during playback.")
 parser.add_argument("--video_length", type=int, default=600, help="Length of the recorded video (in steps).")
 parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
-parser.add_argument("--task", type=str, default="Isaac-FullDOF-TRPO-v0", help="Name of the task.")
+parser.add_argument("--task", type=str, default="Isaac-ConstrainedALBC-TRPO-v0", help="Name of the task.")
 parser.add_argument(
     "--agent", type=str, default="rsl_rl_cfg_entry_point", help="Name of the RL agent configuration entry point."
 )
@@ -113,13 +113,13 @@ from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
 # Overlay-owned runner dispatch (same divergence from upstream as train.py).
-from constrained_albc.envs.constrained_full_albc.runners import ConstraintEncoderRunner
+from constrained_albc.envs.main.runners import ConstraintEncoderRunner
 
 # rsl-rl resolves the runner by class name from agent_cfg; register the overlay
 # runner on the module it looks in (mirrors eval_dr.py:249).
-_runner_module.FullDOFConstraintEncoderRunner = ConstraintEncoderRunner
+_runner_module.ALBCConstraintEncoderRunner = ConstraintEncoderRunner
 
-_RUNNER_MAP = {"FullDOFConstraintEncoderRunner": ConstraintEncoderRunner}
+_RUNNER_MAP = {"ALBCConstraintEncoderRunner": ConstraintEncoderRunner}
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True

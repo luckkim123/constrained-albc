@@ -518,10 +518,10 @@ class ALBCEnv(DirectRLEnv):
         w = sqrt(|l1 * l2 * sin(theta2)|), normalized by w_max = l1 * l2.
         Result in [0, 1]: 1.0 = max manipulability, 0.0 = singularity.
         """
-        from marinelab.assets import HERO_AGENT_ALBC_LINK1_LENGTH, HERO_AGENT_ALBC_LINK2_LENGTH
+        from marinelab.assets import ALBC_LINK1_LENGTH, ALBC_LINK2_LENGTH
 
-        l1 = HERO_AGENT_ALBC_LINK1_LENGTH  # 0.233
-        l2 = HERO_AGENT_ALBC_LINK2_LENGTH  # 0.233
+        l1 = ALBC_LINK1_LENGTH  # 0.233
+        l2 = ALBC_LINK2_LENGTH  # 0.233
         theta2 = self._robot.data.joint_pos[:, self._albc_joint_ids[1]]
         # w = sqrt(|l1*l2*sin(theta2)|), w_max = sqrt(l1*l2) (at sin=1)
         w = torch.sqrt((l1 * l2 * torch.sin(theta2)).abs())

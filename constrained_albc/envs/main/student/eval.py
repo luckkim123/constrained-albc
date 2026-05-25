@@ -1,7 +1,7 @@
-"""Student-in-the-loop wrapper for eval_dr_fulldof.
+"""Student-in-the-loop wrapper for eval_dr.py static.
 
 Usage from a separate eval script:
-    from constrained_albc.envs.constrained_full_albc.student.eval import (
+    from constrained_albc.envs.main.student.eval import (
         build_student_policy_fn,
     )
 
@@ -83,7 +83,7 @@ class StudentInLoopPolicy:
 
         Accepts either: (1) None to reset all, (2) a long index tensor (N,), or
         (3) a bool mask of shape (num_envs,) or (num_envs, 1) -- the latter is
-        what eval_dr_fulldof passes via `dones`.
+        what eval_dr.py static passes via `dones`.
         """
         if env_ids is not None:
             if env_ids.dtype == torch.bool:

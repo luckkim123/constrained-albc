@@ -5,11 +5,11 @@
 
 """Maintain a `latest` symlink pointing at the most recent run directory.
 
-A run lands in ``<parent>/<run_name>/`` (e.g. ``logs/rsl_rl/full_dof_trpo/
+A run lands in ``<parent>/<run_name>/`` (e.g. ``logs/rsl_rl/albc_trpo/
 2026-05-25_16-34-13``). This keeps a sibling ``latest`` symlink so tools can
 reach the newest run without knowing its timestamp::
 
-    tensorboard --logdir logs/rsl_rl/full_dof_trpo/latest
+    tensorboard --logdir logs/rsl_rl/albc_trpo/latest
 """
 
 from __future__ import annotations

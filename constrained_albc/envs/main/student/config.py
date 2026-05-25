@@ -58,8 +58,8 @@ class StudentCfg:
     # Logging
     log_dir_root: str = "logs/rsl_rl/student_policy"
     logger: str = "wandb"           # "wandb" or "tensorboard"
-    wandb_project: str = "full_dof_trpo_student"
+    wandb_project: str = "albc_trpo_student"
 
     # Environment
-    task: str = "Isaac-FullDOF-TRPO-v0"
+    task: str = "Isaac-ConstrainedALBC-TRPO-v0"
     device: str = "cuda:0"          # overridden by CUDA_VISIBLE_DEVICES at launch

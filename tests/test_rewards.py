@@ -60,7 +60,7 @@ sys.modules["isaaclab.utils"].configclass = _mock_configclass
 
 _REWARDS_PATH = (
     Path(__file__).resolve().parent.parent
-    / "constrained_albc/envs/constrained_full_albc/mdp/rewards.py"
+    / "constrained_albc/envs/main/mdp/rewards.py"
 )
 _spec = importlib.util.spec_from_file_location("_albc_rewards_under_test", _REWARDS_PATH)
 R = importlib.util.module_from_spec(_spec)

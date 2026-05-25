@@ -2,7 +2,7 @@
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
-"""Comparison plots for constrained_full_albc evals (pure Python, no Isaac Sim).
+"""Comparison plots for ALBC evals (pure Python, no Isaac Sim).
 
 Subcommands:
     dr      --dirs --labels --output   multi-policy eval_dr .npz comparison plot
@@ -419,7 +419,7 @@ def cmd_tdc_rl(args: argparse.Namespace) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Comparison plots for constrained_full_albc evals (pure Python, no Isaac Sim)."
+        description="Comparison plots for ALBC evals (pure Python, no Isaac Sim)."
     )
     sub = parser.add_subparsers(dest="mode", required=True)
 

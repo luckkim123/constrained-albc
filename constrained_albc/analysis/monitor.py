@@ -2,7 +2,7 @@
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
-"""Training-time monitoring for constrained_full_albc (pure Python, no Isaac Sim).
+"""Training-time monitoring for ALBC (pure Python, no Isaac Sim).
 
 Subcommands:
     plot     <run> --output        single-run 6-panel TB dashboard
@@ -506,7 +506,7 @@ def _wandb_create_report(entity: str, project: str, run_filter: str | None = Non
         entity=entity,
         project=project,
         title="TRPO + IPO + Encoder Training Dashboard",
-        description="8-panel monitoring dashboard for constrained_full_albc TRPO + Encoder training",
+        description="8-panel monitoring dashboard for ALBC TRPO + Encoder training",
         blocks=blocks,
     )
 
@@ -532,7 +532,7 @@ def cmd_wandb(args: argparse.Namespace) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Training-time monitoring for constrained_full_albc",
+        description="Training-time monitoring for ALBC",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     sub = parser.add_subparsers(dest="mode", required=True)

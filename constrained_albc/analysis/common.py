@@ -273,7 +273,7 @@ def build_sweep_params_from_checkpoint(
     """Build sweep params using checkpoint normalizer mean as nominal center.
 
     Supports:
-      - hero_agent 19D privileged-only encoder input
+      - legacy 19D privileged-only encoder input
       - constrained_albc 27D or 28D privileged-only encoder input
       - constrained_albc 280D full concatenated encoder input
         (policy_obs(13) + history(240) + privileged(27))
@@ -307,7 +307,7 @@ def build_sweep_params_from_checkpoint(
         nm_priv = nm[offset:]
         if priv_dim == 27:
             return _build_constrained_albc_27d_sweep(nm_priv, offset)
-        # Hero agent with full input (19D priv at end)
+        # Legacy 19D privileged input at end of full concatenated input
         return [
             SweepParam("Main Volume", offset + 0, nm_priv[0] * 0.9, nm_priv[0] * 1.1, "m^3"),
             SweepParam("Buoy Volume", offset + 5, nm_priv[5] * 0.9, nm_priv[5] * 1.1, "m^3"),
@@ -325,7 +325,7 @@ def build_sweep_params_from_checkpoint(
         return _build_constrained_albc_27d_sweep(nm, offset=0) if input_dim == 27 \
             else _build_constrained_albc_28d_sweep(nm, offset=0)
 
-    # Hero agent 19D (existing structure):
+    # Legacy 19D privileged input (existing structure):
     #  0-4: Main hydro (volume, CoG_xyz, CoB_z)
     #  5-9: Buoy hydro (volume, CoG_xyz, CoB_z)
     # 10-11: Main Ixx, Iyy, 12-13: Buoy Ixx, Iyy
@@ -372,28 +372,6 @@ def smooth(values: np.ndarray, window: int = 15) -> np.ndarray:
         return values
     kernel = np.ones(window) / window
     return np.convolve(values, kernel, mode="same")
-
-
-def find_hero_agent_runs(
-    logs_root: str = "logs/rsl_rl",
-) -> list[Path]:
-    """Find training runs (tfevents dirs) under logs_root, newest first.
-
-    Thin wrapper over ``paths._find_legacy_run``'s scan logic; kept for backward
-    compatibility with callers expecting a list of run-dir Paths.
-    """
-    root = Path(logs_root)
-    if not root.exists():
-        return []
-    runs: list[Path] = []
-    for exp_dir in sorted(root.iterdir()):
-        if not exp_dir.is_dir():
-            continue
-        for run_dir in sorted(exp_dir.iterdir(), reverse=True):
-            if run_dir.is_dir() and list(run_dir.glob("events.out.tfevents.*")):
-                runs.append(run_dir)
-    runs.sort(key=lambda p: p.name, reverse=True)
-    return runs
 
 
 def resolve_run_path(run_spec: str, logs_root: str = "logs/rsl_rl") -> Path:

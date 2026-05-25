@@ -15,7 +15,7 @@ Layout:
     Tx, Ty       - roll/pitch attitude tracking (PD: P on error - D on rate)
     Tz           - yaw rate tracking (P)
 
-Wrench is allocated to the six Hero Agent thrusters via the pseudo-inverse
+Wrench is allocated to the six ALBC vehicle thrusters via the pseudo-inverse
 of the (6x6) thruster allocation matrix and normalized to the [-1, 1]
 command range expected by `ThrusterModel.apply_dynamics`.
 """
@@ -32,7 +32,7 @@ class ThrusterPDCfg:
     """Gains and normalization for the 6-DOF thruster PD controller.
 
     Default values are tuned to minimize steady-state error within the
-    saturation budget of the Hero Agent thrusters (max 50 N each, nominal
+    saturation budget of the ALBC vehicle thrusters (max 50 N each, nominal
     40 N at command 1.0). P-only control leaves a residual proportional to
     drag/disturbance divided by Kp; the gains here trade off SS error against
     overshoot from Kd damping.
@@ -89,7 +89,7 @@ class ThrusterPDController:
             cfg: Gains and normalization.
             allocation_matrix: 6x6 TAM mapping per-thruster forces to the
                 body-frame wrench [Fx, Fy, Fz, Tx, Ty, Tz]. Either a tuple of
-                tuples (from `HeroAgentThrusterCfg.allocation_matrix`) or a
+                tuples (from `ALBCThrusterCfg.allocation_matrix`) or a
                 pre-built tensor.
         """
         self.num_envs = num_envs

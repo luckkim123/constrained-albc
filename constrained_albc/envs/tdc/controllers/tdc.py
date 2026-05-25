@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Time Delay Controller (TDC) for Hero Agent roll/pitch attitude stabilization.
+"""Time Delay Controller (TDC) for ALBC vehicle roll/pitch attitude stabilization.
 
 TDC uses Time Delay Estimation (TDE) to approximate uncertain nonlinear dynamics
 without explicit modeling. The controller positions the buoyancy element
@@ -28,8 +28,8 @@ import torch
 from isaaclab.utils import configclass
 
 from marinelab.assets import (
-    HERO_AGENT_ALBC_LINK1_LENGTH,
-    HERO_AGENT_ALBC_LINK2_LENGTH,
+    ALBC_LINK1_LENGTH,
+    ALBC_LINK2_LENGTH,
 )
 
 
@@ -38,7 +38,7 @@ class TDCControllerCfg:
     """TDC (Time Delay Control) controller configuration.
 
     Groups all parameters for the TDC attitude stabilization controller.
-    Used as a nested config in HeroAgentTDCEnvCfg.
+    Used as a nested config in ALBCTDCEnvCfg.
     """
 
     # Design inertia [roll, pitch] in kg*m^2
@@ -68,8 +68,8 @@ class TDCControllerCfg:
     max_joint_velocity: float = 2.5
 
     # Link lengths from URDF (used by kinematics)
-    link1_length: float = HERO_AGENT_ALBC_LINK1_LENGTH
-    link2_length: float = HERO_AGENT_ALBC_LINK2_LENGTH
+    link1_length: float = ALBC_LINK1_LENGTH
+    link2_length: float = ALBC_LINK2_LENGTH
 
     # Console log every N steps (0 = disabled)
     log_interval: int = 200
@@ -80,7 +80,7 @@ class TDCControllerCfg:
 
 
 class TDCController:
-    """GPU-parallel TDC for Hero Agent roll/pitch attitude stabilization.
+    """GPU-parallel TDC for ALBC vehicle roll/pitch attitude stabilization.
 
     Computes desired end-effector position to stabilize roll/pitch angles
     using Time Delay Estimation (TDE) for dynamics compensation.

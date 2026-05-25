@@ -5,7 +5,7 @@
 
 """Config equivalence regression net for the de-duplication refactor.
 
-The FullDOF runner cfgs duplicate shared constants (seed, num_steps_per_env,
+The ALBC runner cfgs duplicate shared constants (seed, num_steps_per_env,
 max_iterations, save_interval) and the constraint runners' obs_groups dict. The
 de-dup refactor moves these into a base class; this test pins the values so the
 refactor cannot silently change any of them. It passes before the refactor (the
@@ -67,7 +67,7 @@ def _install_stubs() -> None:
     # Sibling relative imports (..algorithms / ..encoder / ..runners): the cfg
     # module only registers these symbols on the runner module; it does not call
     # them at class-definition time, so empty placeholders suffice.
-    pkg = "constrained_albc.envs.constrained_full_albc"
+    pkg = "constrained_albc.envs.main"
     for name in ["constrained_albc", "constrained_albc.envs", pkg,
                  f"{pkg}.algorithms", f"{pkg}.encoder", f"{pkg}.runners"]:
         if name not in sys.modules:
@@ -88,8 +88,8 @@ def _load_by_path(name: str, path: str):
 
 def _load_cfg_modules():
     _install_stubs()
-    pkg = "constrained_albc.envs.constrained_full_albc"
-    base = "constrained_albc/envs/constrained_full_albc/agents"
+    pkg = "constrained_albc.envs.main"
+    base = "constrained_albc/envs/main/agents"
     main = _load_by_path(f"{pkg}.agents.rsl_rl_ppo_cfg", f"{base}/rsl_rl_ppo_cfg.py")
     ablation = _load_by_path(f"{pkg}.agents.ablation_cfgs", f"{base}/ablation_cfgs.py")
     return main, ablation
@@ -101,15 +101,15 @@ _MAIN, _ABLATION = _load_cfg_modules()
 # save_interval differs intentionally for the PPO-Enc ablation (100), which must
 # survive the de-dup as an explicit override.
 _GOLDEN = {
-    "FullDOFTRPORunnerCfg": (_MAIN, {"seed": 30, "num_steps_per_env": 64, "max_iterations": 2500, "save_interval": 50}),
-    "FullDOFNoEncoderRunnerCfg": (_MAIN, {"seed": 30, "num_steps_per_env": 64, "max_iterations": 2500, "save_interval": 50}),
-    "FullDOFPPORunnerCfg": (_MAIN, {"seed": 30, "num_steps_per_env": 64, "max_iterations": 2500, "save_interval": 50}),
-    "FullDOFTRPONoIPORunnerCfg": (_ABLATION, {"seed": 30, "num_steps_per_env": 64, "max_iterations": 2500, "save_interval": 50}),
-    "FullDOFPPOEncRunnerCfg": (_ABLATION, {"seed": 30, "num_steps_per_env": 64, "max_iterations": 2500, "save_interval": 100}),
+    "ALBCTRPORunnerCfg": (_MAIN, {"seed": 30, "num_steps_per_env": 64, "max_iterations": 2500, "save_interval": 50}),
+    "ALBCNoEncoderRunnerCfg": (_MAIN, {"seed": 30, "num_steps_per_env": 64, "max_iterations": 2500, "save_interval": 50}),
+    "ALBCPPORunnerCfg": (_MAIN, {"seed": 30, "num_steps_per_env": 64, "max_iterations": 2500, "save_interval": 50}),
+    "ALBCTRPONoIPORunnerCfg": (_ABLATION, {"seed": 30, "num_steps_per_env": 64, "max_iterations": 2500, "save_interval": 50}),
+    "ALBCPPOEncRunnerCfg": (_ABLATION, {"seed": 30, "num_steps_per_env": 64, "max_iterations": 2500, "save_interval": 100}),
 }
 
 _OBS_GROUPS = {"policy": ["policy", "privileged"], "critic": ["policy", "privileged"]}
-_CONSTRAINT_RUNNERS = ["FullDOFTRPORunnerCfg", "FullDOFNoEncoderRunnerCfg"]
+_CONSTRAINT_RUNNERS = ["ALBCTRPORunnerCfg", "ALBCNoEncoderRunnerCfg"]
 
 
 @pytest.mark.parametrize("cls_name", list(_GOLDEN))

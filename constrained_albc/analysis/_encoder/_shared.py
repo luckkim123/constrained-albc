@@ -5,7 +5,7 @@
 """Shared encoder reconstruction for the encoder_tools subcommands.
 
 Superset builder used by both `debug` and `sweep`: supports the pre-softsign
-LayerNorm and the softsign/tanh output activations used by constrained_full_albc.
+LayerNorm and the softsign/tanh output activations used by ALBC.
 """
 
 from __future__ import annotations

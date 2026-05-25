@@ -3,15 +3,15 @@
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
-"""Student-policy evaluation for constrained_full_albc (Isaac Sim required).
+"""Student-policy evaluation for ALBC (Isaac Sim required).
 
 Subcommands:
     dr      evaluate student (student encoder + teacher actor) across DR levels
     latent  record per-step (l_hat, l_true) during student eval
 
 Usage:
-    ./isaaclab.sh -p scripts/analysis/eval_student.py dr --task Isaac-FullDOF-TRPO-v0 --num_envs 64 --headless
-    ./isaaclab.sh -p scripts/analysis/eval_student.py latent --task Isaac-FullDOF-TRPO-v0 --headless
+    ./isaaclab.sh -p scripts/analysis/eval_student.py dr --task Isaac-ConstrainedALBC-TRPO-v0 --num_envs 64 --headless
+    ./isaaclab.sh -p scripts/analysis/eval_student.py latent --task Isaac-ConstrainedALBC-TRPO-v0 --headless
 """
 
 import argparse
@@ -43,13 +43,13 @@ def _add_common(sp: argparse.ArgumentParser) -> None:
     sp.add_argument("--student_ckpt", type=str, required=True)
     sp.add_argument("--encoder_type", type=str, choices=["tcn", "gru"], required=True)
     sp.add_argument("--num_envs", type=int, default=64)
-    sp.add_argument("--task", type=str, default="Isaac-FullDOF-TRPO-v0")
+    sp.add_argument("--task", type=str, default="Isaac-ConstrainedALBC-TRPO-v0")
     sp.add_argument("--segment_duration", type=float, default=5.0)
     sp.add_argument("--seed", type=int, default=42)
     cli_args.add_rsl_rl_args(sp)
 
 
-parser = argparse.ArgumentParser(description="Student-policy evaluation for constrained_full_albc.")
+parser = argparse.ArgumentParser(description="Student-policy evaluation for ALBC.")
 subparsers = parser.add_subparsers(dest="mode", required=True)
 
 # dr: evaluate student across DR levels
@@ -82,7 +82,7 @@ from isaaclab.envs import DirectRLEnvCfg
 from isaaclab_rl.rsl_rl import RslRlBaseRunnerCfg, RslRlVecEnvWrapper
 
 import isaaclab_tasks  # noqa: F401
-from constrained_albc.envs.constrained_full_albc.student.eval import (
+from constrained_albc.envs.main.student.eval import (
     StudentInLoopPolicy,
     build_student_policy_fn,
 )
@@ -95,7 +95,7 @@ from isaaclab_tasks.utils.hydra import hydra_task_config
 def _wrap_policy_for_eval(student_policy):
     """Adapt StudentInLoopPolicy to the policy callable signature used by run_evaluation.
 
-    eval_dr_fulldof invokes `policy(obs)` where obs is already a tensordict.
+    eval_dr.py static invokes `policy(obs)` where obs is already a tensordict.
     Our StudentInLoopPolicy matches that signature directly.
     """
     return student_policy
@@ -120,7 +120,7 @@ class _StudentPolicyNN:
 
 
 def run_dr(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
-    # ---- Env config overrides (mirror eval_dr_fulldof main) ----
+    # ---- Env config overrides (mirror eval_dr.py static main) ----
     env_cfg.scene.num_envs = args_cli.num_envs
     env_cfg.play_mode = True
     env_cfg.vel_cmd_resample_steps = 0
@@ -236,7 +236,7 @@ def run_dr(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     edf.generate_plots(all_data, all_metrics, output_dir)
 
     # ---- Save summary (delegate to edf's enhanced_summary mechanism via the all_metrics structure) ----
-    # eval_dr_fulldof writes enhanced_summary.json inside generate_plots or a sibling call.
+    # eval_dr.py static writes enhanced_summary.json inside generate_plots or a sibling call.
     # If not, write a minimal summary here as a safety net.
     import json
     summary_path = os.path.join(output_dir, "enhanced_summary.json")

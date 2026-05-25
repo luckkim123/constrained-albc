@@ -43,7 +43,7 @@ def _load_encoder_for_sweep(
     """Load encoder MLP and normalizer from checkpoint for z-sweep.
 
     Architecture is inferred from checkpoint weight shapes.
-    Detects static min-max normalization (constrained_full_albc 23D) vs
+    Detects static min-max normalization (main 23D) vs
     EmpiricalNormalization from checkpoint keys.
 
     Returns:

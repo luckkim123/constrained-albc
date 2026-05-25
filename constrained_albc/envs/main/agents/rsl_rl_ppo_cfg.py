@@ -19,10 +19,10 @@ from ..algorithms import ConstraintTRPO
 from ..encoder import ActorCriticAsymConstrained, ActorCriticEncoder
 from ..runners import ConstraintEncoderRunner
 
-_runner_module.FullDOFActorCriticEncoder = ActorCriticEncoder
-_runner_module.FullDOFActorCriticAsymConstrained = ActorCriticAsymConstrained
-_runner_module.FullDOFConstraintEncoderRunner = ConstraintEncoderRunner
-_runner_module.FullDOFConstraintTRPO = ConstraintTRPO
+_runner_module.ALBCActorCriticEncoder = ActorCriticEncoder
+_runner_module.ALBCActorCriticAsymConstrained = ActorCriticAsymConstrained
+_runner_module.ALBCConstraintEncoderRunner = ConstraintEncoderRunner
+_runner_module.ALBCConstraintTRPO = ConstraintTRPO
 
 
 # =============================================================================
@@ -33,7 +33,7 @@ _runner_module.FullDOFConstraintTRPO = ConstraintTRPO
 # Each pair is (lower, upper) with ~10% margin beyond Hard DR range.
 # Layout: hydro(7) + dynamics(5) + payload(4) + actuator(4) + env(4)
 #
-# Base values from HeroAgentHydrodynamicsCfg:
+# Base values from ALBCHydrodynamicsCfg:
 #   volume=0.009, CoG=(0,0,-0.05), CoB=(0,0,0), Ixx=0.0994
 #   lin_damp_roll=0.3, quad_damp_roll=1.0, mass=9.18, added_mass_surge=8.0
 #   thrust_coeff=40, time_const_up=0.1, water_density=998
@@ -131,7 +131,7 @@ class _EncoderPolicyCfg(RslRlPpoActorCriticCfg):
 
 
 @configclass
-class _FullDOFPolicyCfg(_EncoderPolicyCfg):
+class _ALBCPolicyCfg(_EncoderPolicyCfg):
     """Asymmetric encoder with cost critic for TRPO + IPO.
 
     Architecture (24D->9D encoder, 8D action):
@@ -141,7 +141,7 @@ class _FullDOFPolicyCfg(_EncoderPolicyCfg):
         Cost:    same 120D input -> MLP[512,256,128] -> K (multi-head)
     """
 
-    class_name: str = "FullDOFActorCriticEncoder"
+    class_name: str = "ALBCActorCriticEncoder"
     critic_uses_z: bool = True
     encoder_output_norm: bool = True  # LayerNorm before softsign
     encoder_obs_lower: list[float] = _PRIV_OBS_LOWER
@@ -165,7 +165,7 @@ class RslRlConstraintTRPOAlgorithmCfg:
     - Value (critic + cost_critic): Adam (MSE loss)
     """
 
-    class_name: str = "FullDOFConstraintTRPO"
+    class_name: str = "ALBCConstraintTRPO"
 
     # TRPO
     max_kl: float = 0.005
@@ -222,8 +222,8 @@ class RslRlConstraintTRPOAlgorithmCfg:
 
 
 @configclass
-class _BaseFullDOFRunnerCfg(RslRlOnPolicyRunnerCfg):
-    """Shared FullDOF runner constants (de-dup base; no behavior change).
+class _BaseALBCRunnerCfg(RslRlOnPolicyRunnerCfg):
+    """Shared ALBC runner constants (de-dup base; no behavior change).
 
     Runners below inherit these and override only what differs (class_name,
     experiment_name, obs_groups, algorithm, policy, normalize_value).
@@ -236,14 +236,14 @@ class _BaseFullDOFRunnerCfg(RslRlOnPolicyRunnerCfg):
 
 
 @configclass
-class FullDOFTRPORunnerCfg(_BaseFullDOFRunnerCfg):
+class ALBCTRPORunnerCfg(_BaseALBCRunnerCfg):
     """Velocity tracking TRPO + IPO + Asymmetric Encoder runner.
 
     8D action (2D arm + 6D wrench), 81D policy obs, 24D privileged obs.
     """
 
-    class_name: str = "FullDOFConstraintEncoderRunner"
-    experiment_name = "full_dof_trpo"
+    class_name: str = "ALBCConstraintEncoderRunner"
+    experiment_name = "albc_trpo"
     obs_groups: dict[str, list[str]] = {
         "policy": ["policy", "privileged"],
         "critic": ["policy", "privileged"],
@@ -252,7 +252,7 @@ class FullDOFTRPORunnerCfg(_BaseFullDOFRunnerCfg):
     normalize_value: bool = False
 
     algorithm = RslRlConstraintTRPOAlgorithmCfg()
-    policy = _FullDOFPolicyCfg()
+    policy = _ALBCPolicyCfg()
 
 
 # =============================================================================
@@ -261,7 +261,7 @@ class FullDOFTRPORunnerCfg(_BaseFullDOFRunnerCfg):
 
 
 @configclass
-class _FullDOFNoEncoderPolicyCfg(RslRlPpoActorCriticCfg):
+class _ALBCNoEncoderPolicyCfg(RslRlPpoActorCriticCfg):
     """Asymmetric actor-critic without encoder (Baseline 1).
 
     Architecture (no encoder, 8D action):
@@ -270,7 +270,7 @@ class _FullDOFNoEncoderPolicyCfg(RslRlPpoActorCriticCfg):
         Cost Critic: cat([o_t(87D), p_t(24D)]) = 111D -> MLP[512,256,128] -> K
     """
 
-    class_name: str = "FullDOFActorCriticAsymConstrained"
+    class_name: str = "ALBCActorCriticAsymConstrained"
     init_noise_std: float = 0.7
     actor_obs_normalization: bool = True
     critic_obs_normalization: bool = False
@@ -286,23 +286,23 @@ class _FullDOFNoEncoderPolicyCfg(RslRlPpoActorCriticCfg):
 
 
 @configclass
-class FullDOFNoEncoderRunnerCfg(_BaseFullDOFRunnerCfg):
+class ALBCNoEncoderRunnerCfg(_BaseALBCRunnerCfg):
     """NoEncoder ablation baseline: TRPO + IPO without encoder.
 
     Removes encoder only. DR, reward, constraints, action space, and DORAEMON
-    are identical to Isaac-FullDOF-TRPO-v0. The actor uses o_t only while the
+    are identical to Isaac-ConstrainedALBC-TRPO-v0. The actor uses o_t only while the
     critic and cost critic use asymmetric cat([o_t, p_t]).
     """
 
-    class_name: str = "FullDOFConstraintEncoderRunner"
-    experiment_name = "full_dof_ablation"
+    class_name: str = "ALBCConstraintEncoderRunner"
+    experiment_name = "albc_ablation"
     obs_groups: dict[str, list[str]] = {
         "policy": ["policy", "privileged"],
         "critic": ["policy", "privileged"],
     }
 
     algorithm = RslRlConstraintTRPOAlgorithmCfg()
-    policy = _FullDOFNoEncoderPolicyCfg()
+    policy = _ALBCNoEncoderPolicyCfg()
 
 
 # =============================================================================
@@ -311,7 +311,7 @@ class FullDOFNoEncoderRunnerCfg(_BaseFullDOFRunnerCfg):
 
 
 @configclass
-class _FullDOFPPOPolicyCfg(RslRlPpoActorCriticCfg):
+class _ALBCPPOPolicyCfg(RslRlPpoActorCriticCfg):
     """Standard rsl-rl ActorCritic with asymmetric obs (Baseline 2).
 
     Architecture (8D action):
@@ -335,7 +335,7 @@ class _FullDOFPPOPolicyCfg(RslRlPpoActorCriticCfg):
 
 
 @configclass
-class _FullDOFPPOAlgorithmCfg(RslRlPpoAlgorithmCfg):
+class _ALBCPPOAlgorithmCfg(RslRlPpoAlgorithmCfg):
     """Standard PPO with adaptive KL schedule (Baseline 2).
 
     No constraint / cost critic -- env still computes constraint costs for
@@ -358,11 +358,11 @@ class _FullDOFPPOAlgorithmCfg(RslRlPpoAlgorithmCfg):
 
 
 @configclass
-class FullDOFPPORunnerCfg(_BaseFullDOFRunnerCfg):
+class ALBCPPORunnerCfg(_BaseALBCRunnerCfg):
     """PPO baseline: standard PPO + asymmetric critic, no encoder, no constraint.
 
     Uses OnPolicyDoraemonRunner (OnPolicyRunner + DORAEMON curriculum hook)
-    so the DR schedule matches Isaac-FullDOF-TRPO-v0 — without this override
+    so the DR schedule matches Isaac-ConstrainedALBC-TRPO-v0 — without this override
     stock OnPolicyRunner would never step the env's DORAEMON scheduler,
     freezing the Beta distribution at ``init_concentration=30`` and
     confounding the algorithm ablation with a DR-curriculum ablation.
@@ -372,17 +372,17 @@ class FullDOFPPORunnerCfg(_BaseFullDOFRunnerCfg):
     cat(["policy", "privileged"]) = 105D.
 
     DR, reward weights, action space, and DORAEMON hyperparameters are
-    identical to Isaac-FullDOF-TRPO-v0 (all variants inherit ALBCEnvCfg).
+    identical to Isaac-ConstrainedALBC-TRPO-v0 (all variants inherit ALBCEnvCfg).
     Constraint costs are still computed by the env for diagnostics but do
     not influence the PPO objective.
     """
 
     class_name: str = "OnPolicyDoraemonRunner"
-    experiment_name = "full_dof_ablation"
+    experiment_name = "albc_ablation"
     obs_groups: dict[str, list[str]] = {
         "policy": ["policy"],
         "critic": ["policy", "privileged"],
     }
 
-    algorithm = _FullDOFPPOAlgorithmCfg()
-    policy = _FullDOFPPOPolicyCfg()
+    algorithm = _ALBCPPOAlgorithmCfg()
+    policy = _ALBCPPOPolicyCfg()

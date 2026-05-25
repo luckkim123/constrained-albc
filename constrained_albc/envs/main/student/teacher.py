@@ -1,7 +1,7 @@
-# constrained_albc/envs/constrained_full_albc/student/teacher.py
+# constrained_albc/envs/main/student/teacher.py
 """FrozenTeacher: loads r13_A checkpoint, exposes frozen encoder + actor + normalizer.
 
-Uses FullDOFActorCriticEncoder from the teacher's training registry so the
+Uses ALBCActorCriticEncoder from the teacher's training registry so the
 state_dict loads without modification. All parameters have requires_grad=False.
 Autograd still flows through for student training (gradients to student encoder
 only; teacher weights are never updated).
@@ -35,11 +35,11 @@ class FrozenTeacher(nn.Module):
 
         # Build a teacher policy with the same arch as r13_A. We use the registry
         # class rather than instantiating ActorCriticEncoder directly to ensure
-        # the exact arch (e.g. FullDOFActorCriticEncoder overrides).
-        from constrained_albc.envs.constrained_full_albc.encoder import (
+        # the exact arch (e.g. ALBCActorCriticEncoder overrides).
+        from constrained_albc.envs.main.encoder import (
             ActorCriticEncoder,
         )
-        from constrained_albc.envs.constrained_full_albc.agents.rsl_rl_ppo_cfg import (
+        from constrained_albc.envs.main.agents.rsl_rl_ppo_cfg import (
             _PRIV_OBS_LOWER,
             _PRIV_OBS_UPPER,
         )
