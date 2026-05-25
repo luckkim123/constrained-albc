@@ -1,8 +1,11 @@
 # run_id Single Tree Design (Unifying Training, Evaluation, and Config)
 
-> Status: **Design finalized, implementation on hold** (2026-05-25). Since it is adjacent to training behavior (changing train.py path rules),
-> implementation is deferred until separate user approval (`feedback_training_control`).
-> All supporting code has been verified in its current state (file:line specified).
+> Status: **Foundation done; wiring on hold pending training approval** (2026-05-25).
+> Training-neutral pieces are complete: resolver `analysis/paths.py` (modification point #4, commit c903f12),
+> Hydra `run.dir` override verified (#6), and all 3 Open Questions (section 6) resolved.
+> What remains is the training-adjacent wiring (#1 train.py path + manifest, #2 eval_dr output paths,
+> #3 student/config.py, #5 common delegation), deferred until separate user approval
+> (`feedback_training_control`). All supporting code verified in its current state (file:line specified).
 
 ## 1. Problem — The Same Run Is Scattered Across 4 Places
 
@@ -127,5 +130,12 @@ resolve paths. Knowing only the run_id, training, evaluation, config, and wandb 
      `hydra.run.dir=experiments/<run_id>/config` into `hydra_args` before calling the decorated
      main. No edit to isaaclab `hydra.py` (`feedback_isaaclab_pristine` preserved).
      `HydraConfig.get().run.dir` is also readable inside the run for a copy-after fallback if ever needed.
-2. Whether to move new runs in the past `logs/rsl_rl/` to experiments/, or apply only from new ones onward.
-3. Whether to include git_sha[:7] in run_id (preventing same-timestamp collisions vs. length).
+2. **RESOLVED (2026-05-25): Apply from new runs onward; past runs not migrated.**
+   The 5 past `logs/rsl_rl/` runs were all same-day smoke/debug runs (max iteration 0-1,
+   31M total) with no training value, and were deleted. The run_id tree applies to new
+   training only; paths.py still resolves any future legacy dir via its fallback (section 5).
+3. **RESOLVED (2026-05-25): Do NOT include git_sha in run_id.**
+   `run_id = <ts>_<task_short>` (e.g. `2026-05-25_16-02-48_trpo`, ~24 chars). Timestamp +
+   task_short suffice: observed same-second collisions = 0, and parallel ablations differ by
+   task_short (trpo/ppo/noenc/...). The commit SHA is still recorded in manifest.git.sha
+   (section 3) for provenance, just not in the directory name.
