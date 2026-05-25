@@ -142,16 +142,55 @@ def test_beta_mean_preserves_nominal():
 # ---------------------------------------------------------------------------
 
 
-def test_episode_buffer_ring_behavior():
-    """The buffer keeps at most `capacity` most-recent episodes (FIFO eviction).
+def _make_buffer(capacity, ndims=1):
+    return EpisodeBuffer(capacity=capacity, ndims=ndims, device=torch.device("cpu"))
 
-    TODO(user): pick the invariant that matters most for the IS success-rate
-    estimate downstream, and assert it. Candidates:
-      - after adding > capacity episodes, get_all() returns exactly `capacity` rows
-      - the retained rows are the *most recent* ones (oldest evicted first)
-      - clear() empties the buffer
-    Inspect EpisodeBuffer.add / get_all / clear signatures in doraemon.py first
-    (the `add` signature takes xi, log_probs, returns, success-ish tensors --
-    confirm the exact arg order before asserting).
-    """
-    pytest.skip("USER TODO: assert the ring-buffer invariant (see docstring)")
+
+def _add_n(buf, start, n, ndims=1):
+    """Add n episodes whose returns are start, start+1, ... (so we can track identity)."""
+    vals = torch.arange(start, start + n, dtype=torch.float32)
+    xi = vals.unsqueeze(-1).repeat(1, ndims)
+    return buf.add(xi, returns=vals, success=torch.zeros(n), log_probs=torch.zeros(n))
+
+
+def test_episode_buffer_caps_at_capacity():
+    """get_all() never returns more than `capacity` rows (the IS estimate window)."""
+    buf = _make_buffer(capacity=3)
+    _add_n(buf, 0, 10)
+    _, returns, _, _ = buf.get_all()
+    assert returns.shape[0] == 3
+
+
+def test_episode_buffer_exact_fill_preserved():
+    """Filling exactly to capacity keeps all rows, in order."""
+    buf = _make_buffer(capacity=4)
+    _add_n(buf, 10, 4)  # returns 10,11,12,13
+    _, returns, _, _ = buf.get_all()
+    assert torch.equal(returns, torch.tensor([10.0, 11.0, 12.0, 13.0]))
+
+
+def test_episode_buffer_evicts_oldest_on_wrap():
+    """After overflow, only the most-recent `capacity` episodes survive (FIFO)."""
+    buf = _make_buffer(capacity=3)
+    _add_n(buf, 0, 3)   # fill: 0,1,2
+    _add_n(buf, 3, 2)   # overflow by 2: writes 3,4 over slots 0,1 -> retained {2,3,4}
+    _, returns, _, _ = buf.get_all()
+    assert set(returns.tolist()) == {2.0, 3.0, 4.0}  # oldest (0,1) evicted
+    assert 0.0 not in returns.tolist() and 1.0 not in returns.tolist()
+
+
+def test_episode_buffer_clear_empties():
+    buf = _make_buffer(capacity=3)
+    _add_n(buf, 0, 3)
+    buf.clear()
+    _, returns, _, _ = buf.get_all()
+    assert returns.shape[0] == 0
+
+
+def test_episode_buffer_single_add_over_capacity_keeps_tail():
+    """A single batch larger than capacity keeps only its most-recent rows."""
+    buf = _make_buffer(capacity=3)
+    _add_n(buf, 0, 5)  # one batch of 5 into capacity-3 buffer
+    _, returns, _, _ = buf.get_all()
+    assert returns.shape[0] == 3
+    assert set(returns.tolist()) == {2.0, 3.0, 4.0}  # tail kept, head dropped
