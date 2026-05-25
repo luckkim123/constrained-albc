@@ -3,7 +3,12 @@
 Consolidated record of the full ALBC experiment campaign (2026-04-04 ~ 04-18) plus
 the two root-cause investigations that preceded it. Raw per-round files were compressed
 into this single lookup table; the machine-readable run index lives in
-[`experiments-index.json`](experiments-index.json).
+[`experiments-index.json`](experiments-index.json). Per-run eval/training PNG plots
+survive in the gitignored `experiment-plots/` directory (repo root) — see its
+[`README.md`](../../experiment-plots/README.md) for layout. Raw checkpoints and
+TensorBoard/wandb logs were deleted (2026-05-25) as their runtime environment no
+longer exists post repo-3split; only `r13_A`/`r13_B` `model_4999.pt` are kept under
+`experiment-plots/_final_models/`.
 
 > **Currency caveat.** "BEST POLICY" / "first simultaneous SS+OS improvement" below are
 > *historical training-metric claims*. Per current project ground truth, **no successful

@@ -27,6 +27,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   construction-time check at `albc_env.py:138`).
 - Isaac-Sim-free tests: `test_current_migration.py` (OceanCurrent API regression
   net) and `test_config_equivalence.py` (config de-dup `to_dict()` equality).
+- `experiment-plots/` (gitignored): 962 eval/training PNG plots migrated from the
+  old `isaaclab/logs` tree, original per-run directory structure preserved, plus
+  `_final_models/` holding `r13_A`/`r13_B` `model_4999.pt` + their env/agent configs.
+  See `experiment-plots/README.md`; `experiments-archive.md` now links to it.
 
 ### Changed
 
@@ -38,6 +42,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - Unused `compute_M_bb` (`tdc.py`): exported but had zero call sites.
+- `isaaclab/logs` (11G) + `isaaclab/wandb` (6.9G) + `isaaclab/outputs` (24M) raw
+  experiment artifacts deleted (~17.9G reclaimed). Checkpoints are unusable post
+  repo-3split / fork-removal / OceanCurrent migration (runtime environment that
+  produced them no longer exists) and no successful run exists; numeric results
+  live in `docs/reference/experiments-archive.md` + `experiments-index.json` (49
+  experiments). Only PNG plots and `r13_A`/`r13_B` finals were kept (see Added).
 
 ### Notes
 
