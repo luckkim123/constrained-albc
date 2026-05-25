@@ -35,6 +35,19 @@ if "isaaclab" not in sys.modules:
     sys.modules["isaaclab"] = _isaaclab
     sys.modules["isaaclab.utils"] = _utils
 
+# doraemon.py is now a re-export shim over marinelab.algorithms.doraemon. Install a bare
+# `marinelab` package (real __path__, so marinelab/__init__.py -- which pulls Isaac Sim --
+# never runs) before loading the shim, mirroring the package-shim pattern used by
+# marinelab's own conftest.
+_MARINELAB_ROOT = Path("/workspace/marinelab/marinelab")
+if "marinelab" not in sys.modules:
+    _marinelab = types.ModuleType("marinelab")
+    _marinelab.__path__ = [str(_MARINELAB_ROOT)]
+    sys.modules["marinelab"] = _marinelab
+    _ml_algorithms = types.ModuleType("marinelab.algorithms")
+    _ml_algorithms.__path__ = [str(_MARINELAB_ROOT / "algorithms")]
+    sys.modules["marinelab.algorithms"] = _ml_algorithms
+
 # Import doraemon.py directly by path (avoids importing the full env package,
 # which would pull in Isaac Sim).
 import importlib.util
@@ -86,7 +99,7 @@ class _FakeDRCfg:
 
 
 def test_build_param_specs_reads_bounds_and_midpoint_nominal():
-    specs = build_param_specs(_FakeDRCfg())
+    specs = build_param_specs(_FakeDRCfg(), doraemon._PARAM_DEFS, doraemon._NOMINAL_OVERRIDES)
     assert len(specs) == doraemon.NDIMS
     by_name = {s.name: s for s in specs}
 

@@ -341,9 +341,15 @@ class ALBCEnv(DirectRLEnv):
         """Initialize DORAEMON adaptive DR scheduler if enabled."""
         doraemon_cfg = getattr(self.cfg, "doraemon", None)
         if doraemon_cfg is not None and doraemon_cfg.enable:
-            from .doraemon import NDIMS, DoraemonScheduler
+            from .doraemon import _NOMINAL_OVERRIDES, _PARAM_DEFS, NDIMS, DoraemonScheduler
 
-            self._doraemon = DoraemonScheduler(doraemon_cfg, self.device, dr_cfg=self.cfg.randomization)
+            self._doraemon = DoraemonScheduler(
+                doraemon_cfg,
+                self.device,
+                dr_cfg=self.cfg.randomization,
+                param_defs=_PARAM_DEFS,
+                nominal_overrides=_NOMINAL_OVERRIDES,
+            )
             self._doraemon_ndims = NDIMS
         else:
             self._doraemon = None

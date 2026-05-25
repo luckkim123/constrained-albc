@@ -238,7 +238,7 @@ from constrained_albc.envs.main.config import (
     DomainRandomizationCfg,
     HardDomainRandomizationCfg,
 )
-from constrained_albc.envs.main.doraemon import build_param_specs
+from constrained_albc.envs.main.doraemon import _NOMINAL_OVERRIDES, _PARAM_DEFS, build_param_specs
 from constrained_albc.envs.main.encoder import ActorCriticEncoder
 from constrained_albc.envs.main.mdp import (
     DRSampler,
@@ -332,7 +332,7 @@ def load_doraemon_dr(run_dir: str) -> tuple[DomainRandomizationCfg | None, dict[
     # via build_param_specs(). Using the hardcoded PARAM_SPECS would clamp the
     # learned mean +/- 2*std into the much narrower base DR range, falsely shrinking
     # the hard-DR anchor. Use HardDR-derived specs to match the actual training bounds.
-    runtime_specs = build_param_specs(cfg)
+    runtime_specs = build_param_specs(cfg, _PARAM_DEFS, _NOMINAL_OVERRIDES)
 
     raw: dict[str, tuple[float, float]] = {}
     for spec in runtime_specs:
