@@ -6,7 +6,7 @@ Usage from a separate eval script:
     )
 
     policy_fn = build_student_policy_fn(
-        teacher_ckpt="logs/rsl_rl/fulldof_albc/2026-04-20_20-08-38_r13_A/model_4999.pt",
+        teacher_ckpt="logs/rsl_rl/albc_trpo/<teacher_run>/model_4999.pt",
         student_ckpt="logs/rsl_rl/student_policy/.../models/student_999.pt",
         encoder_type="tcn",
         num_envs=64,

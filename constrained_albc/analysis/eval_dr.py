@@ -163,7 +163,7 @@ sp_segmented.add_argument("--doraemon-dr", action=argparse.BooleanOptionalAction
 sp_segmented.add_argument("--student_ckpt", type=str, default=None,
                           help="If set, run with student encoder + frozen teacher actor instead of teacher runner.")
 sp_segmented.add_argument("--teacher_ckpt", type=str, default=None,
-                          help="Teacher r13_A model_*.pt path (required when --student_ckpt is given).")
+                          help="Teacher model_*.pt path (required when --student_ckpt is given).")
 sp_segmented.add_argument("--encoder_type", type=str, choices=["tcn", "gru"], default=None,
                           help="Student encoder type (required when --student_ckpt is given).")
 
@@ -1888,10 +1888,13 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         )
         all_data[level] = data
 
-        np.savez_compressed(
-            os.path.join(output_dir, f"data_{level}.npz"),
-            **{k: v for k, v in data.items() if isinstance(v, np.ndarray)},
-        )
+        array_data = {k: v for k, v in data.items() if isinstance(v, np.ndarray)}
+        np.savez_compressed(os.path.join(output_dir, f"data_{level}.npz"), **array_data)
+        # Also write a MATLAB .mat alongside the .npz for MATLAB-side visualization
+        # (.npz is a Python-only pickle container that MATLAB cannot load directly).
+        from scipy.io import savemat
+
+        savemat(os.path.join(output_dir, f"data_{level}.mat"), array_data, do_compression=True)
 
         metrics = compute_metrics(data)
         all_metrics[level] = metrics

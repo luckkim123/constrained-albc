@@ -23,7 +23,8 @@ parser = argparse.ArgumentParser(description="Train student policy from teacher 
 parser.add_argument("--task", type=str, default="Isaac-ConstrainedALBC-TRPO-v0")
 parser.add_argument("--encoder_type", type=str, choices=["tcn", "gru"], required=True)
 parser.add_argument("--run_name", type=str, default=None, help="Override auto-named run (default: student_<encoder_type>).")
-parser.add_argument("--teacher_run_dir", type=str, default="logs/rsl_rl/fulldof_albc/2026-04-20_20-08-38_r13_A")
+parser.add_argument("--teacher_run_dir", type=str, required=True,
+                    help="Run directory of the trained teacher to distill from (contains the checkpoint).")
 parser.add_argument("--teacher_checkpoint", type=str, default="model_4999.pt")
 parser.add_argument("--num_envs", type=int, default=4096)
 parser.add_argument("--max_iterations", type=int, default=1000)

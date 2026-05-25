@@ -13,8 +13,9 @@ class StudentCfg:
     run_name: str = "student_tcn"
     seed: int = 42
 
-    # Teacher
-    teacher_run_dir: str = "logs/rsl_rl/fulldof_albc/2026-04-20_20-08-38_r13_A"
+    # Teacher (set by the caller; no hardcoded run -- the teacher is whichever
+    # trained checkpoint you distil from).
+    teacher_run_dir: str = ""
     teacher_checkpoint: str = "model_4999.pt"
 
     # Architecture

@@ -7,9 +7,14 @@ set -e
 # constrained-albc repo (post 2026-05-25 repo 3-split).
 ALBC=/workspace/constrained-albc
 cd /workspace/isaaclab
-TEACHER=logs/rsl_rl/fulldof_albc/2026-04-20_20-08-38_r13_A/model_4999.pt
-TCN_CKPT=logs/rsl_rl/student_policy/2026-04-21_04-33-51_student_tcn/models/student_999.pt
-GRU_CKPT=logs/rsl_rl/student_policy/2026-04-21_05-13-32_student_gru/models/student_999.pt
+# Teacher / student checkpoints are injected by the caller (no hardcoded run).
+# Export TEACHER / TCN_CKPT / GRU_CKPT before invoking, e.g.:
+#   TEACHER=logs/.../<teacher_run>/model_4999.pt \
+#   TCN_CKPT=logs/.../<tcn_run>/models/student_999.pt \
+#   GRU_CKPT=logs/.../<gru_run>/models/student_999.pt ./run_student_evals.sh
+TEACHER=${TEACHER:?set TEACHER to the teacher checkpoint path}
+TCN_CKPT=${TCN_CKPT:?set TCN_CKPT to the student-TCN checkpoint path}
+GRU_CKPT=${GRU_CKPT:?set GRU_CKPT to the student-GRU checkpoint path}
 STAMP=$(date +%Y%m%d_%H%M%S)
 
 run() {
