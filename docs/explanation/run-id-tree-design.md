@@ -63,9 +63,9 @@ experiments/                              # .gitignore'd (large outputs)
     │   └── doraemon_state.pt
     └── eval/
         └── <mode>_<eval_ts>/             # static / periodic / segmented / sudden
-            ├── raw/                      # eval_<level>.npz (+ .mat option, INFRA §2-D)
-            ├── figures/                  # diagnostic PNG
-            └── enhanced_summary.json     # output of analyze.py recompute
+            ├── raw/                      # data_<level>.npz (+ .mat option, INFRA §2-D)
+            ├── figures/                  # diagnostic PNG (traj_*/summary_*)
+            └── summary.json              # output of analyze.py recompute
 ```
 
 Key point: **the training folder name (run_id) and the eval folder (eval/<mode>_<ts>/) share the same parent** →
