@@ -16,7 +16,7 @@ mkdir -p "$(dirname "$STDOUT_LOG")"
 echo "[${RUN_NAME} $(date)] START" | tee -a "$STDOUT_LOG"
 CUDA_VISIBLE_DEVICES=1 ./isaaclab.sh -p "$ALBC/scripts/train_student.py" \
     --encoder_type gru \
-    --task Isaac-FullDOF-TRPO-v0 \
+    --task Isaac-ConstrainedALBC-TRPO-v0 \
     --teacher_run_dir logs/rsl_rl/fulldof_albc/2026-04-20_20-08-38_r13_A \
     --teacher_checkpoint model_4999.pt \
     --num_envs 2048 \

@@ -8,7 +8,6 @@ Subcommands:
     recompute       <run>            npz -> enhanced_summary.json (pipeline prerequisite)
     eval_dr         <runs> --labels  heavy-tail / sample-mean divergence metrics
     switching       <runs> --labels  summary_switching.json analysis
-    table           <run>            Table 1 attitude SS error PNG
     student_latent  <diag_dirs>      per-dim MSE / env-var / confidence ratio from latent logs
 
 Pure Python (no Isaac Sim). Run with plain python3.
@@ -16,7 +15,6 @@ Pure Python (no Isaac Sim). Run with plain python3.
 Usage:
     python3 scripts/analysis/analyze.py recompute logs/.../run_dir
     python3 scripts/analysis/analyze.py eval_dr 0 1 --labels A B
-    python3 scripts/analysis/analyze.py table 0
     python3 scripts/analysis/analyze.py student_latent logs/.../latent_diagnostic
 """
 from __future__ import annotations
@@ -29,7 +27,6 @@ from .eval_dr import _ED_AXES, _ED_DEFAULT_LEVELS, cmd_eval_dr
 from .recompute import cmd_recompute
 from .student_latent import cmd_student_latent
 from .switching import cmd_switching
-from .table import cmd_table
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -83,28 +80,6 @@ def build_parser() -> argparse.ArgumentParser:
     p_sw.add_argument("--labels", nargs="+", default=None)
     p_sw.add_argument("--levels", nargs="+", default=DR_LEVELS)
     p_sw.set_defaults(func=cmd_switching)
-
-    # -- table --
-    p_tb = sub.add_parser(
-        "table",
-        help="Table 1 attitude SS error PNG",
-        description=(
-            "Render Table 1 (attitude SS error under DR) as paper-style PNG. "
-            "The <run> positional is the output directory. "
-            "Input JSON paths default to the original hardcoded run locations."
-        ),
-    )
-    p_tb.add_argument(
-        "run",
-        help="Output directory where table1_eval_dr_attitude.png is written",
-    )
-    p_tb.add_argument("--tdc", default=None, metavar="PATH",
-                      help="Path to TDC enhanced_summary.json (overrides default)")
-    p_tb.add_argument("--v5",  default=None, metavar="PATH",
-                      help="Path to PurePPO enhanced_summary.json (overrides default)")
-    p_tb.add_argument("--r13", default=None, metavar="PATH",
-                      help="Path to r13_A enhanced_summary.json (overrides default)")
-    p_tb.set_defaults(func=cmd_table)
 
     # -- student_latent --
     p_sl = sub.add_parser(

@@ -235,7 +235,10 @@ def cmd_sweep(args: argparse.Namespace) -> None:
     """Per-dimension z sensitivity sweep."""
     ckpt_path = args.checkpoint
     if not os.path.isabs(ckpt_path):
-        ckpt_path = os.path.join("/workspace/isaaclab", ckpt_path)
+        # Resolve relative to the current working directory (overlay runs from
+        # constrained-albc/, logs live under its cwd). The pre-split hardcoded
+        # /workspace/isaaclab prefix is dead after the repo 3-split.
+        ckpt_path = os.path.abspath(ckpt_path)
 
     # Prefer best_model.pt in same directory
     best_path = os.path.join(os.path.dirname(ckpt_path), "best_model.pt")

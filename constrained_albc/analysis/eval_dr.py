@@ -1966,7 +1966,7 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     # Post-process: regenerate summary_*.png using per-env enhanced metrics
     # (overwrites the ensemble-mean-trajectory versions written above).
     try:
-        from recompute_eval_summary import process_and_write
+        from _analyze.recompute import _process_and_write as process_and_write
         run_dir = os.path.dirname(output_dir.rstrip("/"))
         print("\n[INFO] Regenerating summary_*.png with per-env metrics...")
         process_and_write(run_dir)

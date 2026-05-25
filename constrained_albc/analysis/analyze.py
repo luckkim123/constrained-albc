@@ -2,7 +2,7 @@
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
-"""CLI shim for the analyze package (recompute / eval_dr / switching / table / student_latent).
+"""CLI shim for the analyze package (recompute / eval_dr / switching / student_latent).
 
 The implementation lives in the sibling `_analyze/` package. This shim keeps the
 historical invocation path (`python constrained_albc/analysis/analyze.py

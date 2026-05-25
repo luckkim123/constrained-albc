@@ -6,18 +6,15 @@
 
 Subcommands:
     dr      --dirs --labels --output   multi-policy eval_dr .npz comparison plot
-    tdc_rl  --preset --env             TDC vs r13_A vs pureppo OOD attitude overlay
 
 Usage:
     python3 scripts/analysis/compare.py dr --dirs A/ts B/ts --labels A B --output cmp.png
-    python3 scripts/analysis/compare.py tdc_rl --preset extreme_ood --env 0
 """
 
 from __future__ import annotations
 
 import argparse
 import os
-from typing import Any
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -100,44 +97,6 @@ def align_time_ranges(all_policy_data: dict, labels: list[str]) -> None:
                     if isinstance(arr, np.ndarray) and arr.shape[0] == n:
                         d[key] = arr[::ratio]
                 d["time"] = np.linspace(0, end_time, len(d["time"]))
-
-
-# ---------------------------------------------------------------------------
-# tdc_rl helpers (verbatim from plot_tdc_vs_r13_att.py)
-# ---------------------------------------------------------------------------
-
-TDC_DIR = "/workspace/isaaclab/logs/rsl_rl/full_dof_tdc/classical_baseline"
-R13_DIR = "/workspace/isaaclab/logs/rsl_rl/fulldof_albc/2026-04-20_20-08-38_r13_A"
-V5_DIR = "/workspace/isaaclab/logs/rsl_rl/full_dof_ablation/2026-04-22_01-41-00_ablation_v5_pureppo"
-
-DEFAULTS: dict[str, dict[str, str]] = {
-    "v1": {
-        "tdc": f"{TDC_DIR}/eval_extreme_ood_v1/eval_ood_1.0x.npz",
-        "r13": f"{R13_DIR}/eval_extreme_ood_v1/eval_ood_1.0x.npz",
-        "v5": f"{V5_DIR}/eval_extreme_ood_v1/eval_ood_1.0x.npz",
-        "output": f"{TDC_DIR}/tdc_vs_r13a_att_ood_v1.png",
-    },
-    "v2": {
-        "tdc": f"{TDC_DIR}/eval_extreme_ood_v2/eval_ood_1.0x.npz",
-        "r13": f"{R13_DIR}/eval_extreme_ood_v2/eval_ood_1.0x.npz",
-        "v5": f"{V5_DIR}/eval_extreme_ood_v2/eval_ood_1.0x.npz",
-        "output": f"{TDC_DIR}/tdc_vs_r13a_att_ood_v2.png",
-    },
-    "v3": {
-        "tdc": f"{TDC_DIR}/eval_extreme_ood_v3/eval_ood_1.0x.npz",
-        "r13": f"{R13_DIR}/eval_extreme_ood_v3/eval_ood_1.0x.npz",
-        "v5": f"{V5_DIR}/eval_extreme_ood_v3/eval_ood_1.0x.npz",
-        "output": f"{TDC_DIR}/tdc_vs_r13a_att_ood_v3.png",
-    },
-}
-
-
-def ss_err(actual: np.ndarray, target: np.ndarray, tail_frac: float = 0.25) -> np.ndarray:
-    """Per-env |actual - target| averaged over the last `tail_frac` of the trajectory."""
-    N = actual.shape[0]
-    tail = slice(int(N * (1.0 - tail_frac)), N)
-    err = np.abs(actual[tail] - target[tail, None])
-    return err.mean(axis=0)
 
 
 # ---------------------------------------------------------------------------
@@ -319,98 +278,6 @@ def cmd_dr(args: argparse.Namespace) -> None:
         print()
 
 
-def cmd_tdc_rl(args: argparse.Namespace) -> None:
-    """TDC vs r13_A vs pureppo OOD attitude overlay."""
-    d = DEFAULTS[args.preset]
-    tdc = np.load(d["tdc"])
-    r13 = np.load(d["r13"])
-    v5_available = os.path.exists(d["v5"])
-    v5 = np.load(d["v5"]) if v5_available else None
-
-    if args.env is None:
-        gap = ss_err(tdc["actual_roll_deg"], tdc["target_roll_deg"]) - ss_err(
-            r13["actual_roll_deg"], r13["target_roll_deg"]
-        )
-        env_idx = int(np.argmax(gap))
-    else:
-        env_idx = args.env
-
-    t_full = tdc["time"]
-    keep = (t_full >= args.t_start) & (t_full <= args.t_max)
-    t = t_full[keep] - args.t_start  # re-zero the visible axis
-
-    tgt_roll = tdc["target_roll_deg"][keep]
-    tgt_pitch = tdc["target_pitch_deg"][keep]
-
-    def series(dat: Any, key: str) -> np.ndarray:
-        return dat[key][keep, env_idx]
-
-    tdc_r = series(tdc, "actual_roll_deg")
-    tdc_p = series(tdc, "actual_pitch_deg")
-    r13_r = series(r13, "actual_roll_deg")
-    r13_p = series(r13, "actual_pitch_deg")
-    if v5_available and v5 is not None:
-        v5_r = series(v5, "actual_roll_deg")
-        v5_p = series(v5, "actual_pitch_deg")
-
-    def ss(dat: Any, key: str, tgt_key: str) -> float:
-        return float(ss_err(dat[key], dat[tgt_key])[env_idx])
-
-    tdc_rss = ss(tdc, "actual_roll_deg", "target_roll_deg")
-    tdc_pss = ss(tdc, "actual_pitch_deg", "target_pitch_deg")
-    r13_rss = ss(r13, "actual_roll_deg", "target_roll_deg")
-    r13_pss = ss(r13, "actual_pitch_deg", "target_pitch_deg")
-    if v5_available and v5 is not None:
-        v5_rss = ss(v5, "actual_roll_deg", "target_roll_deg")
-        v5_pss = ss(v5, "actual_pitch_deg", "target_pitch_deg")
-
-    fig, axes = plt.subplots(2, 1, figsize=(11, 6.5), sharex=True)
-
-    rl_ppo_label = (
-        f"RL-PPO   (Roll SS: {v5_rss:.2f}° / Pitch SS: {v5_pss:.2f}°)" if v5_available else None
-    )
-    tdc_label = f"TDC-PD   (Roll SS: {tdc_rss:.2f}° / Pitch SS: {tdc_pss:.2f}°)"
-    ours_label = f"Ours        (Roll SS: {r13_rss:.2f}° / Pitch SS: {r13_pss:.2f}°)"
-
-    # --- Roll ---
-    ax = axes[0]
-    ax.plot(t, tgt_roll, color="black", lw=2.2, ls="--", alpha=0.9, label="Target")
-    ax.plot(t, tdc_r, color="tab:green", lw=1.4, alpha=0.9, label=tdc_label)
-    if v5_available and v5 is not None:
-        ax.plot(t, v5_r, color="tab:blue", lw=1.4, alpha=0.9, label=rl_ppo_label)
-    ax.plot(t, r13_r, color="tab:red", lw=1.4, alpha=0.9, label=ours_label)
-    ax.axhline(0.0, color="gray", lw=0.5, alpha=0.4)
-    ax.set_ylabel("Roll (deg)", fontsize=11)
-    ax.set_ylim(-25, 25)
-    ax.grid(True, alpha=0.3)
-    ax.legend(loc="upper left", fontsize=9, framealpha=0.85)
-    ax.set_title(f"Attitude tracking under OOD {args.preset} physics (single env #{env_idx})", fontsize=12)
-
-    # --- Pitch ---
-    ax = axes[1]
-    ax.plot(t, tgt_pitch, color="black", lw=2.2, ls="--", alpha=0.9)
-    ax.plot(t, tdc_p, color="tab:green", lw=1.4, alpha=0.9)
-    if v5_available and v5 is not None:
-        ax.plot(t, v5_p, color="tab:blue", lw=1.4, alpha=0.9)
-    ax.plot(t, r13_p, color="tab:red", lw=1.4, alpha=0.9)
-    ax.axhline(0.0, color="gray", lw=0.5, alpha=0.4)
-    ax.set_ylabel("Pitch (deg)", fontsize=11)
-    ax.set_xlabel("Time (s)", fontsize=11)
-    ax.set_ylim(-25, 25)
-    ax.grid(True, alpha=0.3)
-
-    fig.tight_layout()
-    os.makedirs(os.path.dirname(d["output"]), exist_ok=True)
-    fig.savefig(d["output"], dpi=150, bbox_inches="tight")
-    print(f"Saved: {d['output']}")
-    v5_str = (
-        f"  PurePPO roll={v5_rss:.2f}°/pitch={v5_pss:.2f}°" if v5_available else "  (PurePPO: pending)"
-    )
-    print(
-        f"Preset {args.preset}, Env {env_idx}:  TDC roll={tdc_rss:.2f}°/pitch={tdc_pss:.2f}°"
-        f"  r13_A roll={r13_rss:.2f}°/pitch={r13_pss:.2f}°{v5_str}"
-    )
-
 
 # ---------------------------------------------------------------------------
 # Entry point
@@ -429,21 +296,6 @@ def main() -> None:
     p_dr.add_argument("--labels", nargs="+", required=True, help="Labels for each directory")
     p_dr.add_argument("--output", type=str, default=None, help="Output path prefix (default: auto)")
     p_dr.set_defaults(func=cmd_dr)
-
-    # -- tdc_rl --
-    p_tdc = sub.add_parser("tdc_rl", help="TDC vs r13_A vs pureppo OOD attitude overlay.")
-    p_tdc.add_argument("--preset", choices=["v1", "v2", "v3"], default="v2")
-    p_tdc.add_argument("--env", type=int, default=None, help="Env index (default: picks max roll-gap env)")
-    p_tdc.add_argument(
-        "--t-max", type=float, default=60.0, help="Truncate plot to this many seconds (default: 60)"
-    )
-    p_tdc.add_argument(
-        "--t-start",
-        type=float,
-        default=0.0,
-        help="Drop data before this time (spawn transient); axis re-zeroed (default: 0)",
-    )
-    p_tdc.set_defaults(func=cmd_tdc_rl)
 
     args = parser.parse_args()
     args.func(args)

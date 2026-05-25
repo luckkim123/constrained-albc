@@ -220,6 +220,48 @@ def _build_constrained_albc_23d_sweep(
     ]
 
 
+def _build_constrained_albc_24d_sweep(
+    lower: np.ndarray, upper: np.ndarray, offset: int = 0,
+) -> list[SweepParam]:
+    """Build sweep params for the current constrained ALBC 24D privileged obs.
+
+    Layout is authoritative from envs/main/mdp/observations.py:compute_privileged_obs
+    (24D). Differs from the legacy 23D table: inertia/damping are collapsed to single
+    representative dims and ocean-current velocity (3D) is appended.
+
+        Hydrodynamics (7D):  [0] main vol, [1:4] main CoG xyz, [4:7] main CoB xyz
+        Dynamic Response (5D): [7] main Ixx, [8] lin damp roll, [9] quad damp roll,
+                               [10] body mass, [11] added mass surge
+        Payload (4D):        [12] payload mass, [13:16] payload CoG offset xyz
+        Actuator (4D):       [16] joint stiffness Kp, [17] joint damping Kd,
+                             [18] thrust coeff, [19] time const up
+        Environment (4D):    [20] water density, [21:24] ocean current vel xyz
+
+    Uses static min-max bounds (lower/upper) from checkpoint as sweep ranges.
+    """
+    o = offset
+    names = [
+        "Main Volume", "Main CoG X", "Main CoG Y", "Main CoG Z",
+        "Main CoB X", "Main CoB Y", "Main CoB Z",
+        "Main Ixx", "Lin Damp Roll", "Quad Damp Roll", "Body Mass", "Added Mass Surge",
+        "Payload Mass", "Payload CoG X", "Payload CoG Y", "Payload CoG Z",
+        "Joint Stiffness", "Joint Damping", "Thrust Coeff", "Time Const Up",
+        "Water Density", "Ocean Current X", "Ocean Current Y", "Ocean Current Z",
+    ]
+    units = [
+        "m^3", "m", "m", "m",
+        "m", "m", "m",
+        "kg*m^2", "", "", "kg", "kg",
+        "kg", "m", "m", "m",
+        "Nm/rad", "Nm*s/rad", "", "s",
+        "kg/m^3", "m/s", "m/s", "m/s",
+    ]
+    return [
+        SweepParam(names[i], o + i, float(lower[i]), float(upper[i]), units[i])
+        for i in range(24)
+    ]
+
+
 def _build_reduced_encoder_sweep(
     input_dim: int,
     lower: np.ndarray,
@@ -288,6 +330,8 @@ def build_sweep_params_from_checkpoint(
     """
     # --- Constrained ALBC with static min-max bounds ---
     if enc_obs_lower is not None and enc_obs_upper is not None:
+        if input_dim == 24:
+            return _build_constrained_albc_24d_sweep(enc_obs_lower, enc_obs_upper)
         if input_dim == 23:
             return _build_constrained_albc_23d_sweep(enc_obs_lower, enc_obs_upper)
         # Reduced encoder (e.g. 15D): build sweep from bounds directly
