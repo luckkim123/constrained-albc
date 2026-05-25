@@ -381,3 +381,40 @@ def test_emit_manifest_student_without_parent_omits_link(tmp_path):
     loaded = P.read_manifest(h.root)
     assert loaded["kind"] == "student"
     assert "parent_run_id" not in loaded  # omitted when None (Manifest.to_dict drops it)
+
+
+# ---------------------------------------------------------------------------
+# common.resolve_run_path delegation to paths.resolve_run (#5)
+# ---------------------------------------------------------------------------
+import common as C  # noqa: E402  sibling on the same sys.path as paths
+
+
+def test_common_resolve_run_path_legacy_fullpath(tmp_path):
+    """Legacy full path -> returns that dir unchanged (behavior preserved)."""
+    leg = tmp_path / "logs" / "rsl_rl" / "full_dof_trpo" / "2026-05-25_16-00-00_r1"
+    leg.mkdir(parents=True)
+    (leg / "events.out.tfevents.1.h").write_text("")
+    out = C.resolve_run_path(str(leg), logs_root=str(tmp_path / "logs" / "rsl_rl"))
+    assert out == leg
+
+
+def test_common_resolve_run_path_legacy_substring(tmp_path):
+    logs = tmp_path / "logs" / "rsl_rl"
+    leg = logs / "full_dof_trpo" / "2026-05-25_16-00-00_r1"
+    leg.mkdir(parents=True)
+    (leg / "events.out.tfevents.1.h").write_text("")
+    out = C.resolve_run_path("r1", logs_root=str(logs))
+    assert out == leg
+
+
+def test_common_resolve_run_path_run_id_tree_returns_train(tmp_path):
+    """run_id tree -> returns <run>/train (where tfevents + checkpoints live)."""
+    run_root = tmp_path / "experiments" / "2026-05-25_17-00-00_trpo"
+    (run_root / "train").mkdir(parents=True)
+    (run_root / "train" / "events.out.tfevents.2.h").write_text("")
+    (run_root / P.MANIFEST_NAME).write_text(
+        '{"run_id": "2026-05-25_17-00-00_trpo", "task": "t", "paths": {"tb": "train"}}'
+    )
+    out = C.resolve_run_path(str(run_root), logs_root=str(tmp_path / "logs"))
+    assert out == run_root / "train"
+    assert (out / "events.out.tfevents.2.h").is_file()

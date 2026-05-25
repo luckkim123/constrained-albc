@@ -377,7 +377,11 @@ def smooth(values: np.ndarray, window: int = 15) -> np.ndarray:
 def find_hero_agent_runs(
     logs_root: str = "logs/rsl_rl",
 ) -> list[Path]:
-    """Find Hero Agent training runs, sorted newest first."""
+    """Find training runs (tfevents dirs) under logs_root, newest first.
+
+    Thin wrapper over ``paths._find_legacy_run``'s scan logic; kept for backward
+    compatibility with callers expecting a list of run-dir Paths.
+    """
     root = Path(logs_root)
     if not root.exists():
         return []
@@ -393,33 +397,16 @@ def find_hero_agent_runs(
 
 
 def resolve_run_path(run_spec: str, logs_root: str = "logs/rsl_rl") -> Path:
-    """Resolve a run specifier to a Path.
+    """Resolve a run specifier to a Path holding tb events / checkpoints.
 
-    Accepts:
-        - Full path to run directory
-        - Integer index (0 = latest)
-        - Substring match against run names
+    Delegates to ``paths.resolve_run`` (run_id design #5), so a run is now found whether
+    it lives in the run_id tree (``experiments/<run_id>/``) or the legacy ``logs/rsl_rl``
+    layout. Returns the run's ``tb_dir`` -- for a run_id tree that is ``<run>/train`` (where
+    tfevents + checkpoints live), for a legacy run it is the run dir itself -- so existing
+    callers (monitor: ``load_tb_scalars``; encoder debug: ``glob model_*.pt``) keep working.
+
+    Accepts a full path, an integer index (0 = latest), or a substring match.
     """
-    path = Path(run_spec)
-    if path.exists():
-        return path
+    from paths import resolve_run  # sibling import (analysis/ on sys.path via the entrypoint)
 
-    runs = find_hero_agent_runs(logs_root)
-    if not runs:
-        raise FileNotFoundError(f"No Hero Agent runs found in {logs_root}")
-
-    # Try as integer index
-    try:
-        idx = int(run_spec)
-        if idx >= len(runs):
-            raise IndexError(f"Run index {idx} out of range ({len(runs)} runs)")
-        return runs[idx]
-    except ValueError:
-        pass
-
-    # Try substring match
-    matches = [r for r in runs if run_spec in str(r)]
-    if matches:
-        return matches[0]
-
-    raise FileNotFoundError(f"No run matching '{run_spec}'")
+    return resolve_run(run_spec, legacy_logs_root=logs_root).tb_dir
