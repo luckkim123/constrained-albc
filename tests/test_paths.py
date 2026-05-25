@@ -196,3 +196,113 @@ def test_find_runs_skips_legacy(tmp_path):
     (exp / "legacy").mkdir()  # must be skipped
     runs = P.find_runs(str(exp))
     assert {r.run_id for r in runs} == {"2026-05-25_a", "2026-05-25_b"}
+
+
+# ---------------------------------------------------------------------------
+# task_short / make_run_id (design section 2-A)
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize(
+    "task_id, expected",
+    [
+        ("Isaac-FullDOF-TRPO-v0", "trpo"),
+        ("Isaac-FullDOF-PPO-v0", "ppo"),
+        ("Isaac-FullDOF-NoEncoder-v0", "noenc"),
+        ("Isaac-FullDOF-TDC-v0", "tdc"),
+        # Superset substrings must match the longer pattern first.
+        ("Isaac-FullDOF-TRPO-NoIPO-v0", "trpo-noipo"),  # not "trpo"
+        ("Isaac-FullDOF-PPO-Enc-v0", "ppo-enc"),        # not "ppo"
+    ],
+)
+def test_task_short_known_tasks(task_id, expected):
+    assert P.task_short(task_id) == expected
+
+
+def test_task_short_unknown_fallback():
+    # Unrecognized task -> slugified, never crashes.
+    assert P.task_short("Isaac-FullDOF-Mystery-v0") == "mystery"
+    assert P.task_short("Isaac-Cartpole-v0") == "cartpole"
+
+
+def test_make_run_id_format():
+    rid = P.make_run_id("Isaac-FullDOF-TRPO-v0", ts="2026-05-25_16-02-48")
+    assert rid == "2026-05-25_16-02-48_trpo"
+
+
+def test_make_run_id_with_tag():
+    rid = P.make_run_id("Isaac-FullDOF-PPO-Enc-v0", tag="ablation", ts="2026-05-25_17-00-12")
+    assert rid == "2026-05-25_17-00-12_ppo-enc_ablation"
+
+
+def test_make_run_id_no_git_sha():
+    """Open Q #3: run_id must NOT contain a git sha (only ts + task_short [+ tag])."""
+    rid = P.make_run_id("Isaac-FullDOF-TRPO-v0", ts="2026-05-25_16-02-48")
+    # Exactly 3 underscore-joined fields: date_time_taskshort (date has its own _).
+    assert rid.count("_") == 2
+    assert rid == "2026-05-25_16-02-48_trpo"
+
+
+# ---------------------------------------------------------------------------
+# emit_run_manifest: minimal-touch single-tree wiring (training output not moved)
+# ---------------------------------------------------------------------------
+def _fake_log_dir(tmp_path, leaf="2026-05-25_16-02-48", with_params=True):
+    """Create a fake train.py log_dir with optional params/{env,agent}.yaml."""
+    log_dir = tmp_path / "logs" / "rsl_rl" / "full_dof_trpo" / leaf
+    (log_dir / "params").mkdir(parents=True)
+    if with_params:
+        (log_dir / "params" / "env.yaml").write_text("env: {}\n")
+        (log_dir / "params" / "agent.yaml").write_text("agent: {}\n")
+    return log_dir
+
+
+def test_emit_manifest_reuses_log_dir_timestamp(tmp_path):
+    log_dir = _fake_log_dir(tmp_path)
+    exp = tmp_path / "experiments"
+    h = P.emit_run_manifest("Isaac-FullDOF-TRPO-v0", log_dir, experiments_root=str(exp))
+    # run_id timestamp matches the training folder leaf -> no drift.
+    assert h.run_id == "2026-05-25_16-02-48_trpo"
+    assert (exp / h.run_id / P.MANIFEST_NAME).is_file()
+
+
+def test_emit_manifest_copies_configs(tmp_path):
+    log_dir = _fake_log_dir(tmp_path)
+    exp = tmp_path / "experiments"
+    h = P.emit_run_manifest("Isaac-FullDOF-TRPO-v0", log_dir, experiments_root=str(exp))
+    assert (h.root / "config" / "env.yaml").read_text() == "env: {}\n"
+    assert (h.root / "config" / "agent.yaml").read_text() == "agent: {}\n"
+
+
+def test_emit_manifest_train_symlink_resolves(tmp_path):
+    log_dir = _fake_log_dir(tmp_path)
+    # Put a checkpoint in the real log_dir; RunHandle must reach it through the symlink.
+    (log_dir / "model_10.pt").write_text("")
+    exp = tmp_path / "experiments"
+    h = P.emit_run_manifest("Isaac-FullDOF-TRPO-v0", log_dir, experiments_root=str(exp))
+    train_link = h.root / "train"
+    assert train_link.is_symlink()
+    assert (train_link / "model_10.pt").is_file()
+    # Re-resolve via resolve_run -> checkpoints_dir reaches the symlinked log_dir.
+    re = P.resolve_run(h.run_id, experiments_root=str(exp))
+    assert re.latest_checkpoint().name == "model_10.pt"
+
+
+def test_emit_manifest_records_config_and_tag(tmp_path):
+    log_dir = _fake_log_dir(tmp_path)
+    exp = tmp_path / "experiments"
+    h = P.emit_run_manifest(
+        "Isaac-FullDOF-PPO-Enc-v0", log_dir, tag="ablation",
+        config={"num_envs": 4096, "seed": 30}, experiments_root=str(exp),
+    )
+    # tag flows into run_id; timestamp still from the trpo-named leaf.
+    assert h.run_id == "2026-05-25_16-02-48_ppo-enc_ablation"
+    loaded = P.read_manifest(h.root)
+    assert loaded["config"] == {"num_envs": 4096, "seed": 30}
+    assert loaded["task"] == "Isaac-FullDOF-PPO-Enc-v0"
+
+
+def test_emit_manifest_without_params_still_writes_manifest(tmp_path):
+    log_dir = _fake_log_dir(tmp_path, with_params=False)
+    exp = tmp_path / "experiments"
+    h = P.emit_run_manifest("Isaac-FullDOF-TDC-v0", log_dir, experiments_root=str(exp))
+    assert (h.root / P.MANIFEST_NAME).is_file()
+    # No params to copy -> config dir exists but is empty of yamls.
+    assert not (h.root / "config" / "env.yaml").exists()

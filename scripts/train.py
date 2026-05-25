@@ -264,6 +264,30 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     dump_yaml(os.path.join(log_dir, "params", "env.yaml"), env_cfg)
     dump_yaml(os.path.join(log_dir, "params", "agent.yaml"), agent_cfg)
 
+    # --- overlay: run_id single-tree manifest (minimal-touch; training output stays in log_dir) ---
+    # Emit experiments/<run_id>/ as a tracing entry point: manifest.json + copied configs +
+    # a `train` symlink back to this log_dir. This does NOT move tb/checkpoints/resume -- the
+    # run_id tree only indexes the existing output so analyze/compare can resolve a run by id.
+    # Best-effort: a manifest failure must never abort training (the model is already safe in
+    # log_dir). See docs/explanation/run-id-tree-design.md section 4 #1.
+    try:
+        from constrained_albc.analysis.paths import emit_run_manifest
+
+        run = emit_run_manifest(
+            task=args_cli.task,
+            log_dir=log_dir,
+            tag=agent_cfg.run_name or None,
+            config={
+                "num_envs": env_cfg.scene.num_envs,
+                "max_iterations": agent_cfg.max_iterations,
+                "seed": agent_cfg.seed,
+                "experiment_name": agent_cfg.experiment_name,
+            },
+        )
+        print(f"[INFO] run_id tree: experiments/{run.run_id} (manifest + train -> {log_dir})")
+    except Exception as exc:  # noqa: BLE001  manifest is auxiliary; never block training
+        print(f"[WARN] run_id manifest emission failed (training continues): {exc}")
+
     # run training
     runner.learn(num_learning_iterations=agent_cfg.max_iterations, init_at_random_ep_len=True)
 

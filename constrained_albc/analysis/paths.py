@@ -25,6 +25,7 @@ run produced before train.py adopts this tree) still resolves to a best-effort
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -33,6 +34,52 @@ from pathlib import Path
 EXPERIMENTS_ROOT = "experiments"
 LEGACY_LOGS_ROOT = "logs/rsl_rl"
 MANIFEST_NAME = "manifest.json"
+
+# task_short extraction (design section 2-A). Ordered specific -> general so that
+# superset substrings match first: "-TRPO-NoIPO-" before "-TRPO-", "-PPO-Enc-" before
+# "-PPO-". A wrong order would classify Isaac-FullDOF-TRPO-NoIPO-v0 as "trpo".
+_TASK_SHORT_PATTERNS: list[tuple[str, str]] = [
+    ("-TRPO-NoIPO-", "trpo-noipo"),
+    ("-PPO-Enc-", "ppo-enc"),
+    ("-NoEncoder-", "noenc"),
+    ("-TDC-", "tdc"),
+    ("-TRPO-", "trpo"),
+    ("-PPO-", "ppo"),
+]
+
+
+def task_short(task_id: str) -> str:
+    """Map a registered task ID to its run_id short tag (design section 2-A).
+
+    e.g. ``Isaac-FullDOF-TRPO-v0`` -> ``trpo``, ``Isaac-FullDOF-PPO-Enc-v0`` -> ``ppo-enc``.
+    Falls back to a lowercased, dash-joined slug of the task ID if no pattern matches,
+    so an unrecognized task still yields a usable (if verbose) tag rather than crashing.
+    """
+    for needle, short in _TASK_SHORT_PATTERNS:
+        if needle in task_id:
+            return short
+    # Fallback: strip the Isaac- prefix / -v0 suffix and slugify.
+    slug = task_id
+    for prefix in ("Isaac-FullDOF-", "Isaac-"):
+        if slug.startswith(prefix):
+            slug = slug[len(prefix):]
+            break
+    slug = slug.rsplit("-v", 1)[0]
+    return slug.lower().replace("-", "_") or "run"
+
+
+def make_run_id(task_id: str, tag: str | None = None, ts: str | None = None) -> str:
+    """Build a run_id ``<ts>_<task_short>[_<tag>]`` (design section 2-A).
+
+    The timestamp format matches train.py (``%Y-%m-%d_%H-%M-%S``) so it is compatible
+    with existing runs. ``tag`` reuses the existing ``run_name``. git_sha is NOT included
+    (Open Q #3 resolved 2026-05-25); the SHA lives in manifest.git.sha instead.
+    """
+    stamp = ts or datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    rid = f"{stamp}_{task_short(task_id)}"
+    if tag:
+        rid += f"_{tag}"
+    return rid
 
 
 @dataclass
@@ -236,9 +283,117 @@ def read_manifest(run_root: str | Path) -> dict:
     return json.loads(out.read_text())
 
 
+def emit_run_manifest(
+    task: str,
+    log_dir: str | Path,
+    *,
+    tag: str | None = None,
+    config: dict | None = None,
+    experiments_root: str | Path = EXPERIMENTS_ROOT,
+    run_id: str | None = None,
+) -> RunHandle:
+    """Create the single-tree entry point for a run without moving its training output.
+
+    This is the **minimal-touch** wiring (chosen 2026-05-25): the existing training
+    ``log_dir`` (``logs/rsl_rl/<exp>/<ts>``) keeps owning tb / checkpoints / resume, so
+    training behavior is unchanged. Here we only add the run_id tree as a tracing entry:
+
+        experiments/<run_id>/
+          manifest.json        # this run's metadata (entry point for analyze/compare)
+          config/              # env.yaml + agent.yaml copied from <log_dir>/params (if present)
+          train -> <log_dir>   # relative symlink, so RunHandle.tb_dir/checkpoints resolve
+
+    The timestamp inside run_id is parsed from the log_dir leaf when it starts with one,
+    so the run_id timestamp matches the training folder (no drift). git sha is captured
+    here via a best-effort ``git rev-parse``; wandb is left empty (the runner populates it
+    at runtime, after this is called).
+
+    Args:
+        task: Full task ID (e.g. ``Isaac-FullDOF-TRPO-v0``).
+        log_dir: The training log directory train.py already created.
+        tag: Optional run tag (reuses agent_cfg.run_name).
+        config: Optional config snapshot for manifest.config (num_envs, seed, ...).
+        experiments_root: Root for the run_id tree.
+        run_id: Override the computed run_id (else derived from task + log_dir timestamp).
+
+    Returns:
+        The created run's :class:`RunHandle`.
+    """
+    log_dir = Path(log_dir)
+    ts = _timestamp_from_log_dir(log_dir)
+    rid = run_id or make_run_id(task, tag=tag, ts=ts)
+
+    run_root = Path(experiments_root) / rid
+    (run_root / "config").mkdir(parents=True, exist_ok=True)
+
+    # Copy the configs train.py dumps to <log_dir>/params, if they exist yet.
+    params_dir = log_dir / "params"
+    for fname in ("env.yaml", "agent.yaml"):
+        src = params_dir / fname
+        if src.is_file():
+            (run_root / "config" / fname).write_text(src.read_text())
+
+    # train/ -> log_dir relative symlink (so RunHandle.tb_dir / checkpoints_dir resolve).
+    train_link = run_root / "train"
+    if not train_link.exists():
+        try:
+            train_link.symlink_to(os.path.relpath(log_dir.resolve(), run_root))
+        except OSError:
+            pass  # symlink may be unsupported; manifest paths still point callers to log_dir
+
+    manifest = Manifest(
+        run_id=rid,
+        task=task,
+        config=config or {},
+        git=_git_state(),
+        paths={"tb": "train", "checkpoints": "train", "evals": []},
+    )
+    write_manifest(run_root, manifest)
+    return RunHandle(run_id=rid, root=run_root, manifest=manifest.to_dict())
+
+
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
+
+def _timestamp_from_log_dir(log_dir: Path) -> str | None:
+    """Extract a ``%Y-%m-%d_%H-%M-%S`` prefix from the log_dir leaf, else None.
+
+    train.py names runs ``<ts>[_<run_name>]``; reusing that ts keeps the run_id timestamp
+    aligned with the training folder. Returns None (caller generates a fresh ts) if the
+    leaf does not start with a parseable timestamp.
+    """
+    leaf = log_dir.name
+    parts = leaf.split("_")
+    if len(parts) >= 2:
+        candidate = f"{parts[0]}_{parts[1]}"
+        try:
+            datetime.strptime(candidate, "%Y-%m-%d_%H-%M-%S")
+            return candidate
+        except ValueError:
+            return None
+    return None
+
+
+def _git_state() -> dict:
+    """Best-effort current git sha / branch / dirty flag (empty dict on failure)."""
+    import subprocess
+
+    def _run(args: list[str]) -> str | None:
+        try:
+            return subprocess.check_output(
+                args, cwd=os.path.dirname(__file__), stderr=subprocess.DEVNULL,
+            ).decode().strip()
+        except (subprocess.CalledProcessError, OSError):
+            return None
+
+    sha = _run(["git", "rev-parse", "HEAD"])
+    if sha is None:
+        return {}
+    branch = _run(["git", "rev-parse", "--abbrev-ref", "HEAD"])
+    status = _run(["git", "status", "--porcelain"])
+    return {"sha": sha, "branch": branch, "dirty": bool(status)}
 
 
 def _read_manifest_if_present(run_root: Path) -> dict | None:
