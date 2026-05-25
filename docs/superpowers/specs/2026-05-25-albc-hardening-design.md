@@ -82,22 +82,29 @@ Isaac Sim and is run by the user.
 
 ## Section 2 — Phase A: low-risk cleanup (learning-neutral)
 
-1. **obs-dim runtime assert** — at the end of `_get_observations()`, assert
-   `policy_obs.shape[-1] == self.cfg.observation_space`. `use_integral_obs` /
-   `integral_dims` change obs width (87/84/81) with no current check; this turns a
-   silent mismatch into an immediate raise.
-2. **hot-loop tensor preallocation** — move the per-step `torch.tensor(sigmas, ...)`
-   (`albc_env.py`) into `__init__`. Identical result, minor speedup at 4096 envs.
-3. **dead-code removal** — orphan event functions (`randomize_ocean_current`,
-   `randomize_robot_pose` if unreferenced), unused `compute_M_bb()` (`tdc.py:499`).
-   Each deletion requires a proven zero-call-site grep recorded in the commit.
+Re-verification against current code shrank this phase: two DIAGNOSIS A-items are
+already done.
 
-Note: DIAGNOSIS A3 (analysis `MetricsConfig` + plotting centralization) is deferred
-to the separate eval_dr split cycle — it is only meaningful alongside the 4041-line
-decomposition, which is out of scope here.
+- **A1 (obs-dim assert) — already present at construction.** `albc_env.py:138-143`
+  already raises when `cfg.observation_space != computed obs dim`. The remaining
+  gap is that this is a *config-time* check against a computed width, not a
+  *runtime* check on the tensor actually emitted by `_get_observations()`. The only
+  worthwhile addition is a runtime assert on the returned `policy` tensor shape.
+- **A2 (hot-loop sigma) — already preallocated.** `albc_env.py:153` builds
+  `self._integral_gate_sigmas` once in `__init__` (comment: "Avoids re-allocating
+  ... every step"). No-op; nothing to do.
+- **A3 (analysis MetricsConfig) — deferred** with the eval_dr split.
 
-Verification: pytest passes; the assert accepts valid obs and rejects invalid
-(unit test); dead-code grep evidence in commit messages.
+Actual Phase A work:
+1. **runtime obs-shape assert** — at the end of `_get_observations()`, assert the
+   emitted `policy` tensor's last dim equals `self.cfg.observation_space`.
+2. **dead-code removal** — `compute_M_bb()` (`tdc.py:499`) is exported but has zero
+   call sites (verified). Remove it and drop the export, recording the grep in the
+   commit. NOTE: `randomize_ocean_current` is NOT dead — it is called at
+   `albc_env.py:1327,1412` and `eval_dr.py:601`; do not remove it.
+
+Verification: pytest passes; the runtime assert accepts valid obs and rejects a
+mismatched width (unit test); dead-code grep evidence in the commit message.
 
 ## Section 3 — Phase B: config de-duplication (behavior-preserving, `to_dict()` equality)
 
