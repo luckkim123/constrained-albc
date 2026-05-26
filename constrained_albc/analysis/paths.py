@@ -255,7 +255,7 @@ def resolve_eval(run: RunHandle, mode: str, eval_ts: str | None = None) -> Path:
 
     Args:
         run: Resolved run handle.
-        mode: One of static / periodic / segmented / sudden.
+        mode: One of static / periodic / segmented.
         eval_ts: Optional explicit eval timestamp; defaults to now.
     """
     ts = eval_ts or datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -300,7 +300,7 @@ def eval_dir_for_checkpoint(
 
     Args:
         checkpoint_path: Path the evaluator resolved the checkpoint to.
-        mode: static / periodic / segmented / sudden.
+        mode: static / periodic / segmented.
         experiments_root: Unused (kept for call-site compatibility); detection is grouping-agnostic.
         eval_ts: Optional explicit eval timestamp.
 
