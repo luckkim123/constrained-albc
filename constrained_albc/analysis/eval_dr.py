@@ -1970,9 +1970,15 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     # (overwrites the ensemble-mean-trajectory versions written above).
     try:
         from _analyze.recompute import _process_and_write as process_and_write
-        run_dir = os.path.dirname(output_dir.rstrip("/"))
+        # output_dir holds the data_*.npz; recompute reads <run_dir>/<data_subdir>/.
+        # Split output_dir into parent + leaf so enhanced summaries land beside the
+        # data, regardless of whether the leaf is the legacy "eval_dr" or a run-id-tree
+        # timestamped folder (e.g. "static_<ts>").
+        clean = output_dir.rstrip("/")
+        run_dir = os.path.dirname(clean)
+        data_subdir = os.path.basename(clean)
         print("\n[INFO] Regenerating summary_*.png with per-env metrics...")
-        process_and_write(run_dir)
+        process_and_write(run_dir, data_subdir=data_subdir)
     except Exception as e:
         print(f"[WARN] Enhanced summary generation failed: {e}")
 

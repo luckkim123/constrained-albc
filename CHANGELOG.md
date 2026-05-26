@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Eval pipeline, three independent issues surfaced during an end-to-end
+  teacher -> student -> eval run:
+  - `run_student_evals.sh` aborted after the first eval stage. The `run()` helper
+    ended with `[ $rc -ne 0 ] && {...}`; under `set -e`, when a stage succeeds
+    (rc==0) that test is false, making the function's exit status 1, which `set -e`
+    treats as failure and kills the script. Replaced with an explicit
+    `if [ "$rc" -ne 0 ]; then ...; fi` so successful stages return 0 and the next
+    stage runs.
+  - Enhanced-summary regeneration looked for `<run_dir>/eval_dr/data_*.npz` while
+    the run-id-tree static eval writes data to `<run_dir>/eval/static_<ts>/`, so
+    `summary.json` + per-env `summary_*.png` were silently skipped. `_analyze.recompute`
+    now takes a `data_subdir` argument (default `"eval_dr"` preserves the legacy
+    `analyze.py recompute` layout); `eval_dr.run_static` passes the actual data
+    folder name so enhanced summaries land beside the `.npz` files.
+  - `run_student_evals.sh` now resolves `TEACHER`/`TCN_CKPT`/`GRU_CKPT` to absolute
+    paths (via `realpath -m`) before its `cd /workspace/isaaclab`, and asserts each
+    file exists. Previously a relative `experiments/...` path given from the
+    constrained-albc dir was not found post-cd (FileNotFoundError).
 - Ocean current migrated to the marinelab.core `OceanCurrent` API. marinelab v0.2.0
   removed `HydrodynamicsModel._current_velocity` / `._max_current_vel` (the current
   moved into a standalone component); albc accessed the removed buffers in 8+ sites

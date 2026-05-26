@@ -6,7 +6,7 @@ set -e
 # Uses isaaclab's runtime (./isaaclab.sh) but the eval scripts now live in the
 # constrained-albc repo (post 2026-05-25 repo 3-split).
 ALBC=/workspace/constrained-albc
-cd /workspace/isaaclab
+
 # Teacher / student checkpoints are injected by the caller (no hardcoded run).
 # Export TEACHER / TCN_CKPT / GRU_CKPT before invoking, e.g.:
 #   TEACHER=logs/.../<teacher_run>/model_4999.pt \
@@ -15,6 +15,20 @@ cd /workspace/isaaclab
 TEACHER=${TEACHER:?set TEACHER to the teacher checkpoint path}
 TCN_CKPT=${TCN_CKPT:?set TCN_CKPT to the student-TCN checkpoint path}
 GRU_CKPT=${GRU_CKPT:?set GRU_CKPT to the student-GRU checkpoint path}
+
+# Resolve paths to absolute BEFORE the `cd` below. The eval scripts run from
+# /workspace/isaaclab, so a relative path given by a caller sitting in
+# constrained-albc (e.g. experiments/<run>/...) would not be found post-cd.
+# `realpath -m` normalizes against the current (caller's) cwd without requiring
+# the path to exist yet; we then assert existence so a typo fails loudly here.
+TEACHER=$(realpath -m "$TEACHER")
+TCN_CKPT=$(realpath -m "$TCN_CKPT")
+GRU_CKPT=$(realpath -m "$GRU_CKPT")
+for ckpt in "$TEACHER" "$TCN_CKPT" "$GRU_CKPT"; do
+    [ -f "$ckpt" ] || { echo "ERROR: checkpoint not found: $ckpt" >&2; exit 1; }
+done
+
+cd /workspace/isaaclab
 STAMP=$(date +%Y%m%d_%H%M%S)
 
 run() {
@@ -24,7 +38,14 @@ run() {
     CUDA_VISIBLE_DEVICES=1 "$@" 2>&1 | tee -a "$log"
     local rc=${PIPESTATUS[0]}
     echo "[${name} $(date)] END rc=$rc" | tee -a "$log"
-    [ $rc -ne 0 ] && { echo "[${name}] FAILED"; exit $rc; }
+    # NOTE: under `set -e`, a trailing `[ $rc -ne 0 ] && {...}` makes the function's
+    # exit status 1 whenever rc==0 (the test is false), which set -e treats as the
+    # function failing -- aborting the whole script after the first successful stage.
+    # Use an explicit if so a successful stage returns 0 and the next stage runs.
+    if [ "$rc" -ne 0 ]; then
+        echo "[${name}] FAILED"
+        exit "$rc"
+    fi
 }
 
 # 1. TCN switching (zero-cmd DR re-sample)

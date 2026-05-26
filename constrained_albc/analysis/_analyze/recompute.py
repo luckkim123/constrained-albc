@@ -252,8 +252,8 @@ def _compute_enhanced_metrics(npz_path: str, peak_window_sec: float = 2.0) -> di
     return out
 
 
-def _process_run(run_dir: str) -> dict:
-    eval_dir = os.path.join(run_dir, "eval_dr")
+def _process_run(run_dir: str, data_subdir: str = "eval_dr") -> dict:
+    eval_dir = os.path.join(run_dir, data_subdir)
     result = {}
     for level in _RC_DR_LEVELS:
         path = os.path.join(eval_dir, f"data_{level}.npz")
@@ -318,7 +318,8 @@ def _bars_grouped(ax, per_axis: dict[str, list[float]], ylabel: str, title: str,
 # ---------------- Unified 3x2 summary plots ----------------
 
 def _plot_unified_grouped(run_dir: str, metrics: dict, *,
-                          axes: list[str], ss_unit: str, title: str, filename: str) -> str:
+                          axes: list[str], ss_unit: str, title: str, filename: str,
+                          data_subdir: str = "eval_dr") -> str:
     """Generic 3x2 summary plot for a group with multiple axes (att, lin_vel)."""
     import matplotlib
     matplotlib.use("Agg")
@@ -342,14 +343,15 @@ def _plot_unified_grouped(run_dir: str, metrics: dict, *,
 
     fig.suptitle(title, fontsize=13)
     plt.tight_layout(rect=(0, 0, 1, 0.97))
-    path = os.path.join(run_dir, "eval_dr", filename)
+    path = os.path.join(run_dir, data_subdir, filename)
     fig.savefig(path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     return path
 
 
 def _plot_unified_single(run_dir: str, metrics: dict, *,
-                         ax_name: str, ss_unit: str, title: str, filename: str) -> str:
+                         ax_name: str, ss_unit: str, title: str, filename: str,
+                         data_subdir: str = "eval_dr") -> str:
     """Generic 3x2 summary plot for a single-axis group (yaw)."""
     import matplotlib
     matplotlib.use("Agg")
@@ -372,35 +374,35 @@ def _plot_unified_single(run_dir: str, metrics: dict, *,
 
     fig.suptitle(title, fontsize=13)
     plt.tight_layout(rect=(0, 0, 1, 0.97))
-    path = os.path.join(run_dir, "eval_dr", filename)
+    path = os.path.join(run_dir, data_subdir, filename)
     fig.savefig(path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     return path
 
 
-def _make_summary_att(run_dir: str, metrics: dict) -> str:
+def _make_summary_att(run_dir: str, metrics: dict, data_subdir: str = "eval_dr") -> str:
     """Attitude summary: roll+pitch grouped; SS shown per-axis (roll/pitch)."""
     return _plot_unified_grouped(
         run_dir, metrics,
         axes=["roll", "pitch"], ss_unit="deg",
         title="Attitude Summary (per-env metrics)",
-        filename="summary_attitude.png")
+        filename="summary_attitude.png", data_subdir=data_subdir)
 
 
-def _make_summary_lin_vel(run_dir: str, metrics: dict) -> str:
+def _make_summary_lin_vel(run_dir: str, metrics: dict, data_subdir: str = "eval_dr") -> str:
     return _plot_unified_grouped(
         run_dir, metrics,
         axes=["vx", "vy", "vz"], ss_unit="m/s",
         title="Linear Velocity Summary (per-env metrics)",
-        filename="summary_linvel.png")
+        filename="summary_linvel.png", data_subdir=data_subdir)
 
 
-def _make_summary_yaw(run_dir: str, metrics: dict) -> str:
+def _make_summary_yaw(run_dir: str, metrics: dict, data_subdir: str = "eval_dr") -> str:
     return _plot_unified_single(
         run_dir, metrics,
         ax_name="yaw", ss_unit="rad/s",
         title="Yaw Summary (per-env metrics)",
-        filename="summary_yaw.png")
+        filename="summary_yaw.png", data_subdir=data_subdir)
 
 
 # ---------------- Text + JSON outputs ----------------
@@ -424,8 +426,8 @@ def _print_run_summary(run_name: str, metrics: dict) -> None:
         print()
 
 
-def _write_run_json(run_dir: str, metrics: dict) -> None:
-    out = os.path.join(run_dir, "eval_dr", "summary.json")
+def _write_run_json(run_dir: str, metrics: dict, data_subdir: str = "eval_dr") -> None:
+    out = os.path.join(run_dir, data_subdir, "summary.json")
     with open(out, "w") as f:
         json.dump(metrics, f, indent=2,
                   default=lambda o: None if (isinstance(o, float) and np.isnan(o)) else o)
@@ -460,15 +462,23 @@ def _multirun_comparison_plot(runs: dict, output_path: str) -> None:
     print(f"  Saved {output_path}")
 
 
-def _process_and_write(run_dir: str) -> dict:
-    print(f"\nProcessing: {run_dir}")
-    metrics = _process_run(run_dir)
+def _process_and_write(run_dir: str, data_subdir: str = "eval_dr") -> dict:
+    """Recompute per-env metrics from <run_dir>/<data_subdir>/data_*.npz and write
+    summary.json + summary_*.png into the same dir.
+
+    data_subdir defaults to "eval_dr" for the legacy `analyze.py recompute` layout.
+    The run-id-tree static eval passes the actual timestamped data folder name
+    (e.g. "static_2026-05-26_04-59-47") so outputs land beside the .npz files
+    instead of a non-existent eval_dr/ sibling.
+    """
+    print(f"\nProcessing: {run_dir} (data in {data_subdir}/)")
+    metrics = _process_run(run_dir, data_subdir=data_subdir)
     _print_run_summary(os.path.basename(run_dir), metrics)
-    _write_run_json(run_dir, metrics)
+    _write_run_json(run_dir, metrics, data_subdir=data_subdir)
     if metrics:
-        print(f"  Saved {_make_summary_att(run_dir, metrics)}")
-        print(f"  Saved {_make_summary_lin_vel(run_dir, metrics)}")
-        print(f"  Saved {_make_summary_yaw(run_dir, metrics)}")
+        print(f"  Saved {_make_summary_att(run_dir, metrics, data_subdir=data_subdir)}")
+        print(f"  Saved {_make_summary_lin_vel(run_dir, metrics, data_subdir=data_subdir)}")
+        print(f"  Saved {_make_summary_yaw(run_dir, metrics, data_subdir=data_subdir)}")
     return metrics
 
 
