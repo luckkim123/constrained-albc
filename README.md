@@ -61,24 +61,38 @@ cd /workspace/isaaclab
     --logger wandb --log_project_name full_dof_trpo
 ```
 
-Student distillation has its own overlay entry point:
+Student distillation has its own overlay entry point. Run it directly (TCN then GRU);
+`--teacher_run_dir` points at the teacher's run (use the `experiments/.../train` symlink
+so the student manifest links to the teacher). Hyperparameters are CLI flags — pass only
+what differs from the defaults (`--help` lists them):
 
 ```bash
 cd /workspace/isaaclab
-./isaaclab.sh -p /workspace/constrained-albc/scripts/train_student.py --help
-# or use the launcher scripts:
-bash /workspace/constrained-albc/scripts/launch_student_tcn.sh
-bash /workspace/constrained-albc/scripts/launch_student_gru.sh
+CUDA_VISIBLE_DEVICES=1 ./isaaclab.sh -p /workspace/constrained-albc/scripts/train_student.py \
+    --encoder_type tcn \
+    --teacher_run_dir /workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/<run_id>/train \
+    --num_envs 2048 --wandb_project constrained_albc_student --headless
+# then repeat with --encoder_type gru
 ```
 
 ## Quickstart: evaluation
 
-Full-DOF evaluation **must** use `eval_dr.py static` and produces PNG plots:
+Full-DOF evaluation **must** use `eval.py static` and produces PNG plots:
 
 ```bash
 cd /workspace/isaaclab
-./isaaclab.sh -p /workspace/constrained-albc/constrained_albc/analysis/eval_dr.py static \
+./isaaclab.sh -p /workspace/constrained-albc/constrained_albc/analysis/eval.py static \
     --task Isaac-FullDOF-TRPO-v0 --num_envs 64 --headless
+```
+
+A distilled student is evaluated through the same `static` path (teacher-comparable,
++ the l_hat/l_true encoder diagnostic) by adding student flags:
+
+```bash
+./isaaclab.sh -p /workspace/constrained-albc/constrained_albc/analysis/eval.py static \
+    --teacher_ckpt experiments/rsl_rl/albc_trpo_teacher/<run_id>/train/model_4999.pt \
+    --student_ckpt experiments/rsl_rl/albc_trpo_student/<run_id>/train/models/student_999.pt \
+    --encoder_type tcn --num_envs 64 --headless
 ```
 
 Other DR modes: `periodic`, `segmented`, `sudden`.

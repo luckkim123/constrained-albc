@@ -11,7 +11,7 @@ output, and config under ``experiments/<run_id>/``; ``manifest.json`` (section 3
 entry point for tracing.
 
 This module is **read-mostly and standalone**: it neither imports nor is imported by
-train.py / eval_dr.py / common.py yet, so adding it does not change any training or
+train.py / eval.py / common.py yet, so adding it does not change any training or
 evaluation behavior. The wiring (train.py emitting a manifest, common.resolve_run_path
 delegating here) is deferred to the training-adjacent implementation phase that needs
 explicit user approval (feedback_training_control).
@@ -34,6 +34,16 @@ from pathlib import Path
 EXPERIMENTS_ROOT = "experiments"
 LEGACY_LOGS_ROOT = "logs/rsl_rl"
 MANIFEST_NAME = "manifest.json"
+
+# Experiments are grouped under experiments/<EXPERIMENTS_GROUP_PREFIX>/<experiment_name>/<run_id>/
+# (2026-05-26), mirroring the logs/rsl_rl/<experiment_name>/ layout so teacher/student
+# runs cluster by experiment_name (e.g. albc_trpo_teacher / albc_trpo_student) instead of
+# sitting flat under experiments/. The run_id tree (manifest + train symlink + eval/) lives
+# at the leaf. Detection (eval_dir_for_checkpoint / run_id_from_path) no longer assumes the
+# run_id sits directly under experiments/ -- it locates the run_root via the `train` entry,
+# so it is independent of how deep the grouping is.
+EXPERIMENTS_GROUP_PREFIX = "rsl_rl"
+TRAIN_LINK_NAME = "train"
 
 # task_short extraction (design section 2-A). Ordered specific -> general so that
 # superset substrings match first: "-TRPO-NoIPO-" before "-TRPO-", "-PPO-Enc-" before
@@ -68,14 +78,21 @@ def task_short(task_id: str) -> str:
     return slug.lower().replace("-", "_") or "run"
 
 
+# run_id timestamp format. Shortened 2026-05-26 from "%Y-%m-%d_%H-%M-%S" (19 chars,
+# e.g. 2026-05-25_16-02-48) to "%y%m%d_%H%M%S" (13 chars, e.g. 260525_160248) -- the
+# user wanted a shorter run_id; task_short is kept. train.py emits the same format so
+# the run_id timestamp matches the training folder leaf (no drift).
+RUN_TS_FORMAT = "%y%m%d_%H%M%S"
+
+
 def make_run_id(task_id: str, tag: str | None = None, ts: str | None = None) -> str:
     """Build a run_id ``<ts>_<task_short>[_<tag>]`` (design section 2-A).
 
-    The timestamp format matches train.py (``%Y-%m-%d_%H-%M-%S``) so it is compatible
-    with existing runs. ``tag`` reuses the existing ``run_name``. git_sha is NOT included
-    (Open Q #3 resolved 2026-05-25); the SHA lives in manifest.git.sha instead.
+    The timestamp format (:data:`RUN_TS_FORMAT`, ``%y%m%d_%H%M%S``) matches train.py.
+    ``tag`` reuses the existing ``run_name``. git_sha is NOT included (Open Q #3 resolved
+    2026-05-25); the SHA lives in manifest.git.sha instead.
     """
-    stamp = ts or datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    stamp = ts or datetime.now().strftime(RUN_TS_FORMAT)
     rid = f"{stamp}_{task_short(task_id)}"
     if tag:
         rid += f"_{tag}"
@@ -135,22 +152,40 @@ class RunHandle:
         return max(ckpts, key=_iter)
 
 
+def _is_run_dir(d: Path) -> tuple[bool, dict | None]:
+    """A directory is a run when it holds a manifest or a ``train`` entry."""
+    manifest = _read_manifest_if_present(d)
+    return (manifest is not None or (d / TRAIN_LINK_NAME).exists()), manifest
+
+
 def find_runs(experiments_root: str = EXPERIMENTS_ROOT) -> list[RunHandle]:
     """List active run_id trees under ``experiments/``, newest first.
 
-    Skips the ``legacy/`` subtree (frozen outputs without a run_id convention).
-    A directory counts as a run when it holds a manifest or a ``train/`` subdir.
+    Runs are grouped ``experiments/rsl_rl/<experiment_name>/<run_id>/`` (2026-05-26), but a
+    flat ``experiments/<run_id>/`` (legacy of this tree) is still recognized. The scan
+    therefore checks each top-level dir as a run and, if it is not one, descends one extra
+    level so grouped runs are found. The ``legacy/`` subtree (frozen, no run_id convention)
+    is skipped. run_id sort is by directory name (timestamp-prefixed), newest first.
     """
     root = Path(experiments_root)
     if not root.exists():
         return []
     runs: list[RunHandle] = []
-    for d in sorted(root.iterdir(), reverse=True):
+    for d in root.iterdir():
         if not d.is_dir() or d.name == "legacy":
             continue
-        manifest = _read_manifest_if_present(d)
-        if manifest is not None or (d / "train").exists():
+        is_run, manifest = _is_run_dir(d)
+        if is_run:
             runs.append(RunHandle(run_id=d.name, root=d, manifest=manifest))
+            continue
+        # Not a run itself -> a group dir (e.g. rsl_rl, or rsl_rl/<exp>); descend to find runs.
+        for sub in d.rglob("*"):
+            if not sub.is_dir() or sub.name == "legacy":
+                continue
+            is_run, manifest = _is_run_dir(sub)
+            if is_run:
+                runs.append(RunHandle(run_id=sub.name, root=sub, manifest=manifest))
+    runs.sort(key=lambda r: r.run_id, reverse=True)
     return runs
 
 
@@ -163,8 +198,9 @@ def resolve_run(
 
     Resolution order (first match wins):
       1. ``run_spec`` is an existing directory path -> wrap it directly.
-      2. ``experiments/<run_spec>/`` exists -> active run_id tree (manifest preferred).
-      3. Substring / index match against active runs under ``experiments/``.
+      2. ``experiments/<run_spec>/`` exists (flat layout) -> active run_id tree.
+      3. Substring / index match against active runs under ``experiments/`` (this is the
+         path that resolves grouped ``experiments/rsl_rl/<exp>/<run_id>/`` runs via find_runs).
       4. Legacy fallback: a directory under ``logs/rsl_rl/<exp>/`` whose name matches,
          wrapped as a legacy handle (``manifest=None``).
 
@@ -175,10 +211,10 @@ def resolve_run(
     p = Path(run_spec)
     if p.is_dir():
         manifest = _read_manifest_if_present(p)
-        is_legacy = manifest is None and not (p / "train").exists()
+        is_legacy = manifest is None and not (p / TRAIN_LINK_NAME).exists()
         return RunHandle(run_id=p.name, root=p, manifest=manifest, is_legacy=is_legacy)
 
-    # 2. experiments/<run_spec>/
+    # 2. experiments/<run_spec>/ (flat layout only; grouped runs fall through to case 3).
     candidate = Path(experiments_root) / run_spec
     if candidate.is_dir():
         return RunHandle(
@@ -187,7 +223,7 @@ def resolve_run(
             manifest=_read_manifest_if_present(candidate),
         )
 
-    # 3. Active runs: integer index (0 = latest) or substring.
+    # 3. Active runs: integer index (0 = latest) or substring. Walks grouped subtrees.
     active = find_runs(experiments_root)
     if active:
         try:
@@ -226,50 +262,60 @@ def resolve_eval(run: RunHandle, mode: str, eval_ts: str | None = None) -> Path:
     return run.eval_root / f"{mode}_{ts}"
 
 
+def _run_root_from_path(path: str | Path) -> Path | None:
+    """Return the run_root for a path that passes through a ``train`` entry, else None.
+
+    The run_id tree's training output is reached via ``<run_root>/train`` (a symlink to
+    the real ``logs/`` dir, design #1). A checkpoint the evaluator loads therefore looks
+    like ``.../<run_root>/train/.../model.pt``. Locating the ``train`` segment and taking
+    its parent gives the run_root **independent of how deeply ``experiments/`` is grouped**
+    (flat ``experiments/<run_id>/`` or grouped ``experiments/rsl_rl/<exp>/<run_id>/``).
+
+    Detection is on the **unresolved** path so the tree is recognized even though ``train``
+    is a symlink back into ``logs/``: a checkpoint loaded directly from
+    ``logs/rsl_rl/<exp>/<ts>/model.pt`` has no ``train`` ancestor and returns None.
+    """
+    parts = Path(path).parts
+    for i in range(len(parts) - 1, -1, -1):  # rightmost train wins (closest to the ckpt)
+        if parts[i] == TRAIN_LINK_NAME and i >= 1:
+            return Path(*parts[:i])
+    return None
+
+
 def eval_dir_for_checkpoint(
     checkpoint_path: str | Path,
     mode: str,
     *,
-    experiments_root: str | Path = EXPERIMENTS_ROOT,
+    experiments_root: str | Path = EXPERIMENTS_ROOT,  # retained for signature compat (unused)
     eval_ts: str | None = None,
 ) -> Path | None:
-    """Return ``experiments/<run_id>/eval/<mode>_<ts>/`` if *checkpoint_path* lives in a
-    run_id tree, else ``None`` (caller keeps its legacy default).
+    """Return ``<run_root>/eval/<mode>_<ts>/`` if *checkpoint_path* lives in a run_id tree,
+    else ``None`` (caller keeps its legacy default).
 
-    A checkpoint belongs to a run_id tree when one of its ancestor directories is
-    ``<experiments_root>/<run_id>/`` (i.e. the path passes through ``experiments/``).
-    The match is on the **unresolved** path so the run_id tree is detected even when its
-    ``train`` entry is a symlink back to ``logs/`` (the minimal-touch layout, design #1):
-    a checkpoint loaded as ``experiments/<run_id>/train/.../model.pt`` is recognized, while
-    one loaded directly from ``logs/rsl_rl/<exp>/<ts>/model.pt`` returns None.
+    A checkpoint belongs to a run_id tree when one of its ancestor directories is the
+    run_root's ``train`` entry (the symlink to ``logs/``, design #1). Detection is via the
+    ``train`` segment (:func:`_run_root_from_path`), so it works regardless of the
+    experiments grouping depth (flat or ``experiments/rsl_rl/<exp>/<run_id>/``). A checkpoint
+    loaded directly from ``logs/rsl_rl/<exp>/<ts>/model.pt`` returns None.
 
     Args:
         checkpoint_path: Path the evaluator resolved the checkpoint to.
         mode: static / periodic / segmented / sudden.
-        experiments_root: Root of the run_id tree.
+        experiments_root: Unused (kept for call-site compatibility); detection is grouping-agnostic.
         eval_ts: Optional explicit eval timestamp.
 
     Returns:
         The eval output dir under the run_id tree, or None when not in a tree.
     """
-    ckpt = Path(checkpoint_path)
-    exp_root = Path(experiments_root)
-    exp_name = exp_root.name  # "experiments"
-
-    # Walk ancestors looking for <experiments_root>/<run_id>/ ; the run_id is the child
-    # of the experiments dir on the path.
-    parts = ckpt.parts
-    for i, part in enumerate(parts):
-        if part == exp_name and i + 1 < len(parts):
-            run_id = parts[i + 1]
-            run_root = exp_root / run_id if not exp_root.is_absolute() else Path(*parts[: i + 2])
-            handle = RunHandle(
-                run_id=run_id,
-                root=run_root,
-                manifest=_read_manifest_if_present(run_root),
-            )
-            return resolve_eval(handle, mode, eval_ts=eval_ts)
-    return None
+    run_root = _run_root_from_path(checkpoint_path)
+    if run_root is None:
+        return None
+    handle = RunHandle(
+        run_id=run_root.name,
+        root=run_root,
+        manifest=_read_manifest_if_present(run_root),
+    )
+    return resolve_eval(handle, mode, eval_ts=eval_ts)
 
 
 # ---------------------------------------------------------------------------
@@ -329,6 +375,21 @@ def read_manifest(run_root: str | Path) -> dict:
     return json.loads(out.read_text())
 
 
+def experiments_group_dir(
+    experiment_name: str | None,
+    experiments_root: str | Path = EXPERIMENTS_ROOT,
+) -> Path:
+    """Return the grouped experiments dir ``<experiments_root>/<prefix>/<experiment_name>/``.
+
+    Mirrors ``logs/rsl_rl/<experiment_name>/`` so a run's experiments tree clusters by
+    experiment_name (e.g. ``albc_trpo_teacher`` / ``albc_trpo_student``). When
+    *experiment_name* is falsy the run lands directly under the group prefix (kept simple
+    rather than failing -- experiment_name is always set in practice).
+    """
+    root = Path(experiments_root) / EXPERIMENTS_GROUP_PREFIX
+    return root / experiment_name if experiment_name else root
+
+
 def emit_run_manifest(
     task: str,
     log_dir: str | Path,
@@ -336,6 +397,7 @@ def emit_run_manifest(
     tag: str | None = None,
     config: dict | None = None,
     experiments_root: str | Path = EXPERIMENTS_ROOT,
+    experiment_name: str | None = None,
     run_id: str | None = None,
     kind: str = "teacher",
     parent_run_id: str | None = None,
@@ -344,9 +406,10 @@ def emit_run_manifest(
 
     This is the **minimal-touch** wiring (chosen 2026-05-25): the existing training
     ``log_dir`` (``logs/rsl_rl/<exp>/<ts>``) keeps owning tb / checkpoints / resume, so
-    training behavior is unchanged. Here we only add the run_id tree as a tracing entry:
+    training behavior is unchanged. Here we only add the run_id tree as a tracing entry,
+    grouped by experiment_name to mirror the logs layout (2026-05-26):
 
-        experiments/<run_id>/
+        experiments/rsl_rl/<experiment_name>/<run_id>/
           manifest.json        # this run's metadata (entry point for analyze/compare)
           config/              # env.yaml + agent.yaml copied from <log_dir>/params (if present)
           train -> <log_dir>   # relative symlink, so RunHandle.tb_dir/checkpoints resolve
@@ -362,6 +425,9 @@ def emit_run_manifest(
         tag: Optional run tag (reuses agent_cfg.run_name).
         config: Optional config snapshot for manifest.config (num_envs, seed, ...).
         experiments_root: Root for the run_id tree.
+        experiment_name: Groups the run under ``experiments/rsl_rl/<experiment_name>/``
+            (mirrors logs/rsl_rl/<experiment_name>/). Falls back to ``config["experiment_name"]``
+            then ungrouped if neither is given.
         run_id: Override the computed run_id (else derived from task + log_dir timestamp).
         kind: "teacher" (default) or "student" (design section 2-C Option B).
         parent_run_id: For a student, the teacher's run_id (manifest link to the teacher).
@@ -373,7 +439,8 @@ def emit_run_manifest(
     ts = _timestamp_from_log_dir(log_dir)
     rid = run_id or make_run_id(task, tag=tag, ts=ts)
 
-    run_root = Path(experiments_root) / rid
+    exp_name = experiment_name or (config or {}).get("experiment_name")
+    run_root = experiments_group_dir(exp_name, experiments_root) / rid
     (run_root / "config").mkdir(parents=True, exist_ok=True)
 
     # Copy the configs train.py dumps to <log_dir>/params, if they exist yet.
@@ -405,21 +472,18 @@ def emit_run_manifest(
 
 
 def run_id_from_path(
-    path: str | Path, experiments_root: str | Path = EXPERIMENTS_ROOT,
+    path: str | Path, experiments_root: str | Path = EXPERIMENTS_ROOT,  # noqa: ARG001 compat
 ) -> str | None:
-    """Extract a run_id from a path that passes through ``experiments/<run_id>/``, else None.
+    """Extract a run_id from a path that passes through a run_id tree's ``train`` entry, else None.
 
     Used to resolve a teacher's run_id from its run directory so a student manifest can
     link to it via ``parent_run_id`` (design section 2-C Option B). A teacher in the old
-    ``logs/rsl_rl`` layout (not in a run_id tree) returns None -> the student omits the link.
-    Matches on the unresolved path, consistent with :func:`eval_dir_for_checkpoint`.
+    ``logs/rsl_rl`` layout (no ``train`` ancestor) returns None -> the student omits the link.
+    Detection is via the ``train`` segment (:func:`_run_root_from_path`), consistent with
+    :func:`eval_dir_for_checkpoint` and independent of experiments grouping depth.
     """
-    exp_name = Path(experiments_root).name
-    parts = Path(path).parts
-    for i, part in enumerate(parts):
-        if part == exp_name and i + 1 < len(parts):
-            return parts[i + 1]
-    return None
+    run_root = _run_root_from_path(path)
+    return run_root.name if run_root is not None else None
 
 
 # ---------------------------------------------------------------------------
@@ -428,16 +492,25 @@ def run_id_from_path(
 
 
 def _timestamp_from_log_dir(log_dir: Path) -> str | None:
-    """Extract a ``%Y-%m-%d_%H-%M-%S`` prefix from the log_dir leaf, else None.
+    """Extract the timestamp prefix from the log_dir leaf, else None.
 
     train.py names runs ``<ts>[_<run_name>]``; reusing that ts keeps the run_id timestamp
-    aligned with the training folder. Returns None (caller generates a fresh ts) if the
-    leaf does not start with a parseable timestamp.
+    aligned with the training folder. Both the current ``%y%m%d_%H%M%S`` format and the
+    legacy ``%Y-%m-%d_%H-%M-%S`` are accepted so older training folders still resolve.
+    Returns None (caller generates a fresh ts) if the leaf does not start with a parseable
+    timestamp.
     """
     leaf = log_dir.name
     parts = leaf.split("_")
+    # Current short format: a single underscore-joined field pair (260525_160248).
     if len(parts) >= 2:
         candidate = f"{parts[0]}_{parts[1]}"
+        try:
+            datetime.strptime(candidate, RUN_TS_FORMAT)
+            return candidate
+        except ValueError:
+            pass
+        # Legacy long format: 2026-05-25_16-02-48.
         try:
             datetime.strptime(candidate, "%Y-%m-%d_%H-%M-%S")
             return candidate

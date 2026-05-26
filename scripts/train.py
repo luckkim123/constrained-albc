@@ -193,10 +193,14 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     log_root_path = os.path.join("logs", "rsl_rl", agent_cfg.experiment_name)
     log_root_path = os.path.abspath(log_root_path)
     print(f"[INFO] Logging experiment in directory: {log_root_path}")
-    log_dir = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    # Build the log_dir leaf via make_run_id so the training folder name == the
+    # experiments run_id (both <ts>_<task_short>[_<run_name>]). Using the one builder
+    # keeps logs/ and experiments/ names identical by construction (no task_short drift).
+    from constrained_albc.analysis.paths import RUN_TS_FORMAT, make_run_id
+
+    ts = datetime.now().strftime(RUN_TS_FORMAT)
+    log_dir = make_run_id(args_cli.task, tag=agent_cfg.run_name or None, ts=ts)
     print(f"Exact experiment name requested from command line: {log_dir}")
-    if agent_cfg.run_name:
-        log_dir += f"_{agent_cfg.run_name}"
     log_dir = os.path.join(log_root_path, log_dir)
 
     # Point <experiment>/latest at this run so tools reach the newest run without
@@ -277,6 +281,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             task=args_cli.task,
             log_dir=log_dir,
             tag=agent_cfg.run_name or None,
+            experiment_name=agent_cfg.experiment_name,
             config={
                 "num_envs": env_cfg.scene.num_envs,
                 "max_iterations": agent_cfg.max_iterations,

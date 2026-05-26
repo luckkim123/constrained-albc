@@ -11,10 +11,10 @@ Subcommands:
     sudden     one-shot nominal -> extreme OOD shock, transient recovery
 
 Usage:
-    ./isaaclab.sh -p scripts/analysis/eval_dr.py static --task Isaac-ConstrainedALBC-TRPO-v0 --num_envs 64 --headless
-    ./isaaclab.sh -p scripts/analysis/eval_dr.py periodic --num_steps 4 --headless
-    ./isaaclab.sh -p scripts/analysis/eval_dr.py segmented --segment_duration 5 --headless
-    ./isaaclab.sh -p scripts/analysis/eval_dr.py sudden --switch_time 5 --headless
+    ./isaaclab.sh -p scripts/analysis/eval.py static --task Isaac-ConstrainedALBC-TRPO-v0 --num_envs 64 --headless
+    ./isaaclab.sh -p scripts/analysis/eval.py periodic --num_steps 4 --headless
+    ./isaaclab.sh -p scripts/analysis/eval.py segmented --segment_duration 5 --headless
+    ./isaaclab.sh -p scripts/analysis/eval.py sudden --switch_time 5 --headless
 """
 
 import argparse
@@ -132,6 +132,16 @@ sp_static.add_argument(
          "(e.g. 1.2 = +20%% wider). Random sample per env, combining Hard-DR randomness with "
          "OOD extrapolation. Disables DORAEMON.",
 )
+# Student-policy mode (optional) -- mirrors segmented so a distilled student is evaluated
+# through the same static path as the teacher (4 DR levels + .mat + full PNG set), giving a
+# 1:1 teacher/student comparison. When --student_ckpt is set, the student encoder + frozen
+# teacher actor replace the teacher runner; the rest of the static pipeline is unchanged.
+sp_static.add_argument("--student_ckpt", type=str, default=None,
+                       help="If set, evaluate the student encoder + frozen teacher actor instead of the teacher runner.")
+sp_static.add_argument("--teacher_ckpt", type=str, default=None,
+                       help="Teacher model_*.pt path (required when --student_ckpt is given).")
+sp_static.add_argument("--encoder_type", type=str, choices=["tcn", "gru"], default=None,
+                       help="Student encoder type (required when --student_ckpt is given).")
 
 # ----------------------------------------------------------------------------
 # periodic: mid-episode periodic DR change, hover robustness
@@ -176,10 +186,9 @@ sp_sudden.add_argument("--switch_time", type=float, default=10.0, help="Time to 
 sp_sudden.add_argument("--total_time", type=float, default=30.0, help="Total rollout duration (s).")
 
 # Parse + launch ONLY when executed directly. When this module is imported by
-# another eval script (e.g. eval_student.py reuses the static-mode helpers), the
-# importing script owns argv and is responsible for calling AppLauncher exactly
-# once. Re-launching AppLauncher in imported mode corrupts Kit state. The required
-# subparser would also SystemExit on the importer's argv (no subcommand token),
+# another script that owns argv, that script is responsible for calling AppLauncher
+# exactly once. Re-launching AppLauncher in imported mode corrupts Kit state. The
+# required subparser would also SystemExit on the importer's argv (no subcommand token),
 # so the whole parse/launch block is guarded.
 if __name__ == "__main__":
     args_cli, hydra_args = parser.parse_known_args()
@@ -1640,6 +1649,88 @@ def run_evaluation(
 
 
 # ============================================================================
+# Student latent diagnostic (integrated into static student mode, 2026-05-26)
+# ============================================================================
+# A distilled student can track well yet have a collapsed encoder (the frozen teacher
+# actor carries it). `static` performance alone cannot tell -- so when a student is
+# evaluated, we also log (l_hat = student-predicted latent, l_true = teacher's
+# privileged latent) per step and summarize their agreement. Moved here from
+# eval_student.py `latent` so a single static pass yields both performance and the
+# encoder-fidelity diagnostic. See rule 03 ("encoder verification requires more than
+# aggregate z_std").
+
+
+class _InstrumentedStudentPolicy:
+    """Wrap a StudentInLoopPolicy; log (l_hat, l_true) at every __call__.
+
+    Replicates StudentInLoopPolicy.__call__'s forward so the intermediate latents can be
+    captured WITHOUT calling the underlying __call__ (which would double-advance the TCN
+    ring buffer / GRU hidden state). The returned action is identical to the wrapped
+    policy's, so swapping it in is behavior-neutral for the rollout.
+    """
+
+    def __init__(self, student) -> None:
+        self._s = student
+        self.l_hat_log: list[np.ndarray] = []
+        self.l_true_log: list[np.ndarray] = []
+
+    def reset_logs(self) -> None:
+        self.l_hat_log = []
+        self.l_true_log = []
+
+    def reset(self, env_ids=None) -> None:
+        if env_ids is None or isinstance(env_ids, torch.Tensor):
+            self._s.reset(env_ids)
+        else:
+            self._s.reset(torch.as_tensor(env_ids, dtype=torch.long))
+
+    @torch.no_grad()
+    def __call__(self, obs_td) -> torch.Tensor:
+        s = self._s
+        obs = obs_td["policy"]
+        priv = obs_td["privileged"]
+        l_true = s.teacher.encode_privileged(priv)  # (B, 9)
+
+        if s.cfg.encoder_type == "tcn":
+            assert s.ring is not None
+            s.ring = torch.roll(s.ring, shifts=-1, dims=1)
+            s.ring[:, -1] = obs
+            l_hat = s.student(s.ring)
+        else:
+            obs_for_student = s.obs_normalizer(obs)
+            l_hat_seq, s.hidden = s.student(obs_for_student.unsqueeze(1), hidden=s.hidden)
+            l_hat = l_hat_seq[:, -1]
+
+        obs_normed = s.teacher.normalize_obs(obs)
+        action = s.teacher.actor_forward(obs_normed, l_hat)
+
+        self.l_hat_log.append(l_hat.detach().cpu().numpy())
+        self.l_true_log.append(l_true.detach().cpu().numpy())
+        return action
+
+
+def _summarize_latent(l_hat: np.ndarray, l_true: np.ndarray) -> dict:
+    """Agreement metrics between student-predicted (l_hat) and teacher (l_true) latents.
+
+    Shapes (T, E, D). overall/per-dim MSE = tracking of the latent; envvar = does the
+    student latent distinguish envs as the teacher's does (collapse check across envs);
+    tvar = does it vary over time (collapse check over the episode).
+    """
+    err = l_hat - l_true
+    per_env_rmse = np.sqrt((err ** 2).mean(axis=(0, 2)))
+    return {
+        "overall_mse": float((err ** 2).mean()),
+        "per_dim_mse": (err ** 2).mean(axis=(0, 1)).tolist(),
+        "l_true_envvar_mean": float(l_true.var(axis=1).mean()),
+        "l_hat_envvar_mean": float(l_hat.var(axis=1).mean()),
+        "l_true_tvar_mean": float(l_true.var(axis=0).mean()),
+        "l_hat_tvar_mean": float(l_hat.var(axis=0).mean()),
+        "per_env_rmse_mean": float(per_env_rmse.mean()),
+        "per_env_rmse_std": float(per_env_rmse.std()),
+    }
+
+
+# ============================================================================
 # static mode: run function (was eval_dr.py static main)
 # ============================================================================
 
@@ -1667,8 +1758,19 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     # ---- Load checkpoint ----
     agent_cfg = cli_args.update_rsl_rl_cfg(agent_cfg, args_cli)
 
+    # Student mode short-circuits the teacher-runner checkpoint search (mirrors segmented):
+    # resume_path = student_ckpt so eval output lands under the STUDENT's run_id tree, while
+    # params / DORAEMON DR resolve from the teacher's run dir.
+    is_student_mode = getattr(args_cli, "student_ckpt", None) is not None
+    if is_student_mode:
+        if args_cli.teacher_ckpt is None or args_cli.encoder_type is None:
+            raise ValueError("--student_ckpt requires both --teacher_ckpt and --encoder_type.")
+
     resume_path = None
-    if use_checkpoint:
+    if is_student_mode:
+        resume_path = args_cli.student_ckpt
+        print(f"[INFO] Student mode: student_ckpt={resume_path}  teacher_ckpt={args_cli.teacher_ckpt}  encoder={args_cli.encoder_type}")
+    elif use_checkpoint:
         log_root_path = os.path.abspath(os.path.join("logs", "rsl_rl", agent_cfg.experiment_name))
         if args_cli.checkpoint and args_cli.checkpoint != "none":
             resume_path = retrieve_file_path(args_cli.checkpoint)
@@ -1680,11 +1782,14 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         print(f"[INFO] Checkpoint: {resume_path}")
 
     # ---- Load agent params from run directory if available ----
+    # Student mode reads the teacher's params (the student reuses the teacher's env/agent cfg);
+    # the DORAEMON DR auto-load below also keys off the teacher dir in student mode.
     run_agent_dict = None
-    if resume_path:
+    params_search_ckpt = args_cli.teacher_ckpt if is_student_mode else resume_path
+    if params_search_ckpt:
         import yaml
 
-        run_params_path = os.path.join(os.path.dirname(resume_path), "params", "agent.yaml")
+        run_params_path = os.path.join(os.path.dirname(params_search_ckpt), "params", "agent.yaml")
         if os.path.isfile(run_params_path):
             try:
                 with open(run_params_path) as f:
@@ -1790,8 +1895,9 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         _DORAEMON_FULL_DR = cfg
         _DORAEMON_RAW = raw
         print("[INFO] Hard DR = DORAEMON-learned distribution from override (mean +/- 2*std).\n")
-    elif args_cli.doraemon_dr and resume_path:
-        run_dir = os.path.dirname(resume_path)
+    elif args_cli.doraemon_dr and (params_search_ckpt or resume_path):
+        # Student mode: DORAEMON tags live in the teacher's TB events, not the student dir.
+        run_dir = os.path.dirname(params_search_ckpt if is_student_mode else resume_path)
         print(f"\n[INFO] Attempting to load DORAEMON-learned DR from: {run_dir}")
         cfg, raw = load_doraemon_dr(run_dir)
         if cfg is not None:
@@ -1822,7 +1928,26 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     runner_cls_name = agent_dict.get("class_name", getattr(agent_cfg, "class_name", "OnPolicyRunner"))
     runner_device = agent_dict.get("device", agent_cfg.device)
 
-    if use_checkpoint and resume_path:
+    if is_student_mode:
+        # Student encoder + frozen teacher actor, same loader segmented uses. The resulting
+        # callable matches the policy(obs) signature run_evaluation expects, so the static
+        # pipeline (4 DR levels + .mat + PNG set) is identical to the teacher's.
+        from constrained_albc.analysis.student_policy import build_student_policy_fn
+
+        student_policy = build_student_policy_fn(
+            teacher_ckpt=args_cli.teacher_ckpt,
+            student_ckpt=args_cli.student_ckpt,
+            encoder_type=args_cli.encoder_type,
+            num_envs=num_envs,
+            device=str(device),
+        )
+        # Wrap so the rollout also records (l_hat, l_true) for the encoder-fidelity
+        # diagnostic. The wrapper's action == the wrapped policy's, so performance metrics
+        # are unaffected; it doubles as policy_nn so run_evaluation's reset hook works.
+        policy = _InstrumentedStudentPolicy(student_policy)
+        policy_nn = policy
+        print(f"[INFO] Loaded student ({args_cli.encoder_type}) + frozen teacher actor (latent diagnostic on)")
+    elif use_checkpoint and resume_path:
         runner_cls_map = {
             "ALBCConstraintEncoderRunner": ConstraintEncoderRunner,
         }
@@ -1865,6 +1990,9 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     all_data = {}
     all_metrics = {}
 
+    # Student mode also collects the encoder-fidelity diagnostic (l_hat vs l_true) per level.
+    latent_summary = {"encoder_type": args_cli.encoder_type, "levels": {}} if is_student_mode else None
+
     for level in DR_LEVELS:
         dr_pct = int(DR_SCALE[level] * 100)
         print(f"\n{'=' * 60}")
@@ -1872,6 +2000,9 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         print(f"{'=' * 60}")
 
         apply_dr_config(raw_env.cfg, DR_SCALE[level])
+
+        if is_student_mode:
+            policy.reset_logs()  # per-level latent logs (don't carry across DR levels)
 
         data = run_evaluation(
             env=env,
@@ -1895,6 +2026,16 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         from scipy.io import savemat
 
         savemat(os.path.join(output_dir, f"data_{level}.mat"), array_data, do_compression=True)
+
+        if is_student_mode:
+            l_hat = np.stack(policy.l_hat_log, axis=0)    # (T, E, 9)
+            l_true = np.stack(policy.l_true_log, axis=0)  # (T, E, 9)
+            np.savez_compressed(os.path.join(output_dir, f"latent_{level}.npz"), l_hat=l_hat, l_true=l_true)
+            ls = _summarize_latent(l_hat, l_true)
+            latent_summary["levels"][level] = ls
+            print(f"  [latent] overall_mse={ls['overall_mse']:.5f}  "
+                  f"per_env_rmse={ls['per_env_rmse_mean']:.4f}+/-{ls['per_env_rmse_std']:.4f}  "
+                  f"l_hat/l_true envvar={ls['l_hat_envvar_mean']:.4f}/{ls['l_true_envvar_mean']:.4f}")
 
         metrics = compute_metrics(data)
         all_metrics[level] = metrics
@@ -1962,6 +2103,20 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
             f"{m['survival_rate']:5.0f}%"
         )
     print("=" * 110)
+
+    # ---- Student latent diagnostic summary ----
+    if latent_summary is not None:
+        with open(os.path.join(output_dir, "summary_latent.json"), "w") as f:
+            json.dump(latent_summary, f, indent=2)
+        print(f"\n{'=' * 70}\nLATENT DIAGNOSTIC (l_hat vs l_true) -- {args_cli.encoder_type}\n{'=' * 70}")
+        print(f"{'Level':<10} {'mse':>9} {'per_env_rmse':>16} {'envvar h/t':>14} {'tvar h/t':>14}")
+        for lvl in DR_LEVELS:
+            s = latent_summary["levels"][lvl]
+            print(f"{lvl:<10} {s['overall_mse']:9.5f} "
+                  f"{s['per_env_rmse_mean']:7.4f}+/-{s['per_env_rmse_std']:.4f} "
+                  f"{s['l_hat_envvar_mean']:6.4f}/{s['l_true_envvar_mean']:.4f} "
+                  f"{s['l_hat_tvar_mean']:6.4f}/{s['l_true_tvar_mean']:.4f}")
+        print("=" * 70)
 
     print(f"\nOutput saved to: {output_dir}")
     env.close()
@@ -3048,7 +3203,7 @@ def run_segmented(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
 
     # Policy: student mode uses StudentInLoopPolicy (student encoder + frozen teacher actor)
     if is_student_mode:
-        from constrained_albc.envs.main.student.eval import build_student_policy_fn
+        from constrained_albc.analysis.student_policy import build_student_policy_fn
 
         student_policy = build_student_policy_fn(
             teacher_ckpt=args_cli.teacher_ckpt,

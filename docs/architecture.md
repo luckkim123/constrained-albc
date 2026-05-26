@@ -23,8 +23,8 @@ sequence.
 | Subdirectory | Contents |
 |---|---|
 | `constrained_albc/envs/` | RL environments: `constrained_full_albc` (TRPO+IPO+encoder, main) and `constrained_full_albc_tdc` (TDC controller variant) |
-| `constrained_albc/analysis/` | Evaluation and training-analysis tooling: `eval_dr` (single ~4000-line module, 4 sub-modes: `static` / `periodic` / `segmented` / `sudden`; `static` is the required mode for `Isaac-FullDOF-TRPO-v0`), `eval_student`, `analyze`, `compare`, `monitor`, `encoder_tools`, shared `common` and `cli_args` |
-| `scripts/` | Student-distillation entry point (`train_student.py`) and launcher shell scripts |
+| `constrained_albc/analysis/` | Evaluation and training-analysis tooling: `eval_dr` (single ~4000-line module, 4 sub-modes: `static` / `periodic` / `segmented` / `sudden`; `static` is the required mode for `Isaac-FullDOF-TRPO-v0`, and accepts `--student_ckpt`/`--teacher_ckpt`/`--encoder_type` to evaluate a distilled student through the same path, also emitting the l_hat/l_true encoder-fidelity diagnostic), `analyze`, `compare`, `monitor`, `encoder_tools`, shared `common` and `cli_args` |
+| `scripts/` | Entry points: `train.py` (teacher), `train_student.py` (distillation), `play.py` (policy playback). Run directly via `isaaclab.sh -p` — no wrapper shell scripts |
 | `tests/` | Unit tests (TDC controller; Isaac Sim not required) |
 
 ### Registered task IDs

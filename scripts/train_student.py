@@ -97,9 +97,15 @@ def main(env_cfg: DirectRLEnvCfg, _agent_cfg) -> None:
     if args_cli.gru_head_hidden is not None:
         cfg.gru_head_hidden = args_cli.gru_head_hidden
 
-    # Log dir
-    stamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    log_dir = os.path.abspath(os.path.join(cfg.log_dir_root, f"{stamp}_{cfg.run_name}"))
+    # Log dir. cfg.log_dir_root is an absolute constrained-albc path (student/config.py),
+    # so student output lands in the constrained-albc repo even though this script runs from
+    # /workspace/isaaclab via isaaclab.sh -- it must NOT resolve against the isaaclab cwd.
+    # Leaf is built via make_run_id (== the experiments run_id) so logs/ and experiments/
+    # share one identical name (<ts>_<task_short>_<run_name>), matching the teacher.
+    from constrained_albc.analysis.paths import RUN_TS_FORMAT, make_run_id
+
+    stamp = datetime.now().strftime(RUN_TS_FORMAT)
+    log_dir = os.path.join(cfg.log_dir_root, make_run_id(cfg.task, tag=cfg.run_name, ts=stamp))
     os.makedirs(log_dir, exist_ok=True)
     logger.info("log_dir=%s", log_dir)
 
@@ -125,10 +131,18 @@ def main(env_cfg: DirectRLEnvCfg, _agent_cfg) -> None:
         from constrained_albc.analysis.paths import emit_run_manifest, run_id_from_path
 
         parent = run_id_from_path(cfg.teacher_run_dir)
+        # experiments_root is anchored to the constrained-albc repo (sibling of log_dir_root),
+        # NOT the isaaclab cwd this script runs from -- otherwise the student experiments tree
+        # leaks into /workspace/isaaclab/experiments. log_dir_root is
+        # <repo>/logs/rsl_rl/<exp>, so the repo root is three levels up.
+        repo_root = os.path.dirname(os.path.dirname(os.path.dirname(cfg.log_dir_root)))
+        experiments_root = os.path.join(repo_root, "experiments")
         run = emit_run_manifest(
             task=args_cli.task,
             log_dir=log_dir,
             tag=cfg.run_name or None,
+            experiment_name=cfg.experiment_name,
+            experiments_root=experiments_root,
             kind="student",
             parent_run_id=parent,
             config={

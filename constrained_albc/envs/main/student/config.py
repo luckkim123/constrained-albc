@@ -1,15 +1,24 @@
 """Student policy training configuration."""
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
+
+# Repo root = constrained-albc/ (this file is constrained_albc/envs/main/student/config.py,
+# so five levels up). Used to anchor log_dir_root to an ABSOLUTE path: train_student.py runs
+# via isaaclab.sh from /workspace/isaaclab, so a relative root would leak student output into
+# the isaaclab repo. Anchoring here keeps teacher and student output in one source-of-truth tree.
+_REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 
 
 @dataclass
 class StudentCfg:
     """Hyperparameters for student encoder supervised training."""
 
-    # Experiment
-    experiment_name: str = "student_policy"
+    # Experiment. experiment_name shares the teacher's "albc_trpo" prefix (2026-05-26) so
+    # teacher (albc_trpo_teacher) and student (albc_trpo_student) cluster together under
+    # both logs/rsl_rl/ and experiments/rsl_rl/.
+    experiment_name: str = "albc_trpo_student"
     run_name: str = "student_tcn"
     seed: int = 42
 
@@ -56,8 +65,11 @@ class StudentCfg:
     lambda_latent: float = 1.0
     save_interval: int = 100
 
-    # Logging
-    log_dir_root: str = "logs/rsl_rl/student_policy"
+    # Logging. log_dir_root is ABSOLUTE (anchored to the constrained-albc repo) so student
+    # output does not leak into the isaaclab cwd train_student.py runs from. It mirrors the
+    # teacher layout logs/rsl_rl/<experiment_name>/. experiments_root is derived from this in
+    # train_student.py (repo_root/experiments).
+    log_dir_root: str = os.path.join(_REPO_ROOT, "logs", "rsl_rl", experiment_name)
     logger: str = "wandb"           # "wandb" or "tensorboard"
     wandb_project: str = "albc_trpo_student"
 

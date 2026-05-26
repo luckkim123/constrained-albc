@@ -243,7 +243,10 @@ class ALBCTRPORunnerCfg(_BaseALBCRunnerCfg):
     """
 
     class_name: str = "ALBCConstraintEncoderRunner"
-    experiment_name = "albc_trpo"
+    # "albc_trpo_teacher" shares the "albc_trpo" prefix with the student (albc_trpo_student,
+    # student/config.py) so teacher/student cluster together under logs/rsl_rl/ and
+    # experiments/rsl_rl/ (2026-05-26). WandB project (--log_project_name) is a separate axis.
+    experiment_name = "albc_trpo_teacher"
     obs_groups: dict[str, list[str]] = {
         "policy": ["policy", "privileged"],
         "critic": ["policy", "privileged"],

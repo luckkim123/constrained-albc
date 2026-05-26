@@ -241,6 +241,26 @@ def test_make_run_id_no_git_sha():
     assert rid == "2026-05-25_16-02-48_trpo"
 
 
+def test_run_ts_format_is_short():
+    """run_id timestamp shortened to %y%m%d_%H%M%S (2026-05-26)."""
+    from datetime import datetime
+    assert P.RUN_TS_FORMAT == "%y%m%d_%H%M%S"
+    # A make_run_id without an explicit ts produces the short, 13-char timestamp prefix.
+    rid = P.make_run_id("Isaac-ConstrainedALBC-TRPO-v0")
+    stamp = rid.rsplit("_", 1)[0]  # strip task_short
+    assert len(stamp) == 13  # 260526_160248
+    datetime.strptime(stamp, P.RUN_TS_FORMAT)  # parses, else raises
+
+
+def test_timestamp_from_log_dir_accepts_short_and_legacy(tmp_path):
+    """Both the new short ts and the legacy long ts are parsed from a log_dir leaf."""
+    short = P._timestamp_from_log_dir(tmp_path / "260526_160248_student_tcn")
+    assert short == "260526_160248"
+    legacy = P._timestamp_from_log_dir(tmp_path / "2026-05-25_16-02-48_r13_A")
+    assert legacy == "2026-05-25_16-02-48"
+    assert P._timestamp_from_log_dir(tmp_path / "no-timestamp-here") is None
+
+
 # ---------------------------------------------------------------------------
 # emit_run_manifest: minimal-touch single-tree wiring (training output not moved)
 # ---------------------------------------------------------------------------
@@ -260,7 +280,21 @@ def test_emit_manifest_reuses_log_dir_timestamp(tmp_path):
     h = P.emit_run_manifest("Isaac-ConstrainedALBC-TRPO-v0", log_dir, experiments_root=str(exp))
     # run_id timestamp matches the training folder leaf -> no drift.
     assert h.run_id == "2026-05-25_16-02-48_trpo"
-    assert (exp / h.run_id / P.MANIFEST_NAME).is_file()
+    assert (h.root / P.MANIFEST_NAME).is_file()
+
+
+def test_emit_manifest_groups_by_experiment_name(tmp_path):
+    """The run tree lands under experiments/rsl_rl/<experiment_name>/<run_id>/ (2026-05-26)."""
+    log_dir = _fake_log_dir(tmp_path)
+    exp = tmp_path / "experiments"
+    h = P.emit_run_manifest(
+        "Isaac-ConstrainedALBC-TRPO-v0", log_dir,
+        experiment_name="albc_trpo_teacher", experiments_root=str(exp),
+    )
+    assert h.root == exp / "rsl_rl" / "albc_trpo_teacher" / h.run_id
+    assert (h.root / P.MANIFEST_NAME).is_file()
+    # The grouped run is still discoverable + resolvable by run_id.
+    assert P.resolve_run(h.run_id, experiments_root=str(exp)).root == h.root
 
 
 def test_emit_manifest_copies_configs(tmp_path):
@@ -340,6 +374,23 @@ def test_eval_dir_for_checkpoint_detects_via_unresolved_symlink_path(tmp_path):
     ckpt_via_tree = run_root / "train" / "model_4999.pt"
     out = P.eval_dir_for_checkpoint(ckpt_via_tree, "periodic", experiments_root=str(exp), eval_ts="2026-05-25_18-00-00")
     assert out == run_root / "eval" / "periodic_2026-05-25_18-00-00"
+
+
+def test_eval_dir_for_checkpoint_grouped_tree(tmp_path):
+    """Detection is via the `train` ancestor, so a grouped run
+    (experiments/rsl_rl/<exp>/<run_id>/train/...) resolves regardless of group depth."""
+    run_root = tmp_path / "experiments" / "rsl_rl" / "albc_trpo_teacher" / "260525_160248_trpo"
+    ckpt = run_root / "train" / "model_4999.pt"
+    out = P.eval_dir_for_checkpoint(ckpt, "static", eval_ts="260525_180000")
+    assert out == run_root / "eval" / "static_260525_180000"
+
+
+def test_run_id_from_path_grouped_tree(tmp_path):
+    """run_id_from_path uses the same train-based detection -> grouping-agnostic."""
+    teacher_train = (
+        tmp_path / "experiments" / "rsl_rl" / "albc_trpo_teacher" / "260525_160248_trpo" / "train"
+    )
+    assert P.run_id_from_path(teacher_train) == "260525_160248_trpo"
 
 
 # ---------------------------------------------------------------------------

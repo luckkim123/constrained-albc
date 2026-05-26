@@ -1,7 +1,10 @@
-"""Student-in-the-loop wrapper for eval_dr.py static.
+"""Student-in-the-loop policy for evaluation (used by eval.py student mode).
+
+Builds an inference-time policy that pairs the student encoder with the frozen
+teacher actor. Training of the student lives in `envs/main/student/runner.py`.
 
 Usage from a separate eval script:
-    from constrained_albc.envs.main.student.eval import (
+    from constrained_albc.analysis.student_policy import (
         build_student_policy_fn,
     )
 
@@ -20,9 +23,9 @@ import os
 
 import torch
 
-from .config import StudentCfg
-from .models import make_student_encoder
-from .teacher import FrozenTeacher
+from constrained_albc.envs.main.student.config import StudentCfg
+from constrained_albc.envs.main.student.models import make_student_encoder
+from constrained_albc.envs.main.student.teacher import FrozenTeacher
 
 
 class StudentInLoopPolicy:
@@ -83,7 +86,7 @@ class StudentInLoopPolicy:
 
         Accepts either: (1) None to reset all, (2) a long index tensor (N,), or
         (3) a bool mask of shape (num_envs,) or (num_envs, 1) -- the latter is
-        what eval_dr.py static passes via `dones`.
+        what eval.py static passes via `dones`.
         """
         if env_ids is not None:
             if env_ids.dtype == torch.bool:

@@ -4,7 +4,7 @@
 
 Loads a trained checkpoint and rolls the policy out for visual inspection
 (GUI / livestream / video). Counterpart to ``scripts/train.py``; quantitative
-DR evaluation lives in ``analysis/eval_dr.py`` (see CLAUDE.md).
+DR evaluation lives in ``analysis/eval.py`` (see CLAUDE.md).
 
 isaaclab stays a pristine upstream fork: its ``rsl_rl/play.py`` only knows
 ``OnPolicyRunner`` / ``DistillationRunner``. This overlay entry owns the two
@@ -18,7 +18,7 @@ overlay concerns that must NOT live in isaaclab (same as train.py):
 
 The policy-load path (runner_map + ``_runner_module`` monkeypatch +
 ``runner.load(..., load_optimizer=False)``) mirrors the VERIFIED loader in
-``analysis/eval_dr.py:2353-2360`` so play and eval agree on how a ALBC policy
+``analysis/eval.py:2353-2360`` so play and eval agree on how a ALBC policy
 is reconstructed. jit/onnx export is intentionally omitted (the encoder +
 asymmetric-critic structure is not export-validated; eval_dr does not export
 either).
@@ -116,7 +116,7 @@ from isaaclab_tasks.utils.hydra import hydra_task_config
 from constrained_albc.envs.main.runners import ConstraintEncoderRunner
 
 # rsl-rl resolves the runner by class name from agent_cfg; register the overlay
-# runner on the module it looks in (mirrors eval_dr.py:249).
+# runner on the module it looks in (mirrors eval.py:249).
 _runner_module.ALBCConstraintEncoderRunner = ConstraintEncoderRunner
 
 _RUNNER_MAP = {"ALBCConstraintEncoderRunner": ConstraintEncoderRunner}
@@ -136,7 +136,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     env_cfg.seed = agent_cfg.seed
     env_cfg.sim.device = args_cli.device if args_cli.device is not None else env_cfg.sim.device
 
-    # resolve checkpoint (mirrors eval_dr.py:2202-2205)
+    # resolve checkpoint (mirrors eval.py:2202-2205)
     log_root_path = os.path.abspath(os.path.join("logs", "rsl_rl", agent_cfg.experiment_name))
     print(f"[INFO] Loading experiment from directory: {log_root_path}")
     if args_cli.checkpoint and args_cli.checkpoint != "none":

@@ -43,7 +43,7 @@ def load_eval_data(eval_dir: str) -> dict[str, dict]:
 def compute_level_metrics(d: dict) -> dict:
     """Compute summary metrics for one DR level.
 
-    Steady-state error uses per-segment last-50% averaging (matching eval_dr.py).
+    Steady-state error uses per-segment last-50% averaging (matching eval.py).
     """
     error_roll = d["error_roll"]
     error_pitch = d["error_pitch"]
@@ -56,7 +56,7 @@ def compute_level_metrics(d: dict) -> dict:
     total_mean = float(np.nanmean(np.where(alive, error_norm, np.nan))) if alive.any() else float("nan")
     survival = float(alive[-1].sum()) / num_envs * 100.0
 
-    # Steady-state: per-segment last 50% averaging (consistent with eval_dr.py)
+    # Steady-state: per-segment last 50% averaging (consistent with eval.py)
     seg_steps = int(d["steps_per_segment"]) if "steps_per_segment" in d else 0
     if seg_steps > 0:
         num_segments = error_norm.shape[0] // seg_steps

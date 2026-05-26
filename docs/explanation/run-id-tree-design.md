@@ -32,25 +32,42 @@ Key point: training is grouped by `experiment_name` (= fixed per task), and eval
 ### 2-A. run_id Convention
 
 ```
-run_id = <YYYY-MM-DD_HH-MM-SS>_<task_short>[_<tag>]
-  e.g.: 2026-05-25_16-02-48_trpo
-        2026-05-25_17-00-12_ppo-enc_ablation
+run_id = <YYMMDD_HHMMSS>_<task_short>[_<tag>]
+  e.g.: 260525_160248_trpo
+        260525_170012_ppo-enc_ablation
 ```
 
-- The timestamp format is **identical to the current train.py** (`%Y-%m-%d_%H-%M-%S`, train.py:196) — compatible with existing runs.
+- The timestamp format is `%y%m%d_%H%M%S` (`paths.RUN_TS_FORMAT`, train.py:196) — **shortened
+  2026-05-26** from the original `%Y-%m-%d_%H-%M-%S` (19→13 chars) because the full run_id was too
+  long; `task_short` is kept. `_timestamp_from_log_dir` parses BOTH the short and the legacy long
+  format, so older training folders still resolve.
 - `task_short`: extracted from the task ID. `Isaac-FullDOF-TRPO-v0`→`trpo`, `-PPO-Enc-`→`ppo-enc`,
   `-NoEncoder-`→`noenc`, `-TRPO-NoIPO-`→`trpo-noipo`, `-PPO-`→`ppo`, `-TDC-`→`tdc`.
   → task_short resolves the problem where the current 4 ablations are mixed into one folder under
      `experiment_name="full_dof_ablation"` (rsl_rl_ppo_cfg.py:298/381 + ablation_cfgs.py:40/79).
 - `tag`: reuses the existing `run_name` (train.py:199) as is.
+- Collision policy: run_id uniqueness (via the testname/tag) is the caller's responsibility; an
+  existing run dir is not overwritten.
+- **The training log folder leaf == the run_id (2026-05-26).** train.py / train_student.py build
+  the `logs/rsl_rl/<experiment_name>/` leaf via `make_run_id` (the same builder
+  `emit_run_manifest` uses), so `logs/rsl_rl/<exp>/<run_id>/` and
+  `experiments/rsl_rl/<exp>/<run_id>/` share one identical name -- the logs leaf now includes
+  `task_short` too (previously it was `<ts>_<run_name>` with no task_short, which drifted from
+  the experiments run_id).
 
-### 2-B. Directory Layout (Sibling to legacy)
+### 2-B. Directory Layout (grouped by experiment_name, sibling to legacy)
+
+Runs are grouped under `experiments/rsl_rl/<experiment_name>/<run_id>/` (**2026-05-26**), mirroring
+the `logs/rsl_rl/<experiment_name>/` layout so teacher (`albc_trpo_teacher`) and student
+(`albc_trpo_student`) cluster together. Detection of a run tree (eval output routing, student->teacher
+linkage) is via the `train` symlink ancestor (`paths._run_root_from_path`), so it is independent of the
+grouping depth — a flat `experiments/<run_id>/` still resolves too.
 
 ```
 experiments/                              # .gitignore'd (large outputs)
 ├── legacy/                               # past frozen outputs (already moved 2026-05-25)
 │   ├── plots/  final_models/  README.md
-└── <run_id>/                             # NEW: active run single tree
+└── rsl_rl/<experiment_name>/<run_id>/    # NEW: active run single tree, grouped by experiment_name
     ├── manifest.json                     # ★ run meta — entry point for all tracing (§3)
     ├── config/
     │   ├── env.yaml                      # existing params/env.yaml (train.py already dumps it)
