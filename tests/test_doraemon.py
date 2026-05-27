@@ -207,3 +207,47 @@ def test_episode_buffer_single_add_over_capacity_keeps_tail():
     _, returns, _, _ = buf.get_all()
     assert returns.shape[0] == 3
     assert set(returns.tolist()) == {2.0, 3.0, 4.0}  # tail kept, head dropped
+
+
+# ---------------------------------------------------------------------------
+# Per-axis success floor (SUCCESS_AXIS_* defs + the env's success computation)
+# ---------------------------------------------------------------------------
+
+
+def test_success_axis_defs_shape_and_roll_separated():
+    """The ALBC per-axis defs separate roll from pitch and stay 4-channel."""
+    assert doraemon.SUCCESS_AXIS_LABELS == ["roll", "pitch", "lin_vel", "yaw_vel"]
+    assert len(doraemon.SUCCESS_AXIS_ERR_THRESHOLDS) == 4
+    assert len(doraemon.SUCCESS_AXIS_ALPHA) == 4
+    # roll is separated from pitch (the whole point) and has a (slightly) looser error budget
+    # than pitch because roll is the weak axis.
+    roll_thr = dict(doraemon.SUCCESS_AXIS_DEFS)["roll"]
+    pitch_thr = dict(doraemon.SUCCESS_AXIS_DEFS)["pitch"]
+    assert roll_thr >= pitch_thr > 0.0
+    # alpha is the uniform 0.5 floor
+    assert all(a == 0.5 for a in doraemon.SUCCESS_AXIS_ALPHA)
+
+
+def test_per_axis_success_computation_low_error_is_success():
+    """Replicates the env's _log_and_reset_rewards per-axis success: mean-abs-err <= threshold.
+
+    Direction check: LOW error -> success=1 (opposite sense from the global return>=thr). A roll
+    episode with error above its threshold fails roll even if every other axis passes.
+    """
+    thr = torch.tensor(doraemon.SUCCESS_AXIS_ERR_THRESHOLDS)  # [roll, pitch, lin_vel, yaw]
+    # episode A: all axes well within threshold -> all success
+    mean_err_a = thr * 0.5
+    succ_a = (mean_err_a <= thr).float()
+    assert succ_a.tolist() == [1.0, 1.0, 1.0, 1.0]
+    # episode B: roll error 2x over threshold, others fine -> only roll fails
+    mean_err_b = thr.clone()
+    mean_err_b[0] = thr[0] * 2.0
+    succ_b = (mean_err_b <= thr).float()
+    assert succ_b.tolist() == [0.0, 1.0, 1.0, 1.0]
+
+
+# NOTE: engine instantiation with per_axis_alpha (A=4 switch, set_axis_labels) is covered by
+# marinelab/tests/test_doraemon.py, which applies a dataclass-capable configclass shim. This
+# albc test module's configclass mock is a plain identity passthrough (DoraemonCfg has no
+# generated __init__), so the engine-instantiation assertion lives there, not here. Here we pin
+# only the ALBC-owned shim defs + the success-computation direction.

@@ -31,7 +31,7 @@ from marinelab.assets import (
     ThrusterCfg,
 )
 
-from .doraemon import DoraemonCfg
+from .doraemon import SUCCESS_AXIS_ALPHA, DoraemonCfg
 from .mdp.constraints import (
     ALBCConstraintCfg,
     ConstraintTermCfg,
@@ -393,7 +393,16 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # Domain Randomization
     # ==========================================================================
     randomization: HardDomainRandomizationCfg = HardDomainRandomizationCfg()
-    doraemon: DoraemonCfg = DoraemonCfg(enable=True, kl_ub=0.06, performance_lb=90.0, step_interval=250)
+    doraemon: DoraemonCfg = DoraemonCfg(
+        enable=True,
+        kl_ub=0.06,
+        performance_lb=90.0,
+        step_interval=250,
+        # Per-axis success floor (roll separated from pitch so the weak roll axis can no longer be
+        # masked by strong axes in the global return). Axis labels + error thresholds live in the
+        # shim doraemon.py (SUCCESS_AXIS_DEFS); here we only inject the per-axis alpha vector.
+        per_axis_alpha=SUCCESS_AXIS_ALPHA,
+    )
 
     # ==========================================================================
     # Payload

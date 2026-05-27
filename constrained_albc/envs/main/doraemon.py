@@ -31,6 +31,10 @@ __all__ = [
     "build_param_specs",
     "PARAM_SPECS",
     "NDIMS",
+    "SUCCESS_AXIS_DEFS",
+    "SUCCESS_AXIS_LABELS",
+    "SUCCESS_AXIS_ERR_THRESHOLDS",
+    "SUCCESS_AXIS_ALPHA",
 ]
 
 # --- ALBC-specific DR parameter definitions (the only research coupling) ---
@@ -71,3 +75,26 @@ _NOMINAL_OVERRIDES: dict[str, float] = {
 PARAM_SPECS: list[ParamSpec] = [
     ParamSpec(name, lo, hi, (lo + hi) / 2.0) for name, _f, lo, hi in _PARAM_DEFS
 ]
+
+# --- ALBC-specific per-axis success-floor definitions (the second research coupling) ---
+# Maps each control axis to its per-episode MEAN-ABS-ERROR threshold. An episode "succeeds" on
+# an axis when its mean-abs tracking error over the episode is <= the threshold. These error
+# thresholds are physical (rad / m/s / rad/s) and were calibrated from the baseline teacher run's
+# eval data (see docs/results/2026-05-27-per-axis-floor-threshold-calibration.md) -- INITIAL
+# estimates, refine from the first run's logged success_rate/<axis>.
+#
+# (axis_label, mean_abs_error_threshold). roll separated from pitch so the strong rotational axis
+# (pitch) cannot mask the weak one (roll, ~11x lower control authority). lin_vel stays a single
+# 3D-Euclidean channel (the linear axes are already strong; spec requires only roll separated).
+# These ALBC names live ONLY here -- the marinelab engine never sees them (it gets an opaque
+# [K, A] success tensor + the label list via set_axis_labels()).
+SUCCESS_AXIS_DEFS: list[tuple[str, float]] = [
+    ("roll", 0.012),      # rad (~0.69 deg)
+    ("pitch", 0.010),     # rad (~0.57 deg)
+    ("lin_vel", 0.025),   # m/s (Euclidean norm of vx/vy/vz error)
+    ("yaw_vel", 0.008),   # rad/s
+]
+SUCCESS_AXIS_LABELS: list[str] = [name for name, _thr in SUCCESS_AXIS_DEFS]
+SUCCESS_AXIS_ERR_THRESHOLDS: list[float] = [thr for _name, thr in SUCCESS_AXIS_DEFS]
+# Per-axis success-rate floor (fraction of episodes that must pass each axis). Uniform 0.5.
+SUCCESS_AXIS_ALPHA: list[float] = [0.5] * len(SUCCESS_AXIS_DEFS)

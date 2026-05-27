@@ -341,7 +341,14 @@ class ALBCEnv(DirectRLEnv):
         """Initialize DORAEMON adaptive DR scheduler if enabled."""
         doraemon_cfg = getattr(self.cfg, "doraemon", None)
         if doraemon_cfg is not None and doraemon_cfg.enable:
-            from .doraemon import _NOMINAL_OVERRIDES, _PARAM_DEFS, NDIMS, DoraemonScheduler
+            from .doraemon import (
+                _NOMINAL_OVERRIDES,
+                _PARAM_DEFS,
+                NDIMS,
+                SUCCESS_AXIS_ERR_THRESHOLDS,
+                SUCCESS_AXIS_LABELS,
+                DoraemonScheduler,
+            )
 
             self._doraemon = DoraemonScheduler(
                 doraemon_cfg,
@@ -351,6 +358,15 @@ class ALBCEnv(DirectRLEnv):
                 nominal_overrides=_NOMINAL_OVERRIDES,
             )
             self._doraemon_ndims = NDIMS
+            # Per-axis success floor (ALBC-side mapping). Labels name the engine's success columns;
+            # error thresholds (rad / m/s / rad/s) define per-episode mean-abs-error success.
+            self._doraemon_axis_labels = SUCCESS_AXIS_LABELS
+            self._doraemon_n_axes = len(SUCCESS_AXIS_LABELS)
+            self._doraemon_err_thresholds = torch.tensor(
+                SUCCESS_AXIS_ERR_THRESHOLDS, device=self.device, dtype=torch.float32
+            )
+            if doraemon_cfg.per_axis_alpha is not None:
+                self._doraemon.set_axis_labels(SUCCESS_AXIS_LABELS)
         else:
             self._doraemon = None
             self._doraemon_ndims = 0
@@ -360,6 +376,9 @@ class ALBCEnv(DirectRLEnv):
             self._episode_dr_xi = torch.zeros(self.num_envs, ndims, device=self.device)
             self._episode_dr_log_probs = torch.zeros(self.num_envs, device=self.device)
             self._episode_return_accum = torch.zeros(self.num_envs, device=self.device)
+            # Per-axis ABS-ERROR accumulators (roll, pitch, lin_vel-norm, yaw). Divided by the
+            # episode step count at reset to form per-axis mean-abs-error -> per-axis success.
+            self._episode_abs_err_sum = torch.zeros(self.num_envs, self._doraemon_n_axes, device=self.device)
 
     def _setup_scene(self):
         """Setup simulation scene with robot and underwater lighting."""
@@ -1026,6 +1045,14 @@ class ALBCEnv(DirectRLEnv):
         # DORAEMON: accumulate episode return for binary success criterion
         if self._doraemon is not None:
             self._episode_return_accum += reward
+            # Per-axis ABSOLUTE ERROR accumulation (NOT reward; reward functions untouched).
+            # roll/pitch from the already-separated _att_rp_err columns, lin_vel as the 3D
+            # Euclidean error norm, yaw as |yaw-rate error|. No att_roll_weight here -> no
+            # double-counting. Divided by step count at reset to get per-axis mean-abs-error.
+            self._episode_abs_err_sum[:, 0] += self._att_rp_err[:, 0].abs()
+            self._episode_abs_err_sum[:, 1] += self._att_rp_err[:, 1].abs()
+            self._episode_abs_err_sum[:, 2] += self._lin_vel_err.norm(dim=-1)
+            self._episode_abs_err_sum[:, 3] += self._yaw_rate_err.abs()
 
         return reward
 
@@ -1240,7 +1267,14 @@ class ALBCEnv(DirectRLEnv):
             valid_ids = env_ids[valid]
             if valid_ids.numel() > 0:
                 returns = self._episode_return_accum[valid_ids]
-                success = (returns >= self._doraemon.cfg.performance_lb).float()
+                if self._doraemon.cfg.per_axis_alpha is not None:
+                    # Per-axis success: mean-abs-error over the episode <= per-axis threshold.
+                    # steps read BEFORE the framework reset zeroes episode_length_buf.
+                    steps = self.episode_length_buf[valid_ids].clamp(min=1).unsqueeze(-1).float()
+                    mean_err = self._episode_abs_err_sum[valid_ids] / steps  # [n, A]
+                    success = (mean_err <= self._doraemon_err_thresholds).float()  # [n, A], low err = success
+                else:
+                    success = (returns >= self._doraemon.cfg.performance_lb).float()
                 self._doraemon.record_episodes(
                     xi=self._episode_dr_xi[valid_ids],
                     returns=returns,
@@ -1326,6 +1360,7 @@ class ALBCEnv(DirectRLEnv):
             self._episode_dr_xi[env_ids] = xi_physical
             self._episode_dr_log_probs[env_ids] = log_probs
             self._episode_return_accum[env_ids] = 0.0
+            self._episode_abs_err_sum[env_ids] = 0.0
 
             # Command scales fixed at 1.0 (not DORAEMON-managed).
             # DORAEMON optimizes physics DR only; command difficulty is a task knob.
