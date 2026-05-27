@@ -247,6 +247,11 @@ class ALBCTRPORunnerCfg(_BaseALBCRunnerCfg):
     # student/config.py) so teacher/student cluster together under logs/rsl_rl/ and
     # experiments/rsl_rl/ (2026-05-26). WandB project (--log_project_name) is a separate axis.
     experiment_name = "albc_trpo_teacher"
+    # Default to WandB so teacher runs are tracked + comparable out of the box (matches the
+    # baseline 260525_232805 run). Previously this fell back to rsl_rl's tensorboard default,
+    # so a launch that forgot `agent.logger=wandb` logged only to TB. Override per-run if needed.
+    logger: str = "wandb"
+    wandb_project: str = "constrained_albc"
     obs_groups: dict[str, list[str]] = {
         "policy": ["policy", "privileged"],
         "critic": ["policy", "privileged"],
