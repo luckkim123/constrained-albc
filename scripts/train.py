@@ -175,6 +175,14 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # set the environment seed
     env_cfg.seed = agent_cfg.seed
     env_cfg.sim.device = args_cli.device if args_cli.device is not None else env_cfg.sim.device
+    # Keep the agent/algorithm device in lockstep with the env device for the
+    # non-distributed single-GPU path. cli_args.update_rsl_rl_cfg does not read
+    # --device, so without this agent_cfg.device stays at its cfg default (cuda:0)
+    # while the env runs on args_cli.device (e.g. cuda:1), and ConstraintTRPO then
+    # mixes env tensors (cuda:1) with cost buffers (cuda:0) -> cross-device RuntimeError.
+    # The distributed branch below already sets both; this covers the single-GPU case.
+    if args_cli.device is not None and not args_cli.distributed:
+        agent_cfg.device = args_cli.device
     if args_cli.distributed and args_cli.device is not None and "cpu" in args_cli.device:
         raise ValueError(
             "Distributed training is not supported when using CPU device. "
