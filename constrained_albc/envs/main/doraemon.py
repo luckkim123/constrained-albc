@@ -79,20 +79,28 @@ PARAM_SPECS: list[ParamSpec] = [
 # --- ALBC-specific per-axis success-floor definitions (the second research coupling) ---
 # Maps each control axis to its per-episode MEAN-ABS-ERROR threshold. An episode "succeeds" on
 # an axis when its mean-abs tracking error over the episode is <= the threshold. These error
-# thresholds are physical (rad / m/s / rad/s) and were calibrated from the baseline teacher run's
-# eval data (see docs/results/2026-05-27-per-axis-floor-threshold-calibration.md) -- INITIAL
-# estimates, refine from the first run's logged success_rate/<axis>.
+# thresholds are physical (rad / m/s / rad/s), calibrated from the baseline teacher run's
+# TRAINING-time per-axis error (WandB qd49fd71, iter 4000+), NOT its eval steady-state error.
+# Rationale (2026-05-27 diagnosis, docs/results/2026-05-27-per-axis-floor-recalibration.md):
+# success is computed DURING TRAINING where the attitude command is sampled uniform over
+# +/-30deg (att_cmd_rp_range, FIXED -- not a DORAEMON axis), so the teacher's roll error there is
+# 2-4deg, NOT the 0.6deg seen in eval (eval tracks much smaller targets). The earlier eval-based
+# 0.69deg threshold was ~8x too tight -> success stuck at 0 -> DORAEMON froze DR at nominal
+# (mode=-3). roll/pitch fixed at 3deg per user intent ("tracking error each within ~3deg");
+# lin_vel/yaw matched to training scale. Still INITIAL -- refine from logged success_rate/<axis>
+# (target ~0.5 so the floor binds without freezing DR).
 #
 # (axis_label, mean_abs_error_threshold). roll separated from pitch so the strong rotational axis
-# (pitch) cannot mask the weak one (roll, ~11x lower control authority). lin_vel stays a single
-# 3D-Euclidean channel (the linear axes are already strong; spec requires only roll separated).
-# These ALBC names live ONLY here -- the marinelab engine never sees them (it gets an opaque
-# [K, A] success tensor + the label list via set_axis_labels()).
+# (pitch, training error 1-2deg) cannot mask the weak one (roll, 2-4deg, ~11x lower control
+# authority); at the shared 3deg threshold roll binds first, which is the masking-fix intent.
+# lin_vel stays a single 3D-Euclidean channel (the linear axes are already strong; spec requires
+# only roll separated). These ALBC names live ONLY here -- the marinelab engine never sees them
+# (it gets an opaque [K, A] success tensor + the label list via set_axis_labels()).
 SUCCESS_AXIS_DEFS: list[tuple[str, float]] = [
-    ("roll", 0.012),      # rad (~0.69 deg)
-    ("pitch", 0.010),     # rad (~0.57 deg)
-    ("lin_vel", 0.025),   # m/s (Euclidean norm of vx/vy/vz error)
-    ("yaw_vel", 0.008),   # rad/s
+    ("roll", 0.052),      # rad (~3.0 deg); teacher training roll err 2-4deg, user-specified
+    ("pitch", 0.052),     # rad (~3.0 deg); teacher training pitch err 1-2deg, =roll so roll binds first
+    ("lin_vel", 0.10),    # m/s (Euclidean norm of vx/vy/vz error); teacher training norm 0.07-0.09
+    ("yaw_vel", 0.20),    # rad/s; teacher training yaw-rate err 0.16-0.20
 ]
 SUCCESS_AXIS_LABELS: list[str] = [name for name, _thr in SUCCESS_AXIS_DEFS]
 SUCCESS_AXIS_ERR_THRESHOLDS: list[float] = [thr for _name, thr in SUCCESS_AXIS_DEFS]
