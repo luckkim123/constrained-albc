@@ -233,6 +233,22 @@ def test_make_run_id_with_tag():
     assert rid == "2026-05-25_17-00-12_ppo-enc_ablation"
 
 
+def test_make_run_id_strips_date_prefixed_tag():
+    """A run_name tag that starts with a date must not double the run_id date.
+
+    run_id already begins with the timestamp; a tag like "20260527_per_axis_floor" previously
+    produced "...trpo_20260527_per_axis_floor". The date prefix (8- or 6-digit + underscore) is
+    stripped so the tag carries only the meaningful name.
+    """
+    rid8 = P.make_run_id("Isaac-ConstrainedALBC-TRPO-v0", tag="20260527_per_axis_floor", ts="260527_183358")
+    assert rid8 == "260527_183358_trpo_per_axis_floor"
+    rid6 = P.make_run_id("Isaac-ConstrainedALBC-TRPO-v0", tag="260527_per_axis_floor", ts="260527_183358")
+    assert rid6 == "260527_183358_trpo_per_axis_floor"
+    # A tag without a date prefix is unchanged.
+    plain = P.make_run_id("Isaac-ConstrainedALBC-TRPO-v0", tag="main_teacher", ts="260527_183358")
+    assert plain == "260527_183358_trpo_main_teacher"
+
+
 def test_make_run_id_no_git_sha():
     """Open Q #3: run_id must NOT contain a git sha (only ts + task_short [+ tag])."""
     rid = P.make_run_id("Isaac-ConstrainedALBC-TRPO-v0", ts="2026-05-25_16-02-48")

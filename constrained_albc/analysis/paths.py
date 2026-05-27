@@ -26,9 +26,15 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+
+# Date-like prefix on a run_name tag (e.g. "20260527_" or "260527_"). run_id already prepends
+# the timestamp, so a dated tag would double the date (e.g. 260527_..._trpo_20260527_foo). We
+# strip it in make_run_id so a tag like "20260527_per_axis_floor" yields "..._trpo_per_axis_floor".
+_TAG_DATE_PREFIX = re.compile(r"^(?:\d{8}|\d{6})_")
 
 # Default roots (cwd-relative, matching common.py / train.py conventions).
 EXPERIMENTS_ROOT = "experiments"
@@ -95,7 +101,11 @@ def make_run_id(task_id: str, tag: str | None = None, ts: str | None = None) -> 
     stamp = ts or datetime.now().strftime(RUN_TS_FORMAT)
     rid = f"{stamp}_{task_short(task_id)}"
     if tag:
-        rid += f"_{tag}"
+        # Strip a leading date prefix from the tag so the run_id date is not doubled
+        # (run_id already starts with the timestamp). "20260527_per_axis_floor" -> "per_axis_floor".
+        tag = _TAG_DATE_PREFIX.sub("", tag)
+        if tag:
+            rid += f"_{tag}"
     return rid
 
 
