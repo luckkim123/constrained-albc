@@ -1,0 +1,34 @@
+# OMX profile - metrics vocabulary + output root.
+# Consumed by omx_paths.Profile (vocabulary tier) and exp-analyze (#4).
+# Set pending_approval to false (or delete the key) on approval.
+aggs:
+- by_axis
+- mean_std
+keep_policy: pass_only
+metrics:
+- reward_total
+- att_roll_err_deg
+- att_pitch_err_deg
+- lin_err_x
+- lin_err_y
+- lin_err_z
+- yaw_rate_err
+- entropy
+- noise_std
+- z_std
+- line_search_success
+- barrier_penalty
+- constraint_viol
+- doraemon_success_rate
+- kl
+output_root: experiments
+pending_approval: true
+run_id_regex: null
+score_formula: null
+sources:
+- tensorboard
+- wandb_offline
+views:
+- trajectory
+- per_axis_bar
+- overlay

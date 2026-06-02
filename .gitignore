@@ -8,3 +8,6 @@ wandb/
 experiments/
 .omc/
 docs/superpowers/
+
+# omx wiki runtime lock
+.omx/registry/.wiki-lock
