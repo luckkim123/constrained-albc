@@ -28,3 +28,11 @@
 - **Pages:** training_anomaly_thresholds_tb_tag_alert_table.md, training_diagnosis_decision_tree.md, constrainttrpo_health_thresholds.md, constrained_albc_experiment_conventions.md, heavy_tail_vs_sample_mean_divergence_are_independent.md
 - **Summary:** query 'barrier penalty spike cause' -> 5 of 5
 
+## [2026-06-02T08:39:53.980927] add
+- **Pages:** analysis_engine_map_what_is_grow_able_vs_off_limits.md
+- **Summary:** created 'analysis engine map — what is grow-able vs off-limits'
+
+## [2026-06-02T08:40:08.976124] query
+- **Pages:** training_log_analysis_engine_reference_adapter.md, analysis_engine_map_what_is_grow_able_vs_off_limits.md, constrainttrpo_health_thresholds.md, heavy_tail_vs_sample_mean_divergence_are_independent.md, training_anomaly_thresholds_tb_tag_alert_table.md, training_diagnosis_decision_tree.md, constrained_albc_experiment_conventions.md
+- **Summary:** query 'where to add a new diagnostic to analyze.py' -> 7 of 7
+
