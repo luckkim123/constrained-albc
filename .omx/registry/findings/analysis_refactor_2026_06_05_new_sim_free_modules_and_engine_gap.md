@@ -2,8 +2,8 @@
 title: "analysis refactor 2026-06-05 — new sim-free modules and engine-gap status"
 tags: ["engine", "engine-gap", "analysis", "refactor", "sim-free", "omx-callable"]
 created: 2026-06-05T06:43:49.886174
-updated: 2026-06-05T18:00:00.000000
-sources: ["exp/analysis-refactor", "tasks-1-10", "exp/omx-eval-adapter", "2026-06-05"]
+updated: 2026-06-05T20:00:00.000000
+sources: ["exp/analysis-refactor", "tasks-1-10", "exp/omx-eval-adapter", "exp/omx-encoder-adapter", "2026-06-05"]
 links: ["analysis_engine_map_what_is_grow_able_vs_off_limits.md"]
 category: reference
 confidence: high
@@ -85,8 +85,15 @@ etc.) + cross-axis corr, from data_*.npz, no Isaac Sim. CLI `eval_adapter.py hea
 sources vocab so exp-analyze routes eval questions. [STATUS] implemented (branch
 exp/omx-eval-adapter, 2026-06-05).
 
-[ENGINE-GAP] encoder z-sweep — no omx path reads encoder latent sensitivity. [WHERE] new
-.omx/profile/encoder_adapter.py, delegating to sim-free `_encoder/_shared.py`
-`load_encoder_from_state_dict` + `_encoder/sweep.py`. [SPEC] load checkpoint state_dict,
-run per-dim z sensitivity sweep, emit JSON. NOTE: the sweep itself runs a torch forward
-(GPU), so this adapter is NOT fully sim-free — defer to a GPU-capable session. [STATUS] proposed.
+[ENGINE-GAP] encoder z-sweep — no omx core path reads encoder latent sensitivity.
+[WHERE] .omx/profile/encoder_adapter.py `sweep_sensitivity`, ASSEMBLING the sim-free
+engine functions `_encoder/sweep.py` `_load_encoder_for_sweep` + `_sweep_parameter`
+and `common.build_sweep_params_from_checkpoint`; it computes only z_range = z.max-z.min
+(guarded by test_matches_engine_z_ranges, byte-equal to sweep.py:282). [SPEC] per-DR-param
+per-dim z-range sensitivity matrix + active_dims, plus optional heatmap/per-param PNG
+delegation to `_plot_*` (CLI `sweep <ckpt> [--num-points N] [--plots <dir>]`; engine [INFO]
+prints are redirected off stdout so the JSON contract stays clean). CORRECTION to the
+earlier note: the sweep runs a torch forward but on CPU (map_location='cpu', tiny MLP) —
+it is sim-free AND GPU-free, so it is unit-tested CPU-only with a 192 KB mini-checkpoint
+fixture (no GPU session needed). `encoder` added to the profile sources vocab so exp-analyze
+routes encoder questions. [STATUS] implemented (branch exp/omx-encoder-adapter, 2026-06-05).
