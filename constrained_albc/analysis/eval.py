@@ -144,6 +144,14 @@ sp_static.add_argument("--teacher_ckpt", type=str, default=None,
                        help="Teacher model_*.pt path (required when --student_ckpt is given).")
 sp_static.add_argument("--encoder_type", type=str, choices=["tcn", "gru"], default=None,
                        help="Student encoder type (required when --student_ckpt is given).")
+sp_static.add_argument(
+    "--z_ablation",
+    type=str,
+    default=None,
+    choices=["zero", "mean"],
+    help="Inference-time encoder z-ablation (gap-#1 diagnostic): zero=z->0, "
+    "mean=z->encode(nominal). Unset=normal eval (default).",
+)
 
 # ----------------------------------------------------------------------------
 # periodic: mid-episode periodic DR change, hover robustness
