@@ -22,7 +22,7 @@ metrics:
 - doraemon_success_rate
 - kl
 output_root: experiments
-pending_approval: true
+pending_approval: false
 run_id_regex: null
 score_formula: null
 sources:
