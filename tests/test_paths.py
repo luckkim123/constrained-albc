@@ -224,48 +224,68 @@ def test_task_short_unknown_fallback():
 
 
 def test_make_run_id_format():
-    rid = P.make_run_id("Isaac-ConstrainedALBC-TRPO-v0", ts="2026-05-25_16-02-48")
-    assert rid == "2026-05-25_16-02-48_trpo"
+    # label-before-date (2026-06-05): task_short first, timestamp last.
+    rid = P.make_run_id("Isaac-ConstrainedALBC-TRPO-v0", ts="260525_160248")
+    assert rid == "trpo_260525_160248"
 
 
 def test_make_run_id_with_tag():
-    rid = P.make_run_id("Isaac-ConstrainedALBC-PPO-Enc-v0", tag="ablation", ts="2026-05-25_17-00-12")
-    assert rid == "2026-05-25_17-00-12_ppo-enc_ablation"
+    rid = P.make_run_id("Isaac-ConstrainedALBC-PPO-Enc-v0", tag="ablation", ts="260525_170012")
+    assert rid == "ppo-enc_ablation_260525_170012"
 
 
 def test_make_run_id_strips_date_prefixed_tag():
     """A run_name tag that starts with a date must not double the run_id date.
 
-    run_id already begins with the timestamp; a tag like "20260527_per_axis_floor" previously
-    produced "...trpo_20260527_per_axis_floor". The date prefix (8- or 6-digit + underscore) is
-    stripped so the tag carries only the meaningful name.
+    run_id ends with the timestamp; a tag like "20260527_per_axis_floor" must not
+    re-introduce a date. The date prefix (8- or 6-digit + underscore) is stripped so the
+    tag carries only the meaningful name (label-before-date: <task_short>_<tag>_<ts>).
     """
     rid8 = P.make_run_id("Isaac-ConstrainedALBC-TRPO-v0", tag="20260527_per_axis_floor", ts="260527_183358")
-    assert rid8 == "260527_183358_trpo_per_axis_floor"
+    assert rid8 == "trpo_per_axis_floor_260527_183358"
     rid6 = P.make_run_id("Isaac-ConstrainedALBC-TRPO-v0", tag="260527_per_axis_floor", ts="260527_183358")
-    assert rid6 == "260527_183358_trpo_per_axis_floor"
+    assert rid6 == "trpo_per_axis_floor_260527_183358"
     # A tag without a date prefix is unchanged.
     plain = P.make_run_id("Isaac-ConstrainedALBC-TRPO-v0", tag="main_teacher", ts="260527_183358")
-    assert plain == "260527_183358_trpo_main_teacher"
+    assert plain == "trpo_main_teacher_260527_183358"
 
 
 def test_make_run_id_no_git_sha():
-    """Open Q #3: run_id must NOT contain a git sha (only ts + task_short [+ tag])."""
-    rid = P.make_run_id("Isaac-ConstrainedALBC-TRPO-v0", ts="2026-05-25_16-02-48")
-    # Exactly 3 underscore-joined fields: date_time_taskshort (date has its own _).
+    """Open Q #3: run_id must NOT contain a git sha (only task_short [+ tag] + ts)."""
+    rid = P.make_run_id("Isaac-ConstrainedALBC-TRPO-v0", ts="260525_160248")
+    # label-before-date: task_short + ts (ts contributes one underscore).
     assert rid.count("_") == 2
-    assert rid == "2026-05-25_16-02-48_trpo"
+    assert rid == "trpo_260525_160248"
 
 
 def test_run_ts_format_is_short():
     """run_id timestamp shortened to %y%m%d_%H%M%S (2026-05-26)."""
     from datetime import datetime
     assert P.RUN_TS_FORMAT == "%y%m%d_%H%M%S"
-    # A make_run_id without an explicit ts produces the short, 13-char timestamp prefix.
+    # A make_run_id without an explicit ts ends with the short, 13-char timestamp.
     rid = P.make_run_id("Isaac-ConstrainedALBC-TRPO-v0")
-    stamp = rid.rsplit("_", 1)[0]  # strip task_short
+    stamp = rid.split("_", 1)[1]  # strip leading task_short -> ts is the rest
     assert len(stamp) == 13  # 260526_160248
     datetime.strptime(stamp, P.RUN_TS_FORMAT)  # parses, else raises
+
+
+def test_make_run_id_label_before_date_order():
+    """Explicit guard: the timestamp is the TRAILING field, the label leads."""
+    rid = P.make_run_id("Isaac-ConstrainedALBC-TRPO-v0", tag="main_teacher", ts="260525_232805")
+    assert rid == "trpo_main_teacher_260525_232805"
+    assert rid.endswith("260525_232805")  # ts last
+    assert rid.startswith("trpo")          # label first
+
+
+def test_timestamp_from_log_dir_new_trailing_ts():
+    from pathlib import Path
+    assert P._timestamp_from_log_dir(Path("trpo_main_teacher_260525_232805")) == "260525_232805"
+
+
+def test_timestamp_from_log_dir_legacy_leading_ts():
+    from pathlib import Path
+    # old folders had ts at the front -- must still resolve (dual-accept legacy compat)
+    assert P._timestamp_from_log_dir(Path("260525_232805_trpo_main_teacher")) == "260525_232805"
 
 
 def test_timestamp_from_log_dir_accepts_short_and_legacy(tmp_path):
@@ -295,7 +315,8 @@ def test_emit_manifest_reuses_log_dir_timestamp(tmp_path):
     exp = tmp_path / "experiments"
     h = P.emit_run_manifest("Isaac-ConstrainedALBC-TRPO-v0", log_dir, experiments_root=str(exp))
     # run_id timestamp matches the training folder leaf -> no drift.
-    assert h.run_id == "2026-05-25_16-02-48_trpo"
+    # label-before-date (2026-06-05): task_short leads, ts (from the leaf) trails.
+    assert h.run_id == "trpo_2026-05-25_16-02-48"
     assert (h.root / P.MANIFEST_NAME).is_file()
 
 
@@ -343,7 +364,8 @@ def test_emit_manifest_records_config_and_tag(tmp_path):
         config={"num_envs": 4096, "seed": 30}, experiments_root=str(exp),
     )
     # tag flows into run_id; timestamp still from the trpo-named leaf.
-    assert h.run_id == "2026-05-25_16-02-48_ppo-enc_ablation"
+    # label-before-date (2026-06-05): <task_short>_<tag>_<ts>.
+    assert h.run_id == "ppo-enc_ablation_2026-05-25_16-02-48"
     loaded = P.read_manifest(h.root)
     assert loaded["config"] == {"num_envs": 4096, "seed": 30}
     assert loaded["task"] == "Isaac-ConstrainedALBC-PPO-Enc-v0"
