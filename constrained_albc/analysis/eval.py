@@ -710,6 +710,31 @@ def _summarize_latent(l_hat: np.ndarray, l_true: np.ndarray) -> dict:
 
 
 # ============================================================================
+# shared eval setup helpers (used by run_static / run_periodic / run_segmented)
+# ============================================================================
+
+def _resolve_eval_output_dir(resume_path, mode: str):
+    """Resolve the two universally-shared output-dir branches across run modes.
+
+    All three run funcs (static/periodic/segmented) begin output-dir resolution
+    with the same two checks: an explicit --output_dir override, then the
+    run_id-tree path via eval_dir_for_checkpoint (#2). This centralizes only
+    those two; each caller keeps its OWN mode-specific fallback (ood/robustness/
+    switching suffix, ts-based dir, student dir) because those genuinely differ.
+
+    Returns (output_dir, handled):
+      - (path, True)  -> output_dir is final; caller skips its fallback.
+      - (None, False) -> caller applies its mode-specific fallback.
+    """
+    if args_cli.output_dir:
+        return args_cli.output_dir, True
+    if resume_path and (run_eval_dir := eval_dir_for_checkpoint(resume_path, mode)) is not None:
+        # Checkpoint lives in a run_id tree -> write eval under experiments/<run_id>/eval/ (#2).
+        return str(run_eval_dir), True
+    return None, False
+
+
+# ============================================================================
 # static mode: run function (was eval_dr.py static main)
 # ============================================================================
 
@@ -831,15 +856,11 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         print(f"[INFO] v3 ood-range-scale {scale:.2f}: widened {widened} DR ranges by {(scale-1)*100:+.0f}%\n")
 
     # ---- Output directory ----
-    if args_cli.output_dir:
-        output_dir = args_cli.output_dir
-    elif resume_path and (_run_eval_dir := eval_dir_for_checkpoint(resume_path, "static")) is not None:
-        # Checkpoint lives in a run_id tree -> write eval under experiments/<run_id>/eval/ (#2).
-        output_dir = str(_run_eval_dir)
-    elif resume_path:
+    output_dir, _handled = _resolve_eval_output_dir(resume_path, "static")
+    if not _handled and resume_path:
         suffix = f"eval_dr_ood_{args_cli.ood_scale:.1f}x" if args_cli.ood_scale else "eval_dr"
         output_dir = os.path.join(os.path.dirname(resume_path), suffix)
-    else:
+    elif not _handled:
         ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         folder_name = task_name.removeprefix("Isaac-").lower().replace("-", "_").removesuffix("_v0")
         output_dir = os.path.join("logs", "eval_dr", folder_name, ts)
@@ -1356,14 +1377,10 @@ def run_periodic(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
                 run_agent_dict = None
 
     # ---- Output directory ----
-    if args_cli.output_dir:
-        output_dir = args_cli.output_dir
-    elif resume_path and (_run_eval_dir := eval_dir_for_checkpoint(resume_path, "periodic")) is not None:
-        # Checkpoint lives in a run_id tree -> write eval under experiments/<run_id>/eval/ (#2).
-        output_dir = str(_run_eval_dir)
-    elif resume_path:
+    output_dir, _handled = _resolve_eval_output_dir(resume_path, "periodic")
+    if not _handled and resume_path:
         output_dir = os.path.join(os.path.dirname(resume_path), "eval_dr_robustness")
-    else:
+    elif not _handled:
         ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         folder_name = task_name.removeprefix("Isaac-").lower().replace("-", "_").removesuffix("_v0")
         output_dir = os.path.join("logs", "eval_dr_robustness", folder_name, ts)
@@ -1741,14 +1758,10 @@ def run_segmented(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
             print(f"[WARN] Could not load run agent params: {e}")
 
     # Output dir -- student: put under <student_ckpt_dir>/../eval_dr_switching
-    if args_cli.output_dir:
-        output_dir = args_cli.output_dir
-    elif (_run_eval_dir := eval_dir_for_checkpoint(resume_path, "segmented")) is not None:
-        # Checkpoint lives in a run_id tree -> write eval under experiments/<run_id>/eval/ (#2).
-        output_dir = str(_run_eval_dir)
-    elif is_student_mode:
+    output_dir, _handled = _resolve_eval_output_dir(resume_path, "segmented")
+    if not _handled and is_student_mode:
         output_dir = os.path.join(os.path.dirname(os.path.dirname(resume_path)), "eval_dr_switching")
-    else:
+    elif not _handled:
         output_dir = os.path.join(os.path.dirname(resume_path), "eval_dr_switching")
     os.makedirs(output_dir, exist_ok=True)
     print(f"[INFO] Output: {output_dir}")
