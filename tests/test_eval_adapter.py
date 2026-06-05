@@ -12,6 +12,7 @@ PROFILE = os.path.join(REPO, ".omx", "profile", "metrics.yaml")
 ADAPTER = os.path.join(REPO, ".omx", "profile", "eval_adapter.py")
 FIXTURE_DIR = os.path.join(REPO, "tests", "fixtures", "eval")
 _FIXTURE_NPZ = os.path.join(FIXTURE_DIR, "data_none.npz")
+SEG_FIXTURE_DIR = os.path.join(REPO, "tests", "fixtures", "segmented")
 
 
 def _load_adapter():
@@ -81,3 +82,36 @@ def test_adapter_matches_engine_directly():
     mod = _load_adapter()
     out = mod.analyze_eval(FIXTURE_DIR)
     assert out == ref
+
+
+# --- segmented coverage (2026-06-05): post-switch transient via switching.py delegation ---
+
+def test_adapter_exposes_analyze_segmented():
+    """The adapter must expose analyze_segmented() for the segmented eval mode."""
+    mod = _load_adapter()
+    assert hasattr(mod, "analyze_segmented"), "adapter must expose analyze_segmented()"
+
+
+def test_analyze_segmented_returns_per_axis_transient():
+    """analyze_segmented delegates to _analyze.switching and returns per-level
+    per-axis post-switch transient stats (mean/p95/max), computed via numpy
+    reductions over the engine's _sw_all_post_switch extraction (no metric math
+    re-implemented in the adapter)."""
+    mod = _load_adapter()
+    out = mod.analyze_segmented(SEG_FIXTURE_DIR)
+    assert "levels" in out
+    assert "none" in out["levels"] and "hard" in out["levels"]
+    roll = out["levels"]["none"]["axes"]["roll"]["post_switch"]
+    assert "peak_mean" in roll and "peak_p95" in roll and "peak_max" in roll
+    assert roll["peak_max"] >= roll["peak_p95"] >= roll["peak_mean"] >= 0.0
+
+
+def test_segmented_cli_emits_json():
+    """The adapter's segmented subcommand is runnable and emits JSON."""
+    result = subprocess.run(
+        [sys.executable, ADAPTER, "segmented", SEG_FIXTURE_DIR],
+        capture_output=True, text=True, timeout=60,
+    )
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["levels"]["hard"]["axes"]["yaw"]["post_switch"]["peak_max"] >= 0.0
