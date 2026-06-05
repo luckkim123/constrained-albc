@@ -92,21 +92,23 @@ RUN_TS_FORMAT = "%y%m%d_%H%M%S"
 
 
 def make_run_id(task_id: str, tag: str | None = None, ts: str | None = None) -> str:
-    """Build a run_id ``<ts>_<task_short>[_<tag>]`` (design section 2-A).
+    """Build a run_id ``<task_short>[_<tag>]_<ts>`` (label-before-date, 2026-06-05).
 
-    The timestamp format (:data:`RUN_TS_FORMAT`, ``%y%m%d_%H%M%S``) matches train.py.
-    ``tag`` reuses the existing ``run_name``. git_sha is NOT included (Open Q #3 resolved
-    2026-05-25); the SHA lives in manifest.git.sha instead.
+    The label (task_short + optional tag) leads; the timestamp is the TRAILING field so
+    all output names read label-before-date consistently (matching the eval ``<mode>_<ts>``
+    convention). The timestamp format (:data:`RUN_TS_FORMAT`, ``%y%m%d_%H%M%S``) matches
+    train.py. ``tag`` reuses the existing ``run_name``. git_sha is NOT included (Open Q #3
+    resolved 2026-05-25); the SHA lives in manifest.git.sha instead.
     """
     stamp = ts or datetime.now().strftime(RUN_TS_FORMAT)
-    rid = f"{stamp}_{task_short(task_id)}"
+    label = task_short(task_id)
     if tag:
         # Strip a leading date prefix from the tag so the run_id date is not doubled
-        # (run_id already starts with the timestamp). "20260527_per_axis_floor" -> "per_axis_floor".
+        # (run_id already ends with the timestamp). "20260527_per_axis_floor" -> "per_axis_floor".
         tag = _TAG_DATE_PREFIX.sub("", tag)
         if tag:
-            rid += f"_{tag}"
-    return rid
+            label += f"_{tag}"
+    return f"{label}_{stamp}"
 
 
 @dataclass
@@ -512,20 +514,20 @@ def _timestamp_from_log_dir(log_dir: Path) -> str | None:
     """
     leaf = log_dir.name
     parts = leaf.split("_")
-    # Current short format: a single underscore-joined field pair (260525_160248).
-    if len(parts) >= 2:
-        candidate = f"{parts[0]}_{parts[1]}"
-        try:
-            datetime.strptime(candidate, RUN_TS_FORMAT)
-            return candidate
-        except ValueError:
-            pass
-        # Legacy long format: 2026-05-25_16-02-48.
-        try:
-            datetime.strptime(candidate, "%Y-%m-%d_%H-%M-%S")
-            return candidate
-        except ValueError:
-            return None
+    if len(parts) < 2:
+        return None
+    # Dual-accept (2026-06-05 label-before-date flip):
+    #   new format -> ts is the TRAILING field-pair (trpo_main_teacher_260525_232805)
+    #   legacy     -> ts is the LEADING field-pair  (260525_232805_trpo_main_teacher)
+    # Try trailing first (current), then leading (older folders). RUN_TS_FORMAT (short)
+    # is what train.py emits; the long legacy format is kept for older resolves.
+    for candidate in (f"{parts[-2]}_{parts[-1]}", f"{parts[0]}_{parts[1]}"):
+        for fmt in (RUN_TS_FORMAT, "%Y-%m-%d_%H-%M-%S"):
+            try:
+                datetime.strptime(candidate, fmt)
+                return candidate
+            except ValueError:
+                continue
     return None
 
 

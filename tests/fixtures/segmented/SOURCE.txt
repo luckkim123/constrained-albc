@@ -1,0 +1,36 @@
+Segmented eval fixture for test_eval_adapter.py (segmented coverage).
+
+summary_segmented.json is a minimal SYNTHETIC fixture (2 levels none/hard, 3 segs,
+4 envs) matching the real summary_segmented.json schema produced by
+constrained_albc/analysis/eval.py segmented. It exercises analyze_segmented()'s
+delegation to _analyze.switching._sw_all_post_switch without needing a real GPU eval.
+
+A real segmented eval dir (for higher-fidelity manual checks) lives at e.g.
+  experiments/rsl_rl/albc_trpo_student/260526_043607_trpo_student_tcn/eval/segmented_2026-05-26_05-14-23
+
+Regenerate the synthetic fixture:
+
+  python3 - <<'PY'
+  import json, os
+  def seg(idx):
+      return {
+          'seg_idx': idx,
+          'peak_roll_deg': [1.0+idx, 2.0+idx, 1.5+idx, 3.0+idx],
+          'peak_pitch_deg': [0.5+idx, 1.0+idx, 0.8+idx, 1.2+idx],
+          'peak_yaw_deg': [2.0+idx, 2.5+idx, 2.2+idx, 3.5+idx],
+          'ss_roll_deg': [0.3, 0.4, 0.35, 0.5],
+          'ss_pitch_deg': [0.2, 0.25, 0.22, 0.3],
+          'ss_yaw_deg': [0.6, 0.7, 0.65, 0.8],
+          'pos_drift_peak': [0.05+0.01*idx, 0.06, 0.055, 0.08],
+          'pos_drift_ss': [0.01, 0.012, 0.011, 0.015],
+          'pos_x_ss': [0.005]*4, 'pos_y_ss': [0.004]*4, 'pos_z_ss': [0.003]*4,
+      }
+  summary = {
+      'metrics': {lvl: {'per_seg': [seg(i) for i in range(3)], 'num_envs': 4, 'num_segments': 3}
+                  for lvl in ['none', 'hard']},
+      'config': {'num_segments': 3, 'segment_duration': 5.0, 'seed': 42, 'num_envs': 4},
+  }
+  d = 'tests/fixtures/segmented'
+  os.makedirs(d, exist_ok=True)
+  json.dump(summary, open(os.path.join(d, 'summary_segmented.json'), 'w'), indent=2)
+  PY

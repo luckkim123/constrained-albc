@@ -76,3 +76,7 @@
 - **Pages:** engine_gap_eval_adapter_only_covers_static_periodic_unsupported_.md
 - **Summary:** created 'engine-gap: eval adapter only covers static; periodic unsupported, segmented partial'
 
+## [2026-06-05T10:43:00.649099] add
+- **Pages:** engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md
+- **Summary:** created 'engine-gap: eval adapter covers static + segmented; periodic still unsupported'
+

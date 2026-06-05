@@ -1,6 +1,6 @@
 # Wiki Index
 
-> 12 pages | Last updated: 2026-06-05T10:15:51.918237
+> 13 pages | Last updated: 2026-06-05T10:43:00.649099
 
 ## convention
 
@@ -13,6 +13,7 @@
 
 ## decision
 
+- [engine-gap: eval adapter covers static + segmented; periodic still unsupported](engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md) - # engine-gap: eval adapter covers static + segmented; periodic still unsupported
 - [engine-gap: eval adapter only covers static; periodic unsupported, segmented partial](engine_gap_eval_adapter_only_covers_static_periodic_unsupported_.md) - # engine-gap: eval adapter only covers static; periodic unsupported, segmente...
 - [eval analysis: core does stats, adapter does heavy-tail](eval_analysis_core_does_stats_adapter_does_heavy_tail.md) - # eval analysis: core does stats, adapter does heavy-tail
 
