@@ -35,6 +35,7 @@ _MODULE_PATH = (
     / "_z_ablation.py"
 )
 _spec = importlib.util.spec_from_file_location("_z_ablation", _MODULE_PATH)
+assert _spec is not None and _spec.loader is not None, f"cannot load {_MODULE_PATH}"
 _mod = importlib.util.module_from_spec(_spec)
 sys.modules["_z_ablation"] = _mod
 _spec.loader.exec_module(_mod)
