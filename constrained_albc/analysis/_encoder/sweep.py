@@ -23,7 +23,7 @@ from common import (  # type: ignore[import-not-found]
     get_encoder_architecture_from_checkpoint,
 )
 
-from ._shared import build_encoder_mlp
+from ._shared import build_encoder_mlp, load_encoder_from_state_dict
 
 
 @dataclass
@@ -56,26 +56,9 @@ def _load_encoder_for_sweep(
     ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
     state_dict = ckpt["model_state_dict"]
 
-    encoder_state = {
-        k.removeprefix("encoder."): v
-        for k, v in state_dict.items()
-        if k.startswith("encoder.")
-    }
-
-    # Detect pre-softsign LayerNorm from checkpoint
-    has_output_norm = "_encoder_output_norm.weight" in state_dict
-    encoder = build_encoder_mlp(
-        arch.hidden_dims, arch.latent_dim, arch.input_dim, arch.output_activation,
-        output_norm=has_output_norm,
-    )
-    if has_output_norm:
-        # LayerNorm sits after last Linear, before activation in the Sequential
-        ln_idx = len(arch.hidden_dims) * 2 + 1
-        encoder_state[f"{ln_idx}.weight"] = state_dict["_encoder_output_norm.weight"]
-        encoder_state[f"{ln_idx}.bias"] = state_dict["_encoder_output_norm.bias"]
+    encoder = load_encoder_from_state_dict(state_dict, arch)
+    if "_encoder_output_norm.weight" in state_dict:
         print("[INFO] Detected pre-softsign LayerNorm in checkpoint.")
-    encoder.load_state_dict(encoder_state)
-    encoder.eval()
 
     # Detect normalization mode: static min-max or EmpiricalNorm
     # Static bounds can be in model_state_dict (online) or top-level (offline)

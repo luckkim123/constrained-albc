@@ -51,3 +51,39 @@ def build_encoder_mlp(
     elif output_activation == "softsign":
         layers.append(_Softsign())
     return nn.Sequential(*layers)
+
+
+def load_encoder_from_state_dict(state_dict: dict, arch) -> nn.Sequential:
+    """Reconstruct + load the encoder MLP from a checkpoint state_dict.
+
+    Detects pre-softsign LayerNorm (saved separately as
+    _encoder_output_norm.*) and injects it at the correct Sequential index.
+    This is the single correct loader; debug.py and sweep.py both call it.
+
+    Args:
+        state_dict: Full model_state_dict from the checkpoint (not pre-filtered).
+        arch: Object with hidden_dims, latent_dim, input_dim, output_activation.
+
+    Returns:
+        Encoder MLP in eval mode.
+    """
+    encoder_state = {
+        k.removeprefix("encoder."): v
+        for k, v in state_dict.items()
+        if k.startswith("encoder.")
+    }
+    has_output_norm = "_encoder_output_norm.weight" in state_dict
+    encoder = build_encoder_mlp(
+        arch.hidden_dims,
+        arch.latent_dim,
+        arch.input_dim,
+        arch.output_activation,
+        output_norm=has_output_norm,
+    )
+    if has_output_norm:
+        ln_idx = len(arch.hidden_dims) * 2 + 1
+        encoder_state[f"{ln_idx}.weight"] = state_dict["_encoder_output_norm.weight"]
+        encoder_state[f"{ln_idx}.bias"] = state_dict["_encoder_output_norm.bias"]
+    encoder.load_state_dict(encoder_state)
+    encoder.eval()
+    return encoder

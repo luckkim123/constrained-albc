@@ -17,23 +17,16 @@ from common import (  # type: ignore[import-not-found]
     resolve_run_path,
 )
 
-from ._shared import build_encoder_mlp
+from ._shared import build_encoder_mlp, load_encoder_from_state_dict
 
 
 def _load_encoder_from_ckpt(ckpt_data: dict, arch) -> nn.Sequential:
-    """Build and load encoder MLP from checkpoint state dict (debug mode)."""
-    sd = ckpt_data["model_state_dict"]
-    encoder_state = {
-        k.removeprefix("encoder."): v
-        for k, v in sd.items()
-        if k.startswith("encoder.")
-    }
-    encoder = build_encoder_mlp(
-        arch.hidden_dims, arch.latent_dim, arch.input_dim, arch.output_activation,
-    )
-    encoder.load_state_dict(encoder_state)
-    encoder.eval()
-    return encoder
+    """Build and load encoder MLP from checkpoint (debug mode).
+
+    Delegates to the shared loader so LayerNorm checkpoints load correctly
+    (previously debug silently dropped the pre-softsign LayerNorm).
+    """
+    return load_encoder_from_state_dict(ckpt_data["model_state_dict"], arch)
 
 
 def _print_weight_stats(ckpt_data: dict, key_filter: str = "") -> None:
