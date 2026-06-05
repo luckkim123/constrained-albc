@@ -75,6 +75,13 @@ parser.add_argument(
 )
 parser.add_argument("--export_io_descriptors", action="store_true", default=False, help="Export IO descriptors.")
 parser.add_argument(
+    "--replay_curriculum",
+    type=str,
+    default=None,
+    help="Path to a curriculum_trajectory.json to replay (frozen DR curriculum). "
+    "Overrides DoraemonCfg.replay_curriculum_path.",
+)
+parser.add_argument(
     "--ray-proc-id", "-rid", type=int, default=None, help="Automatically configured by Ray integration, otherwise None."
 )
 # append RSL-RL cli arguments
@@ -171,6 +178,11 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     agent_cfg.max_iterations = (
         args_cli.max_iterations if args_cli.max_iterations is not None else agent_cfg.max_iterations
     )
+
+    # CLI --replay_curriculum overrides DoraemonCfg.replay_curriculum_path (CLI wins).
+    if args_cli.replay_curriculum is not None:
+        if getattr(env_cfg, "doraemon", None) is not None:
+            env_cfg.doraemon.replay_curriculum_path = args_cli.replay_curriculum
 
     # set the environment seed
     env_cfg.seed = agent_cfg.seed
