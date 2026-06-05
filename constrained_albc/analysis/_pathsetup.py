@@ -13,9 +13,8 @@ Import this module at the top of any sub-package __init__.py that needs to
 reach analysis/ siblings before they are on sys.path.  Idempotent: safe to
 call from multiple modules.
 
-Usage (in sub-package __init__.py or any module that needs common):
-    from constrained_albc.analysis import _pathsetup  # noqa: F401
-    -- or, when running as a script/via entrypoint shim --
+Usage (in any sub-package module that needs to reach analysis/ siblings; the
+analysis/ dir is on sys.path via the entrypoint shim, so import by bare name):
     import _pathsetup  # noqa: F401
 """
 from __future__ import annotations

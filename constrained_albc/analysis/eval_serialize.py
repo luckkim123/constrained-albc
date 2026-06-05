@@ -16,7 +16,10 @@ import numpy as np
 
 
 def write_eval_npz(output_dir: str, level: str, array_data: dict) -> str:
-    """Write per-level eval arrays to data_<level>.npz (compressed)."""
+    """Write per-level eval arrays to data_<level>.npz (compressed).
+
+    Returns the written path as a string.
+    """
     path = os.path.join(output_dir, f"data_{level}.npz")
     np.savez_compressed(path, **array_data)
     return path
