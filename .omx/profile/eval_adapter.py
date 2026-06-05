@@ -34,5 +34,14 @@ _T_ATT, _T_LV, _T_YAW = 20.0, 0.5, 0.5
 
 
 def analyze_eval(eval_dir: str, levels=None) -> dict:
-    """Placeholder filled in Task 3."""
-    raise NotImplementedError
+    """Heavy-tail / sample-mean-divergence / cross-axis-corr per DR level.
+
+    Pure delegation to the sim-free driver _analyze.eval_dr._ed_analyze_run.
+    Computes nothing here, so it cannot drift from the engine of record.
+    Basic stats (mean/std/CV) are intentionally NOT here -- the omx core
+    already produces them from summary.json via `omx reduce` (DRY).
+    """
+    from _analyze.eval_dr import _ed_analyze_run  # sim-free
+
+    lvls = list(levels) if levels else list(_DEFAULT_LEVELS)
+    return _ed_analyze_run(eval_dir, lvls, _T_ATT, _T_LV, _T_YAW)
