@@ -6,6 +6,16 @@
 
 No matplotlib, no JSON I/O. Importable on plain python3 so omx can call
 _compute_enhanced_metrics / _process_run without booting Isaac Sim.
+
+TODO(metric-drift): steady-state / tracking-error metric logic is duplicated
+across THREE drifted implementations that are NOT byte-equivalent and were left
+separate on purpose (merging risks changing metric values -- out of scope for the
+structural refactor):
+  - this module: _per_env_ss_stats / _compute_enhanced_metrics (per-env shape)
+  - _eval_dr/metrics.py: att_ss_errors / lin_vel_ss_errors / yaw_ss_errors lists
+  - compare.py: compute_level_metrics ("verbatim from compare_dr.py")
+Reconciling them into one source is a separate, risk-bearing change requiring
+before/after numeric equivalence checks on real eval npz.
 """
 
 from __future__ import annotations
