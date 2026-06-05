@@ -9,5 +9,8 @@ experiments/
 .omc/
 docs/superpowers/
 
+# npz-replay test fixtures (large binary eval outputs; provenance in SOURCE.txt)
+tests/fixtures/
+
 # omx wiki runtime lock
 .omx/registry/.wiki-lock
