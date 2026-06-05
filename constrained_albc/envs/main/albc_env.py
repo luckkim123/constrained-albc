@@ -360,8 +360,12 @@ class ALBCEnv(DirectRLEnv):
                 with open(replay_path) as f:
                     recording = json.load(f)
                 specs = build_param_specs(self.cfg.randomization, _PARAM_DEFS, _NOMINAL_OVERRIDES)
-                self._doraemon = CurriculumReplayer(recording, specs, self.device)
-                logger.info("[DORAEMON] Replaying recorded curriculum from %s", replay_path)
+                self._doraemon = CurriculumReplayer(recording, specs, self.device, cfg=doraemon_cfg)
+                logger.warning(
+                    "[DORAEMON] REPLAY MODE: frozen curriculum from %s (online optimizer OFF). "
+                    "This is a baseline-comparison run, not live DR.",
+                    replay_path,
+                )
             else:
                 self._doraemon = DoraemonScheduler(
                     doraemon_cfg,
