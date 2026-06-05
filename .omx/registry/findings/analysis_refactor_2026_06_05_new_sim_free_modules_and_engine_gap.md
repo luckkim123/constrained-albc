@@ -26,6 +26,28 @@ All importable with `python3 -c "import sys; sys.path.insert(0,'constrained_albc
 - _encoder/_shared.py : now exports load_encoder_from_state_dict(state_dict, arch) — single correct loader detecting pre-softsign LayerNorm. Both debug.py and sweep.py delegate to it. Previously debug.py silently dropped LayerNorm (latent correctness bug fixed).
 - _pathsetup.py : idempotent sys.path shim; inserts analysis/ dir. Import at start of any sub-package module that needs `from common import`.
 
+## omx import pattern for the sim-free modules (verified 2026-06-05)
+
+The correct and SUFFICIENT way for omx (eval_adapter / omx_paths) to import the
+metric core, plotting, and serialization without booting Isaac Sim is: put the
+`analysis/` dir on sys.path (one line), then import the packages by name:
+
+    import sys, os
+    sys.path.insert(0, "<repo>/constrained_albc/analysis")
+    from _analyze import recompute_metrics    # _analyze/ is a real package (__init__.py)
+    from eval_plots import generate_plots
+    from eval_serialize import write_eval_npz
+
+That single sys.path line is enough — `_analyze` is a proper package so its
+internal relative imports (`from ._shared import ...`) and sibling imports
+(`from common import ...`) all resolve. The sub-package modules do NOT each need
+their own `import _pathsetup`: only `_analyze/student_latent.py` wires it, and
+adding it to the others changes nothing about omx's ability to import them (it is
+pure redundant defense). Conversely the 3 entrypoints (eval.py / analyze.py /
+encoder_tools.py) keep their raw `sys.path.insert(self_dir)` BY DESIGN — they are
+the ones that establish the path, so they cannot `import _pathsetup` (chicken-egg).
+Net: the "_pathsetup wiring scope-gap" is CLOSED with no work owed.
+
 ## eval.py status after refactor
 
 eval.py is now ~1885 lines (was 3414). Still OFF-LIMITS (boots Isaac Sim at top-level import). Remaining content: rollout loop, env setup, runner/policy load, student wrapper — all result-PRODUCING code. The sim-free plotting/serialization/DR-config is now in eval_plots.py / eval_serialize.py / dr_config.py.
