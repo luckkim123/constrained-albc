@@ -1609,6 +1609,10 @@ def run_evaluation(
     yaw_rate = np.zeros((total_steps, num_envs))
     # Action magnitude
     action_magnitude = np.zeros((total_steps, num_envs))
+    # z-ablation diagnostic (#1-A): ||action(z) - action(z_ablated)|| per env-step.
+    # Only populated when the policy has an active z-ablation; stays zeros otherwise.
+    delta_action = np.zeros((total_steps, num_envs))
+    _ablation_active = getattr(policy_nn, "_z_ablation", None) is not None
     # Termination
     terminated = np.zeros((total_steps, num_envs), dtype=bool)
     time_to_failure = np.full(num_envs, float("nan"))
@@ -1636,7 +1640,15 @@ def run_evaluation(
         raw_env._vel_cmd_lin[:, 2] = targets["vz"][step_idx]
 
         with torch.inference_mode():
-            actions = policy(obs)
+            actions = policy(obs)  # ablated action (z_ablation active) -> stepped into env
+            if _ablation_active:
+                _prev = policy_nn._z_ablation
+                policy_nn._z_ablation = None  # restore TRUE z for one diagnostic forward
+                actions_normal = policy(obs)
+                policy_nn._z_ablation = _prev  # re-ablate (cache for "mean" untouched)
+                delta_action[step_idx] = (
+                    (actions_normal - actions).norm(dim=-1).detach().cpu().numpy()
+                )
             obs, _, dones, _ = env.step(actions)
             if hasattr(policy_nn, "reset"):
                 policy_nn.reset(dones)
@@ -1704,6 +1716,7 @@ def run_evaluation(
         "lin_vel_norm": lin_vel_norm,
         "yaw_rate": yaw_rate,
         "action_magnitude": action_magnitude,
+        "delta_action": delta_action,
         "terminated": terminated,
         "time_to_failure": time_to_failure,
         "steps_per_segment": steps_per_seg,
@@ -2033,6 +2046,19 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
                 policy_nn = runner.alg.actor_critic
 
         print(f"[INFO] Loaded {runner_cls_name} from {resume_path}")
+
+        # z-ablation diagnostic (encoder gap #1): enable on the loaded policy network.
+        if getattr(args_cli, "z_ablation", None) is not None:
+            if not hasattr(policy_nn, "set_z_ablation"):
+                raise AttributeError(
+                    f"--z_ablation set but policy {type(policy_nn).__name__} has no "
+                    "set_z_ablation (not an ActorCriticEncoder)"
+                )
+            nominal_obs = None
+            if args_cli.z_ablation == "mean":
+                nominal_obs = env.get_observations()
+            policy_nn.set_z_ablation(args_cli.z_ablation, nominal_obs=nominal_obs)
+            print(f"[INFO] z-ablation ENABLED: mode={args_cli.z_ablation}")
     else:
         action_dim = env_cfg.action_space
         policy = lambda obs: torch.zeros(num_envs, action_dim, device=device)  # noqa: E731
