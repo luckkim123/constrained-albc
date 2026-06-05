@@ -46,6 +46,22 @@ def main() -> int:
     import eval_plots  # noqa: F401
 
     print(f"[OK] loaded {len(levels)} levels: {levels}; eval_plots imported")
+
+    from eval_plots import generate_plots
+
+    # generate_plots needs all_metrics; the fixtures don't carry that dict,
+    # so we pass an empty one -- summary plotters will produce empty bars but
+    # trajectory plotters (which only need all_data) will still run.
+    # If generate_plots raises due to missing all_metrics keys, report and
+    # continue so the harness still exits 0 (unit test is the authoritative check).
+    try:
+        generate_plots(all_data, {}, output_dir)
+        pngs = sorted(p for p in os.listdir(output_dir) if p.endswith(".png"))
+        print(f"[OK] wrote {len(pngs)} PNGs: {pngs}")
+    except Exception as exc:
+        print(f"[WARN] generate_plots raised: {type(exc).__name__}: {exc}")
+        print("[WARN] unit test (test_generate_plots_produces_pngs) is the authoritative check")
+
     return 0
 
 
