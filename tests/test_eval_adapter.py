@@ -59,3 +59,14 @@ def test_cli_emits_json():
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
     assert payload["levels"]["none"]["axes"]["roll"]["heavy_tail"]["peak_max"] >= 0.0
+
+
+def test_adapter_matches_engine_directly():
+    """Adapter output must be byte-equal to calling _ed_analyze_run directly."""
+    sys.path.insert(0, os.path.join(REPO, "constrained_albc", "analysis"))
+    from _analyze.eval_dr import _ed_analyze_run  # noqa: E402
+
+    ref = _ed_analyze_run(FIXTURE_DIR, ["none", "soft", "medium", "hard"], 20.0, 0.5, 0.5)
+    mod = _load_adapter()
+    out = mod.analyze_eval(FIXTURE_DIR)
+    assert out == ref
