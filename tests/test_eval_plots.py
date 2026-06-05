@@ -59,6 +59,26 @@ def test_bar_subplot_applies_ylim_and_yerr():
     plt.close(fig)
 
 
+def test_collect_metric_across_levels():
+    from eval_plots import _collect_metric_across_levels
+
+    # real input shape: all_metrics[level]["num_segments"] + ["per_seg"][seg][key]
+    # the func iterates range(1, num_segments), so seg 0 is ignored
+    # int-keyed per_seg; returns (means, stds) via np.nanmean/np.nanstd
+    all_metrics = {
+        "none": {"num_segments": 2, "per_seg": {0: {"ss": [9.0]}, 1: {"ss": [0.1, 0.3]}}},
+        "hard": {"num_segments": 2, "per_seg": {0: {"ss": [9.0]}, 1: {"ss": [0.5, 0.7]}}},
+    }
+    means, stds = _collect_metric_across_levels(all_metrics, ["none", "hard"], "ss", stat="mean")
+    assert len(means) == 2 and len(stds) == 2
+    # seg 0 is ignored; mean of [0.1, 0.3] = 0.2, mean of [0.5, 0.7] = 0.6
+    assert abs(means[0] - 0.2) < 1e-9
+    assert abs(means[1] - 0.6) < 1e-9
+    # nanstd of [0.1, 0.3] = 0.1, nanstd of [0.5, 0.7] = 0.1
+    assert abs(stds[0] - 0.1) < 1e-9
+    assert abs(stds[1] - 0.1) < 1e-9
+
+
 def test_generate_plots_produces_pngs(tmp_path):
     """generate_plots on a synthetic all_data/all_metrics dict writes the expected PNGs."""
     from eval_plots import generate_plots
