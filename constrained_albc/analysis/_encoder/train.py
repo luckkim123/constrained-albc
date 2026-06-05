@@ -14,6 +14,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset, random_split
 
+from ._shared import build_encoder_mlp
+
 
 class _OfflineEncoder(nn.Module):
     """Encoder + value head for offline training.
@@ -48,15 +50,13 @@ class _OfflineEncoder(nn.Module):
             self.register_buffer("_enc_obs_lower", torch.zeros(privileged_dim))
             self.register_buffer("_enc_obs_upper", torch.ones(privileged_dim))
 
-        # Encoder MLP (must match ActorCriticEncoder.encoder structure)
-        layers: list[nn.Module] = []
-        in_dim = privileged_dim
-        for h_dim in encoder_hidden_dims:
-            layers.append(nn.Linear(in_dim, h_dim))
-            layers.append(nn.ELU())
-            in_dim = h_dim
-        layers.append(nn.Linear(in_dim, encoder_latent_dim))
-        self.encoder = nn.Sequential(*layers)
+        # Encoder MLP (must match ActorCriticEncoder.encoder structure).
+        # output_activation="none": softsign is applied externally in encode()
+        # to match ActorCriticEncoder._encode() exactly.
+        self.encoder = build_encoder_mlp(
+            list(encoder_hidden_dims), encoder_latent_dim, privileged_dim,
+            output_activation="none",
+        )
 
         # Value prediction head (disposable -- only encoder weights are saved)
         self.value_head = nn.Linear(policy_obs_dim + encoder_latent_dim, 1)

@@ -16,9 +16,10 @@ import numpy as np
 
 from ._shared import _load_npz
 
-# Local DR constants (recompute_eval_summary.py defined its own, not from common)
-_RC_DR_LEVELS = ["none", "soft", "medium", "hard"]
-_RC_DR_SCALE  = {"none": 0.0, "soft": 0.3, "medium": 0.6, "hard": 1.0}
+# DR constants sourced from common (single definition); aliases kept for callers
+# that imported _RC_DR_LEVELS/_RC_DR_SCALE directly from this module.
+from common import DR_LEVELS as _RC_DR_LEVELS  # type: ignore[import-not-found]  # noqa: E402
+from common import DR_SCALE as _RC_DR_SCALE    # type: ignore[import-not-found]  # noqa: E402
 
 _AX_LIN = [("lin_vel_x", "target_vx", "vx"),
            ("lin_vel_y", "target_vy", "vy"),
