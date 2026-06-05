@@ -233,6 +233,7 @@ import torch
 from common import DR_COLORS
 from common import DR_LEVELS as _DEFAULT_DR_LEVELS
 from common import DR_SCALE as _DEFAULT_DR_SCALE
+from eval_plots import _bar_subplot  # type: ignore[import-not-found]  # noqa: E402
 from matplotlib.ticker import MultipleLocator
 from paths import eval_dir_for_checkpoint  # type: ignore[import-not-found]  # noqa: E402  run_id-tree eval output (#2)
 from rsl_rl.runners import OnPolicyRunner
@@ -713,18 +714,6 @@ def apply_dr_mid_episode(raw_env, dr_cfg: DomainRandomizationCfg) -> None:
 # ============================================================================
 # Plots
 # ============================================================================
-
-
-def _bar_subplot(ax, x, values, colors, xlabels, ylabel, title, ylim=None, yerr=None):
-    """Render a single bar chart subplot with consistent styling."""
-    ax.bar(x, values, color=colors, yerr=yerr, capsize=4, error_kw={"linewidth": 1.2})
-    ax.set_xticks(x)
-    ax.set_xticklabels(xlabels, fontsize=9)
-    ax.set_ylabel(ylabel)
-    ax.set_title(title)
-    if ylim:
-        ax.set_ylim(*ylim)
-    ax.grid(True, alpha=0.3, axis="y")
 
 
 def _plot_dr_distributions(
