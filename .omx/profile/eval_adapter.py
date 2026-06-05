@@ -95,6 +95,12 @@ def analyze_segmented(eval_dir: str, levels=None) -> dict:
     for lvl in lvls:
         if lvl not in avail:
             continue
+        # _sw_all_post_switch concatenates per_seg[1:] (segs after the first switch); a
+        # level with <2 segments has no post-switch data -> skip it rather than crash on
+        # np.concatenate([]). segmented eval is defined with N>=2 segments, so this only
+        # guards malformed/degenerate input.
+        if len(run["summary"]["metrics"][lvl].get("per_seg", [])) < 2:
+            continue
         axes: dict = {}
         for axis, engine_key in _SEG_AXES.items():
             vals = _sw_all_post_switch(run, lvl, engine_key)  # segs 1..N, env x seg

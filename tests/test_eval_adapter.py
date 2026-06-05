@@ -113,6 +113,27 @@ def test_analyze_segmented_returns_per_axis_transient():
     assert roll["peak_max"] >= roll["peak_p95"] >= roll["peak_mean"] >= 0.0
 
 
+def test_analyze_segmented_handles_single_segment_gracefully(tmp_path):
+    """A level whose per_seg has only seg 0 (no DR switch) has no post-switch data.
+    The adapter must skip it gracefully, NOT crash on np.concatenate([])."""
+    import json
+    seg_dir = tmp_path / "seg_single"
+    seg_dir.mkdir()
+    summary = {
+        "metrics": {
+            "none": {"per_seg": [
+                {"seg_idx": 0, "peak_roll_deg": [1.0], "peak_pitch_deg": [0.5], "peak_yaw_deg": [2.0]},
+            ], "num_envs": 1, "num_segments": 1},
+        },
+        "config": {"num_envs": 1, "num_segments": 1},
+    }
+    (seg_dir / "summary_segmented.json").write_text(json.dumps(summary))
+    mod = _load_adapter()
+    out = mod.analyze_segmented(str(seg_dir))
+    # 'none' has no post-switch segments -> skipped (not a crash), so levels is empty here.
+    assert out["levels"] == {}, f"expected empty levels, got {out['levels']}"
+
+
 def test_segmented_cli_emits_json():
     """The adapter's segmented subcommand is runnable and emits JSON."""
     _seg_fixture_or_skip()
