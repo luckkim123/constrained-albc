@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- DORAEMON curriculum replay wiring. The runner flushes
+  `curriculum_trajectory.json` into the run dir per checkpoint and passes the RL
+  iteration into `_doraemon.step(iteration=...)`. `_init_doraemon` constructs a
+  `CurriculumReplayer` (frozen replay) when `replay_curriculum_path` (config) or
+  `--replay_curriculum` (CLI, wins) is set, otherwise the live `DoraemonScheduler`.
+  Lets MDP / no-encoder baselines replay the cmdp run's exact DR curriculum so the
+  only controlled difference is the algorithm. Engine lives in marinelab.
+
 ### Changed
 
 - run_id shortened: `%Y-%m-%d_%H-%M-%S` -> `%y%m%d_%H%M%S` (`paths.RUN_TS_FORMAT`), so a
