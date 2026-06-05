@@ -42,6 +42,7 @@ import torch.nn.functional as F
 from rsl_rl.networks import MLP, EmpiricalNormalization
 
 from ._policy_base import PolicyBase
+from ._z_ablation import apply_z_ablation, validate_ablation_mode
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +93,10 @@ class ActorCriticEncoder(PolicyBase):
 
         self.encoder_latent_dim = encoder_latent_dim
         self._critic_uses_z = critic_uses_z
+
+        # z-ablation (inference-time encoder diagnostic; None = disabled, training-safe)
+        self._z_ablation: str | None = None
+        self._z_ablation_value: torch.Tensor | None = None
 
         # Critic input dim depends on critic_uses_z
         num_critic_obs = policy_obs_dim + privileged_dim
@@ -208,7 +213,35 @@ class ActorCriticEncoder(PolicyBase):
             p_t = (2.0 * p_t - self._enc_obs_midpoint) / self._enc_obs_range
         else:
             p_t = self.encoder_obs_normalizer(p_t)
-        return F.softsign(self._encoder_output_norm(self.encoder(p_t)))
+        z = F.softsign(self._encoder_output_norm(self.encoder(p_t)))
+        return apply_z_ablation(z, self._z_ablation, self._z_ablation_value)
+
+    def set_z_ablation(
+        self, mode: "str | None", nominal_obs: "TensorDict | None" = None
+    ) -> None:
+        """Enable/disable inference-time z-ablation (encoder gap-#1 diagnostic).
+
+        mode None  -> disabled (default; training/eval unchanged).
+        mode "zero" -> _encode returns zeros (latent carries no information).
+        mode "mean" -> _encode returns encode(nominal_obs), cached now.
+        Invalid mode or "mean" without nominal_obs -> ValueError (loud-fail).
+        """
+        validate_ablation_mode(mode)
+        if mode == "mean":
+            if nominal_obs is None:
+                raise ValueError("z_ablation 'mean' requires nominal_obs to build the cache")
+            prev = self._z_ablation
+            self._z_ablation = None  # force true encoder output for the cache
+            try:
+                with torch.no_grad():
+                    self._z_ablation_value = (
+                        self._encode(nominal_obs).mean(dim=0, keepdim=True).detach()
+                    )
+            finally:
+                self._z_ablation = prev
+        else:
+            self._z_ablation_value = None
+        self._z_ablation = mode
 
     def _get_actor_obs(self, obs: TensorDict) -> torch.Tensor:
         """Actor observation: cat([normalize(o_t), z_raw]).

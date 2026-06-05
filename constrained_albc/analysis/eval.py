@@ -147,11 +147,10 @@ sp_static.add_argument("--encoder_type", type=str, choices=["tcn", "gru"], defau
 sp_static.add_argument(
     "--z_ablation",
     type=str,
-    choices=["zero", "mean"],
     default=None,
-    help="Ablate the encoder latent z during inference: 'zero' replaces z with zeros; "
-         "'mean' replaces z with its per-step mean across envs. Records per-step "
-         "||action(z) - action(z_ablated)|| into z_ablation_summary.json (#1-A diagnostic).",
+    choices=["zero", "mean"],
+    help="Inference-time encoder z-ablation (gap-#1 diagnostic): zero=z->0, "
+    "mean=z->encode(nominal). Unset=normal eval (default).",
 )
 
 # ----------------------------------------------------------------------------
@@ -601,8 +600,9 @@ _MAT_VAR_DESC: dict[str, tuple[str, str]] = {
     "lin_vel_y":        ("m/s",      "body-frame sway velocity, shape (T, num_envs)"),
     "lin_vel_z":        ("m/s",      "body-frame heave velocity, shape (T, num_envs)"),
     "lin_vel_norm":     ("m/s",      "linear velocity magnitude, shape (T, num_envs)"),
-    "action_magnitude": ("unitless", "L2 norm of the 8-D action, shape (T, num_envs)"),
-    "terminated":       ("bool",     "per-step termination flag, shape (T, num_envs)"),
+    "action_magnitude": ("unitless",     "L2 norm of the 8-D action, shape (T, num_envs)"),
+    "delta_action":     ("action-norm", "||a(z) - a(z_ablated)|| per env-step; z-ablation diagnostic (#1-A); (T, num_envs); zeros when ablation off"),
+    "terminated":       ("bool",        "per-step termination flag, shape (T, num_envs)"),
     "time_to_failure":  ("s",        "time of first termination per env, shape (1, num_envs)"),
     "target_roll_deg":  ("deg",      "commanded roll setpoint, shape (1, T)"),
     "target_pitch_deg": ("deg",      "commanded pitch setpoint, shape (1, T)"),
@@ -1583,7 +1583,6 @@ def run_evaluation(
     step_dt,
     num_envs,
     device,
-    z_ablation_mode: str | None = None,
 ) -> dict:
     """Run one evaluation pass and collect per-step data.
 
@@ -1611,9 +1610,10 @@ def run_evaluation(
     yaw_rate = np.zeros((total_steps, num_envs))
     # Action magnitude
     action_magnitude = np.zeros((total_steps, num_envs))
-    # Z-ablation: per-step ||action(z) - action(z_ablated)||
-    _do_z_ablation = z_ablation_mode is not None and hasattr(policy_nn, "act_inference")
-    delta_action = np.zeros((total_steps, num_envs)) if _do_z_ablation else None
+    # z-ablation diagnostic (#1-A): ||action(z) - action(z_ablated)|| per env-step.
+    # Only populated when the policy has an active z-ablation; stays zeros otherwise.
+    delta_action = np.zeros((total_steps, num_envs))
+    _ablation_active = getattr(policy_nn, "_z_ablation", None) is not None
     # Termination
     terminated = np.zeros((total_steps, num_envs), dtype=bool)
     time_to_failure = np.full(num_envs, float("nan"))
@@ -1641,30 +1641,21 @@ def run_evaluation(
         raw_env._vel_cmd_lin[:, 2] = targets["vz"][step_idx]
 
         with torch.inference_mode():
-            actions = policy(obs)
+            actions = policy(obs)  # ablated action (z_ablation active) -> stepped into env
+            if _ablation_active:
+                _prev = policy_nn._z_ablation
+                policy_nn._z_ablation = None  # restore TRUE z for one diagnostic forward
+                actions_normal = policy(obs)
+                policy_nn._z_ablation = _prev  # re-ablate (cache for "mean" untouched)
+                delta_action[step_idx] = (
+                    (actions_normal - actions).norm(dim=-1).detach().cpu().numpy()
+                )
             obs, _, dones, _ = env.step(actions)
             if hasattr(policy_nn, "reset"):
                 policy_nn.reset(dones)
 
         # Collect action magnitude
         action_magnitude[step_idx] = torch.norm(actions, dim=-1).cpu().numpy()
-
-        # Z-ablation: compute ||action(z) - action(z_ablated)|| for #1-A diagnostic
-        if _do_z_ablation:
-            with torch.inference_mode():
-                # Reconstruct ablated obs: replace privileged key to zeroise/mean z
-                priv_key = policy_nn._privileged_key
-                priv = obs[priv_key]
-                if z_ablation_mode == "zero":
-                    priv_ablated = torch.zeros_like(priv)
-                else:  # "mean"
-                    priv_ablated = priv.mean(dim=0, keepdim=True).expand_as(priv)
-                obs_ablated = dict(obs) if not hasattr(obs, "clone") else obs.clone()
-                obs_ablated[priv_key] = priv_ablated
-                actions_ablated = policy_nn.act_inference(obs_ablated)
-            delta_action[step_idx] = torch.norm(
-                actions.float() - actions_ablated.float(), dim=-1
-            ).cpu().numpy()
 
         # Attitude: actual + error
         roll_cur, pitch_cur, _ = euler_xyz_from_quat(raw_env._robot.data.root_quat_w)
@@ -1726,13 +1717,13 @@ def run_evaluation(
         "lin_vel_norm": lin_vel_norm,
         "yaw_rate": yaw_rate,
         "action_magnitude": action_magnitude,
+        "delta_action": delta_action,
         "terminated": terminated,
         "time_to_failure": time_to_failure,
         "steps_per_segment": steps_per_seg,
         "segment_duration": segment_duration,
         "segment_names": segment_names,
         "warmup_steps": WARMUP_SEGMENTS * steps_per_seg,
-        **({"delta_action": delta_action} if delta_action is not None else {}),
     }
 
 
@@ -2056,6 +2047,19 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
                 policy_nn = runner.alg.actor_critic
 
         print(f"[INFO] Loaded {runner_cls_name} from {resume_path}")
+
+        # z-ablation diagnostic (encoder gap #1): enable on the loaded policy network.
+        if getattr(args_cli, "z_ablation", None) is not None:
+            if not hasattr(policy_nn, "set_z_ablation"):
+                raise AttributeError(
+                    f"--z_ablation set but policy {type(policy_nn).__name__} has no "
+                    "set_z_ablation (not an ActorCriticEncoder)"
+                )
+            nominal_obs = None
+            if args_cli.z_ablation == "mean":
+                nominal_obs = env.get_observations()
+            policy_nn.set_z_ablation(args_cli.z_ablation, nominal_obs=nominal_obs)
+            print(f"[INFO] z-ablation ENABLED: mode={args_cli.z_ablation}")
     else:
         action_dim = env_cfg.action_space
         policy = lambda obs: torch.zeros(num_envs, action_dim, device=device)  # noqa: E731
@@ -2104,7 +2108,6 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
             step_dt=step_dt,
             num_envs=num_envs,
             device=device,
-            z_ablation_mode=getattr(args_cli, "z_ablation", None),
         )
         all_data[level] = data
 
@@ -2214,55 +2217,6 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
                   f"{s['l_hat_envvar_mean']:6.4f}/{s['l_true_envvar_mean']:.4f} "
                   f"{s['l_hat_tvar_mean']:6.4f}/{s['l_true_tvar_mean']:.4f}")
         print("=" * 70)
-
-    # ---- z-ablation diagnostic summary (#1-A: does the actor use latent z?) ----
-    if getattr(args_cli, "z_ablation", None) is not None:
-        per_level = {}
-        all_deltas = []
-        for lvl in DR_LEVELS:
-            d = all_data[lvl]["delta_action"].reshape(-1)
-            all_deltas.append(d)
-            per_level[lvl] = {
-                "mean": float(np.mean(d)),
-                "std": float(np.std(d)),
-                "p50": float(np.percentile(d, 50)),
-                "p95": float(np.percentile(d, 95)),
-                "max": float(np.max(d)),
-                "n": int(d.size),
-            }
-        overall = np.concatenate(all_deltas)
-        z_ablation_summary = {
-            "z_ablation_mode": args_cli.z_ablation,
-            "checkpoint": resume_path or "",
-            "delta_action_overall": {
-                "mean": float(np.mean(overall)),
-                "std": float(np.std(overall)),
-                "p50": float(np.percentile(overall, 50)),
-                "p95": float(np.percentile(overall, 95)),
-                "max": float(np.max(overall)),
-                "n": int(overall.size),
-            },
-            "delta_action_per_level": per_level,
-            "note": (
-                "delta_action = ||action(z) - action(z_ablated)|| per env-step "
-                "(deterministic act_inference, so this isolates the z effect). "
-                "Large => actor uses z; ~0 => actor ignores z. Compare these "
-                "performance metrics against the un-ablated baseline eval, "
-                "especially whether degradation is larger at hard DR."
-            ),
-        }
-        with open(os.path.join(output_dir, "z_ablation_summary.json"), "w") as f:
-            json.dump(z_ablation_summary, f, indent=2)
-        print(f"\n{'=' * 70}\nZ-ABLATION DIAGNOSTIC (#1-A) -- mode={args_cli.z_ablation}\n{'=' * 70}")
-        print(f"{'Level':<10} {'mean':>9} {'p95':>9} {'max':>9}")
-        for lvl in DR_LEVELS:
-            s = per_level[lvl]
-            print(f"{lvl:<10} {s['mean']:9.4f} {s['p95']:9.4f} {s['max']:9.4f}")
-        print(f"{'OVERALL':<10} {z_ablation_summary['delta_action_overall']['mean']:9.4f} "
-              f"{z_ablation_summary['delta_action_overall']['p95']:9.4f} "
-              f"{z_ablation_summary['delta_action_overall']['max']:9.4f}")
-        print("=" * 70)
-        print(f"[INFO] wrote {os.path.join(output_dir, 'z_ablation_summary.json')}")
 
     print(f"\nOutput saved to: {output_dir}")
     env.close()
