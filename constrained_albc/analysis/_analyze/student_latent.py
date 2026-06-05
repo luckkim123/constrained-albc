@@ -12,10 +12,8 @@ from pathlib import Path
 
 import numpy as np
 
-import os
-import sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from common import DR_LEVELS as _SL_DR_LEVELS  # type: ignore[import-not-found]  # noqa: E402
+import _pathsetup  # noqa: F401  ensure analysis/ on sys.path (for `from common import`)
+from common import DR_LEVELS as _SL_DR_LEVELS  # type: ignore[import-not-found]
 
 
 def _sl_load_level(diag_dir: Path, level: str) -> tuple[np.ndarray, np.ndarray] | None:
