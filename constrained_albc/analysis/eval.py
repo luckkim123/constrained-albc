@@ -244,6 +244,14 @@ from eval_plots import (  # type: ignore[import-not-found]  # noqa: E402
     generate_plots,
 )
 from eval_serialize import _build_mat_meta, write_eval_npz  # type: ignore[import-not-found]  # noqa: E402
+import dr_config as _dr_config_module  # type: ignore[import-not-found]  # noqa: E402
+from dr_config import (  # type: ignore[import-not-found]  # noqa: E402
+    _apply_extreme_ood_physics,
+    _collapse_dr_to_midpoint,
+    build_dr_config,
+    get_hard_dr_config,
+    load_doraemon_dr,
+)
 from matplotlib.ticker import MultipleLocator
 from paths import eval_dir_for_checkpoint  # type: ignore[import-not-found]  # noqa: E402  run_id-tree eval output (#2)
 from rsl_rl.runners import OnPolicyRunner
@@ -260,7 +268,6 @@ from constrained_albc.envs.main.config import (
     DomainRandomizationCfg,
     HardDomainRandomizationCfg,
 )
-from constrained_albc.envs.main.doraemon import _NOMINAL_OVERRIDES, _PARAM_DEFS, build_param_specs
 from constrained_albc.envs.main.encoder import ActorCriticEncoder
 from constrained_albc.envs.main.mdp import (
     DRSampler,
@@ -277,12 +284,6 @@ from isaaclab_tasks.utils.hydra import hydra_task_config
 # Runtime-mutable copies (overridden by --ood-scale in static mode)
 DR_LEVELS: list[str] = list(_DEFAULT_DR_LEVELS)
 DR_SCALE: dict[str, float] = dict(_DEFAULT_DR_SCALE)
-
-# Module-level: DORAEMON-learned distribution as the hard-DR anchor.
-# `_DORAEMON_FULL_DR` is the DR config (mean +/- 2*std clamped to PARAM_SPEC bounds).
-# `_DORAEMON_RAW` is the underlying mean/std per parameter, used by visualization.
-_DORAEMON_FULL_DR: DomainRandomizationCfg | None = None
-_DORAEMON_RAW: dict[str, tuple[float, float]] = {}
 
 # Register custom classes in RSL-RL runner module namespace
 _runner_module.ALBCActorCriticEncoder = ActorCriticEncoder
@@ -307,320 +308,15 @@ MAX_ANGLE_DEG = 15.0  # kept for backward compat (episode_length_s calc)
 # list inside build_step_trajectory().
 TRAJECTORY_N_SEGMENTS = 31
 
-# Mapping from DORAEMON param names to DomainRandomizationCfg field names.
-# Most share the same name except payload_mass and water_density.
-_DORAEMON_TO_DR_FIELD: dict[str, str] = {
-    "payload_mass": "payload_mass_range",
-    "water_density": "water_density_range",
-}
 
-
-def load_doraemon_dr(run_dir: str) -> tuple[DomainRandomizationCfg | None, dict[str, tuple[float, float]]]:
-    """Build DomainRandomizationCfg from DORAEMON's learned distribution.
-
-    Reads final mean/std from TensorBoard logs. Hard DR range = mean +/- 2*std,
-    clamped to PARAM_SPEC bounds. Non-DORAEMON parameters (joint actuator,
-    thruster) start from HardDomainRandomizationCfg so the eval matches the
-    physics ranges actually seen during training.
-
-    Returns:
-        (cfg, raw): DR config with DORAEMON-learned ranges applied, and a dict
-        mapping DR field name -> (mean, std) for visualization. Returns
-        (None, {}) if no DORAEMON tags are found in the TB log.
-    """
-    from tensorboard.backend.event_processing import event_accumulator
-
-    if not os.path.isdir(run_dir):
-        return None, {}
-
-    try:
-        ea = event_accumulator.EventAccumulator(run_dir)
-        ea.Reload()
-        all_tags = set(ea.Tags().get("scalars", []))
-    except Exception as e:
-        print(f"[WARN] Could not load TB events from {run_dir}: {e}")
-        return None, {}
-
-    if not any(t.startswith("DORAEMON/mean/") for t in all_tags):
-        return None, {}
-
-    # Hard DR is the runtime physics range used during training; use it as the
-    # base config so non-DORAEMON fields (joint, thruster) match training.
-    cfg = HardDomainRandomizationCfg()
-    cfg.enable = True
-
-    # CRITICAL: imported PARAM_SPECS uses base DomainRandomizationCfg bounds, but
-    # the runtime DORAEMON scheduler builds its specs from HardDomainRandomizationCfg
-    # via build_param_specs(). Using the hardcoded PARAM_SPECS would clamp the
-    # learned mean +/- 2*std into the much narrower base DR range, falsely shrinking
-    # the hard-DR anchor. Use HardDR-derived specs to match the actual training bounds.
-    runtime_specs = build_param_specs(cfg, _PARAM_DEFS, _NOMINAL_OVERRIDES)
-
-    raw: dict[str, tuple[float, float]] = {}
-    for spec in runtime_specs:
-        if spec.name.startswith("cmd_"):
-            continue
-        mean_tag = f"DORAEMON/mean/{spec.name}"
-        std_tag = f"DORAEMON/std/{spec.name}"
-        if mean_tag not in all_tags or std_tag not in all_tags:
-            print(f"[WARN] DORAEMON tag not found: {mean_tag}")
-            continue
-
-        mean_val = ea.Scalars(mean_tag)[-1].value
-        std_val = ea.Scalars(std_tag)[-1].value
-        lo = max(spec.min_bound, mean_val - 2.0 * std_val)
-        hi = min(spec.max_bound, mean_val + 2.0 * std_val)
-
-        mapped = _DORAEMON_TO_DR_FIELD.get(spec.name)
-        field_name: str = mapped if mapped is not None else spec.name
-        if not hasattr(cfg, field_name):
-            print(f"[WARN] DomainRandomizationCfg has no field '{field_name}'")
-            continue
-
-        setattr(cfg, field_name, (lo, hi))
-        raw[field_name] = (mean_val, std_val)
-        print(f"  DORAEMON DR: {field_name:30s} mean={mean_val:.4f}  std={std_val:.4f}  -> [{lo:.4f}, {hi:.4f}]")
-
-    return cfg, raw
-
-
-def get_hard_dr_config() -> DomainRandomizationCfg:
-    """Get the hard DR config (DORAEMON if loaded, otherwise HardDomainRandomizationCfg)."""
-    cfg = _DORAEMON_FULL_DR if _DORAEMON_FULL_DR is not None else HardDomainRandomizationCfg()
-    cfg.enable = True
-    return cfg
-
-
-# ============================================================================
-# DR Configuration (main-specific fields)
-# ============================================================================
-
-# All tuple fields in DomainRandomizationCfg that should be interpolated.
-_DR_TUPLE_FIELDS = [
-    "added_mass_scale",
-    "linear_damping_scale",
-    "quadratic_damping_scale",
-    "volume_scale",
-    "cob_offset_x",
-    "cob_offset_y",
-    "cob_offset_z",
-    "cog_offset_x",
-    "cog_offset_y",
-    "cog_offset_z",
-    "inertia_scale",
-    "body_mass_scale",
-    "water_density_range",
-    "joint_stiffness_range",
-    "joint_damping_range",
-    "yaw_damping_scale",
-    "joint_effort_limit_range",
-    "joint_static_friction_range",
-    "joint_viscous_friction_range",
-    "payload_mass_range",
-    "payload_cog_offset_z",
-    "thrust_coefficient_scale",
-    "time_constant_scale",
-    # r13: ocean current strength is DORAEMON-managed during training. Eval must
-    # also scale this range with DR level so none/soft/medium/hard match training
-    # curriculum stages. Nominal=(0,0) (no current), hard=(0,1) (full range).
-    "ocean_current_strength_range",
-]
-
-_DR_FLOAT_FIELDS = [
-    "payload_cog_offset_xy_radius",
-    "buoy_moment_arm",
-]
-
-
-# True physics-nominal values for the scale=0 ("none") DR anchor.
-# Scale fields -> 1.0 (no modification), offset fields -> 0.0 (centered),
-# payload -> 0.0 (no payload), water -> 1000.0 (pure water).
-# Joint actuator and buoy_moment_arm are asset-specific: omitted here so they
-# fall back to the base cfg midpoint (preserves prior behavior).
-_TRUE_NOMINAL_PHYSICS: dict[str, float] = {
-    # Scale fields
-    "added_mass_scale": 1.0,
-    "linear_damping_scale": 1.0,
-    "quadratic_damping_scale": 1.0,
-    "volume_scale": 1.0,
-    "inertia_scale": 1.0,
-    "body_mass_scale": 1.0,
-    "yaw_damping_scale": 1.0,
-    "joint_effort_limit_range": 1.0,
-    "thrust_coefficient_scale": 1.0,
-    "time_constant_scale": 1.0,
-    # Offset fields (centered)
-    "cob_offset_x": 0.0,
-    "cob_offset_y": 0.0,
-    "cob_offset_z": 0.0,
-    "cog_offset_x": 0.0,
-    "cog_offset_y": 0.0,
-    "cog_offset_z": 0.0,
-    # Absolute physical defaults
-    "water_density_range": 1000.0,
-    "payload_mass_range": 0.0,
-    "payload_cog_offset_z": 0.0,
-    "joint_static_friction_range": 0.0,
-    "joint_viscous_friction_range": 0.0,
-    # Float fields
-    "payload_cog_offset_xy_radius": 0.0,
-    # r13: ocean current strength tuple collapses to (0, 0) at nominal -> no current.
-    # HardDR full range = (0, 1). Linear interpolation yields per-level strength range.
-    "ocean_current_strength_range": 0.0,
-}
-
-
-def _make_nominal_dr() -> DomainRandomizationCfg:
-    """Construct true nominal DR config (single-point distribution at physics defaults).
-
-    Fields listed in _TRUE_NOMINAL_PHYSICS use the explicit nominal value.
-    Fields not listed (joint_stiffness/damping, buoy_moment_arm) fall back to
-    the base DomainRandomizationCfg midpoint, since these are asset-specific
-    and have no obvious physics-true value.
-    """
-    base = DomainRandomizationCfg()
-    nominal = DomainRandomizationCfg()
-
-    for field_name in _DR_TUPLE_FIELDS:
-        if field_name in _TRUE_NOMINAL_PHYSICS:
-            val = _TRUE_NOMINAL_PHYSICS[field_name]
-            setattr(nominal, field_name, (val, val))
-        else:
-            lo, hi = getattr(base, field_name)
-            mid = (lo + hi) / 2.0
-            setattr(nominal, field_name, (mid, mid))
-
-    for field_name in _DR_FLOAT_FIELDS:
-        if field_name in _TRUE_NOMINAL_PHYSICS:
-            setattr(nominal, field_name, _TRUE_NOMINAL_PHYSICS[field_name])
-        # Otherwise leave at base default (e.g. buoy_moment_arm).
-
-    return nominal
-
-
-def build_dr_config(scale: float) -> DomainRandomizationCfg:
-    """Build DR config by interpolating between true nominal and the hard anchor.
-
-    Hard anchor priority:
-        1. _DORAEMON_FULL_DR (DORAEMON-learned distribution, if loaded)
-        2. HardDomainRandomizationCfg (matches training-time physics ranges)
-
-    Note: previously the fallback was the base DomainRandomizationCfg, which
-    is far narrower than the actual training DR. That caused all four levels
-    to evaluate near-nominal physics regardless of the requested scale.
-    """
-    nominal = _make_nominal_dr()
-
-    if scale <= 0.0:
-        nominal.enable = True
-        return nominal
-
-    full: DomainRandomizationCfg = _DORAEMON_FULL_DR if _DORAEMON_FULL_DR is not None else HardDomainRandomizationCfg()
-    # Allow scale > 1.0 for OOD eval (extrapolate bounds beyond training distribution).
-    f = scale
-
-    cfg = DomainRandomizationCfg()
-    cfg.enable = True
-
-    for field_name in _DR_TUPLE_FIELDS:
-        nom_val = getattr(nominal, field_name)
-        full_val = getattr(full, field_name)
-        lo = nom_val[0] + f * (full_val[0] - nom_val[0])
-        hi = nom_val[1] + f * (full_val[1] - nom_val[1])
-        setattr(cfg, field_name, (lo, hi))
-
-    for field_name in _DR_FLOAT_FIELDS:
-        nom_val = getattr(nominal, field_name)
-        full_val = getattr(full, field_name)
-        setattr(cfg, field_name, nom_val + f * (full_val - nom_val))
-
-    return cfg
-
-
-def _collapse_dr_to_midpoint(cfg: DomainRandomizationCfg) -> None:
-    """Collapse each tuple DR range to its midpoint (lo=hi=mid).
-
-    Uniform sampling over (mid, mid) returns mid deterministically, giving
-    reproducible physics for 1-env comparisons across independent runs.
-    """
-    for field_name in _DR_TUPLE_FIELDS:
-        lo, hi = getattr(cfg, field_name)
-        mid = (lo + hi) / 2.0
-        setattr(cfg, field_name, (mid, mid))
-
-
-# Set True by --deterministic-dr (static mode) to collapse DR bounds inside apply_dr_config.
-_DETERMINISTIC_DR: bool = False
-# Set True by --extreme-ood (static mode) to overwrite DR with fixed OOD preset values.
-_APPLY_EXTREME_OOD: bool = False
-
-
-# Extreme-OOD physics presets. Selectable via --ood-preset {v1,v2} (static mode).
-# v1 = r13_A training hard DR upper bound ("at edge"). v2 = +20-30% beyond (true OOD).
-_EXTREME_OOD_PHYSICS_V1: dict[str, float] = {
-    "payload_mass_range":       3.00,
-    "added_mass_scale":         1.50,
-    "linear_damping_scale":     1.70,
-    "quadratic_damping_scale":  1.70,
-    "water_density_range":      1025.0,
-    "volume_scale":             1.25,
-    "inertia_scale":            2.00,
-    "body_mass_scale":          1.25,
-    "cog_offset_x": 0.020, "cog_offset_y": 0.020, "cog_offset_z": 0.040,
-    "cob_offset_x": 0.020, "cob_offset_y": 0.020, "cob_offset_z": 0.040,
-    "payload_cog_offset_z":    -0.050,
-}
-_EXTREME_OOD_PHYSICS_V1_FLOATS: dict[str, float] = {
-    "payload_cog_offset_xy_radius": 0.08,
-}
-
-_EXTREME_OOD_PHYSICS_V2: dict[str, float] = {
-    "payload_mass_range":       3.50,
-    "added_mass_scale":         1.80,
-    "linear_damping_scale":     2.05,
-    "quadratic_damping_scale":  2.05,
-    "water_density_range":      1045.0,
-    "volume_scale":             1.45,
-    "inertia_scale":            2.50,
-    "body_mass_scale":          1.50,
-    "cog_offset_x": 0.028, "cog_offset_y": 0.028, "cog_offset_z": 0.055,
-    "cob_offset_x": 0.028, "cob_offset_y": 0.028, "cob_offset_z": 0.055,
-    "payload_cog_offset_z":    -0.075,
-}
-_EXTREME_OOD_PHYSICS_V2_FLOATS: dict[str, float] = {
-    "payload_cog_offset_xy_radius": 0.10,
-}
-
-# Default preset (v2); overridden at CLI parse time by --ood-preset.
-_EXTREME_OOD_PHYSICS: dict[str, float] = _EXTREME_OOD_PHYSICS_V2
-_EXTREME_OOD_PHYSICS_FLOATS: dict[str, float] = _EXTREME_OOD_PHYSICS_V2_FLOATS
-
-
-def _apply_extreme_ood_physics(env_cfg) -> None:
-    """Overwrite env_cfg.randomization: tuples -> (v,v); floats -> v (scalar)."""
-    dr = env_cfg.randomization
-    applied = 0
-    for field_name, value in _EXTREME_OOD_PHYSICS.items():
-        if not hasattr(dr, field_name):
-            print(f"[WARN] extreme-ood: DR has no field '{field_name}', skipping.")
-            continue
-        setattr(dr, field_name, (value, value))  # collapse to fixed value
-        applied += 1
-    for field_name, value in _EXTREME_OOD_PHYSICS_FLOATS.items():
-        if not hasattr(dr, field_name):
-            print(f"[WARN] extreme-ood: DR has no float field '{field_name}', skipping.")
-            continue
-        setattr(dr, field_name, value)
-        applied += 1
-    print(f"[INFO] extreme-ood: applied {applied} fixed OOD physics values")
 
 
 def apply_dr_config(env_cfg, scale: float) -> None:
     """Apply interpolated DR config to the environment config."""
     env_cfg.randomization = build_dr_config(scale)
-    if _DETERMINISTIC_DR:
+    if _dr_config_module._DETERMINISTIC_DR:
         _collapse_dr_to_midpoint(env_cfg.randomization)
-    if _APPLY_EXTREME_OOD:
+    if _dr_config_module._APPLY_EXTREME_OOD:
         _apply_extreme_ood_physics(env_cfg)
 
 
@@ -1101,21 +797,19 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
             env_cfg.doraemon.enable = False
             print("[INFO] DORAEMON disabled")
     if args_cli.deterministic_dr:
-        global _DETERMINISTIC_DR
-        _DETERMINISTIC_DR = True  # apply_dr_config will now collapse tuples to midpoint
+        _dr_config_module._DETERMINISTIC_DR = True  # apply_dr_config will now collapse tuples to midpoint
         print("[INFO] deterministic-dr: DR tuple ranges collapsed to midpoint -> fixed physics")
 
     # ---- Extreme OOD preset: overwrite DR with explicit out-of-training values ----
     if args_cli.extreme_ood:
-        global _APPLY_EXTREME_OOD, _EXTREME_OOD_PHYSICS, _EXTREME_OOD_PHYSICS_FLOATS
-        _APPLY_EXTREME_OOD = True
+        _dr_config_module._APPLY_EXTREME_OOD = True
         if args_cli.ood_preset == "v1":
-            _EXTREME_OOD_PHYSICS = _EXTREME_OOD_PHYSICS_V1
-            _EXTREME_OOD_PHYSICS_FLOATS = _EXTREME_OOD_PHYSICS_V1_FLOATS
+            _dr_config_module._EXTREME_OOD_PHYSICS = _dr_config_module._EXTREME_OOD_PHYSICS_V1
+            _dr_config_module._EXTREME_OOD_PHYSICS_FLOATS = _dr_config_module._EXTREME_OOD_PHYSICS_V1_FLOATS
         else:
-            _EXTREME_OOD_PHYSICS = _EXTREME_OOD_PHYSICS_V2
-            _EXTREME_OOD_PHYSICS_FLOATS = _EXTREME_OOD_PHYSICS_V2_FLOATS
-        print(f"[INFO] extreme-ood preset={args_cli.ood_preset}: will apply {len(_EXTREME_OOD_PHYSICS)} fixed OOD physics values\n")
+            _dr_config_module._EXTREME_OOD_PHYSICS = _dr_config_module._EXTREME_OOD_PHYSICS_V2
+            _dr_config_module._EXTREME_OOD_PHYSICS_FLOATS = _dr_config_module._EXTREME_OOD_PHYSICS_V2_FLOATS
+        print(f"[INFO] extreme-ood preset={args_cli.ood_preset}: will apply {len(_dr_config_module._EXTREME_OOD_PHYSICS)} fixed OOD physics values\n")
 
     # ---- v3: widen training DR ranges by `ood_range_scale` factor (random sample per env) ----
     if args_cli.ood_range_scale is not None:
@@ -1162,7 +856,6 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     # run dir. This is used to evaluate every ablation variant on a common test
     # distribution (typically the r13_A baseline's final DR), so cross-variant
     # comparisons are not confounded by per-variant curriculum drift.
-    global _DORAEMON_FULL_DR, _DORAEMON_RAW
     if args_cli.doraemon_dr_from:
         dr_source = args_cli.doraemon_dr_from
         if not os.path.isdir(dr_source):
@@ -1174,8 +867,8 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
                 f"--doraemon-dr-from requested but no DORAEMON tags found in {dr_source}. "
                 "Check that the run dir contains a TB event file with DORAEMON/mean/* scalars."
             )
-        _DORAEMON_FULL_DR = cfg
-        _DORAEMON_RAW = raw
+        _dr_config_module._DORAEMON_FULL_DR = cfg
+        _dr_config_module._DORAEMON_RAW = raw
         print("[INFO] Hard DR = DORAEMON-learned distribution from override (mean +/- 2*std).\n")
     elif args_cli.doraemon_dr and (params_search_ckpt or resume_path):
         # Student mode: DORAEMON tags live in the teacher's TB events, not the student dir.
@@ -1183,8 +876,8 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         print(f"\n[INFO] Attempting to load DORAEMON-learned DR from: {run_dir}")
         cfg, raw = load_doraemon_dr(run_dir)
         if cfg is not None:
-            _DORAEMON_FULL_DR = cfg
-            _DORAEMON_RAW = raw
+            _dr_config_module._DORAEMON_FULL_DR = cfg
+            _dr_config_module._DORAEMON_RAW = raw
             print("[INFO] Hard DR = DORAEMON-learned distribution (mean +/- 2*std).\n")
         else:
             print("[INFO] No DORAEMON state found in run dir. Falling back to HardDomainRandomizationCfg.\n")
@@ -1378,7 +1071,7 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
 
     # DR distribution plot: rebuild the per-level configs and visualize.
     dr_configs_used = {lvl: build_dr_config(DR_SCALE[lvl]) for lvl in DR_LEVELS}
-    _plot_dr_distributions(dr_configs_used, _DORAEMON_RAW, output_dir)
+    _plot_dr_distributions(dr_configs_used, _dr_config_module._DORAEMON_RAW, output_dir)
 
     # ---- Print final comparison ----
     print(f"\n{'=' * 100}")
@@ -1679,13 +1372,12 @@ def run_periodic(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     print(f"[INFO] Output directory: {output_dir}")
 
     # ---- DORAEMON DR override ----
-    global _DORAEMON_FULL_DR
     if args_cli.doraemon_dr and resume_path:
         run_dir = os.path.dirname(resume_path)
         print(f"\n[INFO] Attempting to load DORAEMON-learned DR from: {run_dir}")
         cfg, _ = load_doraemon_dr(run_dir)
         if cfg is not None:
-            _DORAEMON_FULL_DR = cfg
+            _dr_config_module._DORAEMON_FULL_DR = cfg
             print("[INFO] Hard DR = DORAEMON-learned distribution (mean +/- 2*std).\n")
         else:
             print("[INFO] No DORAEMON state found. Falling back to HardDomainRandomizationCfg.\n")
@@ -2061,14 +1753,13 @@ def run_segmented(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     print(f"[INFO] Output: {output_dir}")
 
     # DORAEMON DR -- use teacher run for loading (student doesn't produce DORAEMON state)
-    global _DORAEMON_FULL_DR, _DORAEMON_RAW
     if args_cli.doraemon_dr:
         run_dir = os.path.dirname(args_cli.teacher_ckpt) if is_student_mode else os.path.dirname(resume_path)
         print(f"[INFO] Loading DORAEMON DR from: {run_dir}")
         cfg, raw = load_doraemon_dr(run_dir)
         if cfg is not None:
-            _DORAEMON_FULL_DR = cfg
-            _DORAEMON_RAW = raw
+            _dr_config_module._DORAEMON_FULL_DR = cfg
+            _dr_config_module._DORAEMON_RAW = raw
             print("[INFO] Hard DR = DORAEMON-learned distribution")
         else:
             print("[INFO] No DORAEMON state; using static HardDomainRandomizationCfg")
