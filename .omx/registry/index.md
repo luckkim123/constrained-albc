@@ -1,6 +1,6 @@
 # Wiki Index
 
-> 8 pages | Last updated: 2026-06-05T06:43:49.886174
+> 12 pages | Last updated: 2026-06-05T10:15:51.918237
 
 ## convention
 
@@ -10,6 +10,16 @@
 
 - [heavy-tail vs sample-mean divergence are independent](heavy_tail_vs_sample_mean_divergence_are_independent.md) - # heavy-tail vs sample-mean divergence are independent
 - [training diagnosis decision tree](training_diagnosis_decision_tree.md) - # training diagnosis decision tree
+
+## decision
+
+- [engine-gap: eval adapter only covers static; periodic unsupported, segmented partial](engine_gap_eval_adapter_only_covers_static_periodic_unsupported_.md) - # engine-gap: eval adapter only covers static; periodic unsupported, segmente...
+- [eval analysis: core does stats, adapter does heavy-tail](eval_analysis_core_does_stats_adapter_does_heavy_tail.md) - # eval analysis: core does stats, adapter does heavy-tail
+
+## pattern
+
+- [teacher: cross-axis correlation collapses none->hard (axis decorrelation)](teacher_cross_axis_correlation_collapses_none_hard_axis_decorrel.md) - # teacher: cross-axis correlation collapses none->hard (axis decorrelation)
+- [teacher hard-DR: CV explodes without heavy-tail (DC-bias dispersion)](teacher_hard_dr_cv_explodes_without_heavy_tail_dc_bias_dispersio.md) - # teacher hard-DR: CV explodes without heavy-tail (DC-bias dispersion)
 
 ## reference
 

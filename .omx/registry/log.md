@@ -56,3 +56,23 @@
 - **Pages:** analysis_engine_map_what_is_grow_able_vs_off_limits.md, analysis_refactor_2026_06_05_new_sim_free_modules_and_engine_gap.md, training_log_analysis_engine_reference_adapter.md, heavy_tail_vs_sample_mean_divergence_are_independent.md, constrained_albc_experiment_conventions.md, constrainttrpo_health_thresholds.md, training_anomaly_thresholds_tb_tag_alert_table.md, training_diagnosis_decision_tree.md
 - **Summary:** query 'eval adapter summary.json recompute engine-gap' -> 8 of 8
 
+## [2026-06-05T08:55:20.495177] add
+- **Pages:** eval_analysis_core_does_stats_adapter_does_heavy_tail.md
+- **Summary:** created 'eval analysis: core does stats, adapter does heavy-tail'
+
+## [2026-06-05T10:06:06.745776] query
+- **Pages:** eval_analysis_core_does_stats_adapter_does_heavy_tail.md, heavy_tail_vs_sample_mean_divergence_are_independent.md, analysis_refactor_2026_06_05_new_sim_free_modules_and_engine_gap.md, analysis_engine_map_what_is_grow_able_vs_off_limits.md, constrained_albc_experiment_conventions.md, constrainttrpo_health_thresholds.md, training_anomaly_thresholds_tb_tag_alert_table.md
+- **Summary:** query 'heavy-tail attitude roll hard DR CV env variance' -> 7 of 7
+
+## [2026-06-05T10:09:40.828564] add
+- **Pages:** teacher_hard_dr_cv_explodes_without_heavy_tail_dc_bias_dispersio.md
+- **Summary:** created 'teacher hard-DR: CV explodes without heavy-tail (DC-bias dispersion)'
+
+## [2026-06-05T10:09:41.192115] add
+- **Pages:** teacher_cross_axis_correlation_collapses_none_hard_axis_decorrel.md
+- **Summary:** created 'teacher: cross-axis correlation collapses none->hard (axis decorrelation)'
+
+## [2026-06-05T10:15:51.918237] add
+- **Pages:** engine_gap_eval_adapter_only_covers_static_periodic_unsupported_.md
+- **Summary:** created 'engine-gap: eval adapter only covers static; periodic unsupported, segmented partial'
+
