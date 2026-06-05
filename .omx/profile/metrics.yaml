@@ -28,6 +28,7 @@ score_formula: null
 sources:
 - tensorboard
 - wandb_offline
+- eval
 views:
 - trajectory
 - per_axis_bar
