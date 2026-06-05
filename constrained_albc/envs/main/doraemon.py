@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from marinelab.algorithms.doraemon import (
     BetaDistribution,
+    CurriculumReplayer,
     DoraemonCfg,
     DoraemonScheduler,
     EpisodeBuffer,
@@ -24,6 +25,7 @@ from marinelab.algorithms.doraemon import (
 
 __all__ = [
     "BetaDistribution",
+    "CurriculumReplayer",
     "DoraemonCfg",
     "DoraemonScheduler",
     "EpisodeBuffer",
