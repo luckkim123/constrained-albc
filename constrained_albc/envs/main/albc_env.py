@@ -11,6 +11,7 @@ Yaw: rate command. Linear: velocity command. Joint PD for arm, thruster for body
 
 from __future__ import annotations
 
+import logging
 import math
 
 import torch
@@ -41,6 +42,8 @@ from .mdp.events import (
 from .mdp.observations import compute_policy_obs, compute_privileged_obs
 from .mdp.rewards import RewardManager
 from .utils import log_dr_metrics
+
+logger = logging.getLogger(__name__)
 
 
 class ALBCEnv(DirectRLEnv):
@@ -341,15 +344,32 @@ class ALBCEnv(DirectRLEnv):
         """Initialize DORAEMON adaptive DR scheduler if enabled."""
         doraemon_cfg = getattr(self.cfg, "doraemon", None)
         if doraemon_cfg is not None and doraemon_cfg.enable:
-            from .doraemon import _NOMINAL_OVERRIDES, _PARAM_DEFS, NDIMS, DoraemonScheduler
+            import json
 
-            self._doraemon = DoraemonScheduler(
-                doraemon_cfg,
-                self.device,
-                dr_cfg=self.cfg.randomization,
-                param_defs=_PARAM_DEFS,
-                nominal_overrides=_NOMINAL_OVERRIDES,
+            from .doraemon import (
+                _NOMINAL_OVERRIDES,
+                _PARAM_DEFS,
+                NDIMS,
+                CurriculumReplayer,
+                DoraemonScheduler,
+                build_param_specs,
             )
+
+            replay_path = getattr(doraemon_cfg, "replay_curriculum_path", "") or ""
+            if replay_path:
+                with open(replay_path) as f:
+                    recording = json.load(f)
+                specs = build_param_specs(self.cfg.randomization, _PARAM_DEFS, _NOMINAL_OVERRIDES)
+                self._doraemon = CurriculumReplayer(recording, specs, self.device)
+                logger.info("[DORAEMON] Replaying recorded curriculum from %s", replay_path)
+            else:
+                self._doraemon = DoraemonScheduler(
+                    doraemon_cfg,
+                    self.device,
+                    dr_cfg=self.cfg.randomization,
+                    param_defs=_PARAM_DEFS,
+                    nominal_overrides=_NOMINAL_OVERRIDES,
+                )
             self._doraemon_ndims = NDIMS
         else:
             self._doraemon = None

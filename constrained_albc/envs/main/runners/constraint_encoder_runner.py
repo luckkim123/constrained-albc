@@ -13,6 +13,7 @@ Flat subclass of OnPolicyRunner that combines:
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 
@@ -224,7 +225,7 @@ class ConstraintEncoderRunner(OnPolicyRunner):
         # DORAEMON: update DR distribution based on episode statistics
         raw_env = self.env.unwrapped
         if hasattr(raw_env, "_doraemon") and raw_env._doraemon is not None:
-            metrics = raw_env._doraemon.step()
+            metrics = raw_env._doraemon.step(iteration=iteration)
             if self._should_log:
                 prefixed = {f"DORAEMON/{k}": v for k, v in metrics.items()}
                 flush_metrics(self.writer, prefixed, iteration, self.logger_type)
@@ -241,6 +242,15 @@ class ConstraintEncoderRunner(OnPolicyRunner):
         raw_env = self.env.unwrapped
         if hasattr(raw_env, "_doraemon") and raw_env._doraemon is not None:
             self._save_aux_state(path, "doraemon_state.pt", raw_env._doraemon.state_dict())
+
+            # Persist the curriculum trajectory for later replay (overwrite each checkpoint).
+            # CurriculumReplayer has no export_recording, so a replay run writes nothing.
+            if hasattr(raw_env._doraemon, "export_recording"):
+                recording = raw_env._doraemon.export_recording()
+                if recording["trajectory"]:
+                    traj_path = os.path.join(os.path.dirname(path), "curriculum_trajectory.json")
+                    with open(traj_path, "w") as f:
+                        json.dump(recording, f)
 
     def load(self, path: str, load_optimizer: bool = True, map_location: str | None = None) -> dict:
         """Load model checkpoint, DORAEMON state, and adaptive entropy state."""
