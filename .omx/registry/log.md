@@ -80,3 +80,7 @@
 - **Pages:** engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md
 - **Summary:** created 'engine-gap: eval adapter covers static + segmented; periodic still unsupported'
 
+## [2026-06-05T11:00:33.092719] add
+- **Pages:** teacher_segmented_post_switch_roll_transient_jumps_under_hard_dr.md
+- **Summary:** created 'teacher segmented: post-switch roll transient jumps under hard DR'
+

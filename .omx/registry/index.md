@@ -1,6 +1,6 @@
 # Wiki Index
 
-> 13 pages | Last updated: 2026-06-05T10:43:00.649099
+> 14 pages | Last updated: 2026-06-05T11:00:33.092719
 
 ## convention
 
@@ -21,6 +21,7 @@
 
 - [teacher: cross-axis correlation collapses none->hard (axis decorrelation)](teacher_cross_axis_correlation_collapses_none_hard_axis_decorrel.md) - # teacher: cross-axis correlation collapses none->hard (axis decorrelation)
 - [teacher hard-DR: CV explodes without heavy-tail (DC-bias dispersion)](teacher_hard_dr_cv_explodes_without_heavy_tail_dc_bias_dispersio.md) - # teacher hard-DR: CV explodes without heavy-tail (DC-bias dispersion)
+- [teacher segmented: post-switch roll transient jumps under hard DR](teacher_segmented_post_switch_roll_transient_jumps_under_hard_dr.md) - # teacher segmented: post-switch roll transient jumps under hard DR
 
 ## reference
 
