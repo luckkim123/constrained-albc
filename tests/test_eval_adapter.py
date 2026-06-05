@@ -92,11 +92,18 @@ def test_adapter_exposes_analyze_segmented():
     assert hasattr(mod, "analyze_segmented"), "adapter must expose analyze_segmented()"
 
 
+def _seg_fixture_or_skip():
+    import pytest
+    if not os.path.exists(os.path.join(SEG_FIXTURE_DIR, "summary_segmented.json")):
+        pytest.skip("segmented fixture absent — regenerate from SOURCE.txt")
+
+
 def test_analyze_segmented_returns_per_axis_transient():
     """analyze_segmented delegates to _analyze.switching and returns per-level
     per-axis post-switch transient stats (mean/p95/max), computed via numpy
     reductions over the engine's _sw_all_post_switch extraction (no metric math
     re-implemented in the adapter)."""
+    _seg_fixture_or_skip()
     mod = _load_adapter()
     out = mod.analyze_segmented(SEG_FIXTURE_DIR)
     assert "levels" in out
@@ -108,6 +115,7 @@ def test_analyze_segmented_returns_per_axis_transient():
 
 def test_segmented_cli_emits_json():
     """The adapter's segmented subcommand is runnable and emits JSON."""
+    _seg_fixture_or_skip()
     result = subprocess.run(
         [sys.executable, ADAPTER, "segmented", SEG_FIXTURE_DIR],
         capture_output=True, text=True, timeout=60,
