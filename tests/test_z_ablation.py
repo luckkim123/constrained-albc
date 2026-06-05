@@ -203,6 +203,23 @@ def test_setter_mean_without_obs_raises():
         stub.set_z_ablation("mean", nominal_obs=None)
 
 
+def test_setter_mean_encode_failure_restores_state():
+    """If _encode raises while building the mean cache, the finally block must
+    restore _z_ablation to its prior value (not leave it as the forced None)."""
+    stub = _stub_with_setter()
+    stub.set_z_ablation("zero")  # prior state = "zero"
+
+    def _boom(obs):
+        raise RuntimeError("encode failed")
+
+    stub._encode = _boom
+    with pytest.raises(RuntimeError, match="encode failed"):
+        stub.set_z_ablation("mean", nominal_obs={"dummy": True})
+    # finally restored prev ("zero"), and the trailing `self._z_ablation = mode`
+    # was never reached because the exception propagated out of the try.
+    assert stub._z_ablation == "zero"
+
+
 def test_setter_invalid_mode_raises():
     stub = _stub_with_setter()
     with pytest.raises(ValueError, match="z_ablation"):
