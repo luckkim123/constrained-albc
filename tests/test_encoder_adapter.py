@@ -103,3 +103,36 @@ def test_matches_engine_z_ranges():
     assert len(got) == len(ref)
     for g, r in zip(got, ref):
         assert np.allclose(g, r, rtol=0, atol=0), "adapter z_range drifted from engine"
+
+
+def test_cli_emits_json():
+    """Adapter runs as a subprocess emitting JSON (exp-analyze code-exec)."""
+    if not os.path.exists(FIXTURE):
+        import pytest
+        pytest.skip("fixture absent -- run Task 2")
+    result = subprocess.run(
+        [sys.executable, ADAPTER, "sweep", FIXTURE, "--num-points", "20"],
+        capture_output=True, text=True, timeout=120,
+    )
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["latent_dim"] == 9
+    assert len(payload["params"]) == 24
+
+
+def test_cli_plots_written(tmp_path):
+    """--plots delegates to the engine plotters and writes PNG files."""
+    if not os.path.exists(FIXTURE):
+        import pytest
+        pytest.skip("fixture absent -- run Task 2")
+    out_dir = str(tmp_path / "enc_plots")
+    result = subprocess.run(
+        [sys.executable, ADAPTER, "sweep", FIXTURE,
+         "--num-points", "20", "--plots", out_dir],
+        capture_output=True, text=True, timeout=180,
+    )
+    assert result.returncode == 0, result.stderr
+    assert os.path.exists(os.path.join(out_dir, "sweep_heatmap.png")), os.listdir(out_dir)
+    # at least one per-parameter plot
+    pngs = [f for f in os.listdir(out_dir) if f.startswith("sweep_") and f.endswith(".png")]
+    assert len(pngs) >= 2, pngs

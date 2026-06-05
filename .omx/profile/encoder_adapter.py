@@ -87,3 +87,64 @@ def sweep_sensitivity(ckpt_path: str, num_points: int = 100) -> dict:
         "norm_mode": norm.mode,
         "params": out_params,
     }
+
+
+def _write_plots(ckpt_path: str, num_points: int, output_dir: str) -> None:
+    """Regenerate heatmap + per-param PNGs by delegating to the engine plotters."""
+    import torch
+    sweep, common = _engine()
+
+    os.makedirs(output_dir, exist_ok=True)
+    encoder, norm, latent_dim = sweep._load_encoder_for_sweep(ckpt_path)
+    arch = common.get_encoder_architecture_from_checkpoint(ckpt_path)
+    enc_lower = norm.lower.numpy() if norm.lower is not None else None
+    enc_upper = norm.upper.numpy() if norm.upper is not None else None
+    if norm.mode == "static_minmax":
+        nominal_np = ((norm.lower + norm.upper) / 2.0).numpy()
+    else:
+        nominal_np = norm.mean.squeeze().numpy()
+    params = common.build_sweep_params_from_checkpoint(
+        arch.input_dim, nominal_np, enc_lower, enc_upper)
+    nominal = torch.tensor(nominal_np, dtype=torch.float32)
+
+    all_results = []
+    for p in params:
+        values, z = sweep._sweep_parameter(encoder, norm, nominal, p, num_points)
+        all_results.append((p, values, z))
+
+    sweep._plot_per_parameter(
+        all_results, nominal, output_dir, latent_dim, arch.output_activation)
+    sweep._plot_sensitivity_heatmap(
+        all_results, os.path.join(output_dir, "sweep_heatmap.png"), latent_dim)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="OMX sim-free encoder z-sweep adapter")
+    sub = parser.add_subparsers(dest="cmd", required=True)
+    sw = sub.add_parser("sweep", help="per-DR-param per-dim z-range sensitivity")
+    sw.add_argument("checkpoint", help="path to a model_*.pt checkpoint")
+    sw.add_argument("--num-points", type=int, default=100,
+                    help="sweep points per parameter (default 100)")
+    sw.add_argument("--plots", default=None,
+                    help="if set, also write heatmap + per-param PNGs to this dir")
+    args = parser.parse_args(argv)
+
+    if args.cmd == "sweep":
+        # Redirect stdout to stderr during engine calls so any engine [INFO]
+        # prints do not corrupt the JSON output on stdout.
+        _real_stdout = sys.stdout
+        sys.stdout = sys.stderr
+        try:
+            out = sweep_sensitivity(args.checkpoint, num_points=args.num_points)
+            if args.plots:
+                _write_plots(args.checkpoint, args.num_points, args.plots)
+                out["plots_dir"] = args.plots
+        finally:
+            sys.stdout = _real_stdout
+        print(json.dumps(out))
+        return 0
+    return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
