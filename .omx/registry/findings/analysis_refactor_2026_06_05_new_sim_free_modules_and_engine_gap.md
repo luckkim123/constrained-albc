@@ -2,8 +2,8 @@
 title: "analysis refactor 2026-06-05 — new sim-free modules and engine-gap status"
 tags: ["engine", "engine-gap", "analysis", "refactor", "sim-free", "omx-callable"]
 created: 2026-06-05T06:43:49.886174
-updated: 2026-06-05T06:43:49.886174
-sources: ["exp/analysis-refactor", "tasks-1-10", "2026-06-05"]
+updated: 2026-06-05T18:00:00.000000
+sources: ["exp/analysis-refactor", "tasks-1-10", "exp/omx-eval-adapter", "2026-06-05"]
 links: ["analysis_engine_map_what_is_grow_able_vs_off_limits.md"]
 category: reference
 confidence: high
@@ -66,4 +66,27 @@ omx exp-analyze can now call these without booting sim:
 
 For adapter implementation: add `sources: [eval, encoder]` to .omx/profile/metrics.yaml and write eval_adapter.py that reads summary.json + calls _process_run. This is the [ENGINE-GAP] for eval/encoder analysis.
 
-[ENGINE-GAP] eval_adapter.py not yet implemented. [WHERE] .omx/profile/eval_adapter.py. [SPEC] read summary.json + data_*.npz via recompute_metrics._process_run; expose per-env SS error/jitter/rise_time/overshoot per axis per DR level to omx exp-analyze. [STATUS] proposed.
+[ENGINE-GAP] eval basic stats (mean/std/CV) — RESOLVED by the omx core, not by an
+adapter. `omx reduce summarize --path <summary.json> --format eval_summary --cv-field
+<metric>` already emits per-axis mean/std/CV for all 4 DR levels (verified EXIT 0 on
+the teacher run, 2026-06-05; 28 rows = 4 levels x 7 axes). No adapter was built for
+basic stats — that would duplicate the core (DRY). [STATUS] resolved-by-core.
+
+[ENGINE-GAP] eval heavy-tail / sample-mean divergence / cross-axis corr — the core
+CANNOT do this (`omx reduce summarize --cv-field n_gt20` returns an empty cv list; the
+core only CVs fields with a `_std` sibling). Required by repo rule 03-analysis-quality.md
+("절대 하지 말 것: mean+std로 heavy-tail 판정"). [WHERE] .omx/profile/eval_adapter.py
+`analyze_eval`, a PURE pass-through to sim-free `_analyze/eval_dr.py` `_ed_analyze_run`
+(it computes nothing itself, so it cannot drift — guarded by test_adapter_matches_engine_directly,
+`out == ref`). [SPEC] per-DR-level per-axis heavy_tail (_HeavyTail: ss_mean/ss_std/ss_max/
+peak_mean/peak_max/pct_peak_gt_thresh/pct_ss_gt_hthresh/n_env) + divergence (sample_rank_pct
+etc.) + cross-axis corr, from data_*.npz, no Isaac Sim. CLI `eval_adapter.py heavy-tail
+<eval_dir>` emits JSON for exp-analyze's code-exec path. Also: `eval` added to the profile
+sources vocab so exp-analyze routes eval questions. [STATUS] implemented (branch
+exp/omx-eval-adapter, 2026-06-05).
+
+[ENGINE-GAP] encoder z-sweep — no omx path reads encoder latent sensitivity. [WHERE] new
+.omx/profile/encoder_adapter.py, delegating to sim-free `_encoder/_shared.py`
+`load_encoder_from_state_dict` + `_encoder/sweep.py`. [SPEC] load checkpoint state_dict,
+run per-dim z sensitivity sweep, emit JSON. NOTE: the sweep itself runs a torch forward
+(GPU), so this adapter is NOT fully sim-free — defer to a GPU-capable session. [STATUS] proposed.
