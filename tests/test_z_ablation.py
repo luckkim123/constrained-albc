@@ -68,7 +68,7 @@ def test_ablation_mean_returns_cached_expanded():
 
 def test_ablation_mean_without_cache_raises():
     z = torch.randn(4, 9)
-    with pytest.raises(ValueError, match="mean.*nominal|cache"):
+    with pytest.raises(ValueError, match=r"mean.*(nominal|cache)"):
         apply_z_ablation(z, mode="mean", cached=None)
 
 
