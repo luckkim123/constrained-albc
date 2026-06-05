@@ -274,10 +274,15 @@ class ConstraintEncoderRunner(OnPolicyRunner):
         metrics: dict[str, float] = {}
 
         # Per-constraint: violation + barrier margin (2-level hierarchy for WandB grouping)
+        # Also log d_k (discounted budget D_k/(1-cost_gamma)) so analysis can compute the
+        # cost/budget ratio without depending on the env config (cost = d_k - margin).
+        d_k = alg.d_k.tolist() if hasattr(alg, "d_k") else None
         for k in range(K):
             suffix = self._constraint_names[k] if k < len(self._constraint_names) else str(k)
             metrics[f"Constraint/viol/{suffix}"] = alg._last_violations[k]
             metrics[f"Constraint/margin/{suffix}"] = alg._last_barrier_margins[k]
+            if d_k is not None:
+                metrics[f"Constraint/d_k/{suffix}"] = d_k[k]
 
         # Aggregate constraint metric
         metrics["Constraint/barrier_penalty"] = alg._last_barrier_penalty

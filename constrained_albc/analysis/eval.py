@@ -2218,6 +2218,55 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
                   f"{s['l_hat_tvar_mean']:6.4f}/{s['l_true_tvar_mean']:.4f}")
         print("=" * 70)
 
+    # ---- z-ablation diagnostic summary (#1-A: does the actor use latent z?) ----
+    if getattr(args_cli, "z_ablation", None) is not None:
+        per_level = {}
+        all_deltas = []
+        for lvl in DR_LEVELS:
+            d = all_data[lvl]["delta_action"].reshape(-1)
+            all_deltas.append(d)
+            per_level[lvl] = {
+                "mean": float(np.mean(d)),
+                "std": float(np.std(d)),
+                "p50": float(np.percentile(d, 50)),
+                "p95": float(np.percentile(d, 95)),
+                "max": float(np.max(d)),
+                "n": int(d.size),
+            }
+        overall = np.concatenate(all_deltas)
+        z_ablation_summary = {
+            "z_ablation_mode": args_cli.z_ablation,
+            "checkpoint": resume_path or "",
+            "delta_action_overall": {
+                "mean": float(np.mean(overall)),
+                "std": float(np.std(overall)),
+                "p50": float(np.percentile(overall, 50)),
+                "p95": float(np.percentile(overall, 95)),
+                "max": float(np.max(overall)),
+                "n": int(overall.size),
+            },
+            "delta_action_per_level": per_level,
+            "note": (
+                "delta_action = ||action(z) - action(z_ablated)|| per env-step "
+                "(deterministic act_inference, so this isolates the z effect). "
+                "Large => actor uses z; ~0 => actor ignores z. Compare these "
+                "performance metrics against the un-ablated baseline eval, "
+                "especially whether degradation is larger at hard DR."
+            ),
+        }
+        with open(os.path.join(output_dir, "z_ablation_summary.json"), "w") as f:
+            json.dump(z_ablation_summary, f, indent=2)
+        print(f"\n{'=' * 70}\nZ-ABLATION DIAGNOSTIC (#1-A) -- mode={args_cli.z_ablation}\n{'=' * 70}")
+        print(f"{'Level':<10} {'mean':>9} {'p95':>9} {'max':>9}")
+        for lvl in DR_LEVELS:
+            s = per_level[lvl]
+            print(f"{lvl:<10} {s['mean']:9.4f} {s['p95']:9.4f} {s['max']:9.4f}")
+        print(f"{'OVERALL':<10} {z_ablation_summary['delta_action_overall']['mean']:9.4f} "
+              f"{z_ablation_summary['delta_action_overall']['p95']:9.4f} "
+              f"{z_ablation_summary['delta_action_overall']['max']:9.4f}")
+        print("=" * 70)
+        print(f"[INFO] wrote {os.path.join(output_dir, 'z_ablation_summary.json')}")
+
     print(f"\nOutput saved to: {output_dir}")
     env.close()
 

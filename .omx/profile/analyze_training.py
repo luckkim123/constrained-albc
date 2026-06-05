@@ -307,20 +307,21 @@ def _check_cost_divergence(data):
 
 
 def _find_diverging_costs(data):
-    """Find costs whose return is increasing in the latter half of training."""
+    """Find costs whose return is increasing in the latter half of training.
+
+    Dual-schema: reconstructs the cost series via _constraint_series so it
+    works on both the old cost_return_ tags and new margin//d_k/ tags.
+    """
     diverging = []
-    for tag in data:
-        if not tag.startswith("Constraint/cost_return_"):
-            continue
-        vals = _values(data, tag)
-        if len(vals) < 20:
+    for name in _constraint_names(data):
+        vals, _dk = _constraint_series(data, name)
+        if not vals or len(vals) < 20:
             continue
         n = len(vals)
         mid_start, mid_end = n // 4, n // 2
         mid_mean = sum(vals[mid_start:mid_end]) / max(1, mid_end - mid_start)
         last_mean = sum(vals[-n // 4:]) / max(1, n // 4)
         if mid_mean > 0.1 and last_mean > mid_mean * 1.2:
-            name = tag.replace("Constraint/cost_return_", "")
             diverging.append(name)
     return diverging
 
@@ -364,10 +365,13 @@ def _check_early_convergence(data):
     return improving_early and flat_late
 
 
-def _cost_trend_late(data, tag):
-    """Compute trend in latter half only (last 25% mean vs middle 25% mean)."""
-    vals = _values(data, tag)
-    if len(vals) < 10:
+def _cost_trend_late_series(vals):
+    """Compute trend in latter half only (last 25% mean vs middle 25% mean).
+
+    Operates on a pre-extracted series so it works on costs reconstructed
+    from either tag schema (see _constraint_series).
+    """
+    if not vals or len(vals) < 10:
         return " ", ""
     n = len(vals)
     mid_start, mid_end = n // 4, n // 2
@@ -379,10 +383,90 @@ def _cost_trend_late(data, tag):
     return arrow, alert
 
 
+def _cost_trend_late(data, tag):
+    """Compute trend in latter half only (last 25% mean vs middle 25% mean)."""
+    return _cost_trend_late_series(_values(data, tag))
+
+
+def _constraint_names(data):
+    """Discover constraint names from either tag schema.
+
+    Two schemas exist in the wild:
+      old (synthetic): Constraint/cost_return_{name} + Constraint/d_k_{name}
+      new (real runs): Constraint/margin/{name} + Constraint/viol/{name} (+ Constraint/d_k/{name})
+    """
+    names = set()
+    for tag in data:
+        if tag.startswith("Constraint/cost_return_"):
+            names.add(tag.replace("Constraint/cost_return_", ""))
+        elif tag.startswith("Constraint/margin/"):
+            names.add(tag.split("Constraint/margin/", 1)[1])
+    return sorted(names)
+
+
+def _constraint_series(data, name):
+    """Return (cost_series, d_k) for a constraint across both tag schemas.
+
+    cost is the discounted-sum cost return; d_k is the discounted budget
+    D_k/(1-cost_gamma). Returns (cost_list_or_None, d_k_or_None). When the
+    new schema is present without a logged d_k (older real runs), cost cannot
+    be reconstructed in absolute terms, so cost is None and only margin/viol
+    raw values remain available to callers.
+    """
+    cr = _values(data, f"Constraint/cost_return_{name}")
+    if cr:
+        dk = _last(data, f"Constraint/d_k_{name}")
+        return cr, dk
+    # new schema: cost = d_k - margin (per-iter), needs logged d_k
+    margin = _values(data, f"Constraint/margin/{name}")
+    if not margin:
+        return None, None
+    dk = _last(data, f"Constraint/d_k/{name}")
+    if dk is None or dk <= 0:
+        return None, None
+    cost = [max(0.0, dk - m) for m in margin]
+    return cost, dk
+
+
+def _cost_ratio_q4(data, name):
+    """Mean cost/d_k over the last quarter, or None if unavailable."""
+    cost, dk = _constraint_series(data, name)
+    if not cost or dk is None or dk <= 0:
+        return None
+    q4 = cost[int(len(cost) * 0.75):]
+    if not q4:
+        return None
+    return (sum(q4) / len(q4)) / dk
+
+
+def _find_inert_constraints(data, achieved_below=0.20, loose_above=0.80):
+    """Classify constraints that are not shaping learning.
+
+    Returns (achieved, loose): constraints whose Q4 cost/d_k stays below
+    achieved_below (cost achieved far under budget -> constraint trivially
+    satisfied) vs above loose_above without ever binding (budget so loose the
+    cost sits just under it -> constraint near-inert). Both mean the term is
+    not actively constraining the policy, for opposite reasons.
+    """
+    achieved, loose = [], []
+    for name in _constraint_names(data):
+        r = _cost_ratio_q4(data, name)
+        if r is None:
+            continue
+        if r < achieved_below:
+            achieved.append((name, r))
+        elif r > loose_above:
+            loose.append((name, r))
+    return achieved, loose
+
+
 def _margin_at_floor(data, name):
-    """Check if barrier margin is at the floor (0.01 * d_k)."""
-    margin = _last(data, f"Constraint/barrier_margin_{name}")
+    """Check if barrier margin is at the floor (0.015 * d_k). Dual-schema."""
     dk = _last(data, f"Constraint/d_k_{name}")
+    margin = _last(data, f"Constraint/barrier_margin_{name}")
+    if margin is None:  # new schema
+        margin = _last(data, f"Constraint/margin/{name}")
+        dk = _last(data, f"Constraint/d_k/{name}")
     if margin is None or dk is None or dk <= 0:
         return False
     return margin <= 0.015 * dk
@@ -560,31 +644,37 @@ def format_tier2(data):
     """Constraints + TRPO + DORAEMON + dynamics."""
     lines = []
 
-    # Constraints
-    constraint_names = sorted(set(
-        tag.replace("Constraint/cost_return_", "")
-        for tag in data if tag.startswith("Constraint/cost_return_")
-    ))
+    # Constraints (dual-schema: old cost_return_ tags or new margin//viol//d_k/ tags)
+    constraint_names = _constraint_names(data)
 
     violations = []
     diverging_costs = _find_diverging_costs(data)
     if constraint_names:
         lines.append("[TIER 2] Constraints")
         for name in constraint_names:
-            cr = _last(data, f"Constraint/cost_return_{name}")
-            dk = _last(data, f"Constraint/d_k_{name}")
+            cost_series, dk = _constraint_series(data, name)
+            cr = cost_series[-1] if cost_series else None
             margin = _last(data, f"Constraint/barrier_margin_{name}")
+            if margin is None:
+                margin = _last(data, f"Constraint/margin/{name}")
             if cr is not None and dk is not None and dk > 0:
-                arrow, divg_alert = _cost_trend_late(data, f"Constraint/cost_return_{name}")
+                arrow, divg_alert = _cost_trend_late_series(cost_series)
                 floor_alert = "FLOOR" if _margin_at_floor(data, name) else ""
                 violated = "OVER" if cr > dk else ""
-                alerts = " ".join(filter(None, [violated, divg_alert, floor_alert]))
+                ratio = cr / dk
+                inert_alert = "INERT" if ratio < 0.20 else ("LOOSE" if ratio > 0.80 and not violated else "")
+                alerts = " ".join(filter(None, [violated, divg_alert, floor_alert, inert_alert]))
                 margin_str = _fmt(margin) if margin is not None else "N/A"
                 lines.append(
-                    f"  {name:16s} cr={_fmt(cr):>7s} dk={_fmt(dk):>7s} m={margin_str:>7s} {arrow} {alerts}"
+                    f"  {name:16s} cr={_fmt(cr):>7s} dk={_fmt(dk):>7s} c/dk={ratio:>5.0%} m={margin_str:>7s} {arrow} {alerts}"
                 )
                 if violated:
                     violations.append(name)
+            elif margin is not None:
+                # new schema without logged d_k: only raw margin/viol available
+                viol = _last(data, f"Constraint/viol/{name}")
+                viol_str = _fmt(viol) if viol is not None else "N/A"
+                lines.append(f"  {name:16s} m={_fmt(margin):>7s} viol={viol_str:>7s} (no d_k logged)")
             elif cr is not None:
                 lines.append(f"  {name:16s} cr={_fmt(cr):>7s}")
 
@@ -599,6 +689,14 @@ def format_tier2(data):
 
         if diverging_costs:
             lines.append(f"  ** {len(diverging_costs)} costs diverging: {', '.join(diverging_costs)}")
+
+        achieved, loose = _find_inert_constraints(data)
+        if achieved or loose:
+            n_inert = len(achieved) + len(loose)
+            lines.append(
+                f"  ** {n_inert}/{len(constraint_names)} constraints inert (not shaping learning): "
+                f"{len(achieved)} achieved (c/dk<20%), {len(loose)} loose-budget (c/dk>80%, no breach)"
+            )
 
     # TRPO Step Quality
     trpo_metrics = [
