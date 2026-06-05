@@ -45,3 +45,23 @@ def analyze_eval(eval_dir: str, levels=None) -> dict:
 
     lvls = list(levels) if levels else list(_DEFAULT_LEVELS)
     return _ed_analyze_run(eval_dir, lvls, _T_ATT, _T_LV, _T_YAW)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="OMX sim-free eval heavy-tail adapter")
+    sub = parser.add_subparsers(dest="cmd", required=True)
+    ht = sub.add_parser("heavy-tail", help="per-level per-axis heavy-tail / divergence / corr")
+    ht.add_argument("eval_dir", help="dir holding data_<level>.npz")
+    ht.add_argument("--levels", nargs="+", default=None,
+                    help="DR levels (default: none soft medium hard)")
+    args = parser.parse_args(argv)
+
+    if args.cmd == "heavy-tail":
+        out = analyze_eval(args.eval_dir, levels=args.levels)
+        print(json.dumps(out))
+        return 0
+    return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
