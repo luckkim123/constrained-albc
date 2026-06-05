@@ -246,6 +246,7 @@ from eval_plots import (  # type: ignore[import-not-found]  # noqa: E402
 from eval_serialize import _build_mat_meta, write_eval_npz  # type: ignore[import-not-found]  # noqa: E402
 import dr_config as _dr_config_module  # type: ignore[import-not-found]  # noqa: E402
 from dr_config import (  # type: ignore[import-not-found]  # noqa: E402
+    _DR_TUPLE_FIELDS,
     _apply_extreme_ood_physics,
     _collapse_dr_to_midpoint,
     build_dr_config,
