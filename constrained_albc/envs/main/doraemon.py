@@ -63,8 +63,12 @@ _PARAM_DEFS: list[tuple[str, str, float, float]] = [
 NDIMS = len(_PARAM_DEFS)
 
 # Per-parameter nominal overrides; defaults to midpoint of [lo, hi] when absent.
+# E2 (dr-ocean-shift, 2026-06-05 campaign): nominal 0.0 -> 0.3. DORAEMON grows variance
+# only (never moves mu), so a pinned nominal=0 structurally starves the strong-current tail.
+# Shifting the distribution CENTER forces the under-sampled hard current into sampling.
+# Single-variable vs baseline-260605-dr-harder (everything else identical).
 _NOMINAL_OVERRIDES: dict[str, float] = {
-    "ocean_current_strength": 0.0,
+    "ocean_current_strength": 0.3,
 }
 
 # Default specs (base bounds) for callers without a DR cfg; matches pre-promotion PARAM_SPECS.
