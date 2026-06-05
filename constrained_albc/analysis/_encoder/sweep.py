@@ -23,7 +23,7 @@ from common import (  # type: ignore[import-not-found]
     get_encoder_architecture_from_checkpoint,
 )
 
-from ._shared import build_encoder_mlp, load_encoder_from_state_dict
+from ._shared import load_encoder_from_state_dict
 
 
 @dataclass

@@ -17,7 +17,7 @@ from common import (  # type: ignore[import-not-found]
     resolve_run_path,
 )
 
-from ._shared import build_encoder_mlp, load_encoder_from_state_dict
+from ._shared import load_encoder_from_state_dict
 
 
 def _load_encoder_from_ckpt(ckpt_data: dict, arch) -> nn.Sequential:
