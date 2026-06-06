@@ -261,10 +261,63 @@ def _compute_enhanced_metrics(npz_path: str, peak_window_sec: float = 2.0) -> di
     return out
 
 
+def _discover_levels(eval_dir: str) -> list[str]:
+    """Levels present as data_<level>.npz in eval_dir, ordered: the in-dist
+    levels (_RC_DR_LEVELS order) first, then any EXTRA level (e.g. "ood") last.
+
+    A dir holding only the 4 in-dist npz returns exactly _RC_DR_LEVELS, so a
+    4-level summary stays byte-identical to the pre-OOD behavior. Extra levels
+    (the GAP-1 "ood" level) are appended in sorted order after the in-dist ones.
+    """
+    try:
+        present = {
+            fn[len("data_"):-len(".npz")]
+            for fn in os.listdir(eval_dir)
+            if fn.startswith("data_") and fn.endswith(".npz")
+        }
+    except FileNotFoundError:
+        return []
+    ordered = [lvl for lvl in _RC_DR_LEVELS if lvl in present]
+    extras = sorted(present - set(_RC_DR_LEVELS))
+    return ordered + extras
+
+
+def _compute_generalization_gap(summary: dict) -> dict | None:
+    """gap[axis][field] = ood[axis][field] - hard[axis][field], in-dist vs OOD.
+
+    Returns None unless BOTH "ood" and "hard" levels are present (so a 4-level,
+    no-ood summary is unchanged). Differences only numeric scalars that exist in
+    BOTH levels for the same axis; missing axes/fields or non-numeric values are
+    silently skipped (never invented).
+    """
+    hard = summary.get("hard")
+    ood = summary.get("ood")
+    if not isinstance(hard, dict) or not isinstance(ood, dict):
+        return None
+    gap: dict[str, dict[str, float]] = {}
+    for axis, ood_fields in ood.items():
+        hard_fields = hard.get(axis)
+        if not isinstance(ood_fields, dict) or not isinstance(hard_fields, dict):
+            continue
+        axis_gap: dict[str, float] = {}
+        for field, ood_val in ood_fields.items():
+            hard_val = hard_fields.get(field)
+            if isinstance(ood_val, bool) or isinstance(hard_val, bool):
+                continue
+            if not isinstance(ood_val, (int, float)) or not isinstance(hard_val, (int, float)):
+                continue
+            axis_gap[field] = float(ood_val) - float(hard_val)
+        if axis_gap:
+            gap[axis] = axis_gap
+    return gap
+
+
 def _process_run(run_dir: str, data_subdir: str = "eval_dr") -> dict:
     eval_dir = os.path.join(run_dir, data_subdir)
     result = {}
-    for level in _RC_DR_LEVELS:
+    # Discover present levels so an extra "ood" level (GAP 1) is processed too;
+    # a dir with only the 4 in-dist npz yields the identical 4-level result.
+    for level in _discover_levels(eval_dir):
         path = os.path.join(eval_dir, f"data_{level}.npz")
         if not os.path.exists(path):
             print(f"  [WARN] {path} missing, skip"); continue
