@@ -19,6 +19,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `paths.resolve_eval` now stamps eval folders with `RUN_TS_FORMAT` (`%y%m%d_%H%M%S`) instead of
+  the hardcoded `%Y-%m-%d_%H-%M-%S`. The eval folder date now matches the run_id by construction
+  (`static_260606_054825` under `..._260606_004205`), making `RUN_TS_FORMAT` the single source of
+  truth for every output timestamp (run_id / eval / encoder). Prevents the run_id-vs-eval date-
+  format split. `_timestamp_from_log_dir` already dual-accepts both formats, so old eval folders
+  still resolve. See `docs/results/2026-06-06-output-naming-cleanup.md`.
 - run_id shortened: `%Y-%m-%d_%H-%M-%S` -> `%y%m%d_%H%M%S` (`paths.RUN_TS_FORMAT`), so a
   run_id goes from `2026-05-25_16-02-48_trpo` (24 chars) to `260525_160248_trpo` (18).
   task_short is kept. `_timestamp_from_log_dir` parses both the short and the legacy long

@@ -265,12 +265,17 @@ def resolve_eval(run: RunHandle, mode: str, eval_ts: str | None = None) -> Path:
     is omitted a fresh timestamp is generated. The directory is **not** created here;
     callers create it when they write (this module stays side-effect-free for reads).
 
+    The timestamp uses :data:`RUN_TS_FORMAT` (the SAME format as the run_id), so a run's
+    eval folder reads ``static_260606_054825`` matching the run_id's ``..._260606_004205``
+    -- one date format across the whole run tree (no run_id %y%m%d vs eval %Y-%m-%d drift).
+    RUN_TS_FORMAT is the single source of truth for every output-name timestamp.
+
     Args:
         run: Resolved run handle.
         mode: One of static / periodic / segmented.
         eval_ts: Optional explicit eval timestamp; defaults to now.
     """
-    ts = eval_ts or datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    ts = eval_ts or datetime.now().strftime(RUN_TS_FORMAT)
     return run.eval_root / f"{mode}_{ts}"
 
 
