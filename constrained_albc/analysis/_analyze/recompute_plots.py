@@ -172,8 +172,19 @@ def _print_run_summary(run_name: str, metrics: dict) -> None:
 
 def _write_run_json(run_dir: str, metrics: dict, data_subdir: str = "eval_dr") -> None:
     out = os.path.join(run_dir, data_subdir, "summary.json")
+    # GAP 1 (2c): attach generalization_gap = ood - hard when an OOD level is
+    # present. A 4-level (no-ood) summary gains NO new key (byte-identical). Build
+    # a shallow copy so the caller's in-memory metrics dict (used for plotting)
+    # is not mutated.
+    from .recompute_metrics import _compute_generalization_gap
+
+    payload = metrics
+    gap = _compute_generalization_gap(metrics)
+    if gap:
+        payload = dict(metrics)
+        payload["generalization_gap"] = gap
     with open(out, "w") as f:
-        json.dump(metrics, f, indent=2,
+        json.dump(payload, f, indent=2,
                   default=lambda o: None if (isinstance(o, float) and np.isnan(o)) else o)
     print(f"  Saved {out}")
 

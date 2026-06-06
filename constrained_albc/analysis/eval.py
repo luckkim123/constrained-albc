@@ -103,6 +103,16 @@ sp_static.add_argument(
          "Extrapolates DR bounds beyond training distribution.",
 )
 sp_static.add_argument(
+    "--ood",
+    action="store_true",
+    default=False,
+    help="APPEND a 5th 'ood' level to the none/soft/medium/hard sweep (side-by-side). "
+         "The ood level uses DORAEMON-derived OOD bounds (held-out thruster axes pushed "
+         "past their fixed training range; cog/cob offsets past the DORAEMON ceiling) so "
+         "summary.json can report a per-axis generalization gap (ood - hard). Requires "
+         "--doraemon-dr (the default). Distinct from --ood-scale (which REPLACES the sweep).",
+)
+sp_static.add_argument(
     "--deterministic-dr",
     action="store_true",
     default=False,
@@ -250,6 +260,7 @@ from dr_config import (  # type: ignore[import-not-found]  # noqa: E402
     _apply_extreme_ood_physics,
     _collapse_dr_to_midpoint,
     build_dr_config,
+    build_ood_dr_config,
     get_hard_dr_config,
     load_doraemon_dr,
 )
@@ -816,6 +827,21 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         DR_COLORS[ood_name] = "#FF00FF"  # magenta for OOD
         print(f"\n[INFO] OOD eval mode: single level '{ood_name}' at scale={args_cli.ood_scale:.2f}\n")
 
+    # ---- OOD side-by-side: APPEND a 5th 'ood' level to the in-dist sweep ----
+    # Unlike --ood-scale (which REPLACES the sweep), --ood keeps none/soft/medium/hard
+    # and adds 'ood' so summary.json can report the in-dist(hard)-vs-ood generalization
+    # gap. The ood level's DR is NOT a scalar interpolation; DR_SCALE["ood"]=1.0 is a
+    # display sentinel only -- the actual cfg is built by build_ood_dr_config at the
+    # apply/plot sites (special-cased on level == "ood").
+    if args_cli.ood:
+        # DR_LEVELS / DR_SCALE are already declared global by the --ood-scale block
+        # above (a single compile-time global covers the whole function).
+        if "ood" not in DR_LEVELS:
+            DR_LEVELS = [*DR_LEVELS, "ood"]
+        DR_SCALE = {**DR_SCALE, "ood": 1.0}  # sentinel for display (DR% label); not used to build the cfg
+        DR_COLORS["ood"] = "#FF00FF"  # magenta for OOD
+        print("\n[INFO] OOD side-by-side: appended 'ood' level (DORAEMON-derived OOD bounds).\n")
+
     # ---- Deterministic DR: disable DORAEMON + collapse tuple DR ranges to midpoint ----
     # Applied AFTER env_cfg is built but BEFORE gym.make(...) so env init uses fixed values.
     if args_cli.deterministic_dr or args_cli.extreme_ood:
@@ -1009,7 +1035,12 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         print(f"  DR Level: {level.upper()} | DR Scale: {dr_pct}%")
         print(f"{'=' * 60}")
 
-        apply_dr_config(raw_env.cfg, DR_SCALE[level])
+        if level == "ood":
+            # GAP 1: the ood level is a full DORAEMON-derived OOD config, not a
+            # scalar interpolation -- route around apply_dr_config (Option A).
+            raw_env.cfg.randomization = build_ood_dr_config(_dr_config_module._DORAEMON_RAW)
+        else:
+            apply_dr_config(raw_env.cfg, DR_SCALE[level])
 
         if is_student_mode:
             policy.reset_logs()  # per-level latent logs (don't carry across DR levels)
@@ -1092,7 +1123,12 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     generate_plots(all_data, all_metrics, output_dir)
 
     # DR distribution plot: rebuild the per-level configs and visualize.
-    dr_configs_used = {lvl: build_dr_config(DR_SCALE[lvl]) for lvl in DR_LEVELS}
+    # The ood level (GAP 1) is a full DORAEMON-derived cfg, not a scalar interp.
+    dr_configs_used = {
+        lvl: (build_ood_dr_config(_dr_config_module._DORAEMON_RAW) if lvl == "ood"
+              else build_dr_config(DR_SCALE[lvl]))
+        for lvl in DR_LEVELS
+    }
     _plot_dr_distributions(dr_configs_used, _dr_config_module._DORAEMON_RAW, output_dir)
 
     # ---- Print final comparison ----
