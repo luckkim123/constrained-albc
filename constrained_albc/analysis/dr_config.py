@@ -32,6 +32,10 @@ from constrained_albc.envs.main.doraemon import (  # type: ignore[import-not-fou
     _PARAM_DEFS,
     build_param_specs,
 )
+from ood_logic import (  # type: ignore[import-not-found]  # sim-free OOD bound math
+    _HELD_OUT_AXES,
+    compute_ood_bounds,
+)
 
 # ---- Module-level mutable state (mutated by eval.py at CLI parse time) ----
 
@@ -348,3 +352,51 @@ def _apply_extreme_ood_physics(env_cfg) -> None:
         setattr(dr, field_name, value)
         applied += 1
     print(f"[INFO] extreme-ood: applied {applied} fixed OOD physics values")
+
+
+def build_ood_dr_config(
+    doraemon_raw: dict[str, tuple[float, float]] | None = None,
+) -> DomainRandomizationCfg:
+    """Build the DR config for the GAP-1 `ood` level (thin sim-touching wrapper).
+
+    Starts from the hard-DR anchor (so all in-dist axes are at their trained max),
+    then overrides the OOD axes with bounds from the sim-free `compute_ood_bounds`:
+      - magnitude axes (cog/cob offsets): DORAEMON ceiling (mean+2*std) * 1.5,
+        read from `doraemon_raw` (falls back to the module's _DORAEMON_RAW).
+      - held-out axes (thruster): training range pushed past its max (no overlap).
+
+    NO hardcoded absolute magnitude appears here -- magnitude ceilings are READ
+    from the learned distribution; the only constants live in ood_logic as named
+    DESIGN parameters (OOD_HELD_OUT_PUSH / OOD_MAGNITUDE_FACTOR / OOD_CEILING_STD_K).
+
+    Not unit-tested in CI (constructs DomainRandomizationCfg -> needs Isaac Sim);
+    exercised by the user's GPU smoke. The bound math is unit-tested via ood_logic.
+    """
+    raw = doraemon_raw if doraemon_raw is not None else _DORAEMON_RAW
+    if not raw:
+        raise RuntimeError(
+            "build_ood_dr_config: no DORAEMON raw distribution available. The OOD "
+            "level needs the run's learned mean/std (load_doraemon_dr must succeed) "
+            "to derive magnitude-OOD ceilings. Pass --doraemon-dr (the default)."
+        )
+
+    # Hard anchor: DORAEMON-learned full DR if loaded, else static HardDR.
+    cfg: DomainRandomizationCfg = get_hard_dr_config()
+
+    # Held-out axes anchor on the FIXED training range from the hard config itself.
+    hard_ranges: dict[str, tuple[float, float]] = {}
+    for axis in _HELD_OUT_AXES:
+        if hasattr(cfg, axis):
+            lo, hi = getattr(cfg, axis)
+            hard_ranges[axis] = (lo, hi)
+
+    bounds = compute_ood_bounds(raw, hard_ranges)
+    for field_name, (lo, hi) in bounds.items():
+        if not hasattr(cfg, field_name):
+            print(f"[WARN] build_ood_dr_config: DR has no field '{field_name}', skipping.")
+            continue
+        setattr(cfg, field_name, (lo, hi))
+        print(f"  OOD DR: {field_name:30s} -> [{lo:.4f}, {hi:.4f}]")
+
+    cfg.enable = True
+    return cfg
