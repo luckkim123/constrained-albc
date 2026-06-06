@@ -53,19 +53,19 @@ from .mdp.rewards import ALBCRewardCfg, TrackingTermCfg
 # thruster_sat reverted to thruster_util (Average, budget=0.40): original form.
 _FULL_DOF_CONSTRAINT_TERMS: list[ConstraintTermCfg] = [
     # --- Probabilistic (5): binary indicator, budget = violation probability ---
-    ConstraintTermCfg(func=attitude_limit_cost, params={"limit": 1.396}, budget=0.01, name="attitude"),
-    ConstraintTermCfg(func=torque_limit_cost, params={"limit_nm": 9.5}, budget=0.08, name="arm_torque"),
-    ConstraintTermCfg(func=velocity_limit_cost, params={"limit_rad_per_s": 4.189}, budget=0.02, name="arm_joint_vel"),
-    ConstraintTermCfg(func=joint1_position_cost, params={"limit_rad": 4 * math.pi}, budget=0.01, name="joint1_pos"),
-    ConstraintTermCfg(func=cumulative_yaw_cost, params={"limit_rad": 8 * math.pi}, budget=0.01, name="cumul_yaw"),
+    ConstraintTermCfg(func=attitude_limit_cost, params={"limit": 1.396}, budget=0.005, name="attitude"),
+    ConstraintTermCfg(func=torque_limit_cost, params={"limit_nm": 9.5}, budget=0.04, name="arm_torque"),
+    ConstraintTermCfg(func=velocity_limit_cost, params={"limit_rad_per_s": 4.189}, budget=0.01, name="arm_joint_vel"),
+    ConstraintTermCfg(func=joint1_position_cost, params={"limit_rad": 4 * math.pi}, budget=0.005, name="joint1_pos"),
+    ConstraintTermCfg(func=cumulative_yaw_cost, params={"limit_rad": 8 * math.pi}, budget=0.005, name="cumul_yaw"),
     # --- Average (5): continuous cost, soft threshold for attitude/velocity tracking ---
-    ConstraintTermCfg(func=thruster_utilization_cost, budget=0.40, name="thruster_util"),
-    ConstraintTermCfg(func=rp_rate_cost, params={"soft_threshold": 0.5}, budget=0.10, name="rp_rate"),
-    ConstraintTermCfg(func=yaw_rate_cost, params={"soft_threshold": 0.55}, budget=0.10, name="yaw_rate"),
+    ConstraintTermCfg(func=thruster_utilization_cost, budget=0.20, name="thruster_util"),
+    ConstraintTermCfg(func=rp_rate_cost, params={"soft_threshold": 0.5}, budget=0.05, name="rp_rate"),
+    ConstraintTermCfg(func=yaw_rate_cost, params={"soft_threshold": 0.55}, budget=0.05, name="yaw_rate"),
     ConstraintTermCfg(
-        func=rp_vel_settling_cost, params={"settling_threshold": 0.087}, budget=0.20, name="rp_vel_settling"
+        func=rp_vel_settling_cost, params={"settling_threshold": 0.087}, budget=0.10, name="rp_vel_settling"
     ),
-    ConstraintTermCfg(func=manipulability_cost, params={"w_threshold": 0.3}, budget=0.05, name="manipulability"),
+    ConstraintTermCfg(func=manipulability_cost, params={"w_threshold": 0.3}, budget=0.025, name="manipulability"),
 ]
 
 
