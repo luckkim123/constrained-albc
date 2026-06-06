@@ -19,6 +19,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `paths.find_runs` now ignores alias symlinks and `_`-prefixed / `legacy` subtrees during run
+  enumeration, and tolerates an extra purpose-grouping layer
+  (`experiments/rsl_rl/<exp>/<group>/<run_id>/`, e.g. `dr_harder/`). Previously a `baseline -> run`
+  alias symlink was double-listed as a separate run (`run_id="baseline"`) and a `_pre_reanalysis_
+  backup/.../` subtree surfaced its non-underscore leaf as a phantom run, because `rglob` is a flat
+  iterator (pruning a parent does not stop descent). The skip now tests EVERY path segment relative
+  to the scan root, so aliases/backups at any depth are excluded while real runs at any grouping
+  depth are still found. Guarded by 3 new tests in `test_paths.py` (purpose-group layer; alias +
+  backup ignored). Lets runs be classified by experiment purpose (a `dr_harder/` group with its own
+  `baseline` pointer) without corrupting `find_runs` / eval routing.
 - `paths.resolve_eval` now stamps eval folders with `RUN_TS_FORMAT` (`%y%m%d_%H%M%S`) instead of
   the hardcoded `%Y-%m-%d_%H-%M-%S`. The eval folder date now matches the run_id by construction
   (`static_260606_054825` under `..._260606_004205`), making `RUN_TS_FORMAT` the single source of

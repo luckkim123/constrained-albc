@@ -198,6 +198,36 @@ def test_find_runs_skips_legacy(tmp_path):
     assert {r.run_id for r in runs} == {"2026-05-25_a", "2026-05-25_b"}
 
 
+def test_find_runs_purpose_group_layer(tmp_path):
+    """Runs under an extra purpose layer (experiments/rsl_rl/<exp>/<group>/<run_id>/, e.g.
+    dr_harder/) are found regardless of grouping depth."""
+    exp = tmp_path / "experiments"
+    group = exp / "rsl_rl" / "albc_trpo_teacher" / "dr_harder"
+    _make_new_run(group, "trpo_main_260525_232805")
+    _make_new_run(group, "trpo_e1_260605_193501")
+    runs = P.find_runs(str(exp))
+    assert {r.run_id for r in runs} == {"trpo_main_260525_232805", "trpo_e1_260605_193501"}
+
+
+def test_find_runs_ignores_alias_symlink_and_backup(tmp_path):
+    """An alias symlink (e.g. baseline -> run) and a ``_``-prefixed backup subtree must NOT be
+    counted as runs. The symlink would double-list its target under run_id 'baseline'; the
+    backup holds old eval/analysis output whose non-underscore leaves look run-like to rglob."""
+    exp = tmp_path / "experiments"
+    group = exp / "rsl_rl" / "albc_trpo_teacher" / "dr_harder"
+    _make_new_run(group, "trpo_main_260525_232805")
+    # alias symlink to the real run (sibling) -- not a separate run
+    (group / "baseline").symlink_to("trpo_main_260525_232805")
+    # backup subtree inside the run: rglob would otherwise surface its non-underscore leaf
+    backup = group / "trpo_main_260525_232805" / "_pre_reanalysis_backup" / "analysis"
+    _make_new_run(backup, "20260602-192051-diagnose")
+    runs = P.find_runs(str(exp))
+    ids = [r.run_id for r in runs]
+    assert ids == ["trpo_main_260525_232805"]  # exactly one, no alias, no backup leaf
+    assert "baseline" not in ids
+    assert "20260602-192051-diagnose" not in ids
+
+
 # ---------------------------------------------------------------------------
 # task_short / make_run_id (design section 2-A)
 # ---------------------------------------------------------------------------

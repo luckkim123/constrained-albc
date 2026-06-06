@@ -173,26 +173,51 @@ def _is_run_dir(d: Path) -> tuple[bool, dict | None]:
 def find_runs(experiments_root: str = EXPERIMENTS_ROOT) -> list[RunHandle]:
     """List active run_id trees under ``experiments/``, newest first.
 
-    Runs are grouped ``experiments/rsl_rl/<experiment_name>/<run_id>/`` (2026-05-26), but a
-    flat ``experiments/<run_id>/`` (legacy of this tree) is still recognized. The scan
-    therefore checks each top-level dir as a run and, if it is not one, descends one extra
-    level so grouped runs are found. The ``legacy/`` subtree (frozen, no run_id convention)
-    is skipped. run_id sort is by directory name (timestamp-prefixed), newest first.
+    Runs are grouped ``experiments/rsl_rl/<experiment_name>/<run_id>/`` (2026-05-26), with an
+    optional purpose layer ``.../<experiment_name>/<group>/<run_id>/`` (e.g. ``dr_harder/``);
+    a flat ``experiments/<run_id>/`` (legacy of this tree) is still recognized. The scan checks
+    each top-level dir as a run and, if it is not one, descends (``rglob``) so grouped runs at
+    any depth are found.
+
+    Skipped during enumeration:
+      - ``legacy/`` (frozen, no run_id convention),
+      - symlinks (an alias such as a ``baseline`` -> run pointer is NOT a separate run; counting
+        it would double-list the target run under the wrong run_id),
+      - ``_``-prefixed dirs (backups/scratch like ``_pre_reanalysis_backup_*``; a real run_id is
+        timestamped, never ``_``-prefixed).
+
+    run_id sort is by directory name (timestamp-prefixed), newest first.
     """
     root = Path(experiments_root)
     if not root.exists():
         return []
+
+    def _skip(p: Path, rel_to: Path) -> bool:
+        # alias symlinks + frozen/legacy + backup/scratch dirs are not runs themselves.
+        # rglob is a FLAT iterator (pruning a parent does not stop it descending into the
+        # parent's children), so a backup like ``_pre_reanalysis_backup/analysis/<diagnose>``
+        # would still surface the non-underscore leaf. Guard on ANY ancestor segment (relative
+        # to the scan root) being legacy / ``_``-prefixed, not just the leaf name.
+        if p.is_symlink():
+            return True
+        try:
+            segs = p.relative_to(rel_to).parts
+        except ValueError:
+            segs = (p.name,)
+        return any(s == "legacy" or s.startswith("_") for s in segs)
+
     runs: list[RunHandle] = []
     for d in root.iterdir():
-        if not d.is_dir() or d.name == "legacy":
+        if not d.is_dir() or _skip(d, root):
             continue
         is_run, manifest = _is_run_dir(d)
         if is_run:
             runs.append(RunHandle(run_id=d.name, root=d, manifest=manifest))
             continue
-        # Not a run itself -> a group dir (e.g. rsl_rl, or rsl_rl/<exp>); descend to find runs.
+        # Not a run itself -> a group dir (e.g. rsl_rl, rsl_rl/<exp>, rsl_rl/<exp>/<group>);
+        # descend to find runs. Prune skipped subtrees so aliases/backups never count as runs.
         for sub in d.rglob("*"):
-            if not sub.is_dir() or sub.name == "legacy":
+            if not sub.is_dir() or _skip(sub, root):
                 continue
             is_run, manifest = _is_run_dir(sub)
             if is_run:
