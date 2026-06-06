@@ -214,7 +214,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     log_root_path = os.path.abspath(log_root_path)
     print(f"[INFO] Logging experiment in directory: {log_root_path}")
     # Build the log_dir leaf via make_run_id so the training folder name == the
-    # experiments run_id (both <ts>_<task_short>[_<run_name>]). Using the one builder
+    # experiments run_id (both <task_short>[_<run_name>]_<ts>, tag-time). Using the one builder
     # keeps logs/ and experiments/ names identical by construction (no task_short drift).
     from constrained_albc.analysis.paths import RUN_TS_FORMAT, make_run_id
 

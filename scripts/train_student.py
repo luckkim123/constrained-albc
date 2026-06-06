@@ -101,7 +101,7 @@ def main(env_cfg: DirectRLEnvCfg, _agent_cfg) -> None:
     # so student output lands in the constrained-albc repo even though this script runs from
     # /workspace/isaaclab via isaaclab.sh -- it must NOT resolve against the isaaclab cwd.
     # Leaf is built via make_run_id (== the experiments run_id) so logs/ and experiments/
-    # share one identical name (<ts>_<task_short>_<run_name>), matching the teacher.
+    # share one identical name (<task_short>_<run_name>_<ts>, tag-time), matching the teacher.
     from constrained_albc.analysis.paths import RUN_TS_FORMAT, make_run_id
 
     stamp = datetime.now().strftime(RUN_TS_FORMAT)

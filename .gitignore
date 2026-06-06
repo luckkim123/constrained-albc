@@ -16,3 +16,6 @@ tests/fixtures/*
 
 # omx wiki runtime lock
 .omx/registry/.wiki-lock
+
+# omx scratch — intermediate analysis scaffolding, not tracked
+.omx/scratch/
