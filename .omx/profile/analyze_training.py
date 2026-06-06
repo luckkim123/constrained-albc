@@ -85,6 +85,48 @@ def _resolve_full_analysis_metrics(data):
         ("pitch_err", _resolve(data, "Attitude/pitch_deg", "Attitude_Error/pitch_deg"), False),
     ]
 
+
+def _plot1_panels(data):
+    """Decide which panels Plot 1 (key metrics + changepoints) should render.
+
+    A panel is included ONLY if its underlying tag is present in ``data`` -- this
+    is the GAP-2 fix that prevents blank roll/pitch panels in workspaces (e.g. the
+    dr-harder runs) that log reward but no Attitude*/roll_deg tags.
+
+    Returns a list of ``(key, label, kind, tag)`` tuples, in display order:
+      - kind="single": one line; ``tag`` is the source tag.
+      - kind="exploration": twin-axis noise_std + entropy; ``tag`` is None (the
+        renderer reads Policy/mean_noise_std and Policy/entropy directly). Included
+        if EITHER series is present.
+      - kind="barrier": one line; ``tag`` is Constraint/barrier_penalty.
+    """
+    roll_tag = _resolve(data, "Attitude/roll_deg", "Attitude_Error/roll_deg")
+    pitch_tag = _resolve(data, "Attitude/pitch_deg", "Attitude_Error/pitch_deg")
+    panels = []
+    if "Train/mean_reward" in data:
+        panels.append(("reward", "Reward", "single", "Train/mean_reward"))
+    if roll_tag in data:
+        panels.append(("roll", "Roll Error (deg)", "single", roll_tag))
+    if pitch_tag in data:
+        panels.append(("pitch", "Pitch Error (deg)", "single", pitch_tag))
+    if "Policy/mean_noise_std" in data or "Policy/entropy" in data:
+        panels.append(("exploration", "Exploration", "exploration", None))
+    if "Constraint/barrier_penalty" in data:
+        panels.append(("barrier", "Barrier Penalty", "single", "Constraint/barrier_penalty"))
+    return panels
+
+
+def _discover_doraemon_params(data):
+    """Return sorted DORAEMON curriculum param names that have a mean trajectory.
+
+    Auto-discovers tags of the form ``DORAEMON/mean/<param>`` (mirrors how the
+    constraint-naming fix discovers names rather than hardcoding them). A param is
+    included only if it has a mean series; a std-only tag has no trajectory to
+    anchor and is ignored. Used by the GAP-3 curriculum band plot.
+    """
+    prefix = "DORAEMON/mean/"
+    return sorted(tag[len(prefix):] for tag in data if tag.startswith(prefix))
+
 # ==================================================================
 # 2. CONFIG READING
 # ==================================================================
@@ -1280,54 +1322,49 @@ def generate_deep_plots(data, run_path, metrics=None, pairs=None,
         sig_iters.add(group[0][0])
 
     # --- Plot 1: Key metrics + significant changepoints timeline ---
-    # 5 panels: reward, roll, pitch, exploration (noise+entropy), barrier
-    roll_tag = _resolve(data, "Attitude/roll_deg", "Attitude_Error/roll_deg")
-    pitch_tag = _resolve(data, "Attitude/pitch_deg", "Attitude_Error/pitch_deg")
-    fig, axes = plt.subplots(5, 1, figsize=(14, 12), sharex=True)
-    plot_metrics = [
-        ("Train/mean_reward", "Reward", axes[0]),
-        (roll_tag, "Roll Error (deg)", axes[1]),
-        (pitch_tag, "Pitch Error (deg)", axes[2]),
-    ]
-    for tag, label, ax in plot_metrics:
-        if tag not in data:
-            continue
-        tag_steps = [s for s, _ in data[tag]]
-        tag_vals = [v for _, v in data[tag]]
-        ax.plot(tag_steps, tag_vals, linewidth=0.8, alpha=0.8)
-        ax.set_ylabel(label, fontsize=9)
+    # Panels are chosen DYNAMICALLY: only metrics present in `data` get a panel,
+    # so absent roll/pitch tags no longer leave blank axes (GAP-2 fix).
+    panel_specs = _plot1_panels(data)
+    n_present = len(panel_specs)
+    fig, axes = plt.subplots(n_present, 1, figsize=(14, max(2.4, 2.4 * n_present)), sharex=True)
+    if n_present == 1:
+        axes = [axes]
+    # Uniform legend policy: every panel labels its series and shows a legend.
+    for ax, (_key, label, kind, tag) in zip(axes, panel_specs):
+        if kind == "exploration":
+            # Twin-axis noise_std + entropy; keep the two-color y-labels AND a
+            # combined legend so the policy stays consistent with single panels.
+            handles, labels = [], []
+            if "Policy/mean_noise_std" in data:
+                ns_steps = [s for s, _ in data["Policy/mean_noise_std"]]
+                ns_vals = [v for _, v in data["Policy/mean_noise_std"]]
+                (h,) = ax.plot(ns_steps, ns_vals, linewidth=0.8, alpha=0.8,
+                               color="tab:blue", label="noise_std")
+                ax.set_ylabel("noise_std", fontsize=9, color="tab:blue")
+                ax.tick_params(axis="y", labelcolor="tab:blue")
+                handles.append(h)
+                labels.append("noise_std")
+            if "Policy/entropy" in data:
+                ent_steps = [s for s, _ in data["Policy/entropy"]]
+                ent_vals = [v for _, v in data["Policy/entropy"]]
+                ax_ent = ax.twinx()
+                (h,) = ax_ent.plot(ent_steps, ent_vals, linewidth=0.8, alpha=0.8,
+                                   color="tab:orange", label="entropy")
+                ax_ent.set_ylabel("entropy", fontsize=9, color="tab:orange")
+                ax_ent.tick_params(axis="y", labelcolor="tab:orange")
+                handles.append(h)
+                labels.append("entropy")
+            if handles:
+                ax.legend(handles, labels, fontsize=8, loc="upper right")
+        else:
+            tag_steps = [s for s, _ in data[tag]]
+            tag_vals = [v for _, v in data[tag]]
+            ax.plot(tag_steps, tag_vals, linewidth=0.8, alpha=0.8, label=label)
+            ax.set_ylabel(label, fontsize=9)
+            ax.legend(fontsize=8, loc="upper right")
         ax.grid(True, alpha=0.3)
         for si in sig_iters:
             ax.axvline(si, color="red", linewidth=0.8, alpha=0.6, linestyle="--")
-
-    # Panel 4: Exploration health (noise_std + entropy on dual y-axis)
-    ax_expl = axes[3]
-    if "Policy/mean_noise_std" in data:
-        ns_steps = [s for s, _ in data["Policy/mean_noise_std"]]
-        ns_vals = [v for _, v in data["Policy/mean_noise_std"]]
-        ax_expl.plot(ns_steps, ns_vals, linewidth=0.8, alpha=0.8, color="tab:blue", label="noise_std")
-        ax_expl.set_ylabel("noise_std", fontsize=9, color="tab:blue")
-        ax_expl.tick_params(axis="y", labelcolor="tab:blue")
-    if "Policy/entropy" in data:
-        ent_steps = [s for s, _ in data["Policy/entropy"]]
-        ent_vals = [v for _, v in data["Policy/entropy"]]
-        ax_ent = ax_expl.twinx()
-        ax_ent.plot(ent_steps, ent_vals, linewidth=0.8, alpha=0.8, color="tab:orange", label="entropy")
-        ax_ent.set_ylabel("entropy", fontsize=9, color="tab:orange")
-        ax_ent.tick_params(axis="y", labelcolor="tab:orange")
-    ax_expl.grid(True, alpha=0.3)
-    for si in sig_iters:
-        ax_expl.axvline(si, color="red", linewidth=0.8, alpha=0.6, linestyle="--")
-
-    # Panel 5: Barrier penalty
-    if "Constraint/barrier_penalty" in data:
-        bp_steps = [s for s, _ in data["Constraint/barrier_penalty"]]
-        bp_vals = [v for _, v in data["Constraint/barrier_penalty"]]
-        axes[4].plot(bp_steps, bp_vals, linewidth=0.8, alpha=0.8)
-        axes[4].set_ylabel("Barrier Penalty", fontsize=9)
-        axes[4].grid(True, alpha=0.3)
-        for si in sig_iters:
-            axes[4].axvline(si, color="red", linewidth=0.8, alpha=0.6, linestyle="--")
 
     axes[-1].set_xlabel("Iteration")
     fig.suptitle("Key Metrics + Significant Changepoints (2+ metrics coincident)", fontsize=11)
@@ -1376,6 +1413,8 @@ def generate_deep_plots(data, run_path, metrics=None, pairs=None,
 
     # --- Plot 3: Segmented summary (PELT significant segments) ---
     if sig_iters and "Train/mean_reward" in data:
+        roll_tag = _resolve(data, "Attitude/roll_deg", "Attitude_Error/roll_deg")
+        pitch_tag = _resolve(data, "Attitude/pitch_deg", "Attitude_Error/pitch_deg")
         reward_steps = [s for s, _ in data["Train/mean_reward"]]
         reward_vals = np.array([v for _, v in data["Train/mean_reward"]], dtype=np.float64)
 
@@ -1531,6 +1570,43 @@ def generate_deep_plots(data, run_path, metrics=None, pairs=None,
         fig.savefig(p, dpi=120)
         plt.close(fig)
         saved.append(str(p))
+
+    # --- Plot 5: DORAEMON curriculum trajectory (mean +- std band) ---
+    # Auto-discover DORAEMON/mean/<param> tags and render each as a line with a
+    # +-std band vs iteration. Skip cleanly (with a message, not a silent blank)
+    # when the run logged no curriculum tags (GAP-3 fix).
+    dora_params = _discover_doraemon_params(data)
+    if dora_params:
+        n_dp = len(dora_params)
+        fig, axes = plt.subplots(n_dp, 1, figsize=(14, max(2.4, 2.4 * n_dp)), sharex=True)
+        if n_dp == 1:
+            axes = [axes]
+        for ax, param in zip(axes, dora_params):
+            mean_series = data[f"DORAEMON/mean/{param}"]
+            m_steps = np.array([s for s, _ in mean_series])
+            m_vals = np.array([v for _, v in mean_series], dtype=np.float64)
+            ax.plot(m_steps, m_vals, linewidth=1.0, color="tab:blue", label=f"{param} mean")
+            std_tag = f"DORAEMON/std/{param}"
+            if std_tag in data:
+                s_vals = np.array([v for _, v in data[std_tag]], dtype=np.float64)
+                n = min(len(m_vals), len(s_vals))
+                ax.fill_between(m_steps[:n], (m_vals - s_vals)[:n], (m_vals + s_vals)[:n],
+                                color="tab:blue", alpha=0.2, label="+-1 std")
+            ax.set_ylabel(param, fontsize=9)
+            ax.grid(True, alpha=0.3)
+            ax.legend(fontsize=8, loc="upper right")
+            for si in sig_iters:
+                ax.axvline(si, color="red", linewidth=0.8, alpha=0.6, linestyle="--")
+        axes[-1].set_xlabel("Iteration")
+        fig.suptitle("DORAEMON Curriculum Trajectory (mean +- std)", fontsize=11)
+        fig.tight_layout()
+        p = out_dir / "05_doraemon_curriculum.png"
+        fig.savefig(p, dpi=120)
+        plt.close(fig)
+        saved.append(str(p))
+    else:
+        print("[deep-plot] no DORAEMON/mean/* tags -> skipping curriculum band plot",
+              file=sys.stderr)
 
     return saved
 
