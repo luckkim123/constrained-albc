@@ -89,6 +89,23 @@ metrics:
 - DORAEMON/mean/added_mass_scale
 - DORAEMON/mean/linear_damping_scale
 output_root: experiments
+# --- diagnostic groups for the exp-analyze completeness lint (omx report-coverage) ---
+# Each group must have >=1 metric referenced in a report; otherwise the lint loud-fails.
+# Mirrors the "# --- ... ---" comment headers above, promoted to machine-readable form
+# so a report cannot silently skip a whole diagnostic family (GAP 4 / dr-harder incident).
+groups:
+  # tracking error is discussed by AXIS name + ss_error in reports (not the raw TB
+  # tag att_roll_err_deg), so the lint tokens are the report-facing vocabulary.
+  tracking: [ss_error, roll, pitch, vx, vy, vz, yaw]
+  reward_decomp: [Reward/att_rp, Reward/lin_vel, Reward/yaw_vel, Reward/bias, Reward/smoothness, Reward/thruster, Reward/torque]
+  trpo: [entropy, noise_std, line_search_success, kl, Policy/surrogate_loss, Grad/actor_step, Grad/sigma_step]
+  critic: [Loss/value_function, Loss/cost_value]
+  encoder: [Encoder/z_std, Encoder/z_min, Encoder/z_max, Policy/encoder_grad_norm, Grad/enc_step]
+  constraint: [barrier_penalty, Constraint/margin/attitude, Constraint/margin/cumul_yaw, Constraint/margin/yaw_rate, Constraint/margin/thruster_util, Constraint/viol/attitude, Constraint/viol/cumul_yaw, Constraint/viol/yaw_rate, Constraint/viol/thruster_util]
+  doraemon: [doraemon_success_rate, DORAEMON/entropy_before, DORAEMON/kl_step, DORAEMON/ess_ratio]
+# Markers proving the report was grounded in the training-log engine (analyze_training.py)
+# rather than hand-extracted final scalars. >=1 must appear or the lint loud-fails.
+engine_markers: [DIAGNOSIS, TIER 1, TIER 2, TIER 3, TREND, changepoint, plateau, regime, phase]
 pending_approval: false
 run_id_regex: null
 score_formula: null
