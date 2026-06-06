@@ -115,6 +115,18 @@ def _plot1_panels(data):
         panels.append(("barrier", "Barrier Penalty", "single", "Constraint/barrier_penalty"))
     return panels
 
+
+def _discover_doraemon_params(data):
+    """Return sorted DORAEMON curriculum param names that have a mean trajectory.
+
+    Auto-discovers tags of the form ``DORAEMON/mean/<param>`` (mirrors how the
+    constraint-naming fix discovers names rather than hardcoding them). A param is
+    included only if it has a mean series; a std-only tag has no trajectory to
+    anchor and is ignored. Used by the GAP-3 curriculum band plot.
+    """
+    prefix = "DORAEMON/mean/"
+    return sorted(tag[len(prefix):] for tag in data if tag.startswith(prefix))
+
 # ==================================================================
 # 2. CONFIG READING
 # ==================================================================
@@ -1558,6 +1570,43 @@ def generate_deep_plots(data, run_path, metrics=None, pairs=None,
         fig.savefig(p, dpi=120)
         plt.close(fig)
         saved.append(str(p))
+
+    # --- Plot 5: DORAEMON curriculum trajectory (mean +- std band) ---
+    # Auto-discover DORAEMON/mean/<param> tags and render each as a line with a
+    # +-std band vs iteration. Skip cleanly (with a message, not a silent blank)
+    # when the run logged no curriculum tags (GAP-3 fix).
+    dora_params = _discover_doraemon_params(data)
+    if dora_params:
+        n_dp = len(dora_params)
+        fig, axes = plt.subplots(n_dp, 1, figsize=(14, max(2.4, 2.4 * n_dp)), sharex=True)
+        if n_dp == 1:
+            axes = [axes]
+        for ax, param in zip(axes, dora_params):
+            mean_series = data[f"DORAEMON/mean/{param}"]
+            m_steps = np.array([s for s, _ in mean_series])
+            m_vals = np.array([v for _, v in mean_series], dtype=np.float64)
+            ax.plot(m_steps, m_vals, linewidth=1.0, color="tab:blue", label=f"{param} mean")
+            std_tag = f"DORAEMON/std/{param}"
+            if std_tag in data:
+                s_vals = np.array([v for _, v in data[std_tag]], dtype=np.float64)
+                n = min(len(m_vals), len(s_vals))
+                ax.fill_between(m_steps[:n], (m_vals - s_vals)[:n], (m_vals + s_vals)[:n],
+                                color="tab:blue", alpha=0.2, label="+-1 std")
+            ax.set_ylabel(param, fontsize=9)
+            ax.grid(True, alpha=0.3)
+            ax.legend(fontsize=8, loc="upper right")
+            for si in sig_iters:
+                ax.axvline(si, color="red", linewidth=0.8, alpha=0.6, linestyle="--")
+        axes[-1].set_xlabel("Iteration")
+        fig.suptitle("DORAEMON Curriculum Trajectory (mean +- std)", fontsize=11)
+        fig.tight_layout()
+        p = out_dir / "05_doraemon_curriculum.png"
+        fig.savefig(p, dpi=120)
+        plt.close(fig)
+        saved.append(str(p))
+    else:
+        print("[deep-plot] no DORAEMON/mean/* tags -> skipping curriculum band plot",
+              file=sys.stderr)
 
     return saved
 
