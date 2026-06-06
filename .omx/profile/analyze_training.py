@@ -306,12 +306,66 @@ def _check_cost_divergence(data):
     return len(diverging) >= 2
 
 
-def _find_diverging_costs(data):
-    """Find costs whose return is increasing in the latter half of training."""
-    diverging = []
+def _discover_constraint_names(data):
+    """All constraint names present, under EITHER tag naming.
+
+    Two namings are supported so the table fills on any workspace:
+      - legacy:    Constraint/cost_return_<name> (+ d_k_<name>, barrier_margin_<name>)
+      - this repo: Constraint/margin/<name> (+ viol/<name>)
+    Returns a sorted, de-duplicated list of bare constraint names (no prefix).
+    """
+    names = set()
     for tag in data:
-        if not tag.startswith("Constraint/cost_return_"):
-            continue
+        if tag.startswith("Constraint/cost_return_"):
+            names.add(tag[len("Constraint/cost_return_"):])
+        elif tag.startswith("Constraint/margin/"):
+            names.add(tag[len("Constraint/margin/"):])
+        elif tag.startswith("Constraint/viol/"):
+            names.add(tag[len("Constraint/viol/"):])
+    return sorted(names)
+
+
+def _constraint_margin(data, name):
+    """Margin (>0 = satisfied) under either naming. None if absent.
+
+    this repo logs Constraint/margin/<name> directly; legacy logs
+    Constraint/barrier_margin_<name>. Both mean 'headroom to the budget'.
+    """
+    m = _last(data, f"Constraint/margin/{name}")
+    if m is not None:
+        return m
+    return _last(data, f"Constraint/barrier_margin_{name}")
+
+
+def _constraint_violation(data, name):
+    """Violation amount (>0 = OVER budget) under either naming. None if absent.
+
+    this repo logs Constraint/viol/<name> (= -margin). Legacy has no direct
+    viol tag; derive it from cost_return - d_k when those exist.
+    """
+    v = _last(data, f"Constraint/viol/{name}")
+    if v is not None:
+        return v
+    cr = _last(data, f"Constraint/cost_return_{name}")
+    dk = _last(data, f"Constraint/d_k_{name}")
+    if cr is not None and dk is not None:
+        return cr - dk
+    # fall back to -margin if only a margin is logged
+    m = _constraint_margin(data, name)
+    return None if m is None else -m
+
+
+def _find_diverging_costs(data):
+    """Find constraints whose cost/violation is increasing in the latter half.
+
+    Scans both the legacy cost_return_* curve and this repo's viol/* curve
+    (rising violation = rising cost), so divergence is caught under either naming.
+    """
+    diverging = []
+    for name in _discover_constraint_names(data):
+        # prefer a directly-logged cost-like curve; viol/ rises as cost rises
+        tag = (f"Constraint/cost_return_{name}" if f"Constraint/cost_return_{name}" in data
+               else f"Constraint/viol/{name}")
         vals = _values(data, tag)
         if len(vals) < 20:
             continue
@@ -320,7 +374,6 @@ def _find_diverging_costs(data):
         mid_mean = sum(vals[mid_start:mid_end]) / max(1, mid_end - mid_start)
         last_mean = sum(vals[-n // 4:]) / max(1, n // 4)
         if mid_mean > 0.1 and last_mean > mid_mean * 1.2:
-            name = tag.replace("Constraint/cost_return_", "")
             diverging.append(name)
     return diverging
 
@@ -380,7 +433,11 @@ def _cost_trend_late(data, tag):
 
 
 def _margin_at_floor(data, name):
-    """Check if barrier margin is at the floor (0.01 * d_k)."""
+    """Check if barrier margin is at the floor (0.015 * d_k).
+
+    Only meaningful when a budget d_k is logged (legacy naming). This repo logs
+    margin/viol without a d_k, so the floor test is inapplicable -> False.
+    """
     margin = _last(data, f"Constraint/barrier_margin_{name}")
     dk = _last(data, f"Constraint/d_k_{name}")
     if margin is None or dk is None or dk <= 0:
@@ -560,11 +617,8 @@ def format_tier2(data):
     """Constraints + TRPO + DORAEMON + dynamics."""
     lines = []
 
-    # Constraints
-    constraint_names = sorted(set(
-        tag.replace("Constraint/cost_return_", "")
-        for tag in data if tag.startswith("Constraint/cost_return_")
-    ))
+    # Constraints (both namings: legacy cost_return_/d_k_ and this repo margin/viol)
+    constraint_names = _discover_constraint_names(data)
 
     violations = []
     diverging_costs = _find_diverging_costs(data)
@@ -573,8 +627,10 @@ def format_tier2(data):
         for name in constraint_names:
             cr = _last(data, f"Constraint/cost_return_{name}")
             dk = _last(data, f"Constraint/d_k_{name}")
-            margin = _last(data, f"Constraint/barrier_margin_{name}")
+            margin = _constraint_margin(data, name)
+            viol = _constraint_violation(data, name)
             if cr is not None and dk is not None and dk > 0:
+                # legacy: full cost_return vs budget row
                 arrow, divg_alert = _cost_trend_late(data, f"Constraint/cost_return_{name}")
                 floor_alert = "FLOOR" if _margin_at_floor(data, name) else ""
                 violated = "OVER" if cr > dk else ""
@@ -582,6 +638,21 @@ def format_tier2(data):
                 margin_str = _fmt(margin) if margin is not None else "N/A"
                 lines.append(
                     f"  {name:16s} cr={_fmt(cr):>7s} dk={_fmt(dk):>7s} m={margin_str:>7s} {arrow} {alerts}"
+                )
+                if violated:
+                    violations.append(name)
+            elif margin is not None or viol is not None:
+                # this repo: margin/viol row (margin<0 == viol>0 == OVER budget)
+                over = (margin is not None and margin < 0) or (viol is not None and viol > 0)
+                violated = "OVER" if over else ""
+                viol_tag = f"Constraint/viol/{name}"
+                arrow, divg_alert = (_cost_trend_late(data, viol_tag)
+                                     if viol_tag in data else (" ", ""))
+                alerts = " ".join(filter(None, [violated, divg_alert]))
+                margin_str = _fmt(margin) if margin is not None else "N/A"
+                viol_str = _fmt(viol) if viol is not None else "N/A"
+                lines.append(
+                    f"  {name:16s} m={margin_str:>7s} viol={viol_str:>7s} {arrow} {alerts}"
                 )
                 if violated:
                     violations.append(name)
@@ -919,11 +990,16 @@ def _build_diagnostic_panels(data):
             cr_metrics.append((tag, f"cr_{name}", colors6[i % len(colors6)]))
         panels.append(("Constraint Costs vs Budget", cr_metrics, False))
 
+    # margin panel: legacy barrier_margin_<name> OR this repo's margin/<name>
     margin_tags = sorted(t for t in data if t.startswith("Constraint/barrier_margin_"))
+    margin_split = "barrier_margin_"
+    if not margin_tags:
+        margin_tags = sorted(t for t in data if t.startswith("Constraint/margin/"))
+        margin_split = "Constraint/margin/"
     if margin_tags:
         m_metrics = []
         for i, tag in enumerate(margin_tags[:5]):
-            name = tag.split("barrier_margin_")[1]
+            name = tag.split(margin_split)[1]
             m_metrics.append((tag, f"m_{name}", colors6[i % len(colors6)]))
         m_metrics.append(("Constraint/barrier_penalty", "barrier_pen", "tab:red"))
         panels.append(("Constraint Margins + Barrier", m_metrics, False))
@@ -1529,13 +1605,13 @@ def main():
 
     # Fix constraint count: YAML stores runtime defaults (num_constraints=0),
     # actual count is auto-synced by runner. Infer from TB tags instead.
+    # Discover under EITHER naming (legacy cost_return_ OR this repo margin/viol)
+    # so the [CONFIG] line never prints a false "constraints=0" while the TB
+    # actually holds them (the dr-harder engine-output-unverified incident).
     yaml_num_c = cfg.get("_yaml_num_constraints")
-    tb_constraint_tags = sorted(
-        t for t in data if t.startswith("Constraint/cost_return_")
-    )
-    tb_num_c = len(tb_constraint_tags)
+    tb_names = _discover_constraint_names(data)
+    tb_num_c = len(tb_names)
     if tb_num_c > 0 and (yaml_num_c is None or yaml_num_c == 0):
-        tb_names = [t.split("cost_return_")[1] for t in tb_constraint_tags]
         print(f"  constraints={tb_num_c} (from TB: {', '.join(tb_names)})")
 
     # Filter by --stride (subsample every N-th point, preserves full time range)
