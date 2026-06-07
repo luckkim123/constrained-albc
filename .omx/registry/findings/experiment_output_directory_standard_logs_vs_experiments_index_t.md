@@ -4,7 +4,7 @@ tags: ["albc", "conventions", "directory", "layout", "run_id", "experiments", "l
 created: 2026-06-07T06:04:28.720146
 updated: 2026-06-07T06:04:28.720146
 sources: []
-links: []
+links: ["constrained_albc_experiment_conventions.md", "experiment_launch_checklist_run_id_wandb_latest_alias_naming.md", "experiment_result_recording_location_experiments_tree_is_ssot_no.md"]
 category: convention
 confidence: high
 schemaVersion: 1
@@ -20,7 +20,9 @@ constrained-albc/
   logs/rsl_rl/<exp>/<group>/<run_id>/          # TRAIN output, HEAVY, gitignored
     tb/                                        #   TensorBoard events
     checkpoints/ (or root) model_*.pt          #   checkpoints (numeric sort, model_4999.pt final)
-    wandb/                                     #   wandb local run dir
+    wandb/                                     #   wandb LOCAL run dir (disk side). The SERVER side
+                                               #   (project=campaign / group / tags) is governed by the
+                                               #   launch checklist, NOT by this path.
     params/{env.yaml, agent.yaml}              #   rsl_rl resolved config
   experiments/rsl_rl/<exp>/<group>/<run_id>/   # run-id index tree, LIGHT, gitignored
     train -> ../../../../../logs/rsl_rl/<exp>/<group>/<run_id>   # relative symlink (5 up) into logs
@@ -42,5 +44,5 @@ constrained-albc/
 7. latest alias = inside the group dir. <exp>/<group>/latest -> <newest run_id> (relative link, run basename). No group -> <exp>/latest. If the tree is grouped, the alias MUST sit inside the group or it cannot point at that group's newest run.
 8. baseline alias = <group>/baseline -> <reference run_id> (campaign baseline pointer, optional).
 
-RELATED RULES: run_id naming + e-number campaign-continuity + wandb single-project + launch checklist are in the companion wiki page "experiment launch checklist". eval output placement (--output_dir forbidden, checkpoint via `train` symlink path) is in rule 03-analysis-quality.
+RELATED RULES: run_id naming + e-number campaign-continuity + wandb single-project + launch checklist are in [[experiment_launch_checklist_run_id_wandb_latest_alias_naming.md]]. Result recording (report.md/README/DESIGN) is in [[experiment_result_recording_location_experiments_tree_is_ssot_no.md]]. The experiment-discipline hub is [[constrained_albc_experiment_conventions.md]]. eval output placement (--output_dir forbidden, checkpoint via `train` symlink path) is in rule 03-analysis-quality.
 

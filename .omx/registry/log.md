@@ -324,3 +324,15 @@
 - **Pages:** experiment_launch_checklist_run_id_wandb_latest_alias_naming.md
 - **Summary:** updated 'experiment launch checklist: run_id / wandb / latest-alias naming'
 
+## [2026-06-07T06:37:40.203544] query
+- **Pages:** experiment_launch_checklist_run_id_wandb_latest_alias_naming.md, experiment_output_directory_standard_logs_vs_experiments_index_t.md, sequential_overnight_campaign_wall_clock_budget_not_crashes_kill.md, exp_analyze_must_run_analyze_training_py_for_training_side_diagn.md, constrained_albc_experiment_conventions.md, analysis_engine_map_what_is_grow_able_vs_off_limits.md, barrier_alpha_runtime_0_05_agent_cfg_injects_over_ctor_default_0.md, engine_gap_omx_cli_skill_gaps_found_during_dr_harder_reporting_2.md, hmm_regime_count_separates_dr_harder_runs_overfit_vs_healthy.md, report_completeness_gate_must_run_before_writing_not_after.md, teacher_dr_harder_doraemon_curriculum_froze_before_run_end_unuse.md, dr_harder_reward_decomposition_confirms_eval_trades_on_the_train.md, training_log_analysis_engine_reference_adapter.md, analysis_refactor_2026_06_05_new_sim_free_modules_and_engine_gap.md, constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md, constrainttrpo_health_thresholds.md, don_t_trust_an_engine_s_empty_zero_output_cross_check_the_raw_tb.md, doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md, dr_harder_ood_verdict_e2_best_survives_ood_the_harder_curriculum.md, dr_harder_reports_measure_only_in_distribution_ood_eval_is_the_m.md
+- **Summary:** query 'launch checklist run_id wandb' -> 20 of 40
+
+## [2026-06-07T06:37:40.583641] query
+- **Pages:** experiment_launch_checklist_run_id_wandb_latest_alias_naming.md, sequential_overnight_campaign_wall_clock_budget_not_crashes_kill.md, constrained_albc_experiment_conventions.md, experiment_output_directory_standard_logs_vs_experiments_index_t.md, analysis_engine_map_what_is_grow_able_vs_off_limits.md, report_completeness_gate_must_run_before_writing_not_after.md
+- **Summary:** query 'launch checklist' -> 6 of 6
+
+## [2026-06-07T06:39:06.297946] query
+- **Pages:** experiment_launch_checklist_run_id_wandb_latest_alias_naming.md, dr_harder_campaign_synthesis_speed_kills_attitude_center_shift_o.md, sequential_overnight_campaign_wall_clock_budget_not_crashes_kill.md, constrained_albc_experiment_conventions.md, experiment_output_directory_standard_logs_vs_experiments_index_t.md, analysis_engine_map_what_is_grow_able_vs_off_limits.md, baseline_repro_reproduces_teacher_deterministically_e4_control.md, experiment_result_recording_location_experiments_tree_is_ssot_no.md, kl_ub_0_12_trades_attitude_for_translation_e1_dr_harder.md, ocean_nominal_shift_collapses_actor_entropy_e2_dr_harder.md, training_log_analysis_engine_reference_adapter.md
+- **Summary:** query 'wandb project campaign' -> 11 of 11
+
