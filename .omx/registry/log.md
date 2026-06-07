@@ -312,3 +312,7 @@
 - **Pages:** experiment_output_directory_standard_logs_vs_experiments_index_t.md
 - **Summary:** created 'experiment output directory standard (logs vs experiments index tree)'
 
+## [2026-06-07T06:07:25.442668] add
+- **Pages:** experiment_launch_checklist_run_id_wandb_latest_alias_naming.md
+- **Summary:** updated 'experiment launch checklist: run_id / wandb / latest-alias naming'
+
