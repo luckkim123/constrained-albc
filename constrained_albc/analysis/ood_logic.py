@@ -61,7 +61,9 @@ def compute_ood_bounds(
     Returns:
         field -> (lo, hi) for every OOD-overridden axis. Magnitude axes are
         symmetric about 0 (lo = -hi). Held-out axes are centered at
-        center*OOD_HELD_OUT_PUSH with the training half-width preserved.
+        center*OOD_HELD_OUT_PUSH; the spread is the LARGEST half-width that keeps
+        the whole range past the training max (half = pushed_center - training_max,
+        so lo sits exactly at the training max edge -- NOT the training half-width).
 
     Raises:
         ValueError: if no magnitude axis is present in doraemon_raw (loud-fail:
