@@ -316,3 +316,11 @@
 - **Pages:** experiment_launch_checklist_run_id_wandb_latest_alias_naming.md
 - **Summary:** updated 'experiment launch checklist: run_id / wandb / latest-alias naming'
 
+## [2026-06-07T06:09:38.001037] add
+- **Pages:** experiment_result_recording_location_experiments_tree_is_ssot_no.md
+- **Summary:** created 'experiment result recording location (experiments tree is SSOT, not docs/results)'
+
+## [2026-06-07T06:10:13.430011] add
+- **Pages:** experiment_launch_checklist_run_id_wandb_latest_alias_naming.md
+- **Summary:** updated 'experiment launch checklist: run_id / wandb / latest-alias naming'
+

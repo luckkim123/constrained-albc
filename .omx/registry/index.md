@@ -1,12 +1,13 @@
 # Wiki Index
 
-> 42 pages | Last updated: 2026-06-07T06:07:25.442668
+> 43 pages | Last updated: 2026-06-07T06:10:13.430011
 
 ## convention
 
 - [constrained-albc experiment conventions](constrained_albc_experiment_conventions.md) - # constrained-albc experiment conventions
 - [experiment launch checklist: run_id / wandb / latest-alias naming](experiment_launch_checklist_run_id_wandb_latest_alias_naming.md) - # experiment launch checklist: run_id / wandb / latest-alias naming
 - [experiment output directory standard (logs vs experiments index tree)](experiment_output_directory_standard_logs_vs_experiments_index_t.md) - # experiment output directory standard (logs vs experiments index tree)
+- [experiment result recording location (experiments tree is SSOT, not docs/results)](experiment_result_recording_location_experiments_tree_is_ssot_no.md) - # experiment result recording location (experiments tree is SSOT, not docs/re...
 
 ## debugging
 
