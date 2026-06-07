@@ -300,3 +300,7 @@
 - **Pages:** barrier_alpha_runtime_0_05_agent_cfg_injects_over_ctor_default_0.md
 - **Summary:** created 'barrier_alpha runtime=0.05 (agent cfg injects over ctor default 0.02)'
 
+## [2026-06-07T05:58:58.720019] add
+- **Pages:** experiment_launch_checklist_run_id_wandb_latest_alias_naming.md
+- **Summary:** created 'experiment launch checklist: run_id / wandb / latest-alias naming'
+

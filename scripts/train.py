@@ -219,6 +219,17 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     from constrained_albc.analysis.paths import RUN_TS_FORMAT, make_run_id
 
     ts = datetime.now().strftime(RUN_TS_FORMAT)
+    # Launch guard: a missing run_name (tag) produces a tag-less run_id (`<task_short>_<ts>`),
+    # which loses the experiment label and breaks campaign naming. Warn loudly but do not
+    # block -- a tagless run is still valid, just discouraged. See rules/02-operations.md
+    # "Campaign launch naming". (E5/E6 drift root cause: launches that skipped the tag.)
+    if not agent_cfg.run_name:
+        print(
+            "[WARN] No run_name (tag) given (--agent ... run_name=, or agent cfg run_name empty): "
+            f"run_id will be tag-less '{make_run_id(args_cli.task, tag=None, ts=ts)}'. "
+            "For a campaign run pass a tag (e.g. e3_alpha075) so the experiment is named.",
+            file=sys.stderr,
+        )
     log_dir = make_run_id(args_cli.task, tag=agent_cfg.run_name or None, ts=ts)
     print(f"Exact experiment name requested from command line: {log_dir}")
     log_dir = os.path.join(log_root_path, log_dir)

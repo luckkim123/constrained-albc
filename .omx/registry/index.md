@@ -1,10 +1,11 @@
 # Wiki Index
 
-> 40 pages | Last updated: 2026-06-07T02:59:46.988664
+> 41 pages | Last updated: 2026-06-07T05:58:58.720019
 
 ## convention
 
 - [constrained-albc experiment conventions](constrained_albc_experiment_conventions.md) - # constrained-albc experiment conventions
+- [experiment launch checklist: run_id / wandb / latest-alias naming](experiment_launch_checklist_run_id_wandb_latest_alias_naming.md) - # experiment launch checklist: run_id / wandb / latest-alias naming
 
 ## debugging
 
@@ -25,7 +26,7 @@
 - [DR-harder campaign synthesis: speed kills attitude, center-shift overfits](dr_harder_campaign_synthesis_speed_kills_attitude_center_shift_o.md) - # DR-harder campaign synthesis: speed kills attitude, center-shift overfits
 - [DR-harder OOD verdict: E2-best survives OOD; the harder curriculum (E1) generalizes WORST](dr_harder_ood_verdict_e2_best_survives_ood_the_harder_curriculum.md) - # DR-harder OOD verdict: E2-best survives OOD; the harder curriculum (E1) gen...
 - [engine-gap: analyze_training.py emits no reward 8-term decomposition scalars](engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md) - # engine-gap: analyze_training.py emits no reward 8-term decomposition scalars
-- [engine-gap: barrier_alpha is 0.02 not 0.05 (dr-harder docs drift)](engine_gap_barrier_alpha_is_0_02_not_0_05_dr_harder_docs_drift.md) - # engine-gap: barrier_alpha is 0.02 not 0.05 (dr-harder docs drift)
+- [RETRACTED — barrier_alpha is 0.02 not 0.05 (this claim was WRONG)](engine_gap_barrier_alpha_is_0_02_not_0_05_dr_harder_docs_drift.md) - # RETRACTED — this page's claim (barrier_alpha=0.02) was WRONG
 - [engine-gap CONFIRMED: analyze_training.py constraint+reward prefix mismatch (code lines)](engine_gap_confirmed_analyze_training_py_constraint_reward_prefi.md) - # engine-gap CONFIRMED: analyze_training.py constraint+reward prefix mismatch...
 - [engine-gap: eval adapter covers static + segmented; periodic still unsupported](engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md) - # engine-gap: eval adapter covers static + segmented; periodic still unsupported
 - [engine-gap: eval adapter only covers static; periodic unsupported, segmented partial](engine_gap_eval_adapter_only_covers_static_periodic_unsupported_.md) - # engine-gap: eval adapter only covers static; periodic unsupported, segmente...
