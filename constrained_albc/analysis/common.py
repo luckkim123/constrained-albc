@@ -20,13 +20,22 @@ import numpy as np
 # DR constants (no Isaac Lab dependency)
 # ---------------------------------------------------------------------------
 
+# In-distribution DR levels. "ood" (out-of-distribution stress, eval.py --ood)
+# is NOT part of the in-dist set but IS a renderable level: its scale/color
+# entries below let plots index DR_SCALE[lvl]/DR_COLORS[lvl] without a KeyError
+# when an eval ran with --ood. Plot level lists are derived from the actual
+# all_data keys (see eval_plots.generate_plots), not from DR_LEVELS, so a
+# 4-level eval still draws exactly 4.
 DR_LEVELS: list[str] = ["none", "soft", "medium", "hard"]
-DR_SCALE: dict[str, float] = {"none": 0.0, "soft": 0.3, "medium": 0.6, "hard": 1.0}
+# Canonical render order including the optional out-of-distribution level.
+DR_RENDER_ORDER: list[str] = ["none", "soft", "medium", "hard", "ood"]
+DR_SCALE: dict[str, float] = {"none": 0.0, "soft": 0.3, "medium": 0.6, "hard": 1.0, "ood": 1.0}
 DR_COLORS: dict[str, str] = {
     "none": "#2196F3",
     "soft": "#4CAF50",
     "medium": "#FF9800",
     "hard": "#F44336",
+    "ood": "#E91E63",  # magenta -- distinct from the in-dist gradient (out-of-range)
 }
 
 
