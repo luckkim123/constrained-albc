@@ -397,6 +397,101 @@ def _constraint_violation(data, name):
     return None if m is None else -m
 
 
+# Fallback budgets, mirroring config.py:54 _FULL_DOF_CONSTRAINT_TERMS (verified
+# 2026-06-07). Used only when the run's config/env.yaml does not carry budgets.
+_FALLBACK_CONSTRAINT_BUDGETS = {
+    "attitude": 0.01,
+    "arm_torque": 0.08,
+    "arm_joint_vel": 0.02,
+    "joint1_pos": 0.01,
+    "cumul_yaw": 0.01,
+    "thruster_util": 0.40,
+    "rp_rate": 0.10,
+    "yaw_rate": 0.10,
+    "rp_vel_settling": 0.20,
+    "manipulability": 0.05,
+}
+
+
+def _constraint_binding_ratio(margin, budget, cost_gamma=0.99):
+    """Normalized binding ratio J_C/d_k = 1 - margin / d_k, where d_k is the
+    discounted budget d_k = budget / (1 - cost_gamma).
+
+    Ratio -> 1 means the channel is binding (no headroom); ratio -> 0 means deep
+    slack. This is the comparison absolute margin CANNOT give: budgets span 40x,
+    so absolute margin reflects budget size, not headroom. Returns None when d_k
+    is non-positive (guard against a zero/negative budget).
+    """
+    if budget is None or cost_gamma is None or cost_gamma >= 1.0:
+        return None
+    d_k = budget / (1.0 - cost_gamma)
+    if d_k <= 0.0:
+        return None
+    return 1.0 - margin / d_k
+
+
+def _constraint_budgets(data, budget_source=None, run_dir=None):
+    """Resolve the per-constraint budget map. Source priority:
+    (1) an explicit `budget_source` dict (name -> budget);
+    (2) the run's `config/env.yaml` constraint-term budgets;
+    (3) the hardcoded `_FALLBACK_CONSTRAINT_BUDGETS` table — ONLY when every
+        discovered constraint is a known full-DOF term.
+
+    LOUD-FAIL (raises ValueError) when no source yields budgets — never silently
+    emit margin-only, which re-creates the binding-flip bug (rule: don't trust an
+    engine's empty/zero output).
+    """
+    if budget_source:
+        return dict(budget_source)
+
+    if run_dir is not None:
+        env_yaml = Path(run_dir) / "config" / "env.yaml"
+        if env_yaml.exists():
+            budgets = _budgets_from_env_yaml(env_yaml)
+            if budgets:
+                return budgets
+
+    names = _discover_constraint_names(data)
+    if names and all(n in _FALLBACK_CONSTRAINT_BUDGETS for n in names):
+        return {n: _FALLBACK_CONSTRAINT_BUDGETS[n] for n in names}
+
+    raise ValueError(
+        "Could not resolve constraint budgets: no budget_source, no readable "
+        f"config/env.yaml under run_dir={run_dir!r}, and discovered constraints "
+        f"{names!r} are not all in the known full-DOF set. Refusing to emit "
+        "margin-only output (would misread binding/slack)."
+    )
+
+
+def _budgets_from_env_yaml(env_yaml):
+    """Extract {name: budget} from a run's config/env.yaml constraint terms.
+
+    Returns {} if the file is unreadable or carries no recognizable budgets, so
+    the caller can fall through to the fallback table.
+    """
+    try:
+        with open(env_yaml) as f:
+            cfg = yaml.safe_load(f)
+    except (OSError, yaml.YAMLError):
+        return {}
+    budgets = {}
+
+    def _walk(node):
+        if isinstance(node, dict):
+            name = node.get("name")
+            budget = node.get("budget")
+            if isinstance(name, str) and isinstance(budget, (int, float)):
+                budgets[name] = float(budget)
+            for v in node.values():
+                _walk(v)
+        elif isinstance(node, (list, tuple)):
+            for v in node:
+                _walk(v)
+
+    _walk(cfg)
+    return budgets
+
+
 def _find_diverging_costs(data):
     """Find constraints whose cost/violation is increasing in the latter half.
 
@@ -666,6 +761,15 @@ def format_tier2(data):
     diverging_costs = _find_diverging_costs(data)
     if constraint_names:
         lines.append("[TIER 2] Constraints")
+        # Resolve budgets for the normalized binding ratio J_C/d_k. format_tier2
+        # has no run_dir, so the source is the verified config.py-mirrored fallback
+        # table; if any discovered constraint is unknown, budgets stays None and the
+        # ratio column is omitted (legacy d_k rows are unaffected either way).
+        try:
+            _budgets = _constraint_budgets(data)
+        except ValueError:
+            _budgets = None
+        binding_ratios = {}  # name -> J_C/d_k, populated on the this-repo branch
         for name in constraint_names:
             cr = _last(data, f"Constraint/cost_return_{name}")
             dk = _last(data, f"Constraint/d_k_{name}")
@@ -690,16 +794,34 @@ def format_tier2(data):
                 viol_tag = f"Constraint/viol/{name}"
                 arrow, divg_alert = (_cost_trend_late(data, viol_tag)
                                      if viol_tag in data else (" ", ""))
+                # Normalized binding ratio J_C/d_k: 1=binding, 0=deep slack. This is
+                # what absolute margin cannot show — budgets span 40x, so a tiny
+                # absolute margin (e.g. attitude 0.997) is actually DEEPEST slack,
+                # not binding. Only the max-ratio channel is truly binding.
+                ratio = None
+                if _budgets is not None and margin is not None and name in _budgets:
+                    ratio = _constraint_binding_ratio(margin, _budgets[name])
+                    if ratio is not None:
+                        binding_ratios[name] = ratio
                 alerts = " ".join(filter(None, [violated, divg_alert]))
                 margin_str = _fmt(margin) if margin is not None else "N/A"
                 viol_str = _fmt(viol) if viol is not None else "N/A"
+                ratio_str = f" JC/dk={ratio:6.3f}" if ratio is not None else ""
                 lines.append(
-                    f"  {name:16s} m={margin_str:>7s} viol={viol_str:>7s} {arrow} {alerts}"
+                    f"  {name:16s} m={margin_str:>7s} viol={viol_str:>7s}{ratio_str} {arrow} {alerts}"
                 )
                 if violated:
                     violations.append(name)
             elif cr is not None:
                 lines.append(f"  {name:16s} cr={_fmt(cr):>7s}")
+
+        # Flag the truly binding channel (max J_C/d_k), not the smallest-budget one.
+        if binding_ratios:
+            binding = max(binding_ratios, key=binding_ratios.get)
+            lines.append(
+                f"  -> binding (max JC/dk): {binding} ({binding_ratios[binding]:.3f}); "
+                f"deepest slack: {min(binding_ratios, key=binding_ratios.get)}"
+            )
 
         bp_vals = _values(data, "Constraint/barrier_penalty")
         if bp_vals:
