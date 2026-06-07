@@ -310,4 +310,44 @@ def cmd_eval_dr(ns: argparse.Namespace) -> int:
 
     if ns.save_hist:
         _ed_save_histogram(results, eval_dirs, ns.levels, ns.hist_axis, ns.save_hist)
+
+    if getattr(ns, "failure_dr", True):
+        _ed_run_failure_dr(eval_dirs[0], ns.levels, getattr(ns, "failure_dr_axis", "roll"),
+                           getattr(ns, "failure_dr_k", 10))
     return 0
+
+
+def _ed_run_failure_dr(eval_dir: str, levels: list[str], axis: str, k: int) -> None:
+    """Join failing envs <-> their DR for the first run, print a report, save the plot.
+
+    Levels come from whatever npz files actually carry per-env DR (dr_* keys); an older
+    eval without the dr_* snapshot is skipped cleanly (no dr_* -> empty ranking -> the
+    join reports nothing rather than crashing).
+    """
+    from . import failure_dr as fd
+
+    all_data: dict[str, dict] = {}
+    for lvl in levels:
+        d = _ed_load_level(eval_dir, lvl)
+        if d is not None and any(key.startswith("dr_") for key in d):
+            all_data[lvl] = d
+    if not all_data:
+        print("\n[failure_dr] no per-env DR (dr_*) in npz -- skipped "
+              "(re-run eval with the dr-snapshot build to enable)", file=sys.stderr)
+        return
+
+    result = fd.analyze_failure_dr_levels(all_data, axis=axis, k=k)
+    print(f"\n=== FAILURE <-> DR JOIN (axis={axis}, worst-{k} envs) ===")
+    for lvl, jr in result["levels"].items():
+        if not jr["dr_ranking"]:
+            continue
+        top3 = jr["dr_ranking"][:3]
+        print(f"  [{lvl}] binding DR (|corr| desc):")
+        for r in top3:
+            arrow = "higher" if r["shift"] > 0 else "lower"
+            print(f"    {r['name']:22s} corr={r['correlation']:+.3f}  "
+                  f"failing-env mean {r['failing_mean']:+.4f} ({arrow} than pop {r['population_mean']:+.4f})")
+    out = os.path.join(eval_dir, "failure_dr_correlation.png")
+    saved = fd.plot_failure_dr(result, out, top_n=8)
+    if saved:
+        print(f"  Saved: {saved}")

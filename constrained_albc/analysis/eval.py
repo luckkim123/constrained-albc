@@ -36,6 +36,7 @@ from _eval_dr.metrics import (  # type: ignore[import-not-found]  # noqa: E402
     compute_metrics,
     compute_seg_metrics,
 )
+from _eval_dr.dr_snapshot import per_env_dr_from_tensors  # type: ignore[import-not-found]  # noqa: E402
 from _eval_dr.trajectory import (  # type: ignore[import-not-found]  # noqa: E402
     ATT_AMP_DEG,
     LIN_VEL_AMP,
@@ -482,6 +483,40 @@ def _plot_dr_distributions(
 # ============================================================================
 
 
+def _read_per_env_dr(raw_env) -> dict[str, np.ndarray]:
+    """Read each env's post-randomize DR physics tensors and shape them into dr_<name>[N].
+
+    Called right after the throwaway reset has fixed per-env domain randomization. The
+    physics tensors ARE the per-env DR values (post-clamp = what the policy experienced);
+    we snapshot them and hand them to the pure ``per_env_dr_from_tensors`` transform.
+    Robust to envs without payload/hydro state (returns whatever channels exist).
+    """
+    from constrained_albc.envs.main.mdp.events import _get_hydro_base  # sim-bound, lazy
+
+    def _np(t):
+        return t.detach().cpu().numpy()
+
+    tensors: dict[str, np.ndarray] = {}
+    if getattr(raw_env, "_payload_mass", None) is not None:
+        tensors["payload_mass"] = _np(raw_env._payload_mass)
+    if getattr(raw_env, "_payload_cog_offset", None) is not None:
+        tensors["payload_cog_offset"] = _np(raw_env._payload_cog_offset)
+
+    hydro = getattr(raw_env, "_hydro", None)
+    if hydro is not None:
+        base = _get_hydro_base(hydro)
+        tensors["cob"] = _np(hydro.center_of_buoyancy)
+        tensors["cob_base"] = _np(base.cob)
+        tensors["cog"] = _np(hydro.center_of_gravity)
+        tensors["cog_base"] = _np(base.cog)
+        tensors["added_mass"] = _np(hydro.added_mass_matrix)
+        tensors["linear_damping"] = _np(hydro.linear_damping)
+        if getattr(hydro, "body_mass", None) is not None:
+            tensors["body_mass"] = _np(hydro.body_mass)
+
+    return per_env_dr_from_tensors(tensors)
+
+
 def run_evaluation(
     env,
     policy,
@@ -537,6 +572,10 @@ def run_evaluation(
         if hasattr(policy_nn, "reset"):
             policy_nn.reset(torch.ones(num_envs, 1, dtype=torch.bool, device=device))
     raw_env.episode_length_buf[:] = 0
+
+    # Snapshot each env's now-fixed DR (post-clamp physics tensors = what the policy
+    # experiences). Saved per-env so analysis can join failing envs <-> their DR.
+    per_env_dr = _read_per_env_dr(raw_env)
 
     target_roll_rad = np.deg2rad(target_roll_deg)
     target_pitch_rad = np.deg2rad(target_pitch_deg)
@@ -635,6 +674,8 @@ def run_evaluation(
         "segment_duration": segment_duration,
         "segment_names": segment_names,
         "warmup_steps": WARMUP_SEGMENTS * steps_per_seg,
+        # Per-env DR sampled values (dr_<name>[num_envs]) for failure<->DR join analysis.
+        **per_env_dr,
     }
 
 

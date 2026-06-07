@@ -70,6 +70,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_ed.add_argument("--threshold-yaw", type=float, default=0.5,  help="yaw rate threshold rad/s (default 0.5)")
     p_ed.add_argument("--save-hist", metavar="PATH", help="save per-env peak histogram to PATH (axis=roll)")
     p_ed.add_argument("--hist-axis", default="roll", choices=list(_ED_AXES))
+    p_ed.add_argument("--failure-dr", action=argparse.BooleanOptionalAction, default=True,
+                      help="join worst-env failures vs their per-env DR + save plot (default on)")
+    p_ed.add_argument("--failure-dr-axis", default="roll", choices=list(_ED_AXES),
+                      help="axis whose worst-k envs are joined against DR (default roll)")
+    p_ed.add_argument("--failure-dr-k", type=int, default=10, help="num worst envs treated as failing (default 10)")
     p_ed.set_defaults(func=cmd_eval_dr)
 
     # -- switching --
