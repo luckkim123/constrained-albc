@@ -21,6 +21,7 @@ attribute assignment:
 
 from __future__ import annotations
 
+import copy
 import os
 
 from constrained_albc.envs.main.config import (  # type: ignore[import-not-found]
@@ -250,8 +251,18 @@ def load_doraemon_dr(run_dir: str) -> tuple[DomainRandomizationCfg | None, dict[
 
 
 def get_hard_dr_config() -> DomainRandomizationCfg:
-    """Get the hard DR config (DORAEMON if loaded, otherwise HardDomainRandomizationCfg)."""
-    cfg = _DORAEMON_FULL_DR if _DORAEMON_FULL_DR is not None else HardDomainRandomizationCfg()
+    """Get the hard DR config (DORAEMON if loaded, otherwise HardDomainRandomizationCfg).
+
+    Returns a deep copy so callers can mutate it freely. The DORAEMON branch would
+    otherwise hand out the shared module-global _DORAEMON_FULL_DR by reference:
+    build_ood_dr_config does ``cfg = get_hard_dr_config(); setattr(cfg, "cob_offset_x",
+    ood_bounds)``, which (without the copy) silently overwrote the global hard anchor
+    with the 1.5x-widened OOD magnitude bounds -- so every later build_dr_config(1.0)
+    read OOD values for the hard level (visible as the hard bar exceeding the [0,1]
+    HardDR band in summary_drdist.png).
+    """
+    base = _DORAEMON_FULL_DR if _DORAEMON_FULL_DR is not None else HardDomainRandomizationCfg()
+    cfg = copy.deepcopy(base)
     cfg.enable = True
     return cfg
 
