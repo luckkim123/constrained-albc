@@ -1,15 +1,28 @@
 ---
-title: "engine-gap: barrier_alpha is 0.02 not 0.05 (dr-harder docs drift)"
-tags: ["engine-gap", "constraint_trpo", "barrier_alpha", "doc-drift"]
+title: "RETRACTED — barrier_alpha is 0.02 not 0.05 (this claim was WRONG)"
+tags: ["retracted", "barrier_alpha", "constraint_trpo", "superseded"]
 created: 2026-06-07T02:54:26.487897
-updated: 2026-06-07T02:54:26.487897
+updated: 2026-06-07T02:58:00.000000
 sources: ["diagnose-20260607-113942"]
-links: []
+links: ["barrier_alpha_runtime_0_05_agent_cfg_injects_over_ctor_default_0.md"]
 category: decision
-confidence: high
+confidence: low
 schemaVersion: 1
 ---
 
-# engine-gap: barrier_alpha is 0.02 not 0.05 (dr-harder docs drift)
+# RETRACTED — this page's claim (barrier_alpha=0.02) was WRONG
 
-[ENGINE-GAP] dr-harder campaign docs (README, docs/results/260607_041243_trpo.md front-matter, several Batch-2 briefings) state adaptive_d_k = max(d_k, J_C + 0.05*d_k), i.e. barrier_alpha=0.05. The actual code value is 0.02. [WHERE] constrained_albc/envs/main/algorithms/constraint_trpo.py:65 (default line_search ctor) and :120 (self._barrier_alpha = barrier_alpha), used at :308 (_compute_adaptive_thresholds: torch.max(self.d_k, mean_cost_returns + self._barrier_alpha*self.d_k)). [SPEC] when citing the adaptive-threshold formula in any report/wiki, use 0.02; the per-constraint adaptive FLOOR is alpha*d_k = 0.02*d_k (thruster_util floor = 0.4, not 1.0). This does NOT change the J_C/d_k binding conclusions because those are computed in the slack regime (margin > alpha*d_k) as J_C = d_k - margin, alpha-independent. [EVIDENCE] code lines read this session; docs/results/260607_041243_trpo.md line 50 said barrier_alpha=0.05. [STATUS] proposed (fix doc citations; code is correct).
+**Do not use this page. The claim is incorrect and has been superseded.**
+
+The original claim here — that runtime `barrier_alpha = 0.02` and the docs' 0.05 was drift —
+was based on reading only the **ctor signature default** (`constraint_trpo.py:65`). That is NOT
+the runtime value. The resolved agent config `rsl_rl_ppo_cfg.py:198 barrier_alpha=0.05` is
+**injected over** the ctor default, and the per-run resolved record `params/agent.yaml:127`
+confirms `barrier_alpha: 0.05`. So the runtime value is **0.05**, the docs were RIGHT, and this
+"correction" was the actual error (rule03 "Verify Implementation, Not Name" — verify the resolved
+config, not the function signature).
+
+Correct page: [[barrier_alpha_runtime_0_05_agent_cfg_injects_over_ctor_default_0]].
+
+The `J_C/d_k = 0.944` binding conclusion (analysis `diagnose-20260607-113942`) is unaffected
+either way — it is computed in the slack regime as `J_C = d_k - margin`, alpha-independent.

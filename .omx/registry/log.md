@@ -296,3 +296,7 @@
 - **Pages:** engine_gap_barrier_alpha_is_0_02_not_0_05_dr_harder_docs_drift.md
 - **Summary:** created 'engine-gap: barrier_alpha is 0.02 not 0.05 (dr-harder docs drift)'
 
+## [2026-06-07T02:59:46.988664] add
+- **Pages:** barrier_alpha_runtime_0_05_agent_cfg_injects_over_ctor_default_0.md
+- **Summary:** created 'barrier_alpha runtime=0.05 (agent cfg injects over ctor default 0.02)'
+

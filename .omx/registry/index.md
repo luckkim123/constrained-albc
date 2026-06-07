@@ -1,6 +1,6 @@
 # Wiki Index
 
-> 39 pages | Last updated: 2026-06-07T02:54:26.487897
+> 40 pages | Last updated: 2026-06-07T02:59:46.988664
 
 ## convention
 
@@ -51,6 +51,7 @@
 
 - [analysis engine map — what is grow-able vs off-limits](analysis_engine_map_what_is_grow_able_vs_off_limits.md) - # analysis engine map — what is grow-able vs off-limits
 - [analysis refactor 2026-06-05 — new sim-free modules and engine-gap status](analysis_refactor_2026_06_05_new_sim_free_modules_and_engine_gap.md) - # analysis refactor 2026-06-05 — new sim-free modules and engine-gap status
+- [barrier_alpha runtime=0.05 (agent cfg injects over ctor default 0.02)](barrier_alpha_runtime_0_05_agent_cfg_injects_over_ctor_default_0.md) - # barrier_alpha runtime=0.05 (agent cfg injects over ctor default 0.02)
 - [baseline-repro reproduces teacher deterministically (E4 control)](baseline_repro_reproduces_teacher_deterministically_e4_control.md) - # baseline-repro reproduces teacher deterministically (E4 control)
 - [ConstraintTRPO health thresholds](constrainttrpo_health_thresholds.md) - # ConstraintTRPO health thresholds
 - [training anomaly thresholds (TB tag alert table)](training_anomaly_thresholds_tb_tag_alert_table.md) - # training anomaly thresholds (TB tag alert table)
