@@ -288,3 +288,11 @@
 - **Pages:** doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md
 - **Summary:** created 'DORAEMON alpha is a feasibility FLOOR, not a DR-expansion lever (E5 dr-harder)'
 
+## [2026-06-07T02:54:26.128107] add
+- **Pages:** constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md
+- **Summary:** created 'constraint budget x0.5 binds only thruster_util -> authority starvation'
+
+## [2026-06-07T02:54:26.487897] add
+- **Pages:** engine_gap_barrier_alpha_is_0_02_not_0_05_dr_harder_docs_drift.md
+- **Summary:** created 'engine-gap: barrier_alpha is 0.02 not 0.05 (dr-harder docs drift)'
+

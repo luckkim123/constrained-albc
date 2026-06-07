@@ -1,6 +1,6 @@
 # Wiki Index
 
-> 37 pages | Last updated: 2026-06-07T02:50:59.890630
+> 39 pages | Last updated: 2026-06-07T02:54:26.487897
 
 ## convention
 
@@ -25,6 +25,7 @@
 - [DR-harder campaign synthesis: speed kills attitude, center-shift overfits](dr_harder_campaign_synthesis_speed_kills_attitude_center_shift_o.md) - # DR-harder campaign synthesis: speed kills attitude, center-shift overfits
 - [DR-harder OOD verdict: E2-best survives OOD; the harder curriculum (E1) generalizes WORST](dr_harder_ood_verdict_e2_best_survives_ood_the_harder_curriculum.md) - # DR-harder OOD verdict: E2-best survives OOD; the harder curriculum (E1) gen...
 - [engine-gap: analyze_training.py emits no reward 8-term decomposition scalars](engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md) - # engine-gap: analyze_training.py emits no reward 8-term decomposition scalars
+- [engine-gap: barrier_alpha is 0.02 not 0.05 (dr-harder docs drift)](engine_gap_barrier_alpha_is_0_02_not_0_05_dr_harder_docs_drift.md) - # engine-gap: barrier_alpha is 0.02 not 0.05 (dr-harder docs drift)
 - [engine-gap CONFIRMED: analyze_training.py constraint+reward prefix mismatch (code lines)](engine_gap_confirmed_analyze_training_py_constraint_reward_prefi.md) - # engine-gap CONFIRMED: analyze_training.py constraint+reward prefix mismatch...
 - [engine-gap: eval adapter covers static + segmented; periodic still unsupported](engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md) - # engine-gap: eval adapter covers static + segmented; periodic still unsupported
 - [engine-gap: eval adapter only covers static; periodic unsupported, segmented partial](engine_gap_eval_adapter_only_covers_static_periodic_unsupported_.md) - # engine-gap: eval adapter only covers static; periodic unsupported, segmente...
@@ -35,6 +36,7 @@
 
 ## pattern
 
+- [constraint budget x0.5 binds only thruster_util -> authority starvation](constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md) - # constraint budget x0.5 binds only thruster_util -> authority starvation
 - [dr-harder heavy-tail correction: %peak>20 is NOT zero at medium/hard](dr_harder_heavy_tail_correction_peak_20_is_not_zero_at_medium_ha.md) - # dr-harder heavy-tail correction: %peak>20 is NOT zero at medium/hard
 - [dr-harder: reward decomposition confirms eval trades on the training side](dr_harder_reward_decomposition_confirms_eval_trades_on_the_train.md) - # dr-harder: reward decomposition confirms eval trades on the training side
 - [Autonomous campaign tail-run died from MISSING launch automation, not wall-clock](sequential_overnight_campaign_wall_clock_budget_not_crashes_kill.md) - # Autonomous campaign tail-run died from MISSING launch automation, not wall-...
