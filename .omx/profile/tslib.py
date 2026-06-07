@@ -338,12 +338,18 @@ def detect_oscillation(vals, window=20):
     sign_changes = np.sum(np.abs(np.diff(signs)) > 0)
     sign_change_rate = float(sign_changes) / len(signs)
 
-    high_sign_change = sign_change_rate > 0.3
+    # A genuine oscillation has a SMOOTH derivative (sign flips once per half-period,
+    # so a LOW-to-moderate sign-change rate), not a near-0.5 rate. iid noise sits at
+    # ~0.66 (each step independent); a true sinusoid measures ~0.1. The previous
+    # ">0.3" gate was inverted -- it admitted noise and rejected sinusoids (verified:
+    # 30/30 noise series passed, 0/10 sinusoids did). Use a range: too high = noise,
+    # too low = flat/trend.
+    plausible_rate = 0.05 < sign_change_rate < 0.45
 
     # Estimate period from autocorrelation
     period = 0.0
     has_periodic_peak = False
-    if high_sign_change:
+    if plausible_rate:
         centered = vals - vals.mean()
         n = len(centered)
         # Compute autocorrelation for lags up to n//2
@@ -352,16 +358,19 @@ def detect_oscillation(vals, window=20):
         autocorr = autocorr[n - 1:]  # positive lags only
         if autocorr[0] > 1e-12:
             autocorr = autocorr / autocorr[0]
-        # Find first peak after lag 5 (skip trivial peak at 0)
+        # Find first peak after lag 5 (skip trivial peak at 0). Require a peak
+        # MAGNITUDE well above the pure-noise autocorr floor (~0.2 at n=100): a
+        # sinusoid's first periodic peak measures ~0.78. The fixed 0.1 prominence
+        # alone could not separate the two.
         if max_lag > 10:
             ac_seg = autocorr[5:max_lag]
             peaks, _ = find_peaks(ac_seg, prominence=0.1)
-            if len(peaks) > 0:
+            if len(peaks) > 0 and ac_seg[peaks[0]] > 0.5:
                 period = float(peaks[0] + 5)  # offset by starting lag
                 has_periodic_peak = True
 
-    # Require BOTH high sign change rate AND a periodic autocorrelation peak.
-    is_oscillating = high_sign_change and has_periodic_peak
+    # Require BOTH a plausible (smooth) sign-change rate AND a strong periodic peak.
+    is_oscillating = plausible_rate and has_periodic_peak
 
     # Rolling envelope amplitude
     amplitude = 0.0

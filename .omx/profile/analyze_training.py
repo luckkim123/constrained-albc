@@ -992,8 +992,12 @@ def format_tier3(data):
         ],
     }
 
-    # Auto-discover Episode Reward terms from TB tags
-    ep_reward_tags = sorted(t for t in data if t.startswith("Episode_Reward/"))
+    # Auto-discover per-step reward terms from TB tags. The 8-term decomposition
+    # (Reward/{att_rp,lin_vel,yaw_vel,bias,smoothness,thruster,torque,total},
+    # metrics.yaml:25-31) is logged under the "Reward/" prefix, NOT "Episode_Reward/"
+    # (verified against teacher TB: 0 Episode_Reward/ tags, 8 Reward/ tags). rule03's
+    # differential plateau diagnosis needs these terms.
+    ep_reward_tags = sorted(t for t in data if t.startswith("Reward/"))
     if ep_reward_tags:
         sections["[TIER 3] Rewards"] = [
             (tag.split("/")[-1], tag) for tag in ep_reward_tags

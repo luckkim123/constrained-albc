@@ -216,6 +216,7 @@ def compute_metrics(data: dict) -> dict:
     # ---- Attitude metrics (only attitude segments) ----
     att_ss_errors: list[float] = []
     att_ss_jitters: list[float] = []
+    att_ss_jitters_std: list[float] = []  # env-to-env spread of per-env jitter (rule03 CV)
     att_settling_times: list[float] = []
     att_rise_times: list[float] = []
     att_overshoot_pcts: list[float] = []
@@ -237,12 +238,16 @@ def compute_metrics(data: dict) -> dict:
         if ss_alive.any():
             ss_vals = np.where(ss_alive, ss_error, np.nan)
             att_ss_errors.append(float(np.nanmean(ss_vals)))
-            # SS jitter: std of per-step mean error in SS period
-            ss_per_step = np.nanmean(ss_vals, axis=1)
-            att_ss_jitters.append(float(np.nanstd(ss_per_step[~np.isnan(ss_per_step)])))
+            # SS jitter (unified to the recompute per-env-then-aggregate form so
+            # ss_jitter_std exists): per-env temporal std (axis=0 is time), then
+            # mean across envs = jitter, std across envs = jitter_std (rule03 CV).
+            per_env_jit = np.nanstd(ss_vals, axis=0)
+            att_ss_jitters.append(float(np.nanmean(per_env_jit)))
+            att_ss_jitters_std.append(float(np.nanstd(per_env_jit)))
         else:
             att_ss_errors.append(float("nan"))
             att_ss_jitters.append(float("nan"))
+            att_ss_jitters_std.append(float("nan"))
 
         # Zero crossing count: number of times the mean error signal crosses
         # the target (sign changes in error_roll/pitch relative to target).
@@ -310,6 +315,7 @@ def compute_metrics(data: dict) -> dict:
 
     lin_vel_ss_errors: dict[str, list[float]] = {a: [] for a in axis_labels}
     lin_vel_ss_jitters: dict[str, list[float]] = {a: [] for a in axis_labels}
+    lin_vel_ss_jitters_std: dict[str, list[float]] = {a: [] for a in axis_labels}
     lin_vel_rise_times: dict[str, list[float]] = {a: [] for a in axis_labels}
     lin_vel_overshoot_pcts: dict[str, list[float]] = {a: [] for a in axis_labels}
     lin_vel_zero_crossings: dict[str, list[float]] = {a: [] for a in axis_labels}
@@ -335,11 +341,14 @@ def compute_metrics(data: dict) -> dict:
             if ss_alive.any():
                 ss_vals = np.where(ss_alive, ss_err, np.nan)
                 lin_vel_ss_errors[ax_name].append(float(np.nanmean(ss_vals)))
-                ss_per_step = np.nanmean(ss_vals, axis=1)
-                lin_vel_ss_jitters[ax_name].append(float(np.nanstd(ss_per_step[~np.isnan(ss_per_step)])))
+                # unified recompute per-env-then-aggregate jitter form (see att above)
+                per_env_jit = np.nanstd(ss_vals, axis=0)
+                lin_vel_ss_jitters[ax_name].append(float(np.nanmean(per_env_jit)))
+                lin_vel_ss_jitters_std[ax_name].append(float(np.nanstd(per_env_jit)))
             else:
                 lin_vel_ss_errors[ax_name].append(float("nan"))
                 lin_vel_ss_jitters[ax_name].append(float("nan"))
+                lin_vel_ss_jitters_std[ax_name].append(float("nan"))
 
             # Zero crossing count (after initial 20% of segment)
             zc_start = int(seg_steps * 0.2)
@@ -373,6 +382,7 @@ def compute_metrics(data: dict) -> dict:
     # ---- Yaw rate metrics (only yaw segments) ----
     yaw_ss_errors: list[float] = []
     yaw_ss_jitters: list[float] = []
+    yaw_ss_jitters_std: list[float] = []  # env-to-env spread of per-env jitter (rule03 CV)
     yaw_rise_times: list[float] = []
     yaw_overshoot_pcts: list[float] = []
     yaw_zero_crossings: list[float] = []
@@ -396,11 +406,14 @@ def compute_metrics(data: dict) -> dict:
         if ss_alive.any():
             ss_vals = np.where(ss_alive, ss_err, np.nan)
             yaw_ss_errors.append(float(np.nanmean(ss_vals)))
-            ss_per_step = np.nanmean(ss_vals, axis=1)
-            yaw_ss_jitters.append(float(np.nanstd(ss_per_step[~np.isnan(ss_per_step)])))
+            # unified recompute per-env-then-aggregate jitter form (see att above)
+            per_env_jit = np.nanstd(ss_vals, axis=0)
+            yaw_ss_jitters.append(float(np.nanmean(per_env_jit)))
+            yaw_ss_jitters_std.append(float(np.nanstd(per_env_jit)))
         else:
             yaw_ss_errors.append(float("nan"))
             yaw_ss_jitters.append(float("nan"))
+            yaw_ss_jitters_std.append(float("nan"))
 
         # Zero crossing count (after initial 20%)
         zc_start = int(seg_steps * 0.2)
@@ -438,6 +451,7 @@ def compute_metrics(data: dict) -> dict:
         "total_att_error_std": total_att_error_std,
         "att_ss_errors": att_ss_errors,
         "att_ss_jitters": att_ss_jitters,
+        "att_ss_jitters_std": att_ss_jitters_std,
         "att_settling_times": att_settling_times,
         "att_rise_times": att_rise_times,
         "att_overshoot_pcts": att_overshoot_pcts,
@@ -446,6 +460,7 @@ def compute_metrics(data: dict) -> dict:
         "total_lin_vel_error": total_lin_vel_error,
         "lin_vel_ss_errors": lin_vel_ss_errors,  # dict[axis_name, list[float]]
         "lin_vel_ss_jitters": lin_vel_ss_jitters,
+        "lin_vel_ss_jitters_std": lin_vel_ss_jitters_std,
         "lin_vel_rise_times": lin_vel_rise_times,
         "lin_vel_overshoot_pcts": lin_vel_overshoot_pcts,
         "lin_vel_zero_crossings": lin_vel_zero_crossings,
@@ -454,6 +469,7 @@ def compute_metrics(data: dict) -> dict:
         "total_yaw_rate_error": total_yaw_rate_error,
         "yaw_ss_errors": yaw_ss_errors,
         "yaw_ss_jitters": yaw_ss_jitters,
+        "yaw_ss_jitters_std": yaw_ss_jitters_std,
         "yaw_rise_times": yaw_rise_times,
         "yaw_overshoot_pcts": yaw_overshoot_pcts,
         "yaw_zero_crossings": yaw_zero_crossings,
@@ -511,6 +527,11 @@ def _periodic_compute_metrics(data: dict) -> dict:
     per_step_att_err = []
     per_step_lin_vel = []
     per_step_yaw_rate = []
+    # env-to-env std of the per-step SS error (rule03 CV: std/mean across envs).
+    # The 2D arrays carry an env axis, so per-env SS means are available to disperse.
+    per_step_att_err_std = []
+    per_step_lin_vel_std = []
+    per_step_yaw_rate_std = []
     per_step_att_peak = []
     per_step_lv_peak = []
     per_step_yr_peak = []
@@ -543,10 +564,17 @@ def _periodic_compute_metrics(data: dict) -> dict:
         lv_ss = lv_full[ss_start_offset:]
         yr_ss = yr_full[ss_start_offset:]
 
-        # -- SS error (mean in last 50%) --
-        per_step_att_err.append(np.nanmean(np.where(alive_ss, att_ss, np.nan)))
-        per_step_lin_vel.append(np.nanmean(np.where(alive_ss, lv_ss, np.nan)))
-        per_step_yaw_rate.append(np.nanmean(np.where(alive_ss, yr_ss, np.nan)))
+        # -- SS error (mean in last 50%) + env-to-env std (axis=0 is time, axis=1 env) --
+        att_ss_masked = np.where(alive_ss, att_ss, np.nan)
+        lv_ss_masked = np.where(alive_ss, lv_ss, np.nan)
+        yr_ss_masked = np.where(alive_ss, yr_ss, np.nan)
+        per_step_att_err.append(np.nanmean(att_ss_masked))
+        per_step_lin_vel.append(np.nanmean(lv_ss_masked))
+        per_step_yaw_rate.append(np.nanmean(yr_ss_masked))
+        # per-env SS mean first, then std across envs -> CV computable per rule03
+        per_step_att_err_std.append(np.nanstd(np.nanmean(att_ss_masked, axis=0)))
+        per_step_lin_vel_std.append(np.nanstd(np.nanmean(lv_ss_masked, axis=0)))
+        per_step_yaw_rate_std.append(np.nanstd(np.nanmean(yr_ss_masked, axis=0)))
 
         # -- Peak transient (max in full segment, per-env mean) --
         att_peak = np.where(alive_full, att_full, np.nan)
@@ -572,6 +600,13 @@ def _periodic_compute_metrics(data: dict) -> dict:
         "mean_att_err": np.nanmean(per_step_att_err),
         "mean_lin_vel": np.nanmean(per_step_lin_vel),
         "mean_yaw_rate": np.nanmean(per_step_yaw_rate),
+        # SS error env-to-env dispersion (per-step + aggregate) -> CV per rule03
+        "per_step_att_err_std": np.array(per_step_att_err_std),
+        "per_step_lin_vel_std": np.array(per_step_lin_vel_std),
+        "per_step_yaw_rate_std": np.array(per_step_yaw_rate_std),
+        "mean_att_err_std": np.nanmean(per_step_att_err_std),
+        "mean_lin_vel_std": np.nanmean(per_step_lin_vel_std),
+        "mean_yaw_rate_std": np.nanmean(per_step_yaw_rate_std),
         # Peak transient
         "per_step_att_peak": np.array(per_step_att_peak),
         "per_step_lv_peak": np.array(per_step_lv_peak),

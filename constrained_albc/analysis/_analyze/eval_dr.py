@@ -68,8 +68,8 @@ class _HeavyTail:
     ss_max: float
     peak_mean: float
     peak_max: float
-    pct_peak_gt_thresh: float  # percentage of envs with peak > threshold
-    pct_ss_gt_hthresh: float   # percentage of envs with ss > half-threshold
+    pct_peak_gt_thresh: float       # percentage of envs with peak > threshold
+    pct_ss_gt_tenththresh: float    # percentage of envs with ss > threshold/10 (matches impl)
     n_env: int
 
 
@@ -86,7 +86,7 @@ def _ed_compute_heavy_tail(err_abs: np.ndarray, threshold: float, window_frac: f
         peak_mean=float(peak.mean()),
         peak_max=float(peak.max()),
         pct_peak_gt_thresh=float(100.0 * (peak > threshold).sum() / max(N, 1)),
-        pct_ss_gt_hthresh=float(100.0 * (ss > threshold / 10.0).sum() / max(N, 1)),
+        pct_ss_gt_tenththresh=float(100.0 * (ss > threshold / 10.0).sum() / max(N, 1)),
         n_env=N,
     )
 
