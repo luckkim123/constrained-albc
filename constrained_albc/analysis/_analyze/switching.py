@@ -38,10 +38,13 @@ def _sw_print_aggregate(runs: dict[str, dict], levels: list[str]) -> None:
     print(f"\n{'=' * 100}")
     print("AGGREGATE (segs 1..N, env×seg distribution — cascade PID, target xyz=0 rpy=0)")
     print(f"{'=' * 100}")
+    # ss_* DC-offset means carry an env-to-env std column (mean±std) so CV is
+    # computable per rule03. NOT added to the heavy-tail table (rule03 forbids
+    # judging heavy-tail by mean+std -- that table stays percentile-based).
     print(f"{'level':<8} {'run':<14} "
           f"{'pos_peak':>10} {'pos_ss':>8} {'pos_max':>8} "
           f"{'roll_pk':>8} {'pitch_pk':>9} {'yaw_pk':>8} "
-          f"{'roll_ss':>8} {'pitch_ss':>9} {'yaw_ss':>8}")
+          f"{'roll_ss(±std)':>16} {'pitch_ss(±std)':>17} {'yaw_ss(±std)':>16}")
     for lvl in levels:
         for name, run in runs.items():
             pos_peak = _sw_all_post_switch(run, lvl, "pos_drift_peak")
@@ -55,7 +58,8 @@ def _sw_print_aggregate(runs: dict[str, dict], levels: list[str]) -> None:
             print(f"{lvl:<8} {name:<14} "
                   f"{pos_peak.mean():8.4f}m {pos_ss.mean():7.4f}m {pos_peak.max():7.4f}m "
                   f"{rp.mean():7.3f}° {pp.mean():8.3f}° {yp.mean():7.3f}° "
-                  f"{rs.mean():7.3f}° {ps.mean():8.3f}° {ys.mean():7.3f}°")
+                  f"{rs.mean():6.3f}±{rs.std():5.3f}° {ps.mean():6.3f}±{ps.std():5.3f}° "
+                  f"{ys.mean():6.3f}±{ys.std():5.3f}°")
         print()
 
 
