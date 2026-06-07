@@ -1,6 +1,6 @@
 # Wiki Index
 
-> 36 pages | Last updated: 2026-06-06T13:27:54.764400
+> 37 pages | Last updated: 2026-06-07T02:50:59.890630
 
 ## convention
 
@@ -21,6 +21,7 @@
 
 ## decision
 
+- [DORAEMON alpha is a feasibility FLOOR, not a DR-expansion lever (E5 dr-harder)](doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md) - # DORAEMON alpha is a feasibility FLOOR, not a DR-expansion lever (E5 dr-harder)
 - [DR-harder campaign synthesis: speed kills attitude, center-shift overfits](dr_harder_campaign_synthesis_speed_kills_attitude_center_shift_o.md) - # DR-harder campaign synthesis: speed kills attitude, center-shift overfits
 - [DR-harder OOD verdict: E2-best survives OOD; the harder curriculum (E1) generalizes WORST](dr_harder_ood_verdict_e2_best_survives_ood_the_harder_curriculum.md) - # DR-harder OOD verdict: E2-best survives OOD; the harder curriculum (E1) gen...
 - [engine-gap: analyze_training.py emits no reward 8-term decomposition scalars](engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md) - # engine-gap: analyze_training.py emits no reward 8-term decomposition scalars
