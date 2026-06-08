@@ -390,12 +390,18 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     randomization: HardDomainRandomizationCfg = HardDomainRandomizationCfg()
     # performance_lb: DORAEMON binary-success threshold on accumulated episode return
     # (albc_env.py: _episode_return_accum += reward; success = return >= performance_lb).
-    # Lowered 90.0 -> 68.0 for attitude-only: the lin_vel tracking reward term (per-step
-    # cap +4.0) was removed, shrinking the positive-reward pool from ~16.5 to ~12.5/step
-    # (-24%). main's 90.0 was tuned against the 6-DOF return scale; 68 = 90 * (12.5/16.5).
-    # This is a scale-proportional ESTIMATE -- confirm against the baseline run's reward
-    # decomposition (_episode_sums) and refine if the actual return distribution differs.
-    doraemon: DoraemonCfg = DoraemonCfg(enable=True, kl_ub=0.06, performance_lb=68.0, step_interval=250)
+    # Calibrated 68.0 -> 250.0 from a recon run (trpo_baseline_260608_160453, lb=68, 1146 iter):
+    # the DORAEMON buffer's actual episode-return distribution (n=2000) was
+    # min=81.9 / p5=227 / p25=250 / median=264 / p95=291. lb=68 sat BELOW the minimum return,
+    # so success=return>=68 was always 1 -> the feasibility constraint (Ghat>=alpha) was inert
+    # and the curriculum widened the DR distribution unconstrained (no self-pacing feedback).
+    # lb=250 (p25) puts the starting success_rate at ~0.65: above alpha=0.5 so the distribution
+    # still expands, but the signal is live again instead of pinned at 1. Chosen below the
+    # median so a reward plateau cannot drag success_rate to 0 (which would shrink the DR range).
+    # kl_ub 0.06 -> 0.12: doubles the per-step trust region so the distribution widens fast
+    # enough to compensate for the slower expansion that the raised lb induces. Both levers move
+    # together by design -- lb alone makes DR easier, kl_ub alone leaves success_rate pinned at 1.
+    doraemon: DoraemonCfg = DoraemonCfg(enable=True, kl_ub=0.12, performance_lb=250.0, step_interval=250)
 
     # ==========================================================================
     # Payload
