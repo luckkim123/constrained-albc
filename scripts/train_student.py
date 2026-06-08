@@ -20,7 +20,7 @@ import sys
 from isaaclab.app import AppLauncher
 
 parser = argparse.ArgumentParser(description="Train student policy from teacher checkpoint.")
-parser.add_argument("--task", type=str, default="Isaac-ConstrainedALBC-TRPO-v0")
+parser.add_argument("--task", type=str, default="Isaac-ConstrainedALBC-AttitudeOnly-TRPO-v0")
 parser.add_argument("--encoder_type", type=str, choices=["tcn", "gru"], required=True)
 parser.add_argument("--run_name", type=str, default=None, help="Override auto-named run (default: student_<encoder_type>).")
 parser.add_argument("--teacher_run_dir", type=str, required=True,
@@ -40,7 +40,7 @@ parser.add_argument("--gru_head_hidden", type=int, default=None,
                     help="GRU head intermediate dim (0=disable, default: StudentCfg.gru_head_hidden).")
 parser.add_argument("--seed", type=int, default=42)
 parser.add_argument("--logger", type=str, default="wandb", choices=["wandb", "tensorboard"])
-parser.add_argument("--wandb_project", type=str, default="full_dof_trpo_student")
+parser.add_argument("--wandb_project", type=str, default="attitude_only_student")
 AppLauncher.add_app_launcher_args(parser)
 args_cli, hydra_args = parser.parse_known_args()
 
@@ -64,8 +64,8 @@ from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper
 import isaaclab_tasks  # noqa: F401
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
-from constrained_albc.envs.main.student.config import StudentCfg
-from constrained_albc.envs.main.student.runner import StudentRunner
+from constrained_albc.envs.attitude_only.student.config import StudentCfg
+from constrained_albc.envs.attitude_only.student.runner import StudentRunner
 
 logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger("train_student")

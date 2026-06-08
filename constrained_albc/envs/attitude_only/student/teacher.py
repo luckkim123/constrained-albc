@@ -23,9 +23,9 @@ class FrozenTeacher(nn.Module):
     """Wraps r13_A's ActorCriticEncoder; exposes encode(), normalize_obs(), actor_forward().
 
     Attributes:
-        latent_dim: 9 (r13_A)
-        obs_dim: 87 (policy obs)
-        privileged_dim: 24
+        latent_dim: 9
+        obs_dim: 69 (policy obs)
+        privileged_dim: 27
     """
 
     def __init__(self, cfg: StudentCfg, device: torch.device) -> None:
@@ -36,10 +36,10 @@ class FrozenTeacher(nn.Module):
         # Build a teacher policy with the same arch as r13_A. We use the registry
         # class rather than instantiating ActorCriticEncoder directly to ensure
         # the exact arch (e.g. ALBCActorCriticEncoder overrides).
-        from constrained_albc.envs.main.encoder import (
+        from constrained_albc.envs.attitude_only.encoder import (
             ActorCriticEncoder,
         )
-        from constrained_albc.envs.main.agents.rsl_rl_ppo_cfg import (
+        from constrained_albc.envs.attitude_only.agents.rsl_rl_ppo_cfg import (
             _PRIV_OBS_LOWER,
             _PRIV_OBS_UPPER,
         )
@@ -114,7 +114,7 @@ class FrozenTeacher(nn.Module):
 
     @torch.no_grad()
     def encode_privileged(self, privileged: torch.Tensor) -> torch.Tensor:
-        """Ground-truth latent from privileged obs: (B, 24) -> (B, 9)."""
+        """Ground-truth latent from privileged obs: (B, 27) -> (B, 9)."""
         from tensordict import TensorDict
         dummy = TensorDict(
             {
@@ -132,7 +132,7 @@ class FrozenTeacher(nn.Module):
     def actor_forward(self, obs_normed: torch.Tensor, latent: torch.Tensor) -> torch.Tensor:
         """Teacher actor forward: cat([normed obs, latent]) -> action.
 
-        obs_normed: (B, 87) already through actor_obs_normalizer
+        obs_normed: (B, 69) already through actor_obs_normalizer
         latent: (B, 9) -- either ground-truth l_t or student's l_hat
         Returns: (B, 8)
         """

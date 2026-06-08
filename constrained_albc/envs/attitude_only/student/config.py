@@ -29,9 +29,9 @@ class StudentCfg:
 
     # Architecture
     encoder_type: str = "tcn"       # "tcn" or "gru"
-    policy_obs_dim: int = 87
-    privileged_dim: int = 24
-    latent_dim: int = 9             # must match r13_A teacher
+    policy_obs_dim: int = 69        # attitude-only: 20 proprio + 46 history + 3 integral
+    privileged_dim: int = 27        # attitude-only: 24 DR params + 3 measured lin_vel (critic-only)
+    latent_dim: int = 9             # must match teacher encoder output
 
     # TCN-specific
     # H=9 mirrors teacher's embedded history: stride=3 x 3 steps = 9 physical

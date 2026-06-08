@@ -48,7 +48,7 @@ def configure_env_for_student(env) -> None:
         logger.info("[Student] DORAEMON disabled for supervised training.")
 
     # Replace randomization cfg with HardDomainRandomizationCfg instance
-    from constrained_albc.envs.main.config import HardDomainRandomizationCfg
+    from constrained_albc.envs.attitude_only.config import HardDomainRandomizationCfg
     hard = HardDomainRandomizationCfg()
     env_cfg.randomization = hard
     logger.info("[Student] Randomization forced to HardDomainRandomizationCfg.")

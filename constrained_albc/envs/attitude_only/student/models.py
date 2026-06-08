@@ -16,7 +16,7 @@ from .config import StudentCfg
 class StudentEncoderTCN(nn.Module):
     """Window-based temporal conv encoder.
 
-    Input:  (B, H, D) where H=50, D=87
+    Input:  (B, H, D) where H=tcn_history (9), D=69
     Output: (B, latent_dim) in (-1, 1)
     """
 
@@ -25,7 +25,7 @@ class StudentEncoderTCN(nn.Module):
         self.cfg = cfg
         self.history_len = cfg.tcn_history
 
-        # Per-step channel transform: maps raw 87D features -> tcn_input_channels
+        # Per-step channel transform: maps raw 69D features -> tcn_input_channels
         self.channel_transform = nn.Sequential(
             nn.Linear(cfg.policy_obs_dim, cfg.tcn_input_channels),
             nn.ELU(),
