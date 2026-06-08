@@ -132,10 +132,10 @@ class ALBCEnv(DirectRLEnv):
         #   - integral contributes self.cfg.integral_dims only when self.cfg.use_integral_obs.
         #   - On mismatch, raise ValueError with expected vs computed and the relevant cfg flags,
         #     matching the f-string style of the state_space / control_freq guards.
-        PROPRIO_DIM = 26
+        PROPRIO_DIM = 20
         expected_obs_dim = PROPRIO_DIM
         if self._hist_buf is not None:
-            expected_obs_dim += 13 * self._hist_len + 8 * self._hist_action_len
+            expected_obs_dim += 10 * self._hist_len + 8 * self._hist_action_len
         if self.cfg.use_integral_obs:
             expected_obs_dim += self.cfg.integral_dims
         if expected_obs_dim != self.cfg.observation_space:
@@ -148,11 +148,12 @@ class ALBCEnv(DirectRLEnv):
         # Pre-build the integral error-gating sigma tensor once (step-invariant cfg constants).
         # Avoids re-allocating torch.tensor(...) every step in _get_rewards (hot loop).
         if self.cfg.use_integral_obs and self.cfg.integral_gated:
-            sigmas = [self.cfg.reward.att_rp.sigma, self.cfg.reward.att_rp.sigma]
-            if self.cfg.integral_dims == 6:
-                sigmas += [self.cfg.reward.lin_vel.sigma] * 3 + [self.cfg.reward.yaw_vel.sigma]
-            else:
-                sigmas.append(self.cfg.reward.lin_vel.sigma)
+            # Attitude-only: 3 integral channels [roll, pitch, yaw_rate]
+            sigmas = [
+                self.cfg.reward.att_rp.sigma,
+                self.cfg.reward.att_rp.sigma,
+                self.cfg.reward.yaw_vel.sigma,
+            ]
             self._integral_gate_sigmas = torch.tensor(sigmas, device=self.device)
         else:
             self._integral_gate_sigmas = None
@@ -415,7 +416,7 @@ class ALBCEnv(DirectRLEnv):
         self._control_step_counter += 1
 
     def _get_hist_features(self) -> torch.Tensor:
-        """Compute temporal history features (21D per timestep).
+        """Compute temporal history features (18D per timestep).
 
         Called before ``_apply_joint_pd_action()`` so that ``_joint_pos_targets``
         still holds ``q_des_{t-1}`` (the previous step's target).
@@ -424,20 +425,18 @@ class ALBCEnv(DirectRLEnv):
             [0:2]   joint position error: q_des_{t-1} - q_actual_t
             [2:4]   joint velocity
 
-        Body tracking (9D) -- system response:
-            [4:7]   linear velocity tracking error: vel_cmd - lin_vel
-            [7:9]   roll/pitch attitude error (radians, wrapped)
-            [9]     yaw rate error (rad/s)
-            [10:13] euler angles (roll, pitch, yaw)
+        Body tracking (6D) -- system response:
+            [4:6]   roll/pitch attitude error (radians, wrapped)
+            [6]     yaw rate error (rad/s)
+            [7:10]  euler angles (roll, pitch, yaw)
 
         Action (8D) -- recent control input:
-            [13:21] full action (2D arm + 6D thruster)
+            [10:18] full action (2D arm + 6D thruster)
         """
         joint_pos = self._robot.data.joint_pos[:, self._albc_joint_ids]
         joint_pos_error = self._joint_pos_targets - joint_pos
         joint_vel = self._robot.data.joint_vel[:, self._albc_joint_ids]
 
-        lin_vel_err = self._vel_cmd_lin - self._robot.data.root_lin_vel_b
         roll, pitch, yaw = euler_xyz_from_quat(self._robot.data.root_quat_w)
 
         # Roll/pitch: attitude error (wrapped to [-pi, pi])
@@ -451,7 +450,6 @@ class ALBCEnv(DirectRLEnv):
             [
                 joint_pos_error,  # 2D: q_des_{t-1} - q_actual_t
                 joint_vel,  # 2D: joint velocities
-                lin_vel_err,  # 3D: lin vel tracking error
                 ang_err,  # 3D: [att_rp_err(2), yaw_rate_err(1)]
                 torch.stack([roll, pitch, yaw], dim=-1),  # 3D: euler angles
                 self._prev_actions,  # 8D: action that produced current state
@@ -938,10 +936,10 @@ class ALBCEnv(DirectRLEnv):
         current_proprio = compute_policy_obs(self, self._robot)  # 26D
 
         if self._hist_buf is not None:
-            # Joint tracking + body tracking: all steps, dims [0:13]
-            jb_hist = self._hist_buf[:, :, :13].reshape(self.num_envs, -1)  # 13 * hist_len
-            # Action: newest hist_action_len steps, dims [13:21]
-            act_hist = self._hist_buf[:, -self._hist_action_len :, 13:].reshape(self.num_envs, -1)  # 8 * action_len
+            # Joint tracking + body tracking: all steps, dims [0:10]
+            jb_hist = self._hist_buf[:, :, :10].reshape(self.num_envs, -1)  # 10 * hist_len
+            # Action: newest hist_action_len steps, dims [10:18]
+            act_hist = self._hist_buf[:, -self._hist_action_len :, 10:].reshape(self.num_envs, -1)  # 8 * action_len
             policy_obs = torch.cat([current_proprio, jb_hist, act_hist], dim=-1)
         else:
             policy_obs = current_proprio
@@ -983,22 +981,12 @@ class ALBCEnv(DirectRLEnv):
         if self.cfg.use_integral_obs:
             self._error_integral.mul_(self.cfg.integral_leak)
 
-            # Collect per-channel errors
-            if self.cfg.integral_dims == 6:
-                errs = [
-                    self._att_rp_err[:, 0],  # roll
-                    self._att_rp_err[:, 1],  # pitch
-                    self._lin_vel_err[:, 0],  # vx
-                    self._lin_vel_err[:, 1],  # vy
-                    self._lin_vel_err[:, 2],  # vz
-                    self._yaw_rate_err,  # yaw rate
-                ]
-            else:  # 3D legacy (R7)
-                errs = [
-                    self._att_rp_err[:, 0],  # roll
-                    self._att_rp_err[:, 1],  # pitch
-                    self._lin_vel_err[:, 1],  # vy only
-                ]
+            # Attitude-only: 3 integral channels [roll, pitch, yaw_rate]
+            errs = [
+                self._att_rp_err[:, 0],  # roll
+                self._att_rp_err[:, 1],  # pitch
+                self._yaw_rate_err,  # yaw rate
+            ]
 
             if self.cfg.integral_gated:
                 # Error-gated: only accumulate when |error| < reward sigma.
