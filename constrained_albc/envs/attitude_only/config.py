@@ -388,7 +388,14 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # Domain Randomization
     # ==========================================================================
     randomization: HardDomainRandomizationCfg = HardDomainRandomizationCfg()
-    doraemon: DoraemonCfg = DoraemonCfg(enable=True, kl_ub=0.06, performance_lb=90.0, step_interval=250)
+    # performance_lb: DORAEMON binary-success threshold on accumulated episode return
+    # (albc_env.py: _episode_return_accum += reward; success = return >= performance_lb).
+    # Lowered 90.0 -> 68.0 for attitude-only: the lin_vel tracking reward term (per-step
+    # cap +4.0) was removed, shrinking the positive-reward pool from ~16.5 to ~12.5/step
+    # (-24%). main's 90.0 was tuned against the 6-DOF return scale; 68 = 90 * (12.5/16.5).
+    # This is a scale-proportional ESTIMATE -- confirm against the baseline run's reward
+    # decomposition (_episode_sums) and refine if the actual return distribution differs.
+    doraemon: DoraemonCfg = DoraemonCfg(enable=True, kl_ub=0.06, performance_lb=68.0, step_interval=250)
 
     # ==========================================================================
     # Payload
