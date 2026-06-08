@@ -85,7 +85,7 @@ def compute_policy_obs(
 def compute_privileged_obs(
     env: ALBCEnv,
 ) -> torch.Tensor:
-    """Compute privileged information p_t (24D).
+    """Compute privileged information p_t (27D).
 
     Non-redundant set of independent DR parameters. Each dimension corresponds
     to a single random variable -- no correlated pairs from shared DR scales.
@@ -111,6 +111,8 @@ def compute_privileged_obs(
         Environment (4D):
             [20]    water density
             [21:24] ocean current velocity (x, y, z, world frame)
+        Measured Velocity (3D):
+            [24:27] body linear velocity (u, v, w)
     """
     jid = env._albc_joint_ids[0]
 
@@ -149,6 +151,8 @@ def compute_privileged_obs(
             # Environment (4D)
             env._hydro.water_density.unsqueeze(-1),
             env._hydro.current.velocity_w[:, :3],  # ocean current linear xyz (world frame)
+            # Measured velocity (3D) -- privileged: actor is blinded, critic sees it
+            env._robot.data.root_lin_vel_b,  # 3D: body linear velocity (u, v, w)
         ],
         dim=-1,
     )
