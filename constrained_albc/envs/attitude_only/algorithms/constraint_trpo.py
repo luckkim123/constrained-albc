@@ -482,6 +482,13 @@ class ConstraintTRPO:
         ls_success = self._trpo_step(obs_flat, old_mu_flat, old_sigma_flat, surrogate)
 
         # --- 3. Safety clamp log_std after TRPO step ---
+        # NOTE (state_dependent_std): self.policy.log_std is ALWAYS a live nn.Parameter,
+        # even when the policy uses a state-conditioned log_std head (Phase 2 toggle ON).
+        # In that mode the global log_std does NOT feed the action distribution, so this
+        # clamp is a harmless no-op on an unused Parameter -- the per-state std is bounded
+        # inside the policy's _update_distribution clamp instead. Do NOT "fix" this by
+        # removing the global log_std or guarding on the toggle: the Parameter must stay
+        # present (this clamp does direct .data access) and clamping it costs nothing.
         with torch.no_grad():
             log_max = math.log(self.max_std)
             if self._log_min_std is not None:

@@ -137,6 +137,16 @@ class _EncoderPolicyCfg(RslRlPpoActorCriticCfg):
     # Observation dimensions
     policy_obs_dim: int = 69  # 20D current proprio + 46D temporal history + 3D integral
     privileged_dim: int = 27
+    # State-conditioned action std (Phase 2 falsification track). Default OFF =
+    # byte-identical baseline (global state-independent log_std Parameter). When ON the
+    # actor emits 2*num_actions (mean + per-state log_std head) clamped to [min_std,
+    # max_std]; actuation authority is unchanged. Flip via the launch override
+    # `agent.policy.state_dependent_std=true`. The min/max clamp reuses the algorithm
+    # cfg's sigma bounds (min_std=0.05, max_std=2.0); kept here so the in-policy clamp
+    # matches ConstraintTRPO's post-step clamp.
+    state_dependent_std: bool = False
+    min_std: float = 0.05
+    max_std: float = 2.0
 
 
 @configclass

@@ -14,6 +14,7 @@ update_normalization, load_state_dict.
 from __future__ import annotations
 
 import logging
+import math
 from typing import TYPE_CHECKING, Any, NoReturn
 
 import torch
@@ -54,9 +55,23 @@ class PolicyBase(nn.Module):
         cost_critic_hidden_dims: list[int] | tuple[int, ...],
         # Noise
         init_noise_std: float,
+        # State-conditioned action std (Phase 2: falsification track).
+        # OFF (default) = byte-identical baseline: std is a single state-independent
+        # log_std Parameter. ON = the actor emits 2*num_actions (mean + log_std head);
+        # std becomes a function of state, clamped to [min_std, max_std] in-policy.
+        state_dependent_std: bool = False,
+        min_std: float = 0.05,
+        max_std: float = 2.0,
     ) -> None:
         """Initialize shared components. Called from subclass __init__."""
         # Store dimensions
+        self.num_actions = num_actions
+        self.state_dependent_std = state_dependent_std
+        # Clamp bounds for the state-conditioned log_std head (log-space).
+        # Mirrors ConstraintTRPO's post-step sigma clamp so the per-state std is
+        # bounded the same way the global log_std would be.
+        self._log_min_std = math.log(min_std)
+        self._log_max_std = math.log(max_std)
         self.obs_groups = obs_groups
         self.policy_obs_dim = policy_obs_dim
         self.privileged_dim = privileged_dim
@@ -92,7 +107,13 @@ class PolicyBase(nn.Module):
         else:
             self.cost_critic = None
 
-        # Action noise (Gaussian policy, log_std parameterization)
+        # Action noise (Gaussian policy, log_std parameterization).
+        # ALWAYS created, even when state_dependent_std=True. When ON it is unused for
+        # action sampling (the per-state log_std head supplies std), but it MUST remain a
+        # live nn.Parameter so ConstraintTRPO's post-step clamp (constraint_trpo.py:488-491
+        # `self.policy.log_std.data.clamp_(...)`) never AttributeErrors. It rides in the
+        # TRPO param set harmlessly (its KL gradient is ~0 when it does not feed the
+        # distribution), and the per-state std is bounded by the in-policy clamp below.
         self.log_std = nn.Parameter(torch.log(init_noise_std * torch.ones(num_actions)))
         self.distribution: Normal | None = None
         Normal.set_default_validate_args(False)
@@ -125,8 +146,25 @@ class PolicyBase(nn.Module):
 
     # --- Distribution ---
 
-    def _update_distribution(self, mean: torch.Tensor) -> None:
-        std = torch.exp(self.log_std).expand_as(mean)
+    def _update_distribution(self, actor_out: torch.Tensor) -> None:
+        """Build the Gaussian policy distribution from the raw actor output.
+
+        state_dependent_std OFF (default, byte-identical baseline):
+            actor_out is the mean (num_actions). std = exp(global log_std), broadcast
+            to all states (state-INDEPENDENT).
+
+        state_dependent_std ON:
+            actor_out is cat([mean, log_std]) (2*num_actions). std = exp(log_std head),
+            clamped in log-space to [min_std, max_std] so the per-state std stays in the
+            same range ConstraintTRPO would otherwise enforce on the global log_std.
+        """
+        if self.state_dependent_std:
+            mean, log_std = torch.split(actor_out, self.num_actions, dim=-1)
+            log_std = log_std.clamp(min=self._log_min_std, max=self._log_max_std)
+            std = torch.exp(log_std)
+        else:
+            mean = actor_out
+            std = torch.exp(self.log_std).expand_as(mean)
         self.distribution = Normal(mean, std)
 
     def get_actions_log_prob(self, actions: torch.Tensor) -> torch.Tensor:

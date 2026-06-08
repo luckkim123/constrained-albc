@@ -80,6 +80,13 @@ class ActorCriticEncoder(PolicyBase):
         critic_hidden_dims: list[int] | tuple[int, ...] = (512, 256, 128),
         activation: str = "elu",
         init_noise_std: float = 1.0,
+        # State-conditioned action std (Phase 2 falsification track). OFF = baseline.
+        # ON: actor emits 2*num_actions (mean + log_std head); std becomes per-state,
+        # clamped to [min_std, max_std]. Actuation authority unchanged (mean drives
+        # the same actuator slices). See _policy_base._update_distribution.
+        state_dependent_std: bool = False,
+        min_std: float = 0.05,
+        max_std: float = 2.0,
         # Asymmetric critic with z: cat([o_t, z, p_t]), value gradient to encoder
         critic_uses_z: bool = False,
         # Cost critic (IPO constraints)
@@ -117,6 +124,9 @@ class ActorCriticEncoder(PolicyBase):
             num_constraints=num_constraints,
             cost_critic_hidden_dims=cost_critic_hidden_dims,
             init_noise_std=init_noise_std,
+            state_dependent_std=state_dependent_std,
+            min_std=min_std,
+            max_std=max_std,
         )
 
         # --- Encoder input selection: optionally use a subset of privileged dims ---
@@ -179,7 +189,10 @@ class ActorCriticEncoder(PolicyBase):
         self.actor_obs_normalizer = (
             EmpiricalNormalization(num_actor_obs_norm) if actor_obs_normalization else nn.Identity()
         )
-        self.actor = MLP(num_actor_obs, num_actions, list(actor_hidden_dims), activation)
+        # state_dependent_std ON: actor emits 2*num_actions (mean + per-state log_std).
+        # OFF (default): emits num_actions (mean only); std is the global log_std Parameter.
+        actor_out_dim = 2 * num_actions if state_dependent_std else num_actions
+        self.actor = MLP(num_actor_obs, actor_out_dim, list(actor_hidden_dims), activation)
 
         critic_desc = "asymmetric+z" if critic_uses_z else "asymmetric"
         logger.info(
@@ -277,8 +290,15 @@ class ActorCriticEncoder(PolicyBase):
         return self.distribution.sample()
 
     def act_inference(self, obs: TensorDict) -> torch.Tensor:
-        """Deterministic action (mean, no clamping)."""
-        return self.actor(self._get_actor_obs(obs))
+        """Deterministic action (mean, no clamping).
+
+        When state_dependent_std is ON the actor emits 2*num_actions (mean + log_std);
+        the deterministic action is the mean slice only. OFF: the full output is the mean.
+        """
+        actor_out = self.actor(self._get_actor_obs(obs))
+        if self.state_dependent_std:
+            return actor_out[..., : self.num_actions]
+        return actor_out
 
     def update_normalization(self, obs: TensorDict) -> None:
         """Update observation normalization running statistics.
