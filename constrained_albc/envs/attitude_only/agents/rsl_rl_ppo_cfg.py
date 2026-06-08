@@ -259,7 +259,11 @@ class ALBCTRPORunnerCfg(_BaseALBCRunnerCfg):
     # baseline 260525_232805 run). Previously this fell back to rsl_rl's tensorboard default,
     # so a launch that forgot `agent.logger=wandb` logged only to TB. Override per-run if needed.
     logger: str = "wandb"
-    wandb_project: str = "constrained_albc"
+    # WandB project = campaign name (experiment-dir standard SS95-100: one campaign -> one
+    # project, never per-run). AttitudeOnly's first campaign is att_dr_harder, matching the
+    # <group> dir. Override with --log_project_name when starting a different campaign so runs
+    # cluster correctly (wandb has no move-run API -- the launch-time project name is what sticks).
+    wandb_project: str = "att_dr_harder"
     obs_groups: dict[str, list[str]] = {
         "policy": ["policy", "privileged"],
         "critic": ["policy", "privileged"],

@@ -420,16 +420,24 @@ def read_manifest(run_root: str | Path) -> dict:
 def experiments_group_dir(
     experiment_name: str | None,
     experiments_root: str | Path = EXPERIMENTS_ROOT,
+    group: str | None = None,
 ) -> Path:
-    """Return the grouped experiments dir ``<experiments_root>/<prefix>/<experiment_name>/``.
+    """Return the grouped experiments dir ``<experiments_root>/<prefix>/<experiment_name>/[<group>/]``.
 
-    Mirrors ``logs/rsl_rl/<experiment_name>/`` so a run's experiments tree clusters by
-    experiment_name (e.g. ``albc_trpo_teacher`` / ``albc_trpo_student``). When
-    *experiment_name* is falsy the run lands directly under the group prefix (kept simple
-    rather than failing -- experiment_name is always set in practice).
+    Mirrors ``logs/rsl_rl/<experiment_name>/[<group>/]`` so a run's experiments tree clusters
+    by experiment_name (e.g. ``albc_trpo_teacher`` / ``albc_trpo_student``) and, optionally, by
+    a campaign/purpose *group* layer (e.g. ``att_dr_harder``). The group is the experiment-dir
+    standard's ``<group>`` segment (docs/plans/2026-06-07-experiment-dir-standard.md SS3/4):
+    ``rsl_rl/<exp>/<group>/<run_id>/``. When *experiment_name* is falsy the run lands directly
+    under the group prefix (kept simple rather than failing -- experiment_name is always set in
+    practice); a falsy *group* keeps the original 3-segment layout (back-compat).
     """
     root = Path(experiments_root) / EXPERIMENTS_GROUP_PREFIX
-    return root / experiment_name if experiment_name else root
+    if experiment_name:
+        root = root / experiment_name
+    if group:
+        root = root / group
+    return root
 
 
 def emit_run_manifest(
@@ -440,6 +448,7 @@ def emit_run_manifest(
     config: dict | None = None,
     experiments_root: str | Path = EXPERIMENTS_ROOT,
     experiment_name: str | None = None,
+    group: str | None = None,
     run_id: str | None = None,
     kind: str = "teacher",
     parent_run_id: str | None = None,
@@ -470,6 +479,9 @@ def emit_run_manifest(
         experiment_name: Groups the run under ``experiments/rsl_rl/<experiment_name>/``
             (mirrors logs/rsl_rl/<experiment_name>/). Falls back to ``config["experiment_name"]``
             then ungrouped if neither is given.
+        group: Optional campaign/purpose layer inserted as ``<experiment_name>/<group>/<run_id>/``
+            (the experiment-dir standard's ``<group>`` segment, e.g. ``att_dr_harder``). Falls back
+            to ``config["run_group"]``; falsy keeps the original 3-segment layout.
         run_id: Override the computed run_id (else derived from task + log_dir timestamp).
         kind: "teacher" (default) or "student" (design section 2-C Option B).
         parent_run_id: For a student, the teacher's run_id (manifest link to the teacher).
@@ -482,7 +494,8 @@ def emit_run_manifest(
     rid = run_id or make_run_id(task, tag=tag, ts=ts)
 
     exp_name = experiment_name or (config or {}).get("experiment_name")
-    run_root = experiments_group_dir(exp_name, experiments_root) / rid
+    grp = group or (config or {}).get("run_group")
+    run_root = experiments_group_dir(exp_name, experiments_root, group=grp) / rid
     (run_root / "config").mkdir(parents=True, exist_ok=True)
 
     # Copy the configs train.py dumps to <log_dir>/params, if they exist yet.

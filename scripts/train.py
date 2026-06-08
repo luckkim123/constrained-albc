@@ -82,6 +82,14 @@ parser.add_argument(
     "Overrides DoraemonCfg.replay_curriculum_path.",
 )
 parser.add_argument(
+    "--run_group",
+    type=str,
+    default=None,
+    help="Optional campaign/purpose group inserted as logs/rsl_rl/<exp>/<group>/<run_id>/ "
+    "(experiment-dir standard's <group> segment, e.g. att_dr_harder). Mirrored into the "
+    "experiments/ tree. Omit for the original <exp>/<run_id>/ layout.",
+)
+parser.add_argument(
     "--ray-proc-id", "-rid", type=int, default=None, help="Automatically configured by Ray integration, otherwise None."
 )
 # append RSL-RL cli arguments
@@ -232,7 +240,13 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         )
     log_dir = make_run_id(args_cli.task, tag=agent_cfg.run_name or None, ts=ts)
     print(f"Exact experiment name requested from command line: {log_dir}")
-    log_dir = os.path.join(log_root_path, log_dir)
+    # Optional <group> layer (experiment-dir standard SS3/4): logs/rsl_rl/<exp>/<group>/<run_id>/.
+    # The code now creates this layer itself, so a campaign no longer needs a manual post-move
+    # (the dr_harder mislocation root cause, 2026-06-06/07). Omitted -> original <exp>/<run_id>/.
+    if args_cli.run_group:
+        log_dir = os.path.join(log_root_path, args_cli.run_group, log_dir)
+    else:
+        log_dir = os.path.join(log_root_path, log_dir)
 
     # Point <experiment>/latest at this run so tools reach the newest run without
     # knowing its timestamp (e.g. tensorboard --logdir logs/rsl_rl/<exp>/latest).
@@ -313,11 +327,13 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             log_dir=log_dir,
             tag=agent_cfg.run_name or None,
             experiment_name=agent_cfg.experiment_name,
+            group=args_cli.run_group,
             config={
                 "num_envs": env_cfg.scene.num_envs,
                 "max_iterations": agent_cfg.max_iterations,
                 "seed": agent_cfg.seed,
                 "experiment_name": agent_cfg.experiment_name,
+                "run_group": args_cli.run_group,
             },
         )
         print(f"[INFO] run_id tree: experiments/{run.run_id} (manifest + train -> {log_dir})")

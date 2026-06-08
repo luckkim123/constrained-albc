@@ -198,6 +198,61 @@ def test_find_runs_skips_legacy(tmp_path):
     assert {r.run_id for r in runs} == {"2026-05-25_a", "2026-05-25_b"}
 
 
+# ---------------------------------------------------------------------------
+# group (<exp>/<group>/<run_id>) -- WRITE side (emit_run_manifest + group_dir)
+# The READ side (find_runs) already handles the group layer (test above);
+# these guard that emit now MIRRORS it instead of leaving group dirs to a
+# manual post-move (the dr_harder mislocation root cause, 2026-06-06/07).
+# ---------------------------------------------------------------------------
+def test_experiments_group_dir_with_group():
+    """A group inserts a 4th segment experiments/rsl_rl/<exp>/<group>/."""
+    d = P.experiments_group_dir("albc_trpo_teacher", "experiments", group="att_dr_harder")
+    assert d.as_posix().endswith("experiments/rsl_rl/albc_trpo_teacher/att_dr_harder")
+
+
+def test_experiments_group_dir_no_group_unchanged():
+    """Omitting group keeps the 3-segment layout (back-compat)."""
+    d = P.experiments_group_dir("albc_trpo_teacher", "experiments")
+    assert d.as_posix().endswith("experiments/rsl_rl/albc_trpo_teacher")
+
+
+def test_emit_run_manifest_group_layer(tmp_path):
+    """emit_run_manifest with a group lands the run under <exp>/<group>/<run_id>/,
+    writes a manifest there, and the train symlink (relpath-computed) still resolves
+    one level deeper without any hardcoded ../ depth."""
+    log_dir = tmp_path / "logs" / "rsl_rl" / "albc_trpo_teacher" / "att_dr_harder" / "trpo_e1_260608_120000"
+    (log_dir / "tb").mkdir(parents=True)
+    run = P.emit_run_manifest(
+        task="Isaac-ConstrainedALBC-AttitudeOnly-TRPO-v0",
+        log_dir=log_dir,
+        tag="e1",
+        experiment_name="albc_trpo_teacher",
+        group="att_dr_harder",
+        experiments_root=str(tmp_path / "experiments"),
+    )
+    assert run.root.as_posix().endswith(
+        "experiments/rsl_rl/albc_trpo_teacher/att_dr_harder/" + run.run_id
+    )
+    assert (run.root / P.MANIFEST_NAME).is_file()
+    # train symlink resolves to the real log_dir regardless of group depth.
+    train_link = run.root / "train"
+    assert train_link.is_symlink()
+    assert (train_link / "tb").resolve() == (log_dir / "tb").resolve()
+
+
+def test_emit_run_manifest_no_group_unchanged(tmp_path):
+    """Without a group the run keeps the original <exp>/<run_id>/ layout (no regression)."""
+    log_dir = tmp_path / "logs" / "rsl_rl" / "albc_trpo_teacher" / "trpo_260608_120000"
+    (log_dir / "tb").mkdir(parents=True)
+    run = P.emit_run_manifest(
+        task="Isaac-ConstrainedALBC-TRPO-v0",
+        log_dir=log_dir,
+        experiment_name="albc_trpo_teacher",
+        experiments_root=str(tmp_path / "experiments"),
+    )
+    assert run.root.parent.name == "albc_trpo_teacher"  # no group dir between exp and run
+
+
 def test_find_runs_purpose_group_layer(tmp_path):
     """Runs under an extra purpose layer (experiments/rsl_rl/<exp>/<group>/<run_id>/, e.g.
     dr_harder/) are found regardless of grouping depth."""
