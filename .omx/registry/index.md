@@ -1,6 +1,6 @@
 # Wiki Index
 
-> 43 pages | Last updated: 2026-06-07T06:10:13.430011
+> 48 pages | Last updated: 2026-06-08T03:26:24.790801
 
 ## convention
 
@@ -20,6 +20,7 @@
 - [ocean nominal shift collapses actor entropy (E2 dr-harder)](ocean_nominal_shift_collapses_actor_entropy_e2_dr_harder.md) - # ocean nominal shift collapses actor entropy (E2 dr-harder)
 - [omx CLI tools (not just the engine) silent-fail on misuse — empty != absent](omx_cli_tools_not_just_the_engine_silent_fail_on_misuse_empty_ab.md) - # omx CLI tools (not just the engine) silent-fail on misuse — empty != absent
 - [report completeness gate must run BEFORE writing, not after](report_completeness_gate_must_run_before_writing_not_after.md) - # report completeness gate must run BEFORE writing, not after
+- [static-eval plots regenerate sim-free from npz (reconstruct segment metadata)](static_eval_plots_regenerate_sim_free_from_npz_reconstruct_segme.md) - # static-eval plots regenerate sim-free from npz (reconstruct segment metadata)
 - [training diagnosis decision tree](training_diagnosis_decision_tree.md) - # training diagnosis decision tree
 
 ## decision
@@ -32,6 +33,7 @@
 - [engine-gap CONFIRMED: analyze_training.py constraint+reward prefix mismatch (code lines)](engine_gap_confirmed_analyze_training_py_constraint_reward_prefi.md) - # engine-gap CONFIRMED: analyze_training.py constraint+reward prefix mismatch...
 - [engine-gap: eval adapter covers static + segmented; periodic still unsupported](engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md) - # engine-gap: eval adapter covers static + segmented; periodic still unsupported
 - [engine-gap: eval adapter only covers static; periodic unsupported, segmented partial](engine_gap_eval_adapter_only_covers_static_periodic_unsupported_.md) - # engine-gap: eval adapter only covers static; periodic unsupported, segmente...
+- [engine-gap: heavy_tail.json pct_peak_gt_thresh exceeds 100% at ood level (denominator bug)](engine_gap_heavy_tail_json_pct_peak_gt_thresh_exceeds_100_at_ood.md) - # engine-gap: heavy_tail.json pct_peak_gt_thresh exceeds 100% at ood level (d...
 - [engine-gap: omx CLI gaps found re-analyzing teacher (2026-06-06 round 2)](engine_gap_omx_cli_gaps_found_re_analyzing_teacher_2026_06_06_ro.md) - # engine-gap: omx CLI gaps found re-analyzing teacher (2026-06-06 round 2)
 - [engine-gap: omx CLI/skill gaps found during dr-harder reporting (2026-06-06)](engine_gap_omx_cli_skill_gaps_found_during_dr_harder_reporting_2.md) - # engine-gap: omx CLI/skill gaps found during dr-harder reporting (2026-06-06)
 - [eval analysis: core does stats, adapter does heavy-tail](eval_analysis_core_does_stats_adapter_does_heavy_tail.md) - # eval analysis: core does stats, adapter does heavy-tail
@@ -56,6 +58,9 @@
 - [analysis refactor 2026-06-05 — new sim-free modules and engine-gap status](analysis_refactor_2026_06_05_new_sim_free_modules_and_engine_gap.md) - # analysis refactor 2026-06-05 — new sim-free modules and engine-gap status
 - [barrier_alpha runtime=0.05 (agent cfg injects over ctor default 0.02)](barrier_alpha_runtime_0_05_agent_cfg_injects_over_ctor_default_0.md) - # barrier_alpha runtime=0.05 (agent cfg injects over ctor default 0.02)
 - [baseline-repro reproduces teacher deterministically (E4 control)](baseline_repro_reproduces_teacher_deterministically_e4_control.md) - # baseline-repro reproduces teacher deterministically (E4 control)
+- [constraint margin must be normalized (J_C/d_k) -- absolute margin flips binding/slack](constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md) - # constraint margin must be normalized (J_C/d_k) -- absolute margin flips bin...
 - [ConstraintTRPO health thresholds](constrainttrpo_health_thresholds.md) - # ConstraintTRPO health thresholds
+- [Our DORAEMON == original (both entropy-max); center CAN move, kl_ub is the speed bottleneck](our_doraemon_original_both_entropy_max_center_can_move_kl_ub_is_.md) - # Our DORAEMON == original (both entropy-max); center CAN move, kl_ub is the ...
+- [P2/P3 analysis fixes do NOT change static-eval summary.json numbers (only plots/other modes)](p2_p3_analysis_fixes_do_not_change_static_eval_summary_json_numb.md) - # P2/P3 analysis fixes do NOT change static-eval summary.json numbers (only p...
 - [training anomaly thresholds (TB tag alert table)](training_anomaly_thresholds_tb_tag_alert_table.md) - # training anomaly thresholds (TB tag alert table)
 - [training-log analysis engine (reference adapter)](training_log_analysis_engine_reference_adapter.md) - # training-log analysis engine (reference adapter)
