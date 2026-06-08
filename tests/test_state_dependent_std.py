@@ -34,6 +34,7 @@ import sys
 import types
 from pathlib import Path
 
+import pytest
 import torch
 from tensordict import TensorDict
 
@@ -212,3 +213,77 @@ def test_toggle_on_global_logstd_still_present():
     # The clamp the algorithm runs must be a no-error no-op on this live Parameter.
     log_max = math.log(_MAX_STD)
     policy.log_std.data.clamp_(min=math.log(_MIN_STD), max=log_max)  # must not raise
+
+
+# ---------------------------------------------------------------------------
+# TRPO FVP integration: the global log_std is unused-but-present when ON.
+# Regression for the GPU-smoke crash "One of the differentiated Tensors appears
+# to not have been used in the graph" — ConstraintTRPO's autograd.grad over
+# _policy_params must tolerate the unused global log_std (allow_unused + zero-fill).
+# This reproduces the exact grad pattern sim-free (no ConstraintTRPO, no Isaac Sim).
+# ---------------------------------------------------------------------------
+
+
+def _gaussian_kl(mu, sigma, old_mu, old_sigma):
+    """Mean KL(old || new) for a diagonal Gaussian (mirrors ConstraintTRPO._gaussian_kl)."""
+    kl = (
+        torch.log((sigma / old_sigma).clamp(min=1e-5))
+        + (old_sigma.pow(2) + (old_mu - mu).pow(2)) / (2.0 * sigma.pow(2))
+        - 0.5
+    )
+    return kl.sum(dim=-1).mean()
+
+
+def _policy_params(policy):
+    """The TRPO param set: all named params except critic/cost_critic (mirrors :160-182)."""
+    value_prefixes = ("critic.", "cost_critic.", "value_backbone.", "reward_head.", "cost_head.")
+    return [p for n, p in policy.named_parameters() if not any(n.startswith(v) for v in value_prefixes)]
+
+
+def test_fvp_grad_tolerates_unused_global_logstd_when_on():
+    """Toggle ON: the global log_std is in _policy_params but does NOT feed the KL
+    (the per-state head supplies std). The FVP's strict autograd.grad would raise
+    'differentiated Tensor not used'. The fix is allow_unused=True + zero-fill, which
+    yields an EXACT zero Fisher block for the unused Parameter. Assert: (1) strict grad
+    raises (documents the bug), (2) allow_unused grad succeeds with a None for log_std."""
+    policy = _make_policy(state_dependent_std=True)
+    params = _policy_params(policy)
+    # log_std must be one of the policy params (rides in the TRPO set).
+    assert any(p is policy.log_std for p in params)
+
+    obs = _make_obs(seed=60)
+    policy.act(obs)
+    old_mu = policy.action_mean.detach()
+    old_sigma = policy.action_std.detach()
+    # Re-run act to build a fresh grad-enabled graph (act() sampled above).
+    policy.act(obs)
+    kl = _gaussian_kl(policy.action_mean, policy.action_std, old_mu, old_sigma)
+
+    # (1) strict grad (the pre-fix behavior) raises because log_std is unused.
+    with pytest.raises(RuntimeError, match="not have been used"):
+        torch.autograd.grad(kl, params, create_graph=True, allow_unused=False)
+
+    # (2) the fix: allow_unused=True returns None for the unused log_std; zero-fill is exact.
+    grads = torch.autograd.grad(kl, params, create_graph=True, allow_unused=True)
+    logstd_idx = next(i for i, p in enumerate(params) if p is policy.log_std)
+    assert grads[logstd_idx] is None, "global log_std must be unused (None grad) when toggle ON"
+    # The actor head weights (which carry the per-state log_std) MUST have a real grad.
+    assert any(g is not None for i, g in enumerate(grads) if i != logstd_idx)
+
+
+def test_fvp_grad_uses_global_logstd_when_off():
+    """Toggle OFF (baseline): the global log_std FEEDS the KL, so its grad is NOT None.
+    Proves the allow_unused change is a no-op for the byte-identical baseline path."""
+    policy = _make_policy(state_dependent_std=False)
+    params = _policy_params(policy)
+    obs = _make_obs(seed=61)
+    policy.act(obs)
+    old_mu = policy.action_mean.detach()
+    old_sigma = policy.action_std.detach()
+    policy.act(obs)
+    kl = _gaussian_kl(policy.action_mean, policy.action_std, old_mu, old_sigma)
+
+    # Strict grad must SUCCEED off-toggle (log_std is used) -> the original code path is intact.
+    grads = torch.autograd.grad(kl, params, create_graph=True, allow_unused=False)
+    logstd_idx = next(i for i, p in enumerate(params) if p is policy.log_std)
+    assert grads[logstd_idx] is not None, "global log_std must be USED (real grad) when toggle OFF"

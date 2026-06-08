@@ -354,14 +354,27 @@ class ConstraintTRPO:
     def _fisher_vector_product(
         self, obs: TensorDict, old_mu: torch.Tensor, old_sigma: torch.Tensor, vector: torch.Tensor
     ) -> torch.Tensor:
-        """F @ v via double backprop on KL (pure KL Hessian, no constraint curvature)."""
+        """F @ v via double backprop on KL (pure KL Hessian, no constraint curvature).
+
+        allow_unused=True: with state_dependent_std ON, the global log_std Parameter is in
+        _policy_params but does not feed the KL (the per-state log_std head supplies std),
+        so its grad is None. A None grad == zero Fisher block for an unused parameter
+        (mathematically exact: it simply does not move in the trust region). Zero-filled
+        below. With the toggle OFF, log_std IS used, no grad is None, and this is a no-op.
+        """
         self.policy.act(obs)
         kl = self._gaussian_kl(self.policy.action_mean, self.policy.action_std, old_mu, old_sigma)
-        kl_grads = torch.autograd.grad(kl, self._policy_params, create_graph=True)
-        flat_kl_grad = torch.cat([g.contiguous().view(-1) for g in kl_grads])
+        kl_grads = torch.autograd.grad(kl, self._policy_params, create_graph=True, allow_unused=True)
+        flat_kl_grad = torch.cat(
+            [(g if g is not None else torch.zeros_like(p)).contiguous().view(-1)
+             for g, p in zip(kl_grads, self._policy_params)]
+        )
         kl_v = (flat_kl_grad * vector).sum()
-        hvp_grads = torch.autograd.grad(kl_v, self._policy_params, retain_graph=False)
-        fvp = torch.cat([g.contiguous().view(-1) for g in hvp_grads])
+        hvp_grads = torch.autograd.grad(kl_v, self._policy_params, retain_graph=False, allow_unused=True)
+        fvp = torch.cat(
+            [(g if g is not None else torch.zeros_like(p)).contiguous().view(-1)
+             for g, p in zip(hvp_grads, self._policy_params)]
+        )
         return fvp + self.cg_damping * vector
 
     def _conjugate_gradient(
@@ -527,7 +540,11 @@ class ConstraintTRPO:
         """TRPO natural gradient step: surrogate -> CG -> step size -> line search."""
         loss = surrogate_fn()
         self._last_surrogate_loss = loss.item()
-        g = self._flat_grad(loss, self._policy_params)
+        # allow_unused=True: with state_dependent_std ON the global log_std Parameter does
+        # not feed the surrogate (entropy uses the per-state head std), so its grad is None.
+        # _flat_grad zero-fills None -> exact zero gradient for the unused Parameter. With
+        # the toggle OFF, log_std IS used and no grad is None (this is a no-op).
+        g = self._flat_grad(loss, self._policy_params, allow_unused=True)
 
         # Store encoder gradient norm (pre-clip) for logging
         if self._encoder_param_count > 0:
