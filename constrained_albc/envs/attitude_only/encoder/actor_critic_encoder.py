@@ -63,8 +63,8 @@ class ActorCriticEncoder(PolicyBase):
         obs_groups: dict[str, list[str]],
         num_actions: int,
         # Encoder
-        policy_obs_dim: int = 81,
-        privileged_dim: int = 23,
+        policy_obs_dim: int = 69,
+        privileged_dim: int = 27,
         encoder_hidden_dims: list[int] | tuple[int, ...] = (256, 128, 64),
         encoder_latent_dim: int = 9,
         encoder_activation: str = "elu",
