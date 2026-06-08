@@ -110,6 +110,7 @@ def _exp_quad_saturating(
     return exp_term - penalty
 
 
+# UNUSED in attitude_only (kept for cfg compatibility; not in RewardManager).
 def lin_vel_tracking(env: ALBCEnv) -> torch.Tensor:
     """r_lin: Euclidean norm tracking for linear velocity."""
     err_sq = env._lin_vel_err.pow(2).sum(dim=-1)
@@ -170,7 +171,7 @@ def bias_ema_penalty(env: ALBCEnv) -> torch.Tensor:
 class RewardManager:
     """Computes 6-term tracking reward with dt-scaling and episode tracking."""
 
-    _NAMES = ["lin_vel", "att_rp", "yaw_vel", "torque", "thruster", "smoothness", "bias"]
+    _NAMES = ["att_rp", "yaw_vel", "torque", "thruster", "smoothness", "bias"]
 
     def __init__(self, cfg: ALBCRewardCfg, num_envs: int, device: str) -> None:
         self._cfg = cfg
@@ -185,7 +186,6 @@ class RewardManager:
         self._buf.zero_()
 
         terms = [
-            ("lin_vel", cfg.lin_vel.k, lin_vel_tracking(env)),
             ("att_rp", cfg.att_rp.k, att_rp_tracking(env)),
             ("yaw_vel", cfg.yaw_vel.k, yaw_vel_tracking(env)),
             ("torque", cfg.k_tau, joint_torque(robot, env)),

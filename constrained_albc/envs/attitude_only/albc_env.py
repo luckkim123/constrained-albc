@@ -284,10 +284,8 @@ class ALBCEnv(DirectRLEnv):
         # Previous-step velocity for settling cost constraints (anti-overshoot)
         self._prev_root_lin_vel_b = torch.zeros(self.num_envs, 3, device=self.device)
         self._prev_root_ang_vel_z = torch.zeros(self.num_envs, device=self.device)
-        self._vel_cmd_lin = torch.zeros(self.num_envs, 3, device=self.device)
         # [0:2] = roll/pitch attitude (rad), [2] = yaw rate (rad/s)
         self._ang_cmd = torch.zeros(self.num_envs, 3, device=self.device)
-        self._lin_vel_err = torch.zeros(self.num_envs, 3, device=self.device)
         self._att_rp_err = torch.zeros(self.num_envs, 2, device=self.device)
         self._yaw_rate_err = torch.zeros(self.num_envs, device=self.device)
         # 3D mixed error for history buffer: [att_rp_err(2), yaw_rate_err(1)]
@@ -582,22 +580,18 @@ class ALBCEnv(DirectRLEnv):
         In play_mode, all commands are fixed to zero (hovering/station-keeping).
         """
         if self.cfg.play_mode:
-            self._vel_cmd_lin[env_ids] = 0.0
             self._ang_cmd[env_ids] = 0.0
             self._vel_cmd_step_counter[env_ids] = 0
             return
 
         n = len(env_ids)
-        lin_max = abs(self.cfg.vel_cmd_lin_range[1])
         att_max = abs(self.cfg.att_cmd_rp_range[1])
         yaw_max = abs(self.cfg.yaw_rate_cmd_range[1])
 
         # Per-env DORAEMON scales (1.0 when DORAEMON disabled)
-        lin_s = self._cmd_lin_scale[env_ids].unsqueeze(1)  # (n, 1)
         att_s = self._cmd_att_scale[env_ids].unsqueeze(1)  # (n, 1)
         yaw_s = self._cmd_yaw_scale[env_ids]  # (n,)
 
-        self._vel_cmd_lin[env_ids] = torch.empty(n, 3, device=self.device).uniform_(-1, 1) * (lin_max * lin_s)
         self._ang_cmd[env_ids, :2] = torch.empty(n, 2, device=self.device).uniform_(-1, 1) * (att_max * att_s)
         self._ang_cmd[env_ids, 2] = torch.empty(n, device=self.device).uniform_(-1, 1) * (yaw_max * yaw_s)
 
@@ -605,7 +599,6 @@ class ALBCEnv(DirectRLEnv):
         zero_mask = torch.rand(n, device=self.device) < self.cfg.vel_cmd_zero_prob
         if zero_mask.any():
             zero_ids = env_ids[zero_mask]
-            self._vel_cmd_lin[zero_ids] = 0.0
             self._ang_cmd[zero_ids] = 0.0
         self._vel_cmd_step_counter[env_ids] = 0
 
@@ -972,8 +965,6 @@ class ALBCEnv(DirectRLEnv):
         Returns:
             Reward tensor. Shape: (num_envs,).
         """
-        # Linear velocity error
-        self._lin_vel_err = self._vel_cmd_lin - self._robot.data.root_lin_vel_b
         # Roll/pitch attitude error + yaw rate error
         self._compute_ang_errors()
 
@@ -1080,12 +1071,6 @@ class ALBCEnv(DirectRLEnv):
         log["Track/att/roll_err_deg"] = torch.rad2deg(att_err[:, 0]).abs().mean().item()
         log["Track/att/pitch_err_deg"] = torch.rad2deg(att_err[:, 1]).abs().mean().item()
 
-        # Linear velocity tracking (grouped in one chart)
-        lin_err = self._lin_vel_err[env_ids]
-        log["Track/lin/err_x"] = lin_err[:, 0].abs().mean().item()
-        log["Track/lin/err_y"] = lin_err[:, 1].abs().mean().item()
-        log["Track/lin/err_z"] = lin_err[:, 2].abs().mean().item()
-
         # Yaw rate tracking
         log["Track/yaw/rate_err"] = self._yaw_rate_err[env_ids].abs().mean().item()
 
@@ -1093,9 +1078,6 @@ class ALBCEnv(DirectRLEnv):
         log["Track/cmd_att/roll_deg"] = torch.rad2deg(self._ang_cmd[env_ids, 0]).abs().mean().item()
         log["Track/cmd_att/pitch_deg"] = torch.rad2deg(self._ang_cmd[env_ids, 1]).abs().mean().item()
         log["Track/cmd_att/yaw_rate"] = self._ang_cmd[env_ids, 2].abs().mean().item()
-        log["Track/cmd_lin/vel_x"] = self._vel_cmd_lin[env_ids, 0].abs().mean().item()
-        log["Track/cmd_lin/vel_y"] = self._vel_cmd_lin[env_ids, 1].abs().mean().item()
-        log["Track/cmd_lin/vel_z"] = self._vel_cmd_lin[env_ids, 2].abs().mean().item()
 
         # Arm manipulability
         log["Track/arm/manip_mean"] = self._manipulability[env_ids].mean().item()
@@ -1386,7 +1368,6 @@ class ALBCEnv(DirectRLEnv):
         self._sample_velocity_command(env_ids)
 
         # Initialize errors
-        self._lin_vel_err[env_ids] = self._vel_cmd_lin[env_ids] - self._robot.data.root_lin_vel_b[env_ids]
         roll_r, pitch_r, _ = euler_xyz_from_quat(self._robot.data.root_quat_w[env_ids])
         raw = self._ang_cmd[env_ids, :2] - torch.stack([roll_r, pitch_r], dim=-1)
         self._att_rp_err[env_ids] = torch.atan2(torch.sin(raw), torch.cos(raw))
@@ -1447,7 +1428,7 @@ class ALBCEnv(DirectRLEnv):
         periodic printing during play.py inference.
 
         Returns:
-            Dict with keys: attitude_error_deg, lin_vel_error, action_rate,
+            Dict with keys: attitude_error_deg, action_rate,
             angular_velocity_rp_rms, angular_velocity_yaw_rms,
             thruster_utilization, joint_pos_mean_abs.
         """
@@ -1456,7 +1437,6 @@ class ALBCEnv(DirectRLEnv):
 
         return {
             "attitude_error_deg": torch.rad2deg(torch.linalg.norm(self._att_rp_err, dim=-1)).mean().item(),
-            "lin_vel_error": self._lin_vel_err.norm(dim=-1).mean().item(),
             "action_rate": torch.linalg.norm(da, dim=-1).mean().item(),
             "angular_velocity_rp_rms": self._robot.data.root_ang_vel_b[:, :2].pow(2).mean().sqrt().item(),
             "angular_velocity_yaw_rms": self._robot.data.root_ang_vel_b[:, 2].pow(2).mean().sqrt().item(),
