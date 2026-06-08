@@ -67,6 +67,10 @@ _PRIV_OBS_LOWER: list[float] = [
     -0.55,
     -0.55,
     -0.30,
+    # Measured velocity (3D): body lin_vel u, v, w -- normalization range, not a physical clamp
+    -1.0,
+    -1.0,
+    -1.0,
 ]
 
 _PRIV_OBS_UPPER: list[float] = [
@@ -99,6 +103,10 @@ _PRIV_OBS_UPPER: list[float] = [
     0.55,
     0.55,
     0.30,
+    # Measured velocity (3D): body lin_vel u, v, w -- normalization range, not a physical clamp
+    1.0,
+    1.0,
+    1.0,
 ]
 
 
