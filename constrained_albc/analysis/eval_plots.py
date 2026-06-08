@@ -60,20 +60,28 @@ def generate_plots(
     # order keeps ood last; a 4-level eval still draws exactly 4.
     levels = [lvl for lvl in DR_RENDER_ORDER if lvl in all_data]
 
+    # Capability flag: the attitude_only env tracks no linear velocity, so its data
+    # dicts carry no lin_vel_* arrays. Skip every lin-vel plot for it (they would
+    # KeyError on the missing keys). True default -> full-DOF teacher unchanged.
+    has_lin_vel = bool(all_data[levels[0]].get("has_lin_vel", True)) if levels else True
+
     # Static PNG plots
     _plot_attitude_tracking(all_data, levels, output_dir)
-    _plot_lin_vel(all_data, levels, output_dir)
+    if has_lin_vel:
+        _plot_lin_vel(all_data, levels, output_dir)
     _plot_yaw_rate(all_data, levels, output_dir)
     _plot_error(all_data, levels, output_dir)
     _plot_summary_attitude(all_metrics, levels, output_dir)
-    _plot_summary_lin_vel(all_metrics, levels, output_dir)
+    if has_lin_vel:
+        _plot_summary_lin_vel(all_metrics, levels, output_dir)
     _plot_summary_yaw(all_metrics, levels, output_dir)
     _plot_failure_time(all_data, levels, output_dir)
 
     # Interactive HTML plots (core tracking plots only) -- skip if plotly missing
     if _HAS_PLOTLY:
         _plot_attitude_interactive(all_data, levels, output_dir)
-        _plot_lin_vel_interactive(all_data, levels, output_dir)
+        if has_lin_vel:
+            _plot_lin_vel_interactive(all_data, levels, output_dir)
         _plot_yaw_rate_interactive(all_data, levels, output_dir)
         _plot_error_interactive(all_data, levels, output_dir)
 

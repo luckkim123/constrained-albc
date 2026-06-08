@@ -234,6 +234,21 @@ def _process_and_write(run_dir: str, data_subdir: str = "eval_dr") -> dict:
     _write_run_json(run_dir, metrics, data_subdir=data_subdir)
     if metrics:
         print(f"  Saved {_make_summary_att(run_dir, metrics, data_subdir=data_subdir)}")
-        print(f"  Saved {_make_summary_lin_vel(run_dir, metrics, data_subdir=data_subdir)}")
+        # Lin-vel summary only when some level actually has finite lin-vel data;
+        # the attitude_only eval tracks no lin-vel (all-NaN), so skip the empty plot.
+        import math
+
+        def _has_finite_lin_vel(m: dict) -> bool:
+            for lvl_metrics in m.values():
+                if not isinstance(lvl_metrics, dict):
+                    continue
+                for ax in ("vx", "vy", "vz"):
+                    val = lvl_metrics.get(ax, {}).get("ss_error", float("nan"))
+                    if isinstance(val, (int, float)) and math.isfinite(val):
+                        return True
+            return False
+
+        if _has_finite_lin_vel(metrics):
+            print(f"  Saved {_make_summary_lin_vel(run_dir, metrics, data_subdir=data_subdir)}")
         print(f"  Saved {_make_summary_yaw(run_dir, metrics, data_subdir=data_subdir)}")
     return metrics

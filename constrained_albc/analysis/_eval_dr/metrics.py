@@ -309,9 +309,13 @@ def compute_metrics(data: dict) -> dict:
         total_att_error_std = float("nan")
 
     # ---- Linear velocity metrics (per-axis, only lin_vel segments) ----
-    lin_vel_keys = ["lin_vel_x", "lin_vel_y", "lin_vel_z"]
-    target_vel_keys = ["target_vx", "target_vy", "target_vz"]
+    # Capability guard: the attitude_only env has no _vel_cmd_lin and tracks no
+    # linear velocity, so run_evaluation records has_lin_vel=False and omits the
+    # lin_vel_* / target_v* arrays. Default True keeps the full-DOF teacher path
+    # (and any legacy npz lacking the flag) byte-identical. When absent, the
+    # lin-vel block stays all-NaN/empty -- never a fabricated finite value.
     axis_labels = ["vx", "vy", "vz"]
+    has_lin_vel = bool(data.get("has_lin_vel", True))
 
     lin_vel_ss_errors: dict[str, list[float]] = {a: [] for a in axis_labels}
     lin_vel_ss_jitters: dict[str, list[float]] = {a: [] for a in axis_labels}
@@ -320,64 +324,71 @@ def compute_metrics(data: dict) -> dict:
     lin_vel_overshoot_pcts: dict[str, list[float]] = {a: [] for a in axis_labels}
     lin_vel_zero_crossings: dict[str, list[float]] = {a: [] for a in axis_labels}
 
-    for seg_idx, name in enumerate(seg_names):
-        if _classify_segment(name) != "lin_vel":
-            continue
-        s = seg_idx * seg_steps
-        e = (seg_idx + 1) * seg_steps
-        seg_alive = alive[s:e]
-        seg_time = time_s[s:e]
+    if has_lin_vel:
+        lin_vel_keys = ["lin_vel_x", "lin_vel_y", "lin_vel_z"]
+        target_vel_keys = ["target_vx", "target_vy", "target_vz"]
 
-        for ax_i, (dkey, tkey, ax_name) in enumerate(zip(lin_vel_keys, target_vel_keys, axis_labels)):
-            seg_actual = data[dkey][s:e]
-            cur_target = float(data[tkey][s])
-            prev_target = float(data[tkey][s - 1]) if s > 0 else 0.0
+        for seg_idx, name in enumerate(seg_names):
+            if _classify_segment(name) != "lin_vel":
+                continue
+            s = seg_idx * seg_steps
+            e = (seg_idx + 1) * seg_steps
+            seg_alive = alive[s:e]
+            seg_time = time_s[s:e]
 
-            # SS error and jitter: mean/std of |actual - target| in last 50%
-            ss_start = int(seg_steps * 0.5)
-            ss_actual = seg_actual[ss_start:]
-            ss_alive = seg_alive[ss_start:]
-            ss_err = np.abs(ss_actual - cur_target)
-            if ss_alive.any():
-                ss_vals = np.where(ss_alive, ss_err, np.nan)
-                lin_vel_ss_errors[ax_name].append(float(np.nanmean(ss_vals)))
-                # unified recompute per-env-then-aggregate jitter form (see att above)
-                per_env_jit = np.nanstd(ss_vals, axis=0)
-                lin_vel_ss_jitters[ax_name].append(float(np.nanmean(per_env_jit)))
-                lin_vel_ss_jitters_std[ax_name].append(float(np.nanstd(per_env_jit)))
-            else:
-                lin_vel_ss_errors[ax_name].append(float("nan"))
-                lin_vel_ss_jitters[ax_name].append(float("nan"))
-                lin_vel_ss_jitters_std[ax_name].append(float("nan"))
+            for ax_i, (dkey, tkey, ax_name) in enumerate(zip(lin_vel_keys, target_vel_keys, axis_labels)):
+                seg_actual = data[dkey][s:e]
+                cur_target = float(data[tkey][s])
+                prev_target = float(data[tkey][s - 1]) if s > 0 else 0.0
 
-            # Zero crossing count (after initial 20% of segment)
-            zc_start = int(seg_steps * 0.2)
-            mean_val = np.nanmean(np.where(seg_alive, seg_actual, np.nan), axis=1)
-            deviation = mean_val[zc_start:] - cur_target
-            valid = ~np.isnan(deviation)
-            if valid.sum() > 2:
-                signs = np.sign(deviation[valid])
-                lin_vel_zero_crossings[ax_name].append(float(np.sum(np.abs(np.diff(signs)) > 0)))
-            else:
-                lin_vel_zero_crossings[ax_name].append(float("nan"))
+                # SS error and jitter: mean/std of |actual - target| in last 50%
+                ss_start = int(seg_steps * 0.5)
+                ss_actual = seg_actual[ss_start:]
+                ss_alive = seg_alive[ss_start:]
+                ss_err = np.abs(ss_actual - cur_target)
+                if ss_alive.any():
+                    ss_vals = np.where(ss_alive, ss_err, np.nan)
+                    lin_vel_ss_errors[ax_name].append(float(np.nanmean(ss_vals)))
+                    # unified recompute per-env-then-aggregate jitter form (see att above)
+                    per_env_jit = np.nanstd(ss_vals, axis=0)
+                    lin_vel_ss_jitters[ax_name].append(float(np.nanmean(per_env_jit)))
+                    lin_vel_ss_jitters_std[ax_name].append(float(np.nanstd(per_env_jit)))
+                else:
+                    lin_vel_ss_errors[ax_name].append(float("nan"))
+                    lin_vel_ss_jitters[ax_name].append(float("nan"))
+                    lin_vel_ss_jitters_std[ax_name].append(float("nan"))
 
-            # Step-response only if this axis has a step change in this segment
-            rt, os_pct = _step_response_scalar_segment(
-                seg_actual, seg_alive, prev_target, cur_target, seg_time, min_step_mag=0.01,
-            )
-            lin_vel_rise_times[ax_name].append(rt)
-            lin_vel_overshoot_pcts[ax_name].append(os_pct)
+                # Zero crossing count (after initial 20% of segment)
+                zc_start = int(seg_steps * 0.2)
+                mean_val = np.nanmean(np.where(seg_alive, seg_actual, np.nan), axis=1)
+                deviation = mean_val[zc_start:] - cur_target
+                valid = ~np.isnan(deviation)
+                if valid.sum() > 2:
+                    signs = np.sign(deviation[valid])
+                    lin_vel_zero_crossings[ax_name].append(float(np.sum(np.abs(np.diff(signs)) > 0)))
+                else:
+                    lin_vel_zero_crossings[ax_name].append(float("nan"))
 
-    # Overall lin_vel SS error (per-axis mean then averaged)
-    lin_vel_block_start, lin_vel_block_end = _get_block_step_range(seg_names, seg_steps, "lin_vel")
-    lin_vel_block_alive = alive[lin_vel_block_start:lin_vel_block_end]
-    lin_vel_block_norm = data["lin_vel_norm"][lin_vel_block_start:lin_vel_block_end]
-    if lin_vel_block_alive.any():
-        total_lin_vel_error = float(np.nanmean(np.where(lin_vel_block_alive, lin_vel_block_norm, np.nan)))
+                # Step-response only if this axis has a step change in this segment
+                rt, os_pct = _step_response_scalar_segment(
+                    seg_actual, seg_alive, prev_target, cur_target, seg_time, min_step_mag=0.01,
+                )
+                lin_vel_rise_times[ax_name].append(rt)
+                lin_vel_overshoot_pcts[ax_name].append(os_pct)
+
+    # Overall lin_vel SS error (per-axis mean then averaged). NaN when no lin-vel.
+    if has_lin_vel:
+        lin_vel_block_start, lin_vel_block_end = _get_block_step_range(seg_names, seg_steps, "lin_vel")
+        lin_vel_block_alive = alive[lin_vel_block_start:lin_vel_block_end]
+        lin_vel_block_norm = data["lin_vel_norm"][lin_vel_block_start:lin_vel_block_end]
+        if lin_vel_block_alive.any():
+            total_lin_vel_error = float(np.nanmean(np.where(lin_vel_block_alive, lin_vel_block_norm, np.nan)))
+        else:
+            total_lin_vel_error = float("nan")
+        lin_vel_survival = float(alive[lin_vel_block_end - 1].sum()) / num_envs * 100.0 if lin_vel_block_end > 0 else 0.0
     else:
         total_lin_vel_error = float("nan")
-
-    lin_vel_survival = float(alive[lin_vel_block_end - 1].sum()) / num_envs * 100.0 if lin_vel_block_end > 0 else 0.0
+        lin_vel_survival = float("nan")
 
     # ---- Yaw rate metrics (only yaw segments) ----
     yaw_ss_errors: list[float] = []
