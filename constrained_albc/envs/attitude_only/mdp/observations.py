@@ -5,15 +5,15 @@
 
 """Observation functions for velocity + attitude tracking environment.
 
-    o_t (87D): Unified policy observation = current proprioception (26D) + temporal history (55D) + integral (6D)
+    o_t (87D): Unified policy observation = current proprioception (20D) + temporal history (55D) + integral (6D)
     p_t (24D): Privileged information (simulator-only DR parameters)
 
 The encoder receives p_t to compress physical unknowns into latent z.
 The actor receives o_t + z. The critic receives o_t + z + p_t (asymmetric).
 
-Current proprioception (26D) -- measurable on real robot:
-    Command (6D):       vel_cmd_lin(3), ang_cmd(3) [att_rp(2) + yaw_rate(1)]
-    Body State (9D):    euler(3), ang_vel(3), lin_vel(3)
+Current proprioception (20D) -- measurable on real robot:
+    Command (3D):       ang_cmd(3) [att_rp(2) + yaw_rate(1)]
+    Body State (6D):    euler(3), ang_vel(3)
     Arm State (5D):     joint_pos(2), joint_vel(2), manipulability(1)
     Thruster (6D):      filtered output (T0-T5)
 
@@ -39,27 +39,25 @@ def compute_policy_obs(
     env: ALBCEnv,
     robot: Articulation,
 ) -> torch.Tensor:
-    """Compute current proprioception (26D).
+    """Compute current proprioception (20D).
 
-    Measurable on real robot (IMU, DVL, motor encoders, ESC feedback):
+    Measurable on real robot (IMU, motor encoders, ESC feedback).
+    Linear velocity is excluded -- no DVL on real robot.
 
-    Command (6D):
-        [0:3]   linear velocity command (body frame, no noise)
-        [3:5]   roll/pitch attitude command (radians, no noise)
-        [5]     yaw rate command (rad/s, body frame, no noise)
+    Command (3D):
+        [0:3]   ang_cmd [roll_att, pitch_att, yaw_rate]
 
-    Body State (9D):
-        [6:9]   euler angles (roll, pitch, yaw)
-        [9:12]  angular velocity in body frame (p, q, r)
-        [12:15] linear velocity in body frame (u, v, w)
+    Body State (6D):
+        [3:6]   euler angles (roll, pitch, yaw)
+        [6:9]   angular velocity in body frame (p, q, r)
 
     Arm State (5D):
-        [15:17] joint positions (raw cumulative angle)
-        [17:19] joint velocities
-        [19]    manipulability index w (normalized [0, 1])
+        [9:11]  joint positions (raw cumulative angle)
+        [11:13] joint velocities
+        [13]    manipulability index w (normalized [0, 1])
 
     Thruster State (6D):
-        [20:26] thruster filtered output (T0-T5)
+        [14:20] thruster filtered output (T0-T5)
     """
     roll, pitch, yaw = env._euler_cache
     joint_pos = robot.data.joint_pos[:, env._albc_joint_ids]
@@ -68,13 +66,11 @@ def compute_policy_obs(
 
     return torch.cat(
         [
-            # Command (6D)
-            env._vel_cmd_lin,  # 3D: linear velocity command
+            # Command (3D) -- attitude only (no linear velocity command)
             env._ang_cmd,  # 3D: [roll_att_cmd, pitch_att_cmd, yaw_rate_cmd]
-            # Body State (9D)
+            # Body State (6D) -- no measured linear velocity (no DVL on real robot)
             torch.stack([roll, pitch, yaw], dim=-1),  # 3D: euler angles
             robot.data.root_ang_vel_b,  # 3D: angular velocity body
-            robot.data.root_lin_vel_b,  # 3D: linear velocity body
             # Arm State (5D)
             joint_pos,  # 2D: joint positions (raw cumulative)
             joint_vel,  # 2D: joint velocities
