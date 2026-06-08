@@ -19,7 +19,7 @@ Architecture (HORA-style normalization):
     Cost Critic: cat([o_t, z, p_t]) -> MLP -> K (multi-head, one per constraint)
     Named "cost_critic" so ConstraintTRPO classifies it as a value parameter.
 
-    o_t is unified: current proprioception (26D) + temporal history (55D) + integral (6D) = 87D.
+    o_t is unified: current proprioception (20D) + temporal history (46D) + integral (3D) = 69D.
 
     Encoder input normalization modes:
       - Static min-max (HORA-style): (2*x - upper - lower) / (upper - lower) -> [-1, 1]

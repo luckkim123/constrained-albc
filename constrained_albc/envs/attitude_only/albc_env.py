@@ -47,13 +47,19 @@ logger = logging.getLogger(__name__)
 
 
 class ALBCEnv(DirectRLEnv):
-    """Velocity + attitude tracking ALBC environment with constrained RL.
+    """Attitude-only ALBC environment with constrained RL (pure roll/pitch + yaw-rate tracking).
 
-    Obs (87D): current_proprio(26D) + temporal_history(55D) + integral_error(6D).
-        Current: cmd(6) [lin_vel(3) + att_rp(2) + yaw_rate(1)], euler(3),
-                 ang_vel(3), lin_vel(3), jpos(2), jvel(2), manipulability(1), thr(6).
-        History: joint_tracking(12D) + body_tracking(27D) + action(16D).
-    Action (8D): Delta arm targets (2D) + thruster commands (6D).
+    Linear-velocity tracking is removed entirely (no DVL on the real robot): the actor obs
+    carries no measured linear velocity, no lin_vel command, and no lin_vel reward term. The
+    critic still sees measured linear velocity (privileged p_t), so the asymmetry is preserved.
+
+    Obs (69D): current_proprio(20D) + temporal_history(46D) + integral_error(3D).
+        Current: ang_cmd(3) [att_rp(2) + yaw_rate(1)], euler(3), ang_vel(3),
+                 jpos(2), jvel(2), manipulability(1), thr(6).  -- no measured lin_vel.
+        History (per step, strided): joint_tracking(4) + body_tracking(6) + action(8),
+                 i.e. 10*hist_len + 8*hist_action_len; body_tracking = ang_err(3) + euler(3),
+                 where ang_err = [att_rp_err(2), yaw_rate_err(1)].  -- no lin_vel_err.
+    Action (8D): Delta arm targets (2D) + thruster commands (6D).  -- actuator count, target-invariant.
     """
 
     cfg: ALBCEnvCfg
@@ -123,12 +129,13 @@ class ALBCEnv(DirectRLEnv):
 
         # Validate observation dimension contract (fails loud at construction, not first step).
         # observation_space (config) must equal the actual o_t assembled in _get_observations():
-        #   proprio (26D, compute_policy_obs) + history (13*hist_len + 8*hist_action_len) + integral.
+        #   proprio (20D, compute_policy_obs) + history (10*hist_len + 8*hist_action_len) + integral.
         # Mirrors the existing state_space / control_freq guards above. Runs once -- obs dim is
         # step-invariant -- and survives `python -O` (unlike assert; cf. constraint_trpo hot-path assert).
-        # TODO(user): implement the dimension check below.
-        #   - PROPRIO_DIM = 26 is the documented compute_policy_obs() contract (6 cmd + 9 body + 5 arm + 6 thruster).
-        #   - history contributes 0 when self._hist_buf is None (hist_len == 0).
+        #   - PROPRIO_DIM = 20 is the compute_policy_obs() contract (3 ang_cmd + 6 body + 5 arm + 6 thruster);
+        #     no measured lin_vel (no DVL on real robot).
+        #   - history contributes 0 when self._hist_buf is None (hist_len == 0); per step it is
+        #     joint(4) + body(6) -> 10*hist_len, plus action(8) -> 8*hist_action_len.
         #   - integral contributes self.cfg.integral_dims only when self.cfg.use_integral_obs.
         #   - On mismatch, raise ValueError with expected vs computed and the relevant cfg flags,
         #     matching the f-string style of the state_space / control_freq guards.
@@ -291,7 +298,8 @@ class ALBCEnv(DirectRLEnv):
         # 3D mixed error for history buffer: [att_rp_err(2), yaw_rate_err(1)]
         self._ang_err = torch.zeros(self.num_envs, 3, device=self.device)
         # Leaky-integrated error for Hwangbo 2017 pattern
-        # 3D: [roll, pitch, vy] (R7 legacy) | 6D: [roll, pitch, vx, vy, vz, yaw_rate] (R8+)
+        # Attitude-only: 3D [roll, pitch, yaw_rate] -- mirrors the 3 attitude-control channels
+        # (no linear-velocity integral; lin_vel tracking is removed).
         self._error_integral = torch.zeros(self.num_envs, self.cfg.integral_dims, device=self.device)
         # EMA bias buffer (3D, ungated) for sustained offset penalization. Updated every
         # step regardless of error magnitude; meant to capture systematic per-env bias
@@ -569,13 +577,14 @@ class ALBCEnv(DirectRLEnv):
         self._prev_yaw = yaw.clone()
 
     def _sample_velocity_command(self, env_ids: torch.Tensor) -> None:
-        """Sample random commands for specified environments.
+        """Sample random attitude commands for specified environments (no linear velocity).
 
         Roll/pitch: attitude command (radians) from att_cmd_rp_range.
         Yaw: rate command (rad/s) from yaw_rate_cmd_range.
-        Linear: velocity command (m/s) from vel_cmd_lin_range.
         Ranges are scaled per-env by DORAEMON cmd_*_scale (default 1.0).
         With probability ``vel_cmd_zero_prob``, an env receives a zero command.
+        (The ``vel_cmd_*`` names are retained as the shared command-timing/zeroing knobs;
+        they no longer drive any linear-velocity command.)
 
         In play_mode, all commands are fixed to zero (hovering/station-keeping).
         """
@@ -916,17 +925,17 @@ class ALBCEnv(DirectRLEnv):
         return quat
 
     def _get_observations(self) -> dict:
-        """Compute unified observation o_t (87D) and privileged p_t (24D).
+        """Compute unified observation o_t (69D) and privileged p_t (27D).
 
-        o_t = current proprioception (26D) + temporal history (55D):
+        o_t = current proprioception (20D) + temporal history (46D) + integral (3D):
             - Joint tracking: 4D x 3 steps = 12D (all hist_len steps)
-            - Body tracking:  9D x 3 steps = 27D (all hist_len steps)
+            - Body tracking:  6D x 3 steps = 18D (all hist_len steps; no lin_vel_err)
             - Action:         8D x 2 steps = 16D (newest hist_action_len steps)
 
         Returns:
             Observation dictionary with "policy" and "privileged" keys.
         """
-        current_proprio = compute_policy_obs(self, self._robot)  # 26D
+        current_proprio = compute_policy_obs(self, self._robot)  # 20D
 
         if self._hist_buf is not None:
             # Joint tracking + body tracking: all steps, dims [0:10]

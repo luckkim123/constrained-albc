@@ -335,10 +335,8 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     """Number of action history steps to include in observation (newest N of hist_len)."""
 
     # ==========================================================================
-    # Task: Command Tracking (velocity + attitude)
+    # Task: Command Tracking (attitude only -- roll/pitch + yaw rate; no linear velocity)
     # ==========================================================================
-    vel_cmd_lin_range: tuple[float, float] = (-0.5, 0.5)
-    """Linear velocity command range per axis (m/s, body frame)."""
     att_cmd_rp_range: tuple[float, float] = (-math.pi / 6.0, math.pi / 6.0)
     """Roll/pitch attitude command range (radians). +-30 degrees."""
     yaw_rate_cmd_range: tuple[float, float] = (-0.5, 0.5)
@@ -418,7 +416,7 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     """Hide bar when |cog_offset| < this value (m)."""
 
     # ==========================================================================
-    # Observation Noise (87D)
+    # Observation Noise (69D)
     # ==========================================================================
     observation_noise_model: NoiseModelWithAdditiveBiasCfg = NoiseModelWithAdditiveBiasCfg(
         noise_cfg=GaussianNoiseCfg(mean=0.0, std=_OBS_NOISE_STD),

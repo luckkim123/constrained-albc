@@ -26,10 +26,11 @@ _runner_module.ALBCConstraintTRPO = ConstraintTRPO
 
 
 # =============================================================================
-# Encoder Bounds (24D privileged obs, static min-max normalization)
+# Encoder Bounds (27D privileged obs, static min-max normalization)
 # =============================================================================
 
-# 24D non-redundant privileged obs bounds from HardDomainRandomizationCfg.
+# 27D privileged obs bounds: 24D from HardDomainRandomizationCfg + 3D measured lin_vel
+# (critic-only, appended at the tail to mirror compute_privileged_obs).
 # Each pair is (lower, upper) with ~10% margin beyond Hard DR range.
 # Layout: hydro(7) + dynamics(5) + payload(4) + actuator(4) + env(4)
 #

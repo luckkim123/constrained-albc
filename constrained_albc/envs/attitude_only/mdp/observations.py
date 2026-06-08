@@ -3,24 +3,27 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Observation functions for velocity + attitude tracking environment.
+"""Observation functions for the attitude-only tracking environment (no linear velocity).
 
-    o_t (87D): Unified policy observation = current proprioception (20D) + temporal history (55D) + integral (6D)
-    p_t (24D): Privileged information (simulator-only DR parameters)
+    o_t (69D): Unified policy observation = current proprioception (20D) + temporal history (46D) + integral (3D)
+    p_t (27D): Privileged info (simulator-only DR params) + measured root_lin_vel_b (3D, critic-only)
 
 The encoder receives p_t to compress physical unknowns into latent z.
 The actor receives o_t + z. The critic receives o_t + z + p_t (asymmetric).
+Linear velocity is excluded from o_t (no DVL on the real robot); it appears only in p_t.
 
 Current proprioception (20D) -- measurable on real robot:
-    Command (3D):       ang_cmd(3) [att_rp(2) + yaw_rate(1)]
-    Body State (6D):    euler(3), ang_vel(3)
+    Command (3D):       ang_cmd(3) [att_rp(2) + yaw_rate(1)]   -- no lin_vel command
+    Body State (6D):    euler(3), ang_vel(3)                   -- no measured lin_vel
     Arm State (5D):     joint_pos(2), joint_vel(2), manipulability(1)
     Thruster (6D):      filtered output (T0-T5)
 
-Temporal history (55D) -- ring buffer, stride=3:
+Temporal history (46D) -- ring buffer, stride=3:
     Joint tracking (12D):   (q_des_prev - q_actual, joint_vel) x 3 steps
-    Body tracking (27D):    (lin_vel_err, ang_err [att_rp+yaw_rate], rpy) x 3 steps
+    Body tracking (18D):    (ang_err [att_rp(2)+yaw_rate(1)], rpy(3)) x 3 steps   -- no lin_vel_err
     Action (16D):           full_action(8D) x 2 steps
+
+Integral error (3D): leaky-integrated [roll, pitch, yaw_rate] (mirrors the 3 tracking channels).
 """
 
 from __future__ import annotations
