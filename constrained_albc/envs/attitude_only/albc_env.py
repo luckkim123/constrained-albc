@@ -295,10 +295,10 @@ class ALBCEnv(DirectRLEnv):
         # Leaky-integrated error for Hwangbo 2017 pattern
         # 3D: [roll, pitch, vy] (R7 legacy) | 6D: [roll, pitch, vx, vy, vz, yaw_rate] (R8+)
         self._error_integral = torch.zeros(self.num_envs, self.cfg.integral_dims, device=self.device)
-        # EMA bias buffer (6D, ungated) for sustained offset penalization. Updated every
+        # EMA bias buffer (3D, ungated) for sustained offset penalization. Updated every
         # step regardless of error magnitude; meant to capture systematic per-env bias
         # that per-step tracking reward ignores.
-        self._bias_ema = torch.zeros(self.num_envs, 6, device=self.device)
+        self._bias_ema = torch.zeros(self.num_envs, 3, device=self.device)
         self._vel_cmd_step_counter = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
         # Per-env command range scales (DORAEMON-managed, default 1.0 if disabled)
         self._cmd_lin_scale = torch.ones(self.num_envs, device=self.device)
@@ -999,22 +999,19 @@ class ALBCEnv(DirectRLEnv):
 
             self._error_integral.clamp_(-self.cfg.integral_clamp, self.cfg.integral_clamp)
 
-        # Update EMA bias buffer (6D ungated). Captures sustained per-env offset that
-        # per-step tracking reward ignores. Consumed by bias_ema_penalty term.
+        # Update EMA bias buffer (3D ungated: roll, pitch, yaw_rate). Captures sustained
+        # per-env offset that per-step tracking reward ignores. Consumed by bias_ema_penalty term.
         if self.cfg.reward.k_bias != 0.0:
-            err6 = torch.stack(
+            err3 = torch.stack(
                 [
-                    self._att_rp_err[:, 0],
-                    self._att_rp_err[:, 1],
-                    self._lin_vel_err[:, 0],
-                    self._lin_vel_err[:, 1],
-                    self._lin_vel_err[:, 2],
-                    self._yaw_rate_err,
+                    self._att_rp_err[:, 0],  # roll
+                    self._att_rp_err[:, 1],  # pitch
+                    self._yaw_rate_err,  # yaw rate
                 ],
                 dim=-1,
             )
             a = self.cfg.reward.bias_ema_alpha
-            self._bias_ema = a * self._bias_ema + (1.0 - a) * err6
+            self._bias_ema = a * self._bias_ema + (1.0 - a) * err3
 
         reward = self._reward_manager.compute(
             robot=self._robot,

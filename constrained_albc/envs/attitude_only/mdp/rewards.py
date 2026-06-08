@@ -81,7 +81,7 @@ class ALBCRewardCfg:
     k_bias: float = 0.0
     bias_ema_alpha: float = 0.99  # effective window ~100 steps = 2 s at 50 Hz
     # Per-axis weights for bias penalty so roll (weak authority) gets stronger bias signal.
-    bias_weights: tuple[float, float, float, float, float, float] = (1.5, 1.0, 1.0, 1.0, 1.0, 1.0)
+    bias_weights: tuple[float, float, float] = (1.5, 1.0, 1.0)
 
 
 # --- Reward Functions ---
@@ -156,9 +156,9 @@ def action_smoothness(env: ALBCEnv) -> torch.Tensor:
 def bias_ema_penalty(env: ALBCEnv) -> torch.Tensor:
     """r_bias = sum_i w_i * bias_ema_i^2. Sustained-offset penalty.
 
-    Uses env._bias_ema (6D, ungated EMA of tracking errors) updated each step.
-    Squared form so reward gradient grows with offset; per-axis weights let
-    roll (weak TAM authority) receive a stronger anti-bias signal than yaw.
+    Uses env._bias_ema (3D, ungated EMA of [roll, pitch, yaw_rate] tracking errors)
+    updated each step. Squared form so reward gradient grows with offset; per-axis
+    weights let roll (weak TAM authority) receive a stronger anti-bias signal than yaw.
     """
     w = env._reward_manager._bias_w
     return (env._bias_ema.pow(2) * w).sum(dim=-1)
