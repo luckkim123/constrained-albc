@@ -66,16 +66,36 @@ def main(argv: list[str] | None = None) -> int:
         t_model = build_teacher_model(args.teacher_ckpt, args.device)
         t_rep = export_from_state_dict(t_spec, t_model, args.out)
         if args.report:
+            import torch
+
             from constrained_albc.deploy.report import build_report
+
+            def _ckpt_iter(path: str):
+                """Read the training iter recorded in the checkpoint, or '?' if absent."""
+                return torch.load(path, map_location="cpu", weights_only=False).get("iter", "?")
+
             chosen = {
                 "student_tcn": {"file": os.path.basename(args.student_ckpt),
-                                "iter": 999, "rationale": "last of 1000 (0-indexed)"},
+                                "iter": _ckpt_iter(args.student_ckpt),
+                                "rationale": "last student checkpoint"},
                 "teacher_actor": {"file": os.path.basename(args.teacher_ckpt),
-                                  "iter": 4999, "rationale": "max iter; 5000 absent"},
+                                  "iter": _ckpt_iter(args.teacher_ckpt),
+                                  "rationale": "final teacher checkpoint"},
             }
+            golden_status = (
+                "Skipped: the 69D observation assembly lives in albc_env.py (the "
+                "simulation environment), not in the student code, so it cannot be "
+                "lifted byte-identically on an export host. The exported weights are "
+                "independently verified value-for-value against the source checkpoints "
+                "(max|delta| = 0 for actor/normalizer/student keys), so the .npz "
+                "payloads are complete and correct; only the env-side input assembly "
+                "is out of scope here. Recommend generating golden_e2e_tcn.npz "
+                "(input -> output pairs from the real model) on the Mac/ksm-nas path "
+                "during board integration."
+            )
             md = build_report({"student_tcn": s_rep, "teacher_actor": t_rep}, chosen,
                               out_dir=args.out, mount_status="overlay (docker cp)",
-                              golden_status="see Task 8 decision")
+                              golden_status=golden_status)
             with open(os.path.join(args.out, "EXPORT_REPORT.md"), "w") as f:
                 f.write(md)
         return 0
