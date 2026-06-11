@@ -37,8 +37,8 @@ class StudentTCNSpec(ExportSpec):
 
         cfg is stored in the checkpoint as a dict; rebuild StudentCfg from it so the
         architecture matches exactly. Training code is imported, never modified."""
-        from constrained_albc.envs.attitude_only.student.config import StudentCfg
-        from constrained_albc.envs.attitude_only.student.models import StudentEncoderTCN
+        from constrained_albc.envs.main.student.config import StudentCfg
+        from constrained_albc.envs.main.student.models import StudentEncoderTCN
 
         cfg_dict = ckpt.get("cfg", {})
         cfg = StudentCfg(**{k: v for k, v in cfg_dict.items()
