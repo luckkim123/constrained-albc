@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Deploy export package (`constrained_albc/deploy/`). Exports torch `.pt`
+  checkpoints to numpy `.npz` matching a hardcoded board-runtime key contract,
+  via an `ExportSpec` registry (one spec per architecture = key contract + model
+  build + state_dict rename), a round-trip `verify_npz` stop-gate, and a CLI
+  (`--list-specs` / `--spec` / `--batch attitude_only_5000`). Two specs:
+  `StudentTCNSpec` (14-key identity map -> `weights_tcn.npz`) and
+  `TeacherActorSpec` (43-key ActorCriticEncoder filtered to 10 actor+normalizer
+  keys, `actor_obs_normalizer.*` renamed to `normalizer.*` -> `weights_teacher.npz`).
+  Verified dims for the attitude-only 5000-iter run: policy obs 69, action 8,
+  latent 9, teacher actor input 78 (= obs69 + latent9). All exports fp32 and
+  byte-identical to the source checkpoints (max|delta| = 0).
+  - **Import isolation** (`deploy/_isolation.py` + `scripts/export_deploy.py`):
+    export runs on hosts without the Isaac Sim USD runtime (no `pxr`). The launcher
+    injects lightweight `sys.modules` stubs for the three sim-pulling import roots
+    (`constrained_albc`, `constrained_albc.envs.main`, `isaaclab.utils`) before the
+    package `__init__` (gym register -> `albc_env` -> `isaaclab.sim` -> `pxr`) can
+    fire, so the sim-free student/teacher build code loads against unmodified source.
+    Training code and the pristine isaaclab fork are never modified, only shadowed
+    in `sys.modules` during export.
+  - **Teacher build** derives architecture dims and encoder-obs bounds from the
+    checkpoint tensors (`_infer_teacher_dims`), not hardcoded config, so it serves
+    any teacher variant (main full-DOF 87/24 or attitude-only 69/27) and cannot
+    silently export a mis-shaped model. Load uses the encoder's own
+    `load_state_dict` override (robust to omitted non-exported heads) plus a
+    pre-load presence check on the export-required actor/normalizer keys and a
+    post-load byte-identity integrity gate.
+  - **Golden e2e: skipped** on the container -- the 69D observation assembly lives
+    in `albc_env.py` (the sim env), not in student code, so it cannot be lifted
+    byte-identically on an export host. The `.npz` payloads are complete and
+    independently value-verified; generate `golden_e2e_tcn.npz` on the Mac/ksm-nas
+    path during board integration. The `.npz` artifacts are gitignored (large
+    binary build outputs; kept on disk for docker-cp).
+
 - DORAEMON curriculum replay wiring. The runner flushes
   `curriculum_trajectory.json` into the run dir per checkpoint and passes the RL
   iteration into `_doraemon.step(iteration=...)`. `_init_doraemon` constructs a
