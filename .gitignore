@@ -19,3 +19,6 @@ tests/fixtures/*
 
 # omx scratch — intermediate analysis scaffolding, not tracked
 .omx/scratch/
+
+# deploy export artifacts (large binary .npz; keep on disk for docker cp, out of git)
+deploy_export_5000/*.npz
