@@ -28,28 +28,28 @@ def verify_npz(path: str, contract: dict[str, ShapeSpec]) -> ContractReport:
 
     Raises ExportContractError on any missing/extra key, shape mismatch, or
     non-float32 dtype. Returns a passing ContractReport otherwise."""
-    data = np.load(path)
-    found = set(data.keys())
-    expected = set(contract.keys())
-    errors: list[str] = []
+    with np.load(path) as data:
+        found = set(data.keys())
+        expected = set(contract.keys())
+        errors: list[str] = []
 
-    missing = sorted(expected - found)
-    extra = sorted(found - expected)
-    if missing:
-        errors.append(f"missing keys: {missing}")
-    if extra:
-        errors.append(f"extra keys: {extra}")
+        missing = sorted(expected - found)
+        extra = sorted(found - expected)
+        if missing:
+            errors.append(f"missing keys: {missing}")
+        if extra:
+            errors.append(f"extra keys: {extra}")
 
-    entries: list[tuple[str, tuple[int, ...], str]] = []
-    for key in sorted(found):
-        arr = data[key]
-        entries.append((key, tuple(arr.shape), str(arr.dtype)))
-        if key in contract:
-            spec = contract[key]
-            if tuple(arr.shape) != spec.shape:
-                errors.append(f"{key}: shape {tuple(arr.shape)} != expected {spec.shape}")
-            if str(arr.dtype) != spec.dtype:
-                errors.append(f"{key}: dtype {arr.dtype} != expected {spec.dtype}")
+        entries: list[tuple[str, tuple[int, ...], str]] = []
+        for key in sorted(found):
+            arr = data[key]
+            entries.append((key, tuple(arr.shape), str(arr.dtype)))
+            if key in contract:
+                spec = contract[key]
+                if tuple(arr.shape) != spec.shape:
+                    errors.append(f"{key}: shape {tuple(arr.shape)} != expected {spec.shape}")
+                if arr.dtype != np.dtype(spec.dtype):
+                    errors.append(f"{key}: dtype {arr.dtype} != expected {spec.dtype}")
 
     report = ContractReport(path=path, ok=not errors, errors=errors, entries=entries)
     if errors:
