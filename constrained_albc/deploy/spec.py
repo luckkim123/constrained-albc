@@ -3,8 +3,10 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import ClassVar
 
 import numpy as np
+import torch
 import torch.nn as nn
 
 
@@ -29,12 +31,12 @@ class ExportSpec(ABC):
     its state_dict to the contract keys.
     """
 
-    name: str
-    npz_filename: str
-    key_contract: dict[str, ShapeSpec]
+    name: ClassVar[str]
+    npz_filename: ClassVar[str]
+    key_contract: ClassVar[dict[str, ShapeSpec]]
 
     @abstractmethod
-    def build_model(self, ckpt: dict, device) -> nn.Module:
+    def build_model(self, ckpt: dict, device: torch.device | str) -> nn.Module:
         """Construct the torch model and load weights from a loaded checkpoint dict."""
 
     @abstractmethod

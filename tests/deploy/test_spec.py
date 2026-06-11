@@ -1,4 +1,3 @@
-import numpy as np
 import pytest
 from constrained_albc.deploy.spec import ShapeSpec, ExportSpec, ExportContractError
 
