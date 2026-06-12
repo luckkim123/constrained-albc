@@ -581,14 +581,22 @@ def run_evaluation(
     target_pitch_rad = np.deg2rad(target_pitch_deg)
     terminated_ever = np.zeros(num_envs, dtype=bool)
 
+    # Capability guard (NOT a --task string match): the attitude_only env has only
+    # _ang_cmd (roll/pitch/yaw_rate) and no _vel_cmd_lin, so lin-vel command
+    # injection + lin-vel data/metrics are skipped for it. The full-DOF teacher
+    # has _vel_cmd_lin -> has_lin_vel True -> code path byte-identical (zero regression).
+    has_lin_vel = hasattr(raw_env, "_vel_cmd_lin")
+
     for step_idx in range(total_steps):
-        # Inject 6-DOF commands from trajectory
+        # Inject commands from trajectory. _ang_cmd (attitude + yaw rate) is always
+        # present; lin-vel is injected only when the env tracks it.
         raw_env._ang_cmd[:, 0] = target_roll_rad[step_idx]
         raw_env._ang_cmd[:, 1] = target_pitch_rad[step_idx]
         raw_env._ang_cmd[:, 2] = targets["yaw_rate"][step_idx]
-        raw_env._vel_cmd_lin[:, 0] = targets["vx"][step_idx]
-        raw_env._vel_cmd_lin[:, 1] = targets["vy"][step_idx]
-        raw_env._vel_cmd_lin[:, 2] = targets["vz"][step_idx]
+        if has_lin_vel:
+            raw_env._vel_cmd_lin[:, 0] = targets["vx"][step_idx]
+            raw_env._vel_cmd_lin[:, 1] = targets["vy"][step_idx]
+            raw_env._vel_cmd_lin[:, 2] = targets["vz"][step_idx]
 
         with torch.inference_mode():
             actions = policy(obs)  # ablated action (z_ablation active) -> stepped into env
@@ -616,12 +624,13 @@ def run_evaluation(
         error_roll[step_idx] = torch.rad2deg(att_err[:, 0]).cpu().numpy()
         error_pitch[step_idx] = torch.rad2deg(att_err[:, 1]).cpu().numpy()
 
-        # Linear velocity (body frame)
-        lv = raw_env._robot.data.root_lin_vel_b
-        lin_vel_x[step_idx] = lv[:, 0].cpu().numpy()
-        lin_vel_y[step_idx] = lv[:, 1].cpu().numpy()
-        lin_vel_z[step_idx] = lv[:, 2].cpu().numpy()
-        lin_vel_norm[step_idx] = torch.norm(lv, dim=-1).cpu().numpy()
+        # Linear velocity (body frame) -- only meaningful when the env tracks lin-vel.
+        if has_lin_vel:
+            lv = raw_env._robot.data.root_lin_vel_b
+            lin_vel_x[step_idx] = lv[:, 0].cpu().numpy()
+            lin_vel_y[step_idx] = lv[:, 1].cpu().numpy()
+            lin_vel_z[step_idx] = lv[:, 2].cpu().numpy()
+            lin_vel_norm[step_idx] = torch.norm(lv, dim=-1).cpu().numpy()
 
         # Yaw rate (body frame)
         yaw_rate[step_idx] = raw_env._robot.data.root_ang_vel_b[:, 2].cpu().numpy()
@@ -639,32 +648,28 @@ def run_evaluation(
             err_norm = np.sqrt(error_roll[step_idx] ** 2 + error_pitch[step_idx] ** 2)
             alive_mask = ~terminated_ever
             mean_err = np.mean(err_norm[alive_mask]) if alive_mask.any() else float("nan")
-            lv_mean = np.mean(lin_vel_norm[step_idx][alive_mask]) if alive_mask.any() else float("nan")
             seg_idx = min(step_idx // steps_per_seg, len(segment_names) - 1)
+            lv_str = ""
+            if has_lin_vel:
+                lv_mean = np.mean(lin_vel_norm[step_idx][alive_mask]) if alive_mask.any() else float("nan")
+                lv_str = f"lin_vel={lv_mean:.3f}m/s "
             print(
                 f"  [{step_idx + 1:6d}/{total_steps}] "
                 f"seg={segment_names[seg_idx]:30s} "
                 f"att_err={mean_err:5.1f}deg "
-                f"lin_vel={lv_mean:.3f}m/s "
+                f"{lv_str}"
                 f"alive={alive_count}/{num_envs}"
             )
 
-    return {
+    out = {
         "time": time_s,
         "target_roll_deg": target_roll_deg,
         "target_pitch_deg": target_pitch_deg,
-        "target_vx": targets["vx"],
-        "target_vy": targets["vy"],
-        "target_vz": targets["vz"],
         "target_yaw_rate": targets["yaw_rate"],
         "actual_roll_deg": actual_roll,
         "actual_pitch_deg": actual_pitch,
         "error_roll": error_roll,
         "error_pitch": error_pitch,
-        "lin_vel_x": lin_vel_x,
-        "lin_vel_y": lin_vel_y,
-        "lin_vel_z": lin_vel_z,
-        "lin_vel_norm": lin_vel_norm,
         "yaw_rate": yaw_rate,
         "action_magnitude": action_magnitude,
         "delta_action": delta_action,
@@ -674,9 +679,25 @@ def run_evaluation(
         "segment_duration": segment_duration,
         "segment_names": segment_names,
         "warmup_steps": WARMUP_SEGMENTS * steps_per_seg,
+        # Capability flag consumed by compute_metrics (and downstream) to skip the
+        # lin-vel block for the attitude_only env. True for the full-DOF teacher.
+        "has_lin_vel": has_lin_vel,
         # Per-env DR sampled values (dr_<name>[num_envs]) for failure<->DR join analysis.
         **per_env_dr,
     }
+    # lin-vel arrays/targets only when the env tracks lin-vel (attitude_only omits
+    # them -> compute_metrics sees no lin_vel keys and the npz stays lin-vel-free).
+    if has_lin_vel:
+        out.update({
+            "target_vx": targets["vx"],
+            "target_vy": targets["vy"],
+            "target_vz": targets["vz"],
+            "lin_vel_x": lin_vel_x,
+            "lin_vel_y": lin_vel_y,
+            "lin_vel_z": lin_vel_z,
+            "lin_vel_norm": lin_vel_norm,
+        })
+    return out
 
 
 # ============================================================================
@@ -1139,16 +1160,19 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         print(f"      Rise time: {np.nanmean(metrics['att_rise_times']):.3f} s")
         print(f"      Overshoot: {np.nanmean(metrics['att_overshoot_pcts']):.1f}%")
         print(f"      Zero-X:   {np.nanmean(metrics['att_zero_crossings']):.1f}")
-        print("    [Lin Vel]")
-        print(f"      Error:     {metrics['total_lin_vel_error']:.3f} m/s")
-        for ax_name in ["vx", "vy", "vz"]:
-            ss = np.nanmean(metrics['lin_vel_ss_errors'][ax_name])
-            jt = np.nanmean(metrics['lin_vel_ss_jitters'][ax_name])
-            rt = np.nanmean(metrics['lin_vel_rise_times'][ax_name])
-            os_p = np.nanmean(metrics['lin_vel_overshoot_pcts'][ax_name])
-            zx = np.nanmean(metrics['lin_vel_zero_crossings'][ax_name])
-            print(f"      {ax_name}: SS={ss:.3f} Jit={jt:.3f} Rise={rt:.3f}s OS={os_p:.1f}% ZX={zx:.1f}")
-        print(f"      Survival:  {metrics['lin_vel_survival']:.0f}%")
+        # Lin-vel block only when the env tracks it (attitude_only skips it; the
+        # metrics are all-NaN there and a printed line would be a meaningless lie).
+        if data.get("has_lin_vel", True):
+            print("    [Lin Vel]")
+            print(f"      Error:     {metrics['total_lin_vel_error']:.3f} m/s")
+            for ax_name in ["vx", "vy", "vz"]:
+                ss = np.nanmean(metrics['lin_vel_ss_errors'][ax_name])
+                jt = np.nanmean(metrics['lin_vel_ss_jitters'][ax_name])
+                rt = np.nanmean(metrics['lin_vel_rise_times'][ax_name])
+                os_p = np.nanmean(metrics['lin_vel_overshoot_pcts'][ax_name])
+                zx = np.nanmean(metrics['lin_vel_zero_crossings'][ax_name])
+                print(f"      {ax_name}: SS={ss:.3f} Jit={jt:.3f} Rise={rt:.3f}s OS={os_p:.1f}% ZX={zx:.1f}")
+            print(f"      Survival:  {metrics['lin_vel_survival']:.0f}%")
         print("    [Yaw]")
         print(f"      Error:     {metrics['total_yaw_rate_error']:.4f} rad/s")
         print(f"      SS error:  {np.nanmean(metrics['yaw_ss_errors']):.4f} rad/s")
@@ -1183,6 +1207,9 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     print("-" * 110)
     for lvl in DR_LEVELS:
         m = all_metrics[lvl]
+        # LinVel column shows '--' when the env doesn't track lin-vel (attitude_only).
+        lv = m['total_lin_vel_error']
+        lv_col = f"{lv:7.3f}" if all_data[lvl].get("has_lin_vel", True) and lv == lv else f"{'--':>7}"
         print(
             f"{lvl:<10} "
             f"{int(DR_SCALE[lvl] * 100):4d}% "
@@ -1192,7 +1219,7 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
             f"{np.nanmean(m['att_settling_times']):6.2f}s "
             f"{np.nanmean(m['att_overshoot_pcts']):5.1f}% "
             f"{np.nanmean(m['att_zero_crossings']):5.1f} "
-            f"{m['total_lin_vel_error']:7.3f} "
+            f"{lv_col} "
             f"{m['total_yaw_rate_error']:7.4f} "
             f"{np.nanmean(m['yaw_ss_errors']):7.4f} "
             f"{m['survival_rate']:5.0f}%"

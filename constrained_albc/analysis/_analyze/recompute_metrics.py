@@ -41,12 +41,17 @@ _AX_ATT = [("actual_roll_deg",  "target_roll_deg",  "roll"),
 
 # ---------------- Segment detection ----------------
 
+# Target keys absent from the attitude_only eval npz (it tracks no linear velocity).
+# Every target-key read below skips missing keys via `k in data`, so the recompute
+# path degrades to attitude+yaw cleanly instead of KeyError. For the full-DOF teacher
+# all keys are present -> behavior byte-identical.
 def _find_segments(data: dict) -> list[tuple[int, int]]:
     n = len(data["time"])
     change = np.zeros(n, dtype=bool)
     for key in ["target_roll_deg", "target_pitch_deg",
                 "target_vx", "target_vy", "target_vz", "target_yaw_rate"]:
-        change[1:] |= np.abs(np.diff(data[key])) > 1e-6
+        if key in data:
+            change[1:] |= np.abs(np.diff(data[key])) > 1e-6
     idx = np.where(change)[0]
     bounds = [0] + list(idx) + [n]
     return list(zip(bounds[:-1], bounds[1:]))
@@ -59,7 +64,7 @@ def _classify_segment(data: dict, s: int) -> str:
     att = (abs(data["target_roll_deg"][s]  - data["target_roll_deg"][s-1])  > eps or
            abs(data["target_pitch_deg"][s] - data["target_pitch_deg"][s-1]) > eps)
     lin = any(abs(data[k][s] - data[k][s-1]) > eps
-              for k in ("target_vx", "target_vy", "target_vz"))
+              for k in ("target_vx", "target_vy", "target_vz") if k in data)
     yaw = abs(data["target_yaw_rate"][s] - data["target_yaw_rate"][s-1]) > eps
     if att and not lin and not yaw: return "attitude"
     if lin and not att and not yaw: return "lin_vel"
@@ -72,7 +77,7 @@ def _is_target_zero(data: dict, s: int) -> bool:
     eps = 1e-6
     return all(abs(data[k][s]) < eps for k in
                ("target_roll_deg","target_pitch_deg",
-                "target_vx","target_vy","target_vz","target_yaw_rate"))
+                "target_vx","target_vy","target_vz","target_yaw_rate") if k in data)
 
 
 # ---------------- Per-env metric helpers (single axis, single segment) ----------------
