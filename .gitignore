@@ -25,3 +25,4 @@ tests/fixtures/*
 # root-anchored: must NOT catch constrained_albc/deploy/ (code) or tests/deploy/
 /deploy/
 scratch/
+.trash/
