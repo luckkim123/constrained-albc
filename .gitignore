@@ -19,3 +19,10 @@ tests/fixtures/*
 
 # omx scratch — intermediate analysis scaffolding, not tracked
 .omx/scratch/
+
+# deploy artifacts tree (weights/golden/runtime packs; on disk for docker cp / Mac pull, out of git)
+# layout: deploy/<group>/<label>_<YYMMDD_HHMMSS>/ (mirrors logs tree, label-before-date)
+# root-anchored: must NOT catch constrained_albc/deploy/ (code) or tests/deploy/
+/deploy/
+scratch/
+.trash/

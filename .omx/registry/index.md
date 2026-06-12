@@ -1,13 +1,16 @@
 # Wiki Index
 
-> 48 pages | Last updated: 2026-06-08T03:26:24.790801
+> 56 pages | Last updated: 2026-06-09T04:03:28.206032
 
 ## convention
 
 - [constrained-albc experiment conventions](constrained_albc_experiment_conventions.md) - # constrained-albc experiment conventions
+- [coverage lint ok is a floor not a quality gate; re-analysis uses OLD report as base, never shrinks](coverage_lint_ok_is_a_floor_not_a_quality_gate_re_analysis_uses_.md) - # coverage lint ok is a floor not a quality gate; re-analysis uses OLD report...
+- [cross-run reference values must be RE-EXTRACTED fresh, never carried forward (E4 stale-teacher-column gate)](cross_run_reference_values_must_be_re_extracted_fresh_never_carr.md) - # cross-run reference values must be RE-EXTRACTED fresh, never carried forwar...
 - [experiment launch checklist: run_id / wandb / latest-alias naming](experiment_launch_checklist_run_id_wandb_latest_alias_naming.md) - # experiment launch checklist: run_id / wandb / latest-alias naming
 - [experiment output directory standard (logs vs experiments index tree)](experiment_output_directory_standard_logs_vs_experiments_index_t.md) - # experiment output directory standard (logs vs experiments index tree)
 - [experiment result recording location (experiments tree is SSOT, not docs/results)](experiment_result_recording_location_experiments_tree_is_ssot_no.md) - # experiment result recording location (experiments tree is SSOT, not docs/re...
+- [train.py --run_group creates the <group> layer (no more manual post-move)](train_py_run_group_creates_the_group_layer_no_more_manual_post_m.md) - # train.py --run_group creates the <group> layer (no more manual post-move)
 
 ## debugging
 
@@ -29,18 +32,23 @@
 - [DR-harder campaign synthesis: speed kills attitude, center-shift overfits](dr_harder_campaign_synthesis_speed_kills_attitude_center_shift_o.md) - # DR-harder campaign synthesis: speed kills attitude, center-shift overfits
 - [DR-harder OOD verdict: E2-best survives OOD; the harder curriculum (E1) generalizes WORST](dr_harder_ood_verdict_e2_best_survives_ood_the_harder_curriculum.md) - # DR-harder OOD verdict: E2-best survives OOD; the harder curriculum (E1) gen...
 - [engine-gap: analyze_training.py emits no reward 8-term decomposition scalars](engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md) - # engine-gap: analyze_training.py emits no reward 8-term decomposition scalars
+- [engine-gap: analyze_training.py needs the logs/ run dir, not the experiments/ run dir (events under train symlink)](engine_gap_analyze_training_py_needs_the_logs_run_dir_not_the_ex.md) - # engine-gap: analyze_training.py needs the logs/ run dir, not the experiment...
 - [RETRACTED — barrier_alpha is 0.02 not 0.05 (this claim was WRONG)](engine_gap_barrier_alpha_is_0_02_not_0_05_dr_harder_docs_drift.md) - # RETRACTED — this page's claim (barrier_alpha=0.02) was WRONG
 - [engine-gap CONFIRMED: analyze_training.py constraint+reward prefix mismatch (code lines)](engine_gap_confirmed_analyze_training_py_constraint_reward_prefi.md) - # engine-gap CONFIRMED: analyze_training.py constraint+reward prefix mismatch...
 - [engine-gap: eval adapter covers static + segmented; periodic still unsupported](engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md) - # engine-gap: eval adapter covers static + segmented; periodic still unsupported
 - [engine-gap: eval adapter only covers static; periodic unsupported, segmented partial](engine_gap_eval_adapter_only_covers_static_periodic_unsupported_.md) - # engine-gap: eval adapter only covers static; periodic unsupported, segmente...
+- [engine-gap: eval npz saves no raw obs/std/privileged — blocks exact per-env std reconstruction](engine_gap_eval_npz_saves_no_raw_obs_std_privileged_blocks_exact.md) - # engine-gap: eval npz saves no raw obs/std/privileged — blocks exact per-env...
 - [engine-gap: heavy_tail.json pct_peak_gt_thresh exceeds 100% at ood level (denominator bug)](engine_gap_heavy_tail_json_pct_peak_gt_thresh_exceeds_100_at_ood.md) - # engine-gap: heavy_tail.json pct_peak_gt_thresh exceeds 100% at ood level (d...
 - [engine-gap: omx CLI gaps found re-analyzing teacher (2026-06-06 round 2)](engine_gap_omx_cli_gaps_found_re_analyzing_teacher_2026_06_06_ro.md) - # engine-gap: omx CLI gaps found re-analyzing teacher (2026-06-06 round 2)
 - [engine-gap: omx CLI/skill gaps found during dr-harder reporting (2026-06-06)](engine_gap_omx_cli_skill_gaps_found_during_dr_harder_reporting_2.md) - # engine-gap: omx CLI/skill gaps found during dr-harder reporting (2026-06-06)
 - [eval analysis: core does stats, adapter does heavy-tail](eval_analysis_core_does_stats_adapter_does_heavy_tail.md) - # eval analysis: core does stats, adapter does heavy-tail
 - [exp-analyze MUST run analyze_training.py for training-side diagnosis](exp_analyze_must_run_analyze_training_py_for_training_side_diagn.md) - # exp-analyze MUST run analyze_training.py for training-side diagnosis
+- [state_dependent_std: difficulty-null now confirmed on REAL DR (MED->HIGH), OOD win is a TAIL effect](state_dependent_std_difficulty_null_now_confirmed_on_real_dr_med.md) - # state_dependent_std: difficulty-null now confirmed on REAL DR (MED->HIGH), ...
+- [state_dependent_std: robustness-vs-nominal trade-off, NOT difficulty-adaptive (Phase-2 falsification)](state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md) - # state_dependent_std: robustness-vs-nominal trade-off, NOT difficulty-adapti...
 
 ## pattern
 
+- [attitude_only per-axis CV: roll DRIVES the heavy-tail crossover, yaw is the EXTREME tail](attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md) - # attitude_only per-axis CV: roll DRIVES the heavy-tail crossover, yaw is the...
 - [constraint budget x0.5 binds only thruster_util -> authority starvation](constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md) - # constraint budget x0.5 binds only thruster_util -> authority starvation
 - [dr-harder heavy-tail correction: %peak>20 is NOT zero at medium/hard](dr_harder_heavy_tail_correction_peak_20_is_not_zero_at_medium_ha.md) - # dr-harder heavy-tail correction: %peak>20 is NOT zero at medium/hard
 - [dr-harder: reward decomposition confirms eval trades on the training side](dr_harder_reward_decomposition_confirms_eval_trades_on_the_train.md) - # dr-harder: reward decomposition confirms eval trades on the training side

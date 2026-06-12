@@ -106,6 +106,14 @@ groups:
 # Markers proving the report was grounded in the training-log engine (analyze_training.py)
 # rather than hand-extracted final scalars. >=1 must appear or the lint loud-fails.
 engine_markers: [DIAGNOSIS, TIER 1, TIER 2, TIER 3, TREND, changepoint, plateau, regime, phase]
+# --- required report SECTIONS (markdown headings), dr_harder 2026-06-08 incident ---
+# The token-group lint above checks metric COVERAGE but cannot see a whole section
+# being deleted when it maps to no metric group. The 2026-06-08 re-analysis dropped
+# the `## generalization (in-dist hard vs OOD)` section entirely (OOD was the PHASE B
+# deliverable) and still passed the lint. These tokens MUST each appear inside a
+# markdown heading or `omx report-coverage` loud-fails. generalization is the one the
+# incident lost; the rest are the spine every dr_harder report carries.
+required_sections: [tracking, generalization, reward, trpo, critic, encoder, constraint, doraemon, verdict]
 pending_approval: false
 run_id_regex: null
 score_formula: null
