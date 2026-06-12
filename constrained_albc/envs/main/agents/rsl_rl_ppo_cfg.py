@@ -261,9 +261,11 @@ class ALBCTRPORunnerCfg(_BaseALBCRunnerCfg):
     # so a launch that forgot `agent.logger=wandb` logged only to TB. Override per-run if needed.
     logger: str = "wandb"
     # WandB project = campaign name (experiment-dir standard SS95-100: one campaign -> one
-    # project, never per-run). AttitudeOnly's first campaign is att_dr_harder, matching the
-    # <group> dir. Override with --log_project_name when starting a different campaign so runs
-    # cluster correctly (wandb has no move-run API -- the launch-time project name is what sticks).
+    # project, never per-run). This default env's first campaign logged to "att_dr_harder";
+    # the on-disk <group> dir was later renamed to "dr_harder" (attitude is now the default,
+    # so the "att" prefix is redundant), but the wandb project name is kept as-is because
+    # wandb has no move-run API -- the launch-time project name is what sticks. Override with
+    # --log_project_name when starting a different campaign so runs cluster correctly.
     wandb_project: str = "att_dr_harder"
     obs_groups: dict[str, list[str]] = {
         "policy": ["policy", "privileged"],

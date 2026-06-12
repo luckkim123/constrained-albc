@@ -474,7 +474,7 @@ def _wandb_create_report(entity: str, project: str, run_filter: str | None = Non
     blocks: list = [
         wr.H1("TRPO + IPO + Encoder Training Dashboard"),
         wr.P(
-            "Full-DOF ALBC training health dashboard. "
+            "ALBC training health dashboard. "
             "Panels cover reward, tracking error, encoder z statistics, "
             "DORAEMON DR scheduling, constraint (IPO), and gradient diagnostics."
         ),
@@ -554,11 +554,11 @@ def build_parser() -> argparse.ArgumentParser:
     # -- wandb --
     p_wb = sub.add_parser("wandb", help="Create WandB training report")
     p_wb.add_argument("--entity", default=None, help="WandB entity (username or team)")
-    p_wb.add_argument("--project", default="full_dof_trpo", help="WandB project name")
+    p_wb.add_argument("--project", default="albc_trpo", help="WandB project name")
     p_wb.add_argument(
         "--run-filter",
         default=None,
-        help="Optional run name glob filter (e.g., 'full_dof*')",
+        help="Optional run name glob filter (e.g., 'trpo_*')",
     )
     p_wb.add_argument(
         "--dry-run",

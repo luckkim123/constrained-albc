@@ -3,7 +3,11 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Shared constants and utilities for Full-DOF ALBC analysis scripts.
+"""Shared constants and utilities for ALBC analysis scripts.
+
+Covers both the default attitude-only env (envs/main, 27D privileged) and the
+legacy full-DOF env (envs/full_dof, 24D privileged). The sweep builder dispatches
+on the checkpoint's privileged dim, so a single tool analyzes either variant.
 
 Provides DR constants, checkpoint-based encoder architecture inference,
 and sweep parameter builders derived from checkpoint normalizer bounds.
@@ -232,10 +236,14 @@ def _build_constrained_albc_23d_sweep(
 def _build_constrained_albc_24d_sweep(
     lower: np.ndarray, upper: np.ndarray, offset: int = 0,
 ) -> list[SweepParam]:
-    """Build sweep params for the current constrained ALBC 24D privileged obs.
+    """Build sweep params for the 24 DR parameters of constrained ALBC privileged obs.
 
-    Layout is authoritative from envs/main/mdp/observations.py:compute_privileged_obs
-    (24D). Differs from the legacy 23D table: inertia/damping are collapsed to single
+    Layout matches the first 24 dims of compute_privileged_obs (the randomized DR
+    params). The legacy full_dof env's privileged is exactly these 24D; the default
+    envs/main env appends 3D measured lin_vel ([24:27], critic-only, not a DR sweep
+    target) for a 27D total -- so 27D checkpoints use _build_constrained_albc_27d_sweep
+    and only this 24-param DR prefix is swept either way.
+    Differs from the legacy 23D table: inertia/damping are collapsed to single
     representative dims and ocean-current velocity (3D) is appended.
 
         Hydrodynamics (7D):  [0] main vol, [1:4] main CoG xyz, [4:7] main CoB xyz
