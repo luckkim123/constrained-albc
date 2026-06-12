@@ -24,3 +24,4 @@ tests/fixtures/*
 # layout: deploy/<group>/<label>_<YYMMDD_HHMMSS>/ (mirrors logs tree, label-before-date)
 # root-anchored: must NOT catch constrained_albc/deploy/ (code) or tests/deploy/
 /deploy/
+scratch/
