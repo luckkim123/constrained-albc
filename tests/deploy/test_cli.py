@@ -30,6 +30,14 @@ def test_batch_arg_parses():
     assert ns.teacher_ckpt == "/t.pt"
 
 
+def test_golden_flag_parses():
+    ns = build_parser().parse_args([
+        "--batch", "attitude_only_5000",
+        "--student-ckpt", "/s.pt", "--teacher-ckpt", "/t.pt", "--out", "/o", "--golden",
+    ])
+    assert ns.golden is True
+
+
 def test_default_out_derives_group_tag_ts():
     """--out omitted -> deploy/<run_group>/<tag>_<ts> (label-before-date, RUN_TS_FORMAT)."""
     ns = build_parser().parse_args([

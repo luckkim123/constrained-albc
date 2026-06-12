@@ -5,9 +5,11 @@ Examples:
     python -m constrained_albc.deploy --spec student_tcn --ckpt PATH --out DIR
     python -m constrained_albc.deploy --batch attitude_only_5000 \
         --student-ckpt PATH --teacher-ckpt PATH \
-        --run-group attitude_only_campaign --tag pack_5000iter --report
+        --run-group attitude_only_campaign --tag pack_5000iter --golden --report
     # --out omitted -> deploy/<run-group>/<tag>_<YYMMDD_HHMMSS>/ (cwd-relative;
     # label-before-date, mirrors the logs tree group layer)
+    # --golden -> + golden/ vectors (CPU), npforward.py copy, parity self-close,
+    # MANIFEST.json: one command produces a complete self-verifying deploy pack
 
 The export run loads real models that import the training stack, so run it via
 isaaclab's interpreter:
@@ -38,7 +40,17 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--teacher-ckpt", help="teacher .pt for --batch")
     p.add_argument("--device", default="cuda:0")
     p.add_argument("--report", action="store_true", help="also write EXPORT_REPORT.md")
+    p.add_argument("--golden", action="store_true",
+                   help="complete the pack: golden vectors (CPU) + npforward.py copy "
+                        "+ parity self-close + MANIFEST.json")
     return p
+
+
+def _ckpt_iter(path: str):
+    """Read the training iter recorded in the checkpoint, or '?' if absent."""
+    import torch
+
+    return torch.load(path, map_location="cpu", weights_only=False).get("iter", "?")
 
 
 def resolve_out_dir(args: argparse.Namespace) -> str:
@@ -89,13 +101,7 @@ def main(argv: list[str] | None = None) -> int:
         t_model = build_teacher_model(args.teacher_ckpt, args.device)
         t_rep = export_from_state_dict(t_spec, t_model, out_dir)
         if args.report:
-            import torch
-
             from constrained_albc.deploy.report import build_report
-
-            def _ckpt_iter(path: str):
-                """Read the training iter recorded in the checkpoint, or '?' if absent."""
-                return torch.load(path, map_location="cpu", weights_only=False).get("iter", "?")
 
             chosen = {
                 "student_tcn": {"file": os.path.basename(args.student_ckpt),
@@ -121,6 +127,35 @@ def main(argv: list[str] | None = None) -> int:
                               golden_status=golden_status)
             with open(os.path.join(out_dir, "EXPORT_REPORT.md"), "w") as f:
                 f.write(md)
+
+        if args.golden:
+            from constrained_albc.deploy.golden import export_golden_tcn, export_golden_teacher
+            from constrained_albc.deploy.pack import copy_npforward, self_close, write_manifest
+
+            # Goldens MUST be CPU-generated: GPU cuDNN conv differs from the
+            # standard conv (~1e-4) the board numpy runtime implements (golden.py).
+            s_model.to("cpu")
+            t_model.to("cpu")
+            export_golden_tcn(s_model, out_dir)
+            export_golden_teacher(t_model, out_dir)
+            copy_npforward(out_dir)
+            parity = self_close(out_dir)
+            if not parity["closed_in_container"]:
+                raise SystemExit(f"parity self-close FAILED: {parity}")
+            write_manifest(
+                out_dir,
+                checkpoints={
+                    "student_tcn": {"file": os.path.basename(args.student_ckpt),
+                                    "iter": _ckpt_iter(args.student_ckpt),
+                                    "path": args.student_ckpt},
+                    "teacher": {"file": os.path.basename(args.teacher_ckpt),
+                                "iter": _ckpt_iter(args.teacher_ckpt),
+                                "path": args.teacher_ckpt},
+                },
+                parity=parity,
+            )
+            logger = logging.getLogger("deploy.export")
+            logger.info("pack complete: parity self-close CLOSED, MANIFEST written -> %s", out_dir)
         return 0
 
     if args.spec:
