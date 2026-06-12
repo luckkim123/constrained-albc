@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Deploy artifacts now live under `deploy/<group>/<label>_<YYMMDD_HHMMSS>/`
+  (mirrors the logs tree group layer, label-before-date, timestamp =
+  `analysis.paths.RUN_TS_FORMAT`) instead of ad-hoc repo-root dirs. The CLI
+  derives this path when `--out` is omitted (new `--run-group`/`--tag` args);
+  explicit `--out` still wins. `.gitignore` ignores the whole `deploy/` tree
+  (replaces the stale `deploy_export_5000/*.npz` line). Existing artifacts
+  relocated with payload hashes unchanged:
+  `deploy_pack_5000iter_260611/` -> `deploy/attitude_only_campaign/pack_5000iter_260611_183252/`,
+  `deploy_export_5000/` -> `deploy/attitude_only_campaign/export_5000_260611_175116/`.
+
 ### Added
 
 - Deploy export package (`constrained_albc/deploy/`). Exports torch `.pt`

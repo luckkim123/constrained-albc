@@ -4,7 +4,10 @@ Examples:
     python -m constrained_albc.deploy --list-specs
     python -m constrained_albc.deploy --spec student_tcn --ckpt PATH --out DIR
     python -m constrained_albc.deploy --batch attitude_only_5000 \
-        --student-ckpt PATH --teacher-ckpt PATH --out DIR --report
+        --student-ckpt PATH --teacher-ckpt PATH \
+        --run-group attitude_only_campaign --tag pack_5000iter --report
+    # --out omitted -> deploy/<run-group>/<tag>_<YYMMDD_HHMMSS>/ (cwd-relative;
+    # label-before-date, mirrors the logs tree group layer)
 
 The export run loads real models that import the training stack, so run it via
 isaaclab's interpreter:
@@ -16,7 +19,9 @@ import argparse
 import logging
 import os
 import sys
+from datetime import datetime
 
+from constrained_albc.analysis.paths import RUN_TS_FORMAT
 from constrained_albc.deploy.specs import SPEC_REGISTRY
 
 
@@ -25,13 +30,30 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--list-specs", action="store_true", help="list registered specs and exit")
     p.add_argument("--spec", choices=sorted(SPEC_REGISTRY), help="single-export spec name")
     p.add_argument("--ckpt", help="checkpoint .pt path for --spec")
-    p.add_argument("--out", help="output directory")
+    p.add_argument("--out", help="output directory (default: deploy/<run-group>/<tag>_<ts>)")
+    p.add_argument("--run-group", help="campaign group layer for the default --out path")
+    p.add_argument("--tag", help="pack label for the default --out path (e.g. pack_5000iter)")
     p.add_argument("--batch", choices=["attitude_only_5000"], help="named batch export")
     p.add_argument("--student-ckpt", help="student .pt for --batch")
     p.add_argument("--teacher-ckpt", help="teacher .pt for --batch")
     p.add_argument("--device", default="cuda:0")
     p.add_argument("--report", action="store_true", help="also write EXPORT_REPORT.md")
     return p
+
+
+def resolve_out_dir(args: argparse.Namespace) -> str:
+    """Resolve the export output dir per the deploy artifacts convention.
+
+    Explicit ``--out`` wins. Otherwise derive ``deploy/<run_group>/<tag>_<ts>``
+    (cwd-relative; label-before-date with the same timestamp format as
+    ``analysis.paths.make_run_id``, mirroring the logs tree group layer).
+    """
+    if args.out:
+        return args.out
+    if not (args.run_group and args.tag):
+        raise SystemExit("--out missing: provide it, or both --run-group and --tag")
+    stamp = datetime.now().strftime(RUN_TS_FORMAT)
+    return os.path.join("deploy", args.run_group, f"{args.tag}_{stamp}")
 
 
 def list_specs_text() -> str:
@@ -58,13 +80,14 @@ def main(argv: list[str] | None = None) -> int:
     from constrained_albc.deploy.specs import StudentTCNSpec, TeacherActorSpec
 
     if args.batch == "attitude_only_5000":
-        assert args.student_ckpt and args.teacher_ckpt and args.out, \
-            "--batch needs --student-ckpt, --teacher-ckpt, --out"
+        assert args.student_ckpt and args.teacher_ckpt, \
+            "--batch needs --student-ckpt and --teacher-ckpt"
+        out_dir = resolve_out_dir(args)
         s_spec, t_spec = StudentTCNSpec(), TeacherActorSpec()
         s_model = build_student_model(s_spec, args.student_ckpt, args.device)
-        s_rep = export_from_state_dict(s_spec, s_model, args.out)
+        s_rep = export_from_state_dict(s_spec, s_model, out_dir)
         t_model = build_teacher_model(args.teacher_ckpt, args.device)
-        t_rep = export_from_state_dict(t_spec, t_model, args.out)
+        t_rep = export_from_state_dict(t_spec, t_model, out_dir)
         if args.report:
             import torch
 
@@ -94,21 +117,22 @@ def main(argv: list[str] | None = None) -> int:
                 "during board integration."
             )
             md = build_report({"student_tcn": s_rep, "teacher_actor": t_rep}, chosen,
-                              out_dir=args.out, mount_status="overlay (docker cp)",
+                              out_dir=out_dir, mount_status="overlay (docker cp)",
                               golden_status=golden_status)
-            with open(os.path.join(args.out, "EXPORT_REPORT.md"), "w") as f:
+            with open(os.path.join(out_dir, "EXPORT_REPORT.md"), "w") as f:
                 f.write(md)
         return 0
 
     if args.spec:
-        assert args.ckpt and args.out, "--spec needs --ckpt and --out"
+        assert args.ckpt, "--spec needs --ckpt"
+        out_dir = resolve_out_dir(args)
         spec_cls = SPEC_REGISTRY[args.spec]
         spec = spec_cls()
         if args.spec == "teacher_actor":
             model = build_teacher_model(args.ckpt, args.device)
         else:
             model = build_student_model(spec, args.ckpt, args.device)
-        export_from_state_dict(spec, model, args.out)
+        export_from_state_dict(spec, model, out_dir)
         return 0
 
     build_parser().print_help()
