@@ -5,7 +5,7 @@ Examples:
     python -m constrained_albc.deploy --spec student_tcn --ckpt PATH --out DIR
     python -m constrained_albc.deploy --batch attitude_only_5000 \
         --student-ckpt PATH --teacher-ckpt PATH \
-        --run-group attitude_only_campaign --tag pack_5000iter --golden --report
+        --run-group dr_harder --tag pack_5000iter --golden --report
     # --out omitted -> deploy/<run-group>/<tag>_<YYMMDD_HHMMSS>/ (cwd-relative;
     # label-before-date, mirrors the logs tree group layer)
     # --golden -> + golden/ vectors (CPU), npforward.py copy, parity self-close,

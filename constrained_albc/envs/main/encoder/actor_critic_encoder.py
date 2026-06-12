@@ -19,7 +19,7 @@ Architecture (HORA-style normalization):
     Cost Critic: cat([o_t, z, p_t]) -> MLP -> K (multi-head, one per constraint)
     Named "cost_critic" so ConstraintTRPO classifies it as a value parameter.
 
-    o_t is unified: current proprioception (26D) + temporal history (55D) + integral (6D) = 87D.
+    o_t is unified: current proprioception (20D) + temporal history (46D) + integral (3D) = 69D.
 
     Encoder input normalization modes:
       - Static min-max (HORA-style): (2*x - upper - lower) / (upper - lower) -> [-1, 1]
@@ -63,8 +63,8 @@ class ActorCriticEncoder(PolicyBase):
         obs_groups: dict[str, list[str]],
         num_actions: int,
         # Encoder
-        policy_obs_dim: int = 81,
-        privileged_dim: int = 23,
+        policy_obs_dim: int = 69,
+        privileged_dim: int = 27,
         encoder_hidden_dims: list[int] | tuple[int, ...] = (256, 128, 64),
         encoder_latent_dim: int = 9,
         encoder_activation: str = "elu",

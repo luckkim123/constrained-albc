@@ -223,7 +223,7 @@ def test_emit_run_manifest_group_layer(tmp_path):
     log_dir = tmp_path / "logs" / "rsl_rl" / "albc_trpo_teacher" / "att_dr_harder" / "trpo_e1_260608_120000"
     (log_dir / "tb").mkdir(parents=True)
     run = P.emit_run_manifest(
-        task="Isaac-ConstrainedALBC-AttitudeOnly-TRPO-v0",
+        task="Isaac-ConstrainedALBC-TRPO-v0",
         log_dir=log_dir,
         tag="e1",
         experiment_name="albc_trpo_teacher",

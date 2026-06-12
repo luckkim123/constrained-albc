@@ -38,7 +38,7 @@ def test_config_matches_expected_dims():
     import ast
     import pathlib
 
-    cfg_path = pathlib.Path(__file__).parents[1] / "constrained_albc" / "envs" / "attitude_only" / "config.py"
+    cfg_path = pathlib.Path(__file__).parents[1] / "constrained_albc" / "envs" / "main" / "config.py"
     tree = ast.parse(cfg_path.read_text())
     assigns = {}
     for node in ast.walk(tree):

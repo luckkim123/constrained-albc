@@ -43,10 +43,10 @@ def test_default_out_derives_group_tag_ts():
     ns = build_parser().parse_args([
         "--batch", "attitude_only_5000",
         "--student-ckpt", "/s.pt", "--teacher-ckpt", "/t.pt",
-        "--run-group", "attitude_only_campaign", "--tag", "pack_5000iter",
+        "--run-group", "dr_harder", "--tag", "pack_5000iter",
     ])
     out = resolve_out_dir(ns)
-    assert re.fullmatch(r"deploy/attitude_only_campaign/pack_5000iter_\d{6}_\d{6}", out)
+    assert re.fullmatch(r"deploy/dr_harder/pack_5000iter_\d{6}_\d{6}", out)
 
 
 def test_explicit_out_wins_over_derivation():

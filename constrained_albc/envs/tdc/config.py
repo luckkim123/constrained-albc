@@ -7,7 +7,7 @@
 
 Inherits every field from `ALBCEnvCfg` (DR, reward, constraints, observation,
 command sampling, thruster model, DORAEMON) so the baseline experiences the
-exact same training conditions as `Isaac-ConstrainedALBC-TRPO-v0`. Only adds the
+exact same training conditions as `Isaac-ConstrainedALBC-Full-TRPO-v0`. Only adds the
 classical controller gains.
 """
 
@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from isaaclab.utils import configclass
 
-from constrained_albc.envs.main.config import ALBCEnvCfg
+from constrained_albc.envs.full_dof.config import ALBCEnvCfg
 
 from .controllers.tdc import TDCControllerCfg
 from .controllers.thruster_pd import ThrusterPDCfg

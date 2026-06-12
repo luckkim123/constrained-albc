@@ -3,24 +3,27 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Observation functions for velocity + attitude tracking environment.
+"""Observation functions for the attitude-only tracking environment (no linear velocity).
 
-    o_t (87D): Unified policy observation = current proprioception (26D) + temporal history (55D) + integral (6D)
-    p_t (24D): Privileged information (simulator-only DR parameters)
+    o_t (69D): Unified policy observation = current proprioception (20D) + temporal history (46D) + integral (3D)
+    p_t (27D): Privileged info (simulator-only DR params) + measured root_lin_vel_b (3D, critic-only)
 
 The encoder receives p_t to compress physical unknowns into latent z.
 The actor receives o_t + z. The critic receives o_t + z + p_t (asymmetric).
+Linear velocity is excluded from o_t (no DVL on the real robot); it appears only in p_t.
 
-Current proprioception (26D) -- measurable on real robot:
-    Command (6D):       vel_cmd_lin(3), ang_cmd(3) [att_rp(2) + yaw_rate(1)]
-    Body State (9D):    euler(3), ang_vel(3), lin_vel(3)
+Current proprioception (20D) -- measurable on real robot:
+    Command (3D):       ang_cmd(3) [att_rp(2) + yaw_rate(1)]   -- no lin_vel command
+    Body State (6D):    euler(3), ang_vel(3)                   -- no measured lin_vel
     Arm State (5D):     joint_pos(2), joint_vel(2), manipulability(1)
     Thruster (6D):      filtered output (T0-T5)
 
-Temporal history (55D) -- ring buffer, stride=3:
+Temporal history (46D) -- ring buffer, stride=3:
     Joint tracking (12D):   (q_des_prev - q_actual, joint_vel) x 3 steps
-    Body tracking (27D):    (lin_vel_err, ang_err [att_rp+yaw_rate], rpy) x 3 steps
+    Body tracking (18D):    (ang_err [att_rp(2)+yaw_rate(1)], rpy(3)) x 3 steps   -- no lin_vel_err
     Action (16D):           full_action(8D) x 2 steps
+
+Integral error (3D): leaky-integrated [roll, pitch, yaw_rate] (mirrors the 3 tracking channels).
 """
 
 from __future__ import annotations
@@ -39,27 +42,25 @@ def compute_policy_obs(
     env: ALBCEnv,
     robot: Articulation,
 ) -> torch.Tensor:
-    """Compute current proprioception (26D).
+    """Compute current proprioception (20D).
 
-    Measurable on real robot (IMU, DVL, motor encoders, ESC feedback):
+    Measurable on real robot (IMU, motor encoders, ESC feedback).
+    Linear velocity is excluded -- no DVL on real robot.
 
-    Command (6D):
-        [0:3]   linear velocity command (body frame, no noise)
-        [3:5]   roll/pitch attitude command (radians, no noise)
-        [5]     yaw rate command (rad/s, body frame, no noise)
+    Command (3D):
+        [0:3]   ang_cmd [roll_att, pitch_att, yaw_rate]
 
-    Body State (9D):
-        [6:9]   euler angles (roll, pitch, yaw)
-        [9:12]  angular velocity in body frame (p, q, r)
-        [12:15] linear velocity in body frame (u, v, w)
+    Body State (6D):
+        [3:6]   euler angles (roll, pitch, yaw)
+        [6:9]   angular velocity in body frame (p, q, r)
 
     Arm State (5D):
-        [15:17] joint positions (raw cumulative angle)
-        [17:19] joint velocities
-        [19]    manipulability index w (normalized [0, 1])
+        [9:11]  joint positions (raw cumulative angle)
+        [11:13] joint velocities
+        [13]    manipulability index w (normalized [0, 1])
 
     Thruster State (6D):
-        [20:26] thruster filtered output (T0-T5)
+        [14:20] thruster filtered output (T0-T5)
     """
     roll, pitch, yaw = env._euler_cache
     joint_pos = robot.data.joint_pos[:, env._albc_joint_ids]
@@ -68,13 +69,11 @@ def compute_policy_obs(
 
     return torch.cat(
         [
-            # Command (6D)
-            env._vel_cmd_lin,  # 3D: linear velocity command
+            # Command (3D) -- attitude only (no linear velocity command)
             env._ang_cmd,  # 3D: [roll_att_cmd, pitch_att_cmd, yaw_rate_cmd]
-            # Body State (9D)
+            # Body State (6D) -- no measured linear velocity (no DVL on real robot)
             torch.stack([roll, pitch, yaw], dim=-1),  # 3D: euler angles
             robot.data.root_ang_vel_b,  # 3D: angular velocity body
-            robot.data.root_lin_vel_b,  # 3D: linear velocity body
             # Arm State (5D)
             joint_pos,  # 2D: joint positions (raw cumulative)
             joint_vel,  # 2D: joint velocities
@@ -89,7 +88,7 @@ def compute_policy_obs(
 def compute_privileged_obs(
     env: ALBCEnv,
 ) -> torch.Tensor:
-    """Compute privileged information p_t (24D).
+    """Compute privileged information p_t (27D).
 
     Non-redundant set of independent DR parameters. Each dimension corresponds
     to a single random variable -- no correlated pairs from shared DR scales.
@@ -115,6 +114,8 @@ def compute_privileged_obs(
         Environment (4D):
             [20]    water density
             [21:24] ocean current velocity (x, y, z, world frame)
+        Measured Velocity (3D):
+            [24:27] body linear velocity (u, v, w)
     """
     jid = env._albc_joint_ids[0]
 
@@ -153,6 +154,8 @@ def compute_privileged_obs(
             # Environment (4D)
             env._hydro.water_density.unsqueeze(-1),
             env._hydro.current.velocity_w[:, :3],  # ocean current linear xyz (world frame)
+            # Measured velocity (3D) -- privileged: actor is blinded, critic sees it
+            env._robot.data.root_lin_vel_b,  # 3D: body linear velocity (u, v, w)
         ],
         dim=-1,
     )

@@ -71,7 +71,7 @@ class ALBCPPOEncRunnerCfg(_BaseALBCRunnerCfg):
     """Encoder + PPO. No IPO. Uses ALBCNoConstraintEnvCfg.
 
     Runs under OnPolicyDoraemonRunner so DORAEMON curriculum is stepped
-    every iteration — same DR schedule as Isaac-ConstrainedALBC-TRPO-v0.
+    every iteration — same DR schedule as Isaac-ConstrainedALBC-Full-TRPO-v0.
     """
 
     class_name: str = "OnPolicyDoraemonRunner"

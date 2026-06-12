@@ -3,10 +3,11 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Configuration for velocity + attitude tracking ALBC environment.
+"""Configuration for attitude-only ALBC environment.
 
-8D action (2D arm + 6D thruster). Roll/pitch: attitude command, yaw: rate command,
-linear: velocity command. Single registered task: Isaac-ConstrainedALBC-TRPO-v0
+8D action (2D arm + 6D thruster). Roll/pitch: attitude command, yaw: rate command.
+No linear velocity tracking. 69D observation, 27D privileged.
+Single registered task: Isaac-ConstrainedALBC-TRPO-v0
 """
 
 from __future__ import annotations
@@ -187,62 +188,58 @@ class HardDomainRandomizationCfg(DomainRandomizationCfg):
 
 
 # ==========================================================================
-# 87D Observation Noise Model
+# 69D Observation Noise Model
 #
-# Current Proprioception (26D):
-#   Command (6D): vel_cmd_lin(3), ang_cmd(3) [att_rp(2) + yaw_rate(1)]
-#   Body State (9D): euler(3), ang_vel(3), lin_vel(3)
+# Current Proprioception (20D):
+#   Command (3D): ang_cmd(3) [att_rp(2) + yaw_rate(1)]
+#   Body State (6D): euler(3), ang_vel(3)
 #   Arm State (5D): joint_pos(2), joint_vel(2), manipulability(1)
 #   Thruster (6D): filtered output (ESC feedback)
 #
-# Temporal History (55D, stride=3):
+# Temporal History (46D, stride=3):
 #   Joint tracking x3 steps (12D): joint_pos_error(2), joint_vel(2)
-#   Body tracking x3 steps (27D): lin_vel_err(3), ang_err(3) [att_rp(2)+yaw_rate(1)], rpy(3)
+#   Body tracking x3 steps (18D): ang_err(3) [att_rp(2)+yaw_rate(1)], rpy(3)
 #   Action x2 steps (16D): full_action(8)
 #
-# Integral Error (6D): roll, pitch, vx, vy, vz, yaw_rate
+# Integral Error (3D): roll, pitch, yaw_rate
 # ==========================================================================
 _OBS_NOISE_STD = tuple(
-    # --- Current Proprioception (26D) ---
-    [0.0] * 3  # vel_cmd_lin (our command, no noise)
-    + [0.0] * 3  # ang_cmd [att_rp(2) + yaw_rate(1)] (our command, no noise)
+    # --- Current Proprioception (20D) ---
+    [0.0] * 3  # ang_cmd [att_rp(2) + yaw_rate(1)] (our command, no noise)
     + [0.02] * 3  # euler
     + [0.04] * 3  # ang_vel
-    + [0.04] * 3  # lin_vel
     + [0.02] * 2  # joint_pos
     + [0.04] * 2  # joint_vel
     + [0.0]  # manipulability (computed)
     + [0.02] * 6  # thruster_state (ESC feedback)
     # --- Joint Tracking History (12D = 4D x 3 steps) ---
     + ([0.02] * 2 + [0.04] * 2) * 3  # joint_pos_error + joint_vel
-    # --- Body Tracking History (27D = 9D x 3 steps) ---
-    + ([0.04] * 3 + [0.04] * 3 + [0.02] * 3) * 3  # lin_vel_err + ang_err [att_rp+yaw_rate] + rpy
+    # --- Body Tracking History (18D = 6D x 3 steps) ---
+    + ([0.04] * 3 + [0.02] * 3) * 3  # ang_err [att_rp+yaw_rate] + rpy (no lin_vel_err)
     # --- Action History (16D = 8D x 2 steps) ---
     + [0.0] * 16  # actions (our command, no noise)
-    # --- Integral Error (6D) ---
-    + [0.0] * 6  # integral observation (computed, no sensor noise)
+    # --- Integral Error (3D) ---
+    + [0.0] * 3  # integral observation (computed, no sensor noise)
 )
 
 # Bias magnitude (symmetric: MIN = -MAG, MAX = +MAG)
 _OBS_BIAS_MAG = tuple(
-    # --- Current Proprioception (26D) ---
-    [0] * 3  # vel_cmd_lin
-    + [0] * 3  # ang_cmd
+    # --- Current Proprioception (20D) ---
+    [0] * 3  # ang_cmd
     + [0.02] * 3  # euler
     + [0.03] * 3  # ang_vel
-    + [0.02] * 3  # lin_vel
     + [0.02] * 2  # joint_pos
     + [0.03] * 2  # joint_vel
     + [0]  # manipulability
     + [0.01] * 6  # thruster
     # --- Joint Tracking History (12D) ---
     + ([0.02] * 2 + [0.03] * 2) * 3
-    # --- Body Tracking History (27D) ---
-    + ([0.02] * 3 + [0.04] * 3 + [0.02] * 3) * 3  # lin_vel_err + ang_err [att_rp+yaw_rate] + rpy
+    # --- Body Tracking History (18D) ---
+    + ([0.04] * 3 + [0.02] * 3) * 3  # ang_err + rpy (no lin_vel_err)
     # --- Action History (16D) ---
     + [0] * 16
-    # --- Integral Error (6D) ---
-    + [0] * 6  # integral observation (computed, no bias)
+    # --- Integral Error (3D) ---
+    + [0] * 3  # integral observation (computed, no bias)
 )
 _OBS_BIAS_MIN = tuple(-x for x in _OBS_BIAS_MAG)
 _OBS_BIAS_MAX = _OBS_BIAS_MAG
@@ -250,14 +247,15 @@ _OBS_BIAS_MAX = _OBS_BIAS_MAG
 
 @configclass
 class ALBCEnvCfg(DirectRLEnvCfg):
-    """Velocity + attitude tracking ALBC environment configuration.
+    """Attitude-only ALBC environment configuration.
 
-    8D action (2D arm delta + 6D thruster), 81D observation (26D current + 55D history),
-    24D privileged. TRPO + IPO + Asymmetric Encoder with 10 constraints (5 prob + 5 avg).
+    8D action (2D arm delta + 6D thruster), 69D observation (20D current + 46D history
+    + 3D integral), 27D privileged (incl. measured lin_vel). Attitude-only: roll/pitch
+    attitude + yaw rate, no linear velocity tracking. TRPO + IPO + Asymmetric Encoder
+    with 10 constraints (5 prob + 5 avg).
 
     Roll/pitch: attitude command (+-30 deg, exp kernel reward).
     Yaw: rate command (+-0.5 rad/s, quadratic penalty).
-    Linear: velocity command (+-0.5 m/s, quadratic penalty).
     """
 
     # ==========================================================================
@@ -266,14 +264,14 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     episode_length_s: float = 30.0
     decimation: int = 4
     action_space: int = 8  # 2D arm delta + 6D thruster
-    observation_space: int = 87  # 26D current proprio + 55D history + 6D integral
-    # Breakdown: cmd(6) + body(9) + arm(5) + thruster(6) = 26D current
-    #            + joint_hist(12) + body_hist(27) + action_hist(16) = 55D history
-    #            + integral(6) [roll, pitch, vx, vy, vz, yaw_rate]
-    state_space: int = 24  # Privileged info (see observations.py compute_privileged_obs)
+    observation_space: int = 69  # 20D current proprio + 46D history + 3D integral
+    # Breakdown: cmd(3) + body(6) + arm(5) + thruster(6) = 20D current
+    #            + joint_hist(12) + body_hist(18) + action_hist(16) = 46D history
+    #            + integral(3) [roll, pitch, yaw_rate]
+    state_space: int = 27  # Privileged info (see observations.py compute_privileged_obs)
     # Integral error observation (Hwangbo 2017 pattern, validated in R7/R8 experiments)
     use_integral_obs: bool = True
-    integral_dims: int = 6  # [roll, pitch, vx, vy, vz, yaw_rate]
+    integral_dims: int = 3  # [roll, pitch, yaw_rate]
     integral_leak: float = 0.99  # Leaky integrator decay: I_{t+1} = leak * I_t + err * dt
     integral_clamp: float = 2.0  # Windup prevention: clamp |I| <= this value
     integral_gated: bool = True  # Error-gated integration: only accumulate when |err| < reward sigma
@@ -331,16 +329,14 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     """Number of past timesteps stored in the history ring buffer."""
     hist_stride: int = 3
     """Record every N-th control step. Effective span = hist_len * hist_stride * step_dt."""
-    hist_feature_dim: int = 21
-    """Features per timestep: joint_tracking(4) + body_tracking(9) + action(8)."""
+    hist_feature_dim: int = 18
+    """Features per timestep: joint_tracking(4) + body_tracking(6) + action(8)."""
     hist_action_len: int = 2
     """Number of action history steps to include in observation (newest N of hist_len)."""
 
     # ==========================================================================
-    # Task: Command Tracking (velocity + attitude)
+    # Task: Command Tracking (attitude only -- roll/pitch + yaw rate; no linear velocity)
     # ==========================================================================
-    vel_cmd_lin_range: tuple[float, float] = (-0.5, 0.5)
-    """Linear velocity command range per axis (m/s, body frame)."""
     att_cmd_rp_range: tuple[float, float] = (-math.pi / 6.0, math.pi / 6.0)
     """Roll/pitch attitude command range (radians). +-30 degrees."""
     yaw_rate_cmd_range: tuple[float, float] = (-0.5, 0.5)
@@ -354,7 +350,6 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     """Play/eval mode: disable command resampling, fix all commands to zero (hovering)."""
 
     reward: ALBCRewardCfg = ALBCRewardCfg(
-        lin_vel=TrackingTermCfg(k=4.0, sigma=0.10, quad_ratio=1.0, tanh_coef=0.3, tanh_eps=0.10),
         yaw_vel=TrackingTermCfg(k=3.5, sigma=0.10, quad_ratio=1.0, tanh_coef=0.3, tanh_eps=0.10),
         # r13: restored k_bias=-2.0 (r11_emabias strength). r12_baseline halving to
         # -1.0 combined with latent=16 produced rank #7 (hard roll 1.26 vs r11_emabias
@@ -393,7 +388,20 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # Domain Randomization
     # ==========================================================================
     randomization: HardDomainRandomizationCfg = HardDomainRandomizationCfg()
-    doraemon: DoraemonCfg = DoraemonCfg(enable=True, kl_ub=0.06, performance_lb=90.0, step_interval=250)
+    # performance_lb: DORAEMON binary-success threshold on accumulated episode return
+    # (albc_env.py: _episode_return_accum += reward; success = return >= performance_lb).
+    # Calibrated 68.0 -> 250.0 from a recon run (trpo_baseline_260608_160453, lb=68, 1146 iter):
+    # the DORAEMON buffer's actual episode-return distribution (n=2000) was
+    # min=81.9 / p5=227 / p25=250 / median=264 / p95=291. lb=68 sat BELOW the minimum return,
+    # so success=return>=68 was always 1 -> the feasibility constraint (Ghat>=alpha) was inert
+    # and the curriculum widened the DR distribution unconstrained (no self-pacing feedback).
+    # lb=250 (p25) puts the starting success_rate at ~0.65: above alpha=0.5 so the distribution
+    # still expands, but the signal is live again instead of pinned at 1. Chosen below the
+    # median so a reward plateau cannot drag success_rate to 0 (which would shrink the DR range).
+    # kl_ub 0.06 -> 0.12: doubles the per-step trust region so the distribution widens fast
+    # enough to compensate for the slower expansion that the raised lb induces. Both levers move
+    # together by design -- lb alone makes DR easier, kl_ub alone leaves success_rate pinned at 1.
+    doraemon: DoraemonCfg = DoraemonCfg(enable=True, kl_ub=0.12, performance_lb=250.0, step_interval=250)
 
     # ==========================================================================
     # Payload
@@ -421,7 +429,7 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     """Hide bar when |cog_offset| < this value (m)."""
 
     # ==========================================================================
-    # Observation Noise (87D)
+    # Observation Noise (69D)
     # ==========================================================================
     observation_noise_model: NoiseModelWithAdditiveBiasCfg = NoiseModelWithAdditiveBiasCfg(
         noise_cfg=GaussianNoiseCfg(mean=0.0, std=_OBS_NOISE_STD),

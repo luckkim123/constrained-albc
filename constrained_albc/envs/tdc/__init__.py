@@ -5,7 +5,7 @@
 
 """Full-DOF ALBC TDC + thruster PD baseline (no RL).
 
-Classical control variant of `Isaac-ConstrainedALBC-TRPO-v0` used as a comparison
+Classical control variant of `Isaac-ConstrainedALBC-Full-TRPO-v0` used as a comparison
 baseline. Arm 2D is controlled by the Time Delay Controller, thruster 6D by a
 stateless P controller with thruster allocation. DR, reward, command sampling
 and DORAEMON are identical to the RL environment so evaluations are directly
@@ -33,7 +33,7 @@ gym.register(
         # Play/eval scripts require an rsl_rl cfg. The classical baseline does
         # not train, so reuse the RL runner cfg purely for script compatibility.
         "rsl_rl_cfg_entry_point": (
-            "constrained_albc.envs.main.agents.rsl_rl_ppo_cfg:ALBCTRPORunnerCfg"
+            "constrained_albc.envs.full_dof.agents.rsl_rl_ppo_cfg:ALBCTRPORunnerCfg"
         ),
     },
 )

@@ -7,23 +7,22 @@ aggs:
 keep_policy: pass_only
 metrics:
 # --- tracking error (primary objective) ---
+# Default task is attitude-only (roll/pitch + yaw-rate); it tracks no linear velocity,
+# so lin_err_x/y/z are intentionally absent (the legacy full-DOF env logs them).
 - reward_total
 - att_roll_err_deg
 - att_pitch_err_deg
-- lin_err_x
-- lin_err_y
-- lin_err_z
 - yaw_rate_err
-# --- reward decomposition (all 8 terms: which axis drives plateau vs which penalizes) ---
-# tracking terms (should rise): att_rp, lin_vel, yaw_vel. penalty terms (negative drag):
-# bias, smoothness, thruster, torque. total plateau is diagnosed by decomposition, not
+# --- reward decomposition (7 attitude-only terms: which axis drives plateau vs which penalizes) ---
+# tracking terms (should rise): att_rp, yaw_vel. penalty terms (negative drag):
+# bias, smoothness, thruster, torque. (full-DOF additionally has lin_vel.) total plateau
+# is diagnosed by decomposition, not
 # Reward/total alone (rule 03 differential diagnosis). reward_total/Reward/total are
 # PER-STEP (same unit as the 8 terms below). Train/mean_reward is the EPISODE-cumulative
 # return (~29x larger, verified step-wise) -- it is what DORAEMON compares to
 # performance_lb(=90) for success, so keep it for the curriculum analysis.
 - Train/mean_reward
 - Reward/att_rp
-- Reward/lin_vel
 - Reward/yaw_vel
 - Reward/bias
 - Reward/smoothness
@@ -96,8 +95,8 @@ output_root: experiments
 groups:
   # tracking error is discussed by AXIS name + ss_error in reports (not the raw TB
   # tag att_roll_err_deg), so the lint tokens are the report-facing vocabulary.
-  tracking: [ss_error, roll, pitch, vx, vy, vz, yaw]
-  reward_decomp: [Reward/att_rp, Reward/lin_vel, Reward/yaw_vel, Reward/bias, Reward/smoothness, Reward/thruster, Reward/torque]
+  tracking: [ss_error, roll, pitch, yaw]
+  reward_decomp: [Reward/att_rp, Reward/yaw_vel, Reward/bias, Reward/smoothness, Reward/thruster, Reward/torque]
   trpo: [entropy, noise_std, line_search_success, kl, Policy/surrogate_loss, Grad/actor_step, Grad/sigma_step]
   critic: [Loss/value_function, Loss/cost_value]
   encoder: [Encoder/z_std, Encoder/z_min, Encoder/z_max, Policy/encoder_grad_norm, Grad/enc_step]

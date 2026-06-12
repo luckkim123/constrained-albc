@@ -28,6 +28,6 @@ TERMINOLOGY (resolves the naming the user uses vs the standard's labels -- SAME 
 - user "run_name" == standard "<run_id>" == make_run_id output (trpo_e1_..._<ts>).
 - wandb project = the campaign = the group name (att_dr_harder). AttitudeOnly's agent cfg sets wandb_project="att_dr_harder" as the default; override with --log_project_name for a different campaign. This is consistent with the launch checklist's "one campaign = one project".
 
-LAUNCH (AttitudeOnly campaign): `python scripts/train.py --task Isaac-ConstrainedALBC-AttitudeOnly-TRPO-v0 --run_group att_dr_harder --agent run_name=e1_<knob> --num_envs 4096 --max_iterations 5000 --headless --logger wandb --log_project_name att_dr_harder`. The `--run_group` value and wandb project should match the campaign name.
+LAUNCH (default attitude-only task; the env dir rename of 2026-06-12 made attitude-only the default `Isaac-ConstrainedALBC-TRPO-v0`, was `-AttitudeOnly-TRPO-v0`): `python scripts/train.py --task Isaac-ConstrainedALBC-TRPO-v0 --run_group att_dr_harder --agent run_name=e1_<knob> --num_envs 4096 --max_iterations 5000 --headless --logger wandb --log_project_name att_dr_harder`. The `--run_group` value and wandb project should match the campaign name.
 
 See [[experiment_output_directory_standard_logs_vs_experiments_index_t.md]] for the tree + 8 principles and [[experiment_launch_checklist_run_id_wandb_latest_alias_naming.md]] for the pre-launch gate.

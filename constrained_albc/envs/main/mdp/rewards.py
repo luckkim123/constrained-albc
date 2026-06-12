@@ -81,7 +81,7 @@ class ALBCRewardCfg:
     k_bias: float = 0.0
     bias_ema_alpha: float = 0.99  # effective window ~100 steps = 2 s at 50 Hz
     # Per-axis weights for bias penalty so roll (weak authority) gets stronger bias signal.
-    bias_weights: tuple[float, float, float, float, float, float] = (1.5, 1.0, 1.0, 1.0, 1.0, 1.0)
+    bias_weights: tuple[float, float, float] = (1.5, 1.0, 1.0)
 
 
 # --- Reward Functions ---
@@ -110,6 +110,7 @@ def _exp_quad_saturating(
     return exp_term - penalty
 
 
+# UNUSED in attitude_only (kept for cfg compatibility; not in RewardManager).
 def lin_vel_tracking(env: ALBCEnv) -> torch.Tensor:
     """r_lin: Euclidean norm tracking for linear velocity."""
     err_sq = env._lin_vel_err.pow(2).sum(dim=-1)
@@ -156,9 +157,9 @@ def action_smoothness(env: ALBCEnv) -> torch.Tensor:
 def bias_ema_penalty(env: ALBCEnv) -> torch.Tensor:
     """r_bias = sum_i w_i * bias_ema_i^2. Sustained-offset penalty.
 
-    Uses env._bias_ema (6D, ungated EMA of tracking errors) updated each step.
-    Squared form so reward gradient grows with offset; per-axis weights let
-    roll (weak TAM authority) receive a stronger anti-bias signal than yaw.
+    Uses env._bias_ema (3D, ungated EMA of [roll, pitch, yaw_rate] tracking errors)
+    updated each step. Squared form so reward gradient grows with offset; per-axis
+    weights let roll (weak TAM authority) receive a stronger anti-bias signal than yaw.
     """
     w = env._reward_manager._bias_w
     return (env._bias_ema.pow(2) * w).sum(dim=-1)
@@ -170,7 +171,7 @@ def bias_ema_penalty(env: ALBCEnv) -> torch.Tensor:
 class RewardManager:
     """Computes 6-term tracking reward with dt-scaling and episode tracking."""
 
-    _NAMES = ["lin_vel", "att_rp", "yaw_vel", "torque", "thruster", "smoothness", "bias"]
+    _NAMES = ["att_rp", "yaw_vel", "torque", "thruster", "smoothness", "bias"]
 
     def __init__(self, cfg: ALBCRewardCfg, num_envs: int, device: str) -> None:
         self._cfg = cfg
@@ -185,7 +186,6 @@ class RewardManager:
         self._buf.zero_()
 
         terms = [
-            ("lin_vel", cfg.lin_vel.k, lin_vel_tracking(env)),
             ("att_rp", cfg.att_rp.k, att_rp_tracking(env)),
             ("yaw_vel", cfg.yaw_vel.k, yaw_vel_tracking(env)),
             ("torque", cfg.k_tau, joint_torque(robot, env)),

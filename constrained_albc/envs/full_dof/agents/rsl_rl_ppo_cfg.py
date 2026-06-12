@@ -5,7 +5,7 @@
 
 """RSL-RL agent configurations for velocity tracking ALBC environment.
 
-Single pipeline: TRPO + IPO + Asymmetric Encoder (8D action, 69D obs).
+Single pipeline: TRPO + IPO + Asymmetric Encoder (8D action, 81D obs).
 """
 
 import rsl_rl.runners.on_policy_runner as _runner_module
@@ -26,11 +26,10 @@ _runner_module.ALBCConstraintTRPO = ConstraintTRPO
 
 
 # =============================================================================
-# Encoder Bounds (27D privileged obs, static min-max normalization)
+# Encoder Bounds (24D privileged obs, static min-max normalization)
 # =============================================================================
 
-# 27D privileged obs bounds: 24D from HardDomainRandomizationCfg + 3D measured lin_vel
-# (critic-only, appended at the tail to mirror compute_privileged_obs).
+# 24D non-redundant privileged obs bounds from HardDomainRandomizationCfg.
 # Each pair is (lower, upper) with ~10% margin beyond Hard DR range.
 # Layout: hydro(7) + dynamics(5) + payload(4) + actuator(4) + env(4)
 #
@@ -68,10 +67,6 @@ _PRIV_OBS_LOWER: list[float] = [
     -0.55,
     -0.55,
     -0.30,
-    # Measured velocity (3D): body lin_vel u, v, w -- normalization range, not a physical clamp
-    -1.0,
-    -1.0,
-    -1.0,
 ]
 
 _PRIV_OBS_UPPER: list[float] = [
@@ -104,10 +99,6 @@ _PRIV_OBS_UPPER: list[float] = [
     0.55,
     0.55,
     0.30,
-    # Measured velocity (3D): body lin_vel u, v, w -- normalization range, not a physical clamp
-    1.0,
-    1.0,
-    1.0,
 ]
 
 
@@ -135,19 +126,19 @@ class _EncoderPolicyCfg(RslRlPpoActorCriticCfg):
     encoder_activation: str = "elu"
     encoder_obs_normalization: bool = False
     # Observation dimensions
-    policy_obs_dim: int = 69  # 20D current proprio + 46D temporal history + 3D integral
-    privileged_dim: int = 27
+    policy_obs_dim: int = 87  # 26D current proprio + 55D temporal history + 6D integral
+    privileged_dim: int = 24
 
 
 @configclass
 class _ALBCPolicyCfg(_EncoderPolicyCfg):
     """Asymmetric encoder with cost critic for TRPO + IPO.
 
-    Architecture (27D->9D encoder, 8D action):
-        Encoder: p_t(27D) -> static_minmax -> MLP[256,128,64] -> LN -> softsign -> z(9D)
-        Actor:   cat([o_t(69D), z(9D)]) = 78D -> MLP[256,128,64] -> 8D
-        Critic:  cat([o_t(69D), z(9D), p_t(27D)]) = 105D -> MLP[512,256,128] -> 1D
-        Cost:    same 105D input -> MLP[512,256,128] -> K (multi-head)
+    Architecture (24D->9D encoder, 8D action):
+        Encoder: p_t(24D) -> static_minmax -> MLP[256,128,64] -> LN -> softsign -> z(9D)
+        Actor:   cat([o_t(87D), z(9D)]) = 96D -> MLP[256,128,64] -> 8D
+        Critic:  cat([o_t(87D), z(9D), p_t(24D)]) = 120D -> MLP[512,256,128] -> 1D
+        Cost:    same 120D input -> MLP[512,256,128] -> K (multi-head)
     """
 
     class_name: str = "ALBCActorCriticEncoder"
@@ -248,7 +239,7 @@ class _BaseALBCRunnerCfg(RslRlOnPolicyRunnerCfg):
 class ALBCTRPORunnerCfg(_BaseALBCRunnerCfg):
     """Velocity tracking TRPO + IPO + Asymmetric Encoder runner.
 
-    8D action (2D arm + 6D wrench), 69D policy obs, 27D privileged obs.
+    8D action (2D arm + 6D wrench), 81D policy obs, 24D privileged obs.
     """
 
     class_name: str = "ALBCConstraintEncoderRunner"
@@ -260,11 +251,7 @@ class ALBCTRPORunnerCfg(_BaseALBCRunnerCfg):
     # baseline 260525_232805 run). Previously this fell back to rsl_rl's tensorboard default,
     # so a launch that forgot `agent.logger=wandb` logged only to TB. Override per-run if needed.
     logger: str = "wandb"
-    # WandB project = campaign name (experiment-dir standard SS95-100: one campaign -> one
-    # project, never per-run). AttitudeOnly's first campaign is att_dr_harder, matching the
-    # <group> dir. Override with --log_project_name when starting a different campaign so runs
-    # cluster correctly (wandb has no move-run API -- the launch-time project name is what sticks).
-    wandb_project: str = "att_dr_harder"
+    wandb_project: str = "constrained_albc"
     obs_groups: dict[str, list[str]] = {
         "policy": ["policy", "privileged"],
         "critic": ["policy", "privileged"],
@@ -286,9 +273,9 @@ class _ALBCNoEncoderPolicyCfg(RslRlPpoActorCriticCfg):
     """Asymmetric actor-critic without encoder (Baseline 1).
 
     Architecture (no encoder, 8D action):
-        Actor:       o_t(69D) -> MLP[256,128,64] -> 8D
-        Critic:      cat([o_t(69D), p_t(27D)]) = 96D -> MLP[512,256,128] -> 1D
-        Cost Critic: cat([o_t(69D), p_t(27D)]) = 96D -> MLP[512,256,128] -> K
+        Actor:       o_t(87D) -> MLP[256,128,64] -> 8D
+        Critic:      cat([o_t(87D), p_t(24D)]) = 111D -> MLP[512,256,128] -> 1D
+        Cost Critic: cat([o_t(87D), p_t(24D)]) = 111D -> MLP[512,256,128] -> K
     """
 
     class_name: str = "ALBCActorCriticAsymConstrained"
@@ -299,8 +286,8 @@ class _ALBCNoEncoderPolicyCfg(RslRlPpoActorCriticCfg):
     critic_hidden_dims: list[int] = [512, 256, 128]
     activation: str = "elu"
     # Observation dimensions
-    policy_obs_dim: int = 69
-    privileged_dim: int = 27
+    policy_obs_dim: int = 87
+    privileged_dim: int = 24
     # Cost critic for IPO
     num_constraints: int = 0  # Auto-synced from env config
     cost_critic_hidden_dims: list[int] = [512, 256, 128]
@@ -311,7 +298,7 @@ class ALBCNoEncoderRunnerCfg(_BaseALBCRunnerCfg):
     """NoEncoder ablation baseline: TRPO + IPO without encoder.
 
     Removes encoder only. DR, reward, constraints, action space, and DORAEMON
-    are identical to Isaac-ConstrainedALBC-TRPO-v0. The actor uses o_t only while the
+    are identical to Isaac-ConstrainedALBC-Full-TRPO-v0. The actor uses o_t only while the
     critic and cost critic use asymmetric cat([o_t, p_t]).
     """
 
@@ -336,8 +323,8 @@ class _ALBCPPOPolicyCfg(RslRlPpoActorCriticCfg):
     """Standard rsl-rl ActorCritic with asymmetric obs (Baseline 2).
 
     Architecture (8D action):
-        Actor:  o_t(69D)          -> MLP[256,128,64] -> 8D
-        Critic: cat(o_t, p_t)=96D -> MLP[512,256,128] -> 1D
+        Actor:  o_t(87D)           -> MLP[256,128,64] -> 8D
+        Critic: cat(o_t, p_t)=111D -> MLP[512,256,128] -> 1D
 
     Asymmetric routing is done via Runner.obs_groups -- no custom policy
     class required because rsl-rl ActorCritic auto-computes num_actor_obs
@@ -383,17 +370,17 @@ class ALBCPPORunnerCfg(_BaseALBCRunnerCfg):
     """PPO baseline: standard PPO + asymmetric critic, no encoder, no constraint.
 
     Uses OnPolicyDoraemonRunner (OnPolicyRunner + DORAEMON curriculum hook)
-    so the DR schedule matches Isaac-ConstrainedALBC-TRPO-v0 — without this override
+    so the DR schedule matches Isaac-ConstrainedALBC-Full-TRPO-v0 — without this override
     stock OnPolicyRunner would never step the env's DORAEMON scheduler,
     freezing the Beta distribution at ``init_concentration=30`` and
     confounding the algorithm ablation with a DR-curriculum ablation.
 
     Asymmetric actor/critic observation routing is expressed purely through
-    obs_groups: actor receives "policy" (69D) only while critic receives
-    cat(["policy", "privileged"]) = 96D.
+    obs_groups: actor receives "policy" (81D) only while critic receives
+    cat(["policy", "privileged"]) = 105D.
 
     DR, reward weights, action space, and DORAEMON hyperparameters are
-    identical to Isaac-ConstrainedALBC-TRPO-v0 (all variants inherit ALBCEnvCfg).
+    identical to Isaac-ConstrainedALBC-Full-TRPO-v0 (all variants inherit ALBCEnvCfg).
     Constraint costs are still computed by the env for diagnostics but do
     not influence the PPO objective.
     """

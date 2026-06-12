@@ -47,19 +47,13 @@ logger = logging.getLogger(__name__)
 
 
 class ALBCEnv(DirectRLEnv):
-    """Attitude-only ALBC environment with constrained RL (pure roll/pitch + yaw-rate tracking).
+    """Velocity + attitude tracking ALBC environment with constrained RL.
 
-    Linear-velocity tracking is removed entirely (no DVL on the real robot): the actor obs
-    carries no measured linear velocity, no lin_vel command, and no lin_vel reward term. The
-    critic still sees measured linear velocity (privileged p_t), so the asymmetry is preserved.
-
-    Obs (69D): current_proprio(20D) + temporal_history(46D) + integral_error(3D).
-        Current: ang_cmd(3) [att_rp(2) + yaw_rate(1)], euler(3), ang_vel(3),
-                 jpos(2), jvel(2), manipulability(1), thr(6).  -- no measured lin_vel.
-        History (per step, strided): joint_tracking(4) + body_tracking(6) + action(8),
-                 i.e. 10*hist_len + 8*hist_action_len; body_tracking = ang_err(3) + euler(3),
-                 where ang_err = [att_rp_err(2), yaw_rate_err(1)].  -- no lin_vel_err.
-    Action (8D): Delta arm targets (2D) + thruster commands (6D).  -- actuator count, target-invariant.
+    Obs (87D): current_proprio(26D) + temporal_history(55D) + integral_error(6D).
+        Current: cmd(6) [lin_vel(3) + att_rp(2) + yaw_rate(1)], euler(3),
+                 ang_vel(3), lin_vel(3), jpos(2), jvel(2), manipulability(1), thr(6).
+        History: joint_tracking(12D) + body_tracking(27D) + action(16D).
+    Action (8D): Delta arm targets (2D) + thruster commands (6D).
     """
 
     cfg: ALBCEnvCfg
@@ -129,20 +123,19 @@ class ALBCEnv(DirectRLEnv):
 
         # Validate observation dimension contract (fails loud at construction, not first step).
         # observation_space (config) must equal the actual o_t assembled in _get_observations():
-        #   proprio (20D, compute_policy_obs) + history (10*hist_len + 8*hist_action_len) + integral.
+        #   proprio (26D, compute_policy_obs) + history (13*hist_len + 8*hist_action_len) + integral.
         # Mirrors the existing state_space / control_freq guards above. Runs once -- obs dim is
         # step-invariant -- and survives `python -O` (unlike assert; cf. constraint_trpo hot-path assert).
-        #   - PROPRIO_DIM = 20 is the compute_policy_obs() contract (3 ang_cmd + 6 body + 5 arm + 6 thruster);
-        #     no measured lin_vel (no DVL on real robot).
-        #   - history contributes 0 when self._hist_buf is None (hist_len == 0); per step it is
-        #     joint(4) + body(6) -> 10*hist_len, plus action(8) -> 8*hist_action_len.
+        # TODO(user): implement the dimension check below.
+        #   - PROPRIO_DIM = 26 is the documented compute_policy_obs() contract (6 cmd + 9 body + 5 arm + 6 thruster).
+        #   - history contributes 0 when self._hist_buf is None (hist_len == 0).
         #   - integral contributes self.cfg.integral_dims only when self.cfg.use_integral_obs.
         #   - On mismatch, raise ValueError with expected vs computed and the relevant cfg flags,
         #     matching the f-string style of the state_space / control_freq guards.
-        PROPRIO_DIM = 20
+        PROPRIO_DIM = 26
         expected_obs_dim = PROPRIO_DIM
         if self._hist_buf is not None:
-            expected_obs_dim += 10 * self._hist_len + 8 * self._hist_action_len
+            expected_obs_dim += 13 * self._hist_len + 8 * self._hist_action_len
         if self.cfg.use_integral_obs:
             expected_obs_dim += self.cfg.integral_dims
         if expected_obs_dim != self.cfg.observation_space:
@@ -155,12 +148,11 @@ class ALBCEnv(DirectRLEnv):
         # Pre-build the integral error-gating sigma tensor once (step-invariant cfg constants).
         # Avoids re-allocating torch.tensor(...) every step in _get_rewards (hot loop).
         if self.cfg.use_integral_obs and self.cfg.integral_gated:
-            # Attitude-only: 3 integral channels [roll, pitch, yaw_rate]
-            sigmas = [
-                self.cfg.reward.att_rp.sigma,
-                self.cfg.reward.att_rp.sigma,
-                self.cfg.reward.yaw_vel.sigma,
-            ]
+            sigmas = [self.cfg.reward.att_rp.sigma, self.cfg.reward.att_rp.sigma]
+            if self.cfg.integral_dims == 6:
+                sigmas += [self.cfg.reward.lin_vel.sigma] * 3 + [self.cfg.reward.yaw_vel.sigma]
+            else:
+                sigmas.append(self.cfg.reward.lin_vel.sigma)
             self._integral_gate_sigmas = torch.tensor(sigmas, device=self.device)
         else:
             self._integral_gate_sigmas = None
@@ -291,20 +283,21 @@ class ALBCEnv(DirectRLEnv):
         # Previous-step velocity for settling cost constraints (anti-overshoot)
         self._prev_root_lin_vel_b = torch.zeros(self.num_envs, 3, device=self.device)
         self._prev_root_ang_vel_z = torch.zeros(self.num_envs, device=self.device)
+        self._vel_cmd_lin = torch.zeros(self.num_envs, 3, device=self.device)
         # [0:2] = roll/pitch attitude (rad), [2] = yaw rate (rad/s)
         self._ang_cmd = torch.zeros(self.num_envs, 3, device=self.device)
+        self._lin_vel_err = torch.zeros(self.num_envs, 3, device=self.device)
         self._att_rp_err = torch.zeros(self.num_envs, 2, device=self.device)
         self._yaw_rate_err = torch.zeros(self.num_envs, device=self.device)
         # 3D mixed error for history buffer: [att_rp_err(2), yaw_rate_err(1)]
         self._ang_err = torch.zeros(self.num_envs, 3, device=self.device)
         # Leaky-integrated error for Hwangbo 2017 pattern
-        # Attitude-only: 3D [roll, pitch, yaw_rate] -- mirrors the 3 attitude-control channels
-        # (no linear-velocity integral; lin_vel tracking is removed).
+        # 3D: [roll, pitch, vy] (R7 legacy) | 6D: [roll, pitch, vx, vy, vz, yaw_rate] (R8+)
         self._error_integral = torch.zeros(self.num_envs, self.cfg.integral_dims, device=self.device)
-        # EMA bias buffer (3D, ungated) for sustained offset penalization. Updated every
+        # EMA bias buffer (6D, ungated) for sustained offset penalization. Updated every
         # step regardless of error magnitude; meant to capture systematic per-env bias
         # that per-step tracking reward ignores.
-        self._bias_ema = torch.zeros(self.num_envs, 3, device=self.device)
+        self._bias_ema = torch.zeros(self.num_envs, 6, device=self.device)
         self._vel_cmd_step_counter = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
         # Per-env command range scales (DORAEMON-managed, default 1.0 if disabled)
         self._cmd_lin_scale = torch.ones(self.num_envs, device=self.device)
@@ -422,7 +415,7 @@ class ALBCEnv(DirectRLEnv):
         self._control_step_counter += 1
 
     def _get_hist_features(self) -> torch.Tensor:
-        """Compute temporal history features (18D per timestep).
+        """Compute temporal history features (21D per timestep).
 
         Called before ``_apply_joint_pd_action()`` so that ``_joint_pos_targets``
         still holds ``q_des_{t-1}`` (the previous step's target).
@@ -431,18 +424,20 @@ class ALBCEnv(DirectRLEnv):
             [0:2]   joint position error: q_des_{t-1} - q_actual_t
             [2:4]   joint velocity
 
-        Body tracking (6D) -- system response:
-            [4:6]   roll/pitch attitude error (radians, wrapped)
-            [6]     yaw rate error (rad/s)
-            [7:10]  euler angles (roll, pitch, yaw)
+        Body tracking (9D) -- system response:
+            [4:7]   linear velocity tracking error: vel_cmd - lin_vel
+            [7:9]   roll/pitch attitude error (radians, wrapped)
+            [9]     yaw rate error (rad/s)
+            [10:13] euler angles (roll, pitch, yaw)
 
         Action (8D) -- recent control input:
-            [10:18] full action (2D arm + 6D thruster)
+            [13:21] full action (2D arm + 6D thruster)
         """
         joint_pos = self._robot.data.joint_pos[:, self._albc_joint_ids]
         joint_pos_error = self._joint_pos_targets - joint_pos
         joint_vel = self._robot.data.joint_vel[:, self._albc_joint_ids]
 
+        lin_vel_err = self._vel_cmd_lin - self._robot.data.root_lin_vel_b
         roll, pitch, yaw = euler_xyz_from_quat(self._robot.data.root_quat_w)
 
         # Roll/pitch: attitude error (wrapped to [-pi, pi])
@@ -456,6 +451,7 @@ class ALBCEnv(DirectRLEnv):
             [
                 joint_pos_error,  # 2D: q_des_{t-1} - q_actual_t
                 joint_vel,  # 2D: joint velocities
+                lin_vel_err,  # 3D: lin vel tracking error
                 ang_err,  # 3D: [att_rp_err(2), yaw_rate_err(1)]
                 torch.stack([roll, pitch, yaw], dim=-1),  # 3D: euler angles
                 self._prev_actions,  # 8D: action that produced current state
@@ -577,30 +573,33 @@ class ALBCEnv(DirectRLEnv):
         self._prev_yaw = yaw.clone()
 
     def _sample_velocity_command(self, env_ids: torch.Tensor) -> None:
-        """Sample random attitude commands for specified environments (no linear velocity).
+        """Sample random commands for specified environments.
 
         Roll/pitch: attitude command (radians) from att_cmd_rp_range.
         Yaw: rate command (rad/s) from yaw_rate_cmd_range.
+        Linear: velocity command (m/s) from vel_cmd_lin_range.
         Ranges are scaled per-env by DORAEMON cmd_*_scale (default 1.0).
         With probability ``vel_cmd_zero_prob``, an env receives a zero command.
-        (The ``vel_cmd_*`` names are retained as the shared command-timing/zeroing knobs;
-        they no longer drive any linear-velocity command.)
 
         In play_mode, all commands are fixed to zero (hovering/station-keeping).
         """
         if self.cfg.play_mode:
+            self._vel_cmd_lin[env_ids] = 0.0
             self._ang_cmd[env_ids] = 0.0
             self._vel_cmd_step_counter[env_ids] = 0
             return
 
         n = len(env_ids)
+        lin_max = abs(self.cfg.vel_cmd_lin_range[1])
         att_max = abs(self.cfg.att_cmd_rp_range[1])
         yaw_max = abs(self.cfg.yaw_rate_cmd_range[1])
 
         # Per-env DORAEMON scales (1.0 when DORAEMON disabled)
+        lin_s = self._cmd_lin_scale[env_ids].unsqueeze(1)  # (n, 1)
         att_s = self._cmd_att_scale[env_ids].unsqueeze(1)  # (n, 1)
         yaw_s = self._cmd_yaw_scale[env_ids]  # (n,)
 
+        self._vel_cmd_lin[env_ids] = torch.empty(n, 3, device=self.device).uniform_(-1, 1) * (lin_max * lin_s)
         self._ang_cmd[env_ids, :2] = torch.empty(n, 2, device=self.device).uniform_(-1, 1) * (att_max * att_s)
         self._ang_cmd[env_ids, 2] = torch.empty(n, device=self.device).uniform_(-1, 1) * (yaw_max * yaw_s)
 
@@ -608,6 +607,7 @@ class ALBCEnv(DirectRLEnv):
         zero_mask = torch.rand(n, device=self.device) < self.cfg.vel_cmd_zero_prob
         if zero_mask.any():
             zero_ids = env_ids[zero_mask]
+            self._vel_cmd_lin[zero_ids] = 0.0
             self._ang_cmd[zero_ids] = 0.0
         self._vel_cmd_step_counter[env_ids] = 0
 
@@ -925,23 +925,23 @@ class ALBCEnv(DirectRLEnv):
         return quat
 
     def _get_observations(self) -> dict:
-        """Compute unified observation o_t (69D) and privileged p_t (27D).
+        """Compute unified observation o_t (87D) and privileged p_t (24D).
 
-        o_t = current proprioception (20D) + temporal history (46D) + integral (3D):
+        o_t = current proprioception (26D) + temporal history (55D):
             - Joint tracking: 4D x 3 steps = 12D (all hist_len steps)
-            - Body tracking:  6D x 3 steps = 18D (all hist_len steps; no lin_vel_err)
+            - Body tracking:  9D x 3 steps = 27D (all hist_len steps)
             - Action:         8D x 2 steps = 16D (newest hist_action_len steps)
 
         Returns:
             Observation dictionary with "policy" and "privileged" keys.
         """
-        current_proprio = compute_policy_obs(self, self._robot)  # 20D
+        current_proprio = compute_policy_obs(self, self._robot)  # 26D
 
         if self._hist_buf is not None:
-            # Joint tracking + body tracking: all steps, dims [0:10]
-            jb_hist = self._hist_buf[:, :, :10].reshape(self.num_envs, -1)  # 10 * hist_len
-            # Action: newest hist_action_len steps, dims [10:18]
-            act_hist = self._hist_buf[:, -self._hist_action_len :, 10:].reshape(self.num_envs, -1)  # 8 * action_len
+            # Joint tracking + body tracking: all steps, dims [0:13]
+            jb_hist = self._hist_buf[:, :, :13].reshape(self.num_envs, -1)  # 13 * hist_len
+            # Action: newest hist_action_len steps, dims [13:21]
+            act_hist = self._hist_buf[:, -self._hist_action_len :, 13:].reshape(self.num_envs, -1)  # 8 * action_len
             policy_obs = torch.cat([current_proprio, jb_hist, act_hist], dim=-1)
         else:
             policy_obs = current_proprio
@@ -974,6 +974,8 @@ class ALBCEnv(DirectRLEnv):
         Returns:
             Reward tensor. Shape: (num_envs,).
         """
+        # Linear velocity error
+        self._lin_vel_err = self._vel_cmd_lin - self._robot.data.root_lin_vel_b
         # Roll/pitch attitude error + yaw rate error
         self._compute_ang_errors()
 
@@ -981,12 +983,22 @@ class ALBCEnv(DirectRLEnv):
         if self.cfg.use_integral_obs:
             self._error_integral.mul_(self.cfg.integral_leak)
 
-            # Attitude-only: 3 integral channels [roll, pitch, yaw_rate]
-            errs = [
-                self._att_rp_err[:, 0],  # roll
-                self._att_rp_err[:, 1],  # pitch
-                self._yaw_rate_err,  # yaw rate
-            ]
+            # Collect per-channel errors
+            if self.cfg.integral_dims == 6:
+                errs = [
+                    self._att_rp_err[:, 0],  # roll
+                    self._att_rp_err[:, 1],  # pitch
+                    self._lin_vel_err[:, 0],  # vx
+                    self._lin_vel_err[:, 1],  # vy
+                    self._lin_vel_err[:, 2],  # vz
+                    self._yaw_rate_err,  # yaw rate
+                ]
+            else:  # 3D legacy (R7)
+                errs = [
+                    self._att_rp_err[:, 0],  # roll
+                    self._att_rp_err[:, 1],  # pitch
+                    self._lin_vel_err[:, 1],  # vy only
+                ]
 
             if self.cfg.integral_gated:
                 # Error-gated: only accumulate when |error| < reward sigma.
@@ -999,19 +1011,22 @@ class ALBCEnv(DirectRLEnv):
 
             self._error_integral.clamp_(-self.cfg.integral_clamp, self.cfg.integral_clamp)
 
-        # Update EMA bias buffer (3D ungated: roll, pitch, yaw_rate). Captures sustained
-        # per-env offset that per-step tracking reward ignores. Consumed by bias_ema_penalty term.
+        # Update EMA bias buffer (6D ungated). Captures sustained per-env offset that
+        # per-step tracking reward ignores. Consumed by bias_ema_penalty term.
         if self.cfg.reward.k_bias != 0.0:
-            err3 = torch.stack(
+            err6 = torch.stack(
                 [
-                    self._att_rp_err[:, 0],  # roll
-                    self._att_rp_err[:, 1],  # pitch
-                    self._yaw_rate_err,  # yaw rate
+                    self._att_rp_err[:, 0],
+                    self._att_rp_err[:, 1],
+                    self._lin_vel_err[:, 0],
+                    self._lin_vel_err[:, 1],
+                    self._lin_vel_err[:, 2],
+                    self._yaw_rate_err,
                 ],
                 dim=-1,
             )
             a = self.cfg.reward.bias_ema_alpha
-            self._bias_ema = a * self._bias_ema + (1.0 - a) * err3
+            self._bias_ema = a * self._bias_ema + (1.0 - a) * err6
 
         reward = self._reward_manager.compute(
             robot=self._robot,
@@ -1080,6 +1095,12 @@ class ALBCEnv(DirectRLEnv):
         log["Track/att/roll_err_deg"] = torch.rad2deg(att_err[:, 0]).abs().mean().item()
         log["Track/att/pitch_err_deg"] = torch.rad2deg(att_err[:, 1]).abs().mean().item()
 
+        # Linear velocity tracking (grouped in one chart)
+        lin_err = self._lin_vel_err[env_ids]
+        log["Track/lin/err_x"] = lin_err[:, 0].abs().mean().item()
+        log["Track/lin/err_y"] = lin_err[:, 1].abs().mean().item()
+        log["Track/lin/err_z"] = lin_err[:, 2].abs().mean().item()
+
         # Yaw rate tracking
         log["Track/yaw/rate_err"] = self._yaw_rate_err[env_ids].abs().mean().item()
 
@@ -1087,6 +1108,9 @@ class ALBCEnv(DirectRLEnv):
         log["Track/cmd_att/roll_deg"] = torch.rad2deg(self._ang_cmd[env_ids, 0]).abs().mean().item()
         log["Track/cmd_att/pitch_deg"] = torch.rad2deg(self._ang_cmd[env_ids, 1]).abs().mean().item()
         log["Track/cmd_att/yaw_rate"] = self._ang_cmd[env_ids, 2].abs().mean().item()
+        log["Track/cmd_lin/vel_x"] = self._vel_cmd_lin[env_ids, 0].abs().mean().item()
+        log["Track/cmd_lin/vel_y"] = self._vel_cmd_lin[env_ids, 1].abs().mean().item()
+        log["Track/cmd_lin/vel_z"] = self._vel_cmd_lin[env_ids, 2].abs().mean().item()
 
         # Arm manipulability
         log["Track/arm/manip_mean"] = self._manipulability[env_ids].mean().item()
@@ -1377,6 +1401,7 @@ class ALBCEnv(DirectRLEnv):
         self._sample_velocity_command(env_ids)
 
         # Initialize errors
+        self._lin_vel_err[env_ids] = self._vel_cmd_lin[env_ids] - self._robot.data.root_lin_vel_b[env_ids]
         roll_r, pitch_r, _ = euler_xyz_from_quat(self._robot.data.root_quat_w[env_ids])
         raw = self._ang_cmd[env_ids, :2] - torch.stack([roll_r, pitch_r], dim=-1)
         self._att_rp_err[env_ids] = torch.atan2(torch.sin(raw), torch.cos(raw))
@@ -1437,7 +1462,7 @@ class ALBCEnv(DirectRLEnv):
         periodic printing during play.py inference.
 
         Returns:
-            Dict with keys: attitude_error_deg, action_rate,
+            Dict with keys: attitude_error_deg, lin_vel_error, action_rate,
             angular_velocity_rp_rms, angular_velocity_yaw_rms,
             thruster_utilization, joint_pos_mean_abs.
         """
@@ -1446,6 +1471,7 @@ class ALBCEnv(DirectRLEnv):
 
         return {
             "attitude_error_deg": torch.rad2deg(torch.linalg.norm(self._att_rp_err, dim=-1)).mean().item(),
+            "lin_vel_error": self._lin_vel_err.norm(dim=-1).mean().item(),
             "action_rate": torch.linalg.norm(da, dim=-1).mean().item(),
             "angular_velocity_rp_rms": self._robot.data.root_ang_vel_b[:, :2].pow(2).mean().sqrt().item(),
             "angular_velocity_yaw_rms": self._robot.data.root_ang_vel_b[:, 2].pow(2).mean().sqrt().item(),
