@@ -19,7 +19,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `deploy_pack_5000iter_260611/` -> `deploy/attitude_only_campaign/pack_5000iter_260611_183252/`,
   `deploy_export_5000/` -> `deploy/attitude_only_campaign/export_5000_260611_175116/`.
 
+### Fixed
+
+- `npforward.py` was not Python 2.7-loadable: three `@` matmul sites (PEP 465,
+  py3.5+) raised SyntaxError at `import` on the agent-jetson board, whose ROS
+  (lunar rospy) pins the inference node to py2.7. Every parity check had run
+  under python3 (test_npforward.py), which can never catch a py2 syntax break.
+  Replaced `@` with `np.dot` (bit-identical: regenerated-pack parity unchanged,
+  teacher 0.0/1.9e-6, TCN 1.6e-7) and added a permanent sim-free AST gate
+  (`tests/deploy/test_npforward_compat.py`: no matmul / f-strings / annotations /
+  keyword-only args). Stale dim docstrings (87 -> 69) fixed in the same hash
+  change. New npforward sha256 `8eff0046...0741`; the old `4b708314...b10e2` is
+  py2.7-broken and the 260611 pack carrying it was superseded by the regenerated
+  `pack_5000iter_260612_135619` (weights/goldens byte-identical).
+
 ### Added
+
+- `--golden` pack assembly (`constrained_albc/deploy/pack.py` + CLI flag): one
+  command now produces a complete self-verifying deploy pack -- golden vectors
+  (CPU-forced), `npforward.py` copy, parity self-close (loud-fail), and
+  `MANIFEST.json` with payload-derived dims and per-file sha256. Verified by
+  regeneration: the CLI-produced pack's weights + goldens are byte-identical to
+  the hand-assembled 2026-06-11 pack. Tested sim-free end-to-end with tiny
+  same-structure torch models (`tests/deploy/test_pack.py`).
 
 - Deploy export package (`constrained_albc/deploy/`). Exports torch `.pt`
   checkpoints to numpy `.npz` matching a hardcoded board-runtime key contract,
