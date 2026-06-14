@@ -1,6 +1,6 @@
 # constrained-albc
 
-**Private research: constrained full-DOF ALBC for underwater vehicles. Not for distribution.**
+**Private research: constrained ALBC for underwater vehicles. Not for distribution.**
 
 This is the top layer of a three-repo research stack:
 
@@ -11,7 +11,7 @@ isaaclab  (GPU sim core, clean fork)
 ```
 
 `constrained-albc` adds the research-specific stack on top of `marinelab`:
-- Constrained full-DOF ALBC (TRPO + IPO + asymmetric encoder)
+- Constrained ALBC (TRPO + IPO + asymmetric encoder) — attitude-only main task, plus legacy full-DOF variants
 - TDC-augmented variant
 - Student distillation (TCN / GRU)
 - Analysis and evaluation tooling
@@ -20,12 +20,13 @@ isaaclab  (GPU sim core, clean fork)
 
 | Task ID | Description |
 |---|---|
-| `Isaac-FullDOF-TRPO-v0` | **Main** — ConstraintTRPO + IPO + asymmetric encoder, DORAEMON DR |
-| `Isaac-FullDOF-NoEncoder-v0` | TRPO + IPO, no encoder (ablation) |
-| `Isaac-FullDOF-PPO-v0` | Unconstrained PPO baseline |
-| `Isaac-FullDOF-TRPO-NoIPO-v0` | TRPO without IPO barrier (ablation) |
-| `Isaac-FullDOF-PPO-Enc-v0` | PPO with asymmetric encoder |
-| `Isaac-FullDOF-TDC-v0` | TDC controller variant |
+| `Isaac-ConstrainedALBC-TRPO-v0` | **Main** — attitude-only ALBC (`envs/main`), ConstraintTRPO + IPO + asymmetric encoder, DORAEMON DR |
+| `Isaac-ConstrainedALBC-Full-TRPO-v0` | Legacy full-DOF (`envs/full_dof`) — velocity + attitude |
+| `Isaac-ConstrainedALBC-Full-NoEncoder-v0` | Full-DOF TRPO + IPO, no encoder (ablation) |
+| `Isaac-ConstrainedALBC-Full-PPO-v0` | Full-DOF unconstrained PPO baseline |
+| `Isaac-ConstrainedALBC-Full-TRPO-NoIPO-v0` | Full-DOF TRPO without IPO barrier (ablation) |
+| `Isaac-ConstrainedALBC-Full-PPO-Enc-v0` | Full-DOF PPO with asymmetric encoder |
+| `Isaac-ConstrainedALBC-TDC-v0` | TDC controller variant (`envs/tdc`) |
 
 ## Install
 
@@ -49,16 +50,16 @@ cd /workspace/isaaclab && ./isaaclab.sh -p -m pip install -e /workspace/constrai
 ## Quickstart: training
 
 Training uses the **overlay-owned** entry point. `isaaclab` stays a pristine
-upstream fork, so its stock `train.py` does not know the `Isaac-FullDOF-*` tasks —
-the overlay entry owns env registration (`import constrained_albc`) and the custom
-runner dispatch (`FullDOFConstraintEncoderRunner`):
+upstream fork, so its stock `train.py` does not know the `Isaac-ConstrainedALBC-*`
+tasks — the overlay entry owns env registration (`import constrained_albc`) and the
+custom runner dispatch (`ConstraintEncoderRunner`):
 
 ```bash
 cd /workspace/isaaclab
 ./isaaclab.sh -p /workspace/constrained-albc/scripts/train.py \
-    --task Isaac-FullDOF-TRPO-v0 \
+    --task Isaac-ConstrainedALBC-TRPO-v0 \
     --num_envs 4096 --max_iterations 5000 \
-    --logger wandb --log_project_name full_dof_trpo
+    --logger wandb --log_project_name albc_trpo
 ```
 
 Student distillation has its own overlay entry point. Run it directly (TCN then GRU);
@@ -77,12 +78,12 @@ CUDA_VISIBLE_DEVICES=1 ./isaaclab.sh -p /workspace/constrained-albc/scripts/trai
 
 ## Quickstart: evaluation
 
-Full-DOF evaluation **must** use `eval.py static` and produces PNG plots:
+Evaluation of the main task **must** use `eval.py static` and produces PNG plots:
 
 ```bash
 cd /workspace/isaaclab
 ./isaaclab.sh -p /workspace/constrained-albc/constrained_albc/analysis/eval.py static \
-    --task Isaac-FullDOF-TRPO-v0 --num_envs 64 --headless
+    --task Isaac-ConstrainedALBC-TRPO-v0 --num_envs 64 --headless
 ```
 
 A distilled student is evaluated through the same `static` path (teacher-comparable,
@@ -102,3 +103,7 @@ Other DR modes: `periodic`, `segmented`, `sudden`.
 See [`docs/architecture.md`](docs/architecture.md) for:
 - Package layout (envs / analysis / scripts / tests)
 - RSL-RL fork dependency details
+
+The main task's network architecture (encoder / actor / asymmetric critic /
+ConstraintTRPO) is documented in
+[`docs/reference/main-network-architecture.md`](docs/reference/main-network-architecture.md).

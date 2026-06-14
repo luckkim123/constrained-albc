@@ -22,21 +22,25 @@ sequence.
 
 | Subdirectory | Contents |
 |---|---|
-| `constrained_albc/envs/` | RL environments: `constrained_full_albc` (TRPO+IPO+encoder, main) and `constrained_full_albc_tdc` (TDC controller variant) |
-| `constrained_albc/analysis/` | Evaluation and training-analysis tooling: `eval_dr` (single ~4000-line module, 4 sub-modes: `static` / `periodic` / `segmented` / `sudden`; `static` is the required mode for `Isaac-FullDOF-TRPO-v0`, and accepts `--student_ckpt`/`--teacher_ckpt`/`--encoder_type` to evaluate a distilled student through the same path, also emitting the l_hat/l_true encoder-fidelity diagnostic), `analyze`, `compare`, `monitor`, `encoder_tools`, shared `common` and `cli_args` |
+| `constrained_albc/envs/` | RL environments: `main` (attitude-only ALBC, TRPO+IPO+encoder — the default), `full_dof` (legacy full-DOF variants), and `tdc` (TDC controller variant) |
+| `constrained_albc/analysis/` | Evaluation and training-analysis tooling: `eval_dr` (single ~4000-line module, 4 sub-modes: `static` / `periodic` / `segmented` / `sudden`; `static` is the required mode for `Isaac-ConstrainedALBC-TRPO-v0`, and accepts `--student_ckpt`/`--teacher_ckpt`/`--encoder_type` to evaluate a distilled student through the same path, also emitting the l_hat/l_true encoder-fidelity diagnostic), `analyze`, `compare`, `monitor`, `encoder_tools`, shared `common` and `cli_args` |
 | `scripts/` | Entry points: `train.py` (teacher), `train_student.py` (distillation), `play.py` (policy playback). Run directly via `isaaclab.sh -p` — no wrapper shell scripts |
 | `tests/` | Unit tests (TDC controller; Isaac Sim not required) |
 
 ### Registered task IDs
 
-| Task ID | Description |
-|---|---|
-| `Isaac-FullDOF-TRPO-v0` | **Main** — ConstraintTRPO + IPO + asymmetric encoder, DORAEMON DR |
-| `Isaac-FullDOF-NoEncoder-v0` | TRPO + IPO, no encoder (ablation) |
-| `Isaac-FullDOF-PPO-v0` | Unconstrained PPO baseline |
-| `Isaac-FullDOF-TRPO-NoIPO-v0` | TRPO without IPO barrier (ablation) |
-| `Isaac-FullDOF-PPO-Enc-v0` | PPO with asymmetric encoder |
-| `Isaac-FullDOF-TDC-v0` | TDC controller variant |
+| Task ID | Env dir | Description |
+|---|---|---|
+| `Isaac-ConstrainedALBC-TRPO-v0` | `envs/main` | **Main** — attitude-only ALBC, ConstraintTRPO + IPO + asymmetric encoder, DORAEMON DR. 69D obs / 27D privileged / 8D action |
+| `Isaac-ConstrainedALBC-Full-TRPO-v0` | `envs/full_dof` | Legacy full-DOF (velocity + attitude, 87D obs); kept for future full-DOF experiments |
+| `Isaac-ConstrainedALBC-Full-NoEncoder-v0` | `envs/full_dof` | Full-DOF TRPO + IPO, no encoder (ablation) |
+| `Isaac-ConstrainedALBC-Full-PPO-v0` | `envs/full_dof` | Full-DOF unconstrained PPO baseline |
+| `Isaac-ConstrainedALBC-Full-TRPO-NoIPO-v0` | `envs/full_dof` | Full-DOF TRPO without IPO barrier (ablation) |
+| `Isaac-ConstrainedALBC-Full-PPO-Enc-v0` | `envs/full_dof` | Full-DOF PPO with asymmetric encoder |
+| `Isaac-ConstrainedALBC-TDC-v0` | `envs/tdc` | TDC controller variant (inherits full_dof) |
+
+The network architecture of the default `Isaac-ConstrainedALBC-TRPO-v0` is
+documented in [`docs/reference/main-network-architecture.md`](reference/main-network-architecture.md).
 
 ---
 
@@ -46,18 +50,22 @@ constrained-albc runs on **stock `rsl-rl-lib==3.1.2`** and **stock `isaaclab_rl`
 There are no forks: a fresh-machine install is `pip install rsl-rl-lib==3.1.2` plus
 the clean isaaclab fork-point checkout.
 
-The main pipeline does not subclass stock rsl_rl. `Isaac-FullDOF-TRPO-v0` uses:
+The main pipeline does not subclass stock rsl_rl. `Isaac-ConstrainedALBC-TRPO-v0` uses:
 - `ConstraintTRPO` — a standalone algorithm (own `optim.Adam`), NOT an `rsl_rl.PPO`
   subclass. Injected into `rsl_rl.runners.on_policy_runner`'s namespace by the overlay
   runner so `OnPolicyRunner`'s `eval(class_name)` resolves it.
 - `ActorCriticEncoder(PolicyBase)` — a custom policy base, NOT `rsl_rl.ActorCritic`.
 
-The PPO ablations (`Isaac-FullDOF-PPO-v0`, `Isaac-FullDOF-PPO-Enc-v0`) use stock
-`rsl_rl.PPO` with `class_name="PPO"`; they set only stock algorithm fields.
+The PPO ablations (`Isaac-ConstrainedALBC-Full-PPO-v0`,
+`Isaac-ConstrainedALBC-Full-PPO-Enc-v0`) use stock `rsl_rl.PPO` with
+`class_name="PPO"`; they set only stock algorithm fields.
 
 Notes on fields that previously looked fork-specific:
 - `state_dependent_std` is a STOCK `RslRlPpoActorCriticCfg` field (present upstream at
-  the fork point); our cfgs do not set it.
+  the fork point). The main `envs/main` policy cfg (`_ALBCPolicyCfg`) does not define
+  it at all — its std is a single global `log_std` parameter (see the network
+  reference). A per-state std head exists only in the unmerged `exp/attitude-only-state-std`
+  experiment branch.
 - `weight_decay` was a former local addition to `RslRlPpoAlgorithmCfg`; it has been
   removed. The PPO ablation never set it, so stock PPO (which lacks the kwarg) is
   fully compatible.
