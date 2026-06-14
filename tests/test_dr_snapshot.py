@@ -210,3 +210,45 @@ def test_fault_and_dr_namespaces_disjoint():
     dr = ds.per_env_dr_from_tensors(_raw(4))
     fault = ds.per_env_fault_from_tensors(_raw_fault(4))
     assert set(dr).isdisjoint(set(fault))
+
+
+# ---- 7. npz round-trip: the eval.py save/load contract for fault keys ---------
+# eval.py merges **per_env_dr, **per_env_fault into the dict that np.savez writes to
+# data_<level>.npz. This proves the fault transform's output survives that round-trip
+# with fault_* keys and values intact -- done-criterion #2, provable without booting sim.
+
+
+def test_fault_keys_survive_npz_roundtrip(tmp_path):
+    merged = {
+        **ds.per_env_dr_from_tensors(_raw(4)),
+        **ds.per_env_fault_from_tensors(_raw_fault(4)),
+    }
+    path = os.path.join(str(tmp_path), "data_test.npz")
+    np.savez(path, **merged)
+    loaded = np.load(path)
+
+    fault_keys = [k for k in loaded.files if k.startswith("fault_")]
+    # 6 thruster + sensor_noise + joint = 8 fault keys land in the npz.
+    assert len(fault_keys) == 8
+    assert "fault_thruster_5" in loaded.files
+    assert "fault_sensor_noise" in loaded.files
+    assert "fault_joint" in loaded.files
+    # values preserved through the round-trip
+    assert np.allclose(loaded["fault_thruster_5"], [1.0, 0.5, 0.0, 0.0])
+    assert np.allclose(loaded["fault_joint"], [1.0, 0.95, 0.90, 0.85])
+    # dr keys still coexist (the merge did not clobber them)
+    assert "dr_payload_mass" in loaded.files
+
+
+def test_no_fault_keys_when_fault_disabled_roundtrip(tmp_path):
+    """fault disabled -> per_env_fault_from_tensors({}) empty -> npz is fault-free.
+
+    Mirrors the eval path when _read_per_env_fault finds no buffers: the merged dict
+    carries zero fault_ keys, so data_<level>.npz is byte-identical to the DR-only case.
+    """
+    merged = {**ds.per_env_dr_from_tensors(_raw(4)), **ds.per_env_fault_from_tensors({})}
+    path = os.path.join(str(tmp_path), "data_test.npz")
+    np.savez(path, **merged)
+    loaded = np.load(path)
+    assert not any(k.startswith("fault_") for k in loaded.files)
+    assert "dr_payload_mass" in loaded.files  # DR snapshot unaffected
