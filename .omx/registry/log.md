@@ -476,3 +476,23 @@
 - **Pages:** constraint_viol_trajectory_barrier_sign_metrics_4_10_starts_at_d.md
 - **Summary:** created 'Constraint/viol trajectory + barrier sign + metrics 4->10: starts at -d_k rising=healthy, barrier mostly-negative=healthy, early-satisfy tail=over-loose candidate'
 
+## [2026-06-14T07:37:55.125761] add
+- **Pages:** omx_wiki_has_no_delete_subcommand_by_design_removal_is_gc_apply_.md
+- **Summary:** created 'omx wiki has no delete subcommand by design: removal is gc-apply, duplicates come from add-with-new-title'
+
+## [2026-06-14T07:38:12.045031] add
+- **Pages:** reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md
+- **Summary:** created 'Reward absolute scale is invariant to the ConstraintTRPO actor; only term ratios matter (3 un-normalized leak paths)'
+
+## [2026-06-14T07:38:12.435122] add
+- **Pages:** reward_penalty_terms_thruster_smoothness_bias_block_3_temporal_b.md
+- **Summary:** created 'Reward penalty terms thruster/smoothness/bias block 3 temporal bands (magnitude/jerk/DC-offset); bias EMA makes a Markov reward see non-Markov drift'
+
+## [2026-06-14T07:38:12.841674] add
+- **Pages:** sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md
+- **Summary:** created 'sim hydro nominal is analytical (not measured); IMU+pressure can anchor rotation/heave but not surge/sway/TAM'
+
+## [2026-06-14T07:38:30.793420] add
+- **Pages:** state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md
+- **Summary:** updated 'state_dependent_std: robustness-vs-nominal trade-off, NOT difficulty-adaptive (Phase-2 falsification)'
+
