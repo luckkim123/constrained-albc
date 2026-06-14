@@ -71,6 +71,12 @@ def _add_common(sp: argparse.ArgumentParser) -> None:
     sp.add_argument("--output_dir", type=str, default=None, help="Output directory.")
     sp.add_argument("--seed", type=int, default=42, help="Random seed.")
     sp.add_argument("--agent", type=str, default="rsl_rl_cfg_entry_point", help="RSL-RL config entry point.")
+    sp.add_argument(
+        "--fault",
+        action="store_true",
+        help="Enable per-env fault injection (cfg.fault.enable). Records fault_<name>[N] "
+        "per-env into data_<level>.npz alongside dr_<name>. Off -> npz is fault-free.",
+    )
     cli_args.add_rsl_rl_args(sp)
 
 
@@ -869,6 +875,10 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     env_cfg.sim.device = args_cli.device if args_cli.device is not None else env_cfg.sim.device
     if hasattr(env_cfg, "doraemon"):
         env_cfg.doraemon.enable = False
+    # Fault injection: opt-in via --fault. Independent of observation_noise_model (which
+    # eval turns off above) -- fault sensor noise is added directly in _get_observations.
+    if getattr(args_cli, "fault", False) and hasattr(env_cfg, "fault"):
+        env_cfg.fault.enable = True
 
     # Compute episode_length_s from trajectory (see TRAJECTORY_N_SEGMENTS).
     env_cfg.episode_length_s = TRAJECTORY_N_SEGMENTS * args_cli.segment_duration + 10.0
@@ -1483,6 +1493,10 @@ def run_periodic(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     env_cfg.sim.device = args_cli.device if args_cli.device is not None else env_cfg.sim.device
     if hasattr(env_cfg, "doraemon"):
         env_cfg.doraemon.enable = False
+    # Fault injection: opt-in via --fault. Independent of observation_noise_model (which
+    # eval turns off above) -- fault sensor noise is added directly in _get_observations.
+    if getattr(args_cli, "fault", False) and hasattr(env_cfg, "fault"):
+        env_cfg.fault.enable = True
 
     # Episode must be long enough for all DR steps
     env_cfg.episode_length_s = args_cli.step_duration * args_cli.num_steps + 10.0
@@ -1864,6 +1878,10 @@ def run_segmented(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     env_cfg.sim.device = args_cli.device if args_cli.device is not None else env_cfg.sim.device
     if hasattr(env_cfg, "doraemon"):
         env_cfg.doraemon.enable = False
+    # Fault injection: opt-in via --fault. Independent of observation_noise_model (which
+    # eval turns off above) -- fault sensor noise is added directly in _get_observations.
+    if getattr(args_cli, "fault", False) and hasattr(env_cfg, "fault"):
+        env_cfg.fault.enable = True
     # Upright init (no attitude noise)
     if hasattr(env_cfg, "play_init_attitude_noise_deg"):
         env_cfg.play_init_attitude_noise_deg = 0.0
