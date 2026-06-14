@@ -24,6 +24,16 @@ Input dict keys (all optional; absent -> skipped, never fabricated):
     body_mass           (N,)        scalar passthrough
     added_mass          (N, 6, 6)   -> dr_added_mass_{0..5} (diagonal per DOF)
     linear_damping      (N, 6)      -> dr_lin_damp_{0..5}
+
+A SECOND, namespace-disjoint transform shapes per-env FAULT tensors into a
+``fault_<name>[N]`` schema (per_env_fault_from_tensors). A fault is an actuator /
+sensor FAILURE (not a DR physical-parameter spread), so it lives on its own axis:
+analysis joins "which fault did the worst-roll envs carry" the same way it joins DR.
+
+Fault input dict keys (all optional; absent -> skipped, never fabricated):
+    thruster_health  (N, 6)  -> fault_thruster_{0..5}  (0=dead..1=nominal, per thruster)
+    sensor_noise     (N,)    -> fault_sensor_noise     (per-env obs noise scale)
+    joint_health     (N,)    -> fault_joint            (per-env arm response, 0..1)
 """
 from __future__ import annotations
 
@@ -88,3 +98,39 @@ def per_env_dr_from_tensors(tensors: dict[str, np.ndarray]) -> dict[str, np.ndar
 def dr_param_names(snapshot: dict[str, np.ndarray]) -> list[str]:
     """List the dr_<name> keys present in a snapshot (stable order)."""
     return [k for k in snapshot if k.startswith("dr_")]
+
+
+def per_env_fault_from_tensors(tensors: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
+    """Shape per-env fault tensors into the fault_<name>[N] schema.
+
+    Namespace-disjoint from per_env_dr_from_tensors (dr_ vs fault_), so the two merge
+    cleanly into one npz. Every emitted value is a per-env scalar array of shape (N,).
+    Missing input channels are silently skipped (a level with that fault disabled, or a
+    future schema change), never filled with fabricated keys.
+    """
+    out: dict[str, np.ndarray] = {}
+    if not tensors:
+        return out
+
+    # --- thruster health: per-thruster (N,6) -> one scalar key per thruster ---
+    health = tensors.get("thruster_health")
+    if health is not None:
+        health = np.asarray(health, dtype=np.float32)
+        for thr in range(health.shape[1]):
+            out[f"fault_thruster_{thr}"] = health[:, thr]
+
+    # --- scalar per-env fault channels ---
+    noise = tensors.get("sensor_noise")
+    if noise is not None:
+        out["fault_sensor_noise"] = np.asarray(noise, dtype=np.float32).reshape(-1)
+
+    joint = tensors.get("joint_health")
+    if joint is not None:
+        out["fault_joint"] = np.asarray(joint, dtype=np.float32).reshape(-1)
+
+    return out
+
+
+def fault_param_names(snapshot: dict[str, np.ndarray]) -> list[str]:
+    """List the fault_<name> keys present in a snapshot (stable order)."""
+    return [k for k in snapshot if k.startswith("fault_")]

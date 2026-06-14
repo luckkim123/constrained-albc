@@ -135,3 +135,78 @@ def test_dr_param_names_lists_emitted_keys():
     names = ds.dr_param_names(out)
     assert set(names) == set(out.keys())
     assert all(n.startswith("dr_") for n in names)
+
+
+# ============================================================================
+# Per-env FAULT snapshot (fault-injection infrastructure for FTC research)
+# ============================================================================
+# A fault is an actuator/sensor FAILURE (thruster dead, sensor noisy, joint
+# degraded), distinct from DR (a physical-parameter spread). It gets its own
+# fault_<name>[N] schema and its own pure transform so a later analysis can join
+# "which fault did the worst-roll envs commonly carry" -- the same env-level
+# differential-diagnosis pattern as dr_<name>, on a different axis. Missing input
+# keys are skipped (never fabricated), mirroring per_env_dr_from_tensors.
+
+
+def _raw_fault(n=4):
+    """Synthetic per-env fault tensors as numpy, as eval.py reads them off the env."""
+    rng = np.arange(n, dtype=np.float32)
+    # thruster_health: (N, 6); env i -> [1, 1-0.1i, 1-0.2i, ...] so per-thruster differs.
+    health = np.ones((n, 6), dtype=np.float32)
+    for i in range(n):
+        health[i] = np.clip(1.0 - 0.1 * i * np.arange(6, dtype=np.float32), 0.0, 1.0)
+    return {
+        "thruster_health": health,                       # (N, 6)
+        "sensor_noise": 0.01 * rng,                       # (N,)
+        "joint_health": np.clip(1.0 - 0.05 * rng, 0.0, 1.0),  # (N,)
+    }
+
+
+def test_fault_all_keys_are_per_env_scalar_arrays():
+    out = ds.per_env_fault_from_tensors(_raw_fault(4))
+    for k, v in out.items():
+        assert k.startswith("fault_"), f"key {k} missing fault_ prefix"
+        assert v.shape == (4,), f"{k} must be per-env scalar [N], got {v.shape}"
+
+
+def test_fault_thruster_splits_per_thruster():
+    out = ds.per_env_fault_from_tensors(_raw_fault(4))
+    # 6 thrusters -> 6 keys; thruster 0 healthy for all envs, thruster 5 degrades by env.
+    for j in range(6):
+        assert f"fault_thruster_{j}" in out
+    assert np.allclose(out["fault_thruster_0"], [1.0, 1.0, 1.0, 1.0])  # col 0 = health[:,0]
+    # env i, thruster 5 -> clip(1 - 0.1*i*5, 0, 1): i=0->1, i=1->0.5, i=2->0, i=3->0
+    assert np.allclose(out["fault_thruster_5"], [1.0, 0.5, 0.0, 0.0])
+
+
+def test_fault_sensor_and_joint_passthrough():
+    out = ds.per_env_fault_from_tensors(_raw_fault(4))
+    assert np.allclose(out["fault_sensor_noise"], [0.0, 0.01, 0.02, 0.03])
+    assert np.allclose(out["fault_joint"], [1.0, 0.95, 0.90, 0.85])
+
+
+def test_fault_missing_channels_skipped():
+    raw = _raw_fault(4)
+    del raw["thruster_health"]
+    out = ds.per_env_fault_from_tensors(raw)
+    assert not any(k.startswith("fault_thruster") for k in out)  # absent -> no fabricated keys
+    assert "fault_sensor_noise" in out                            # present channel still emits
+    assert "fault_joint" in out
+
+
+def test_fault_empty_input_yields_empty_dict():
+    assert ds.per_env_fault_from_tensors({}) == {}
+
+
+def test_fault_param_names_lists_emitted_keys():
+    out = ds.per_env_fault_from_tensors(_raw_fault(4))
+    names = ds.fault_param_names(out)
+    assert set(names) == set(out.keys())
+    assert all(n.startswith("fault_") for n in names)
+
+
+def test_fault_and_dr_namespaces_disjoint():
+    """fault_ and dr_ keys never collide -- they merge cleanly into one npz."""
+    dr = ds.per_env_dr_from_tensors(_raw(4))
+    fault = ds.per_env_fault_from_tensors(_raw_fault(4))
+    assert set(dr).isdisjoint(set(fault))
