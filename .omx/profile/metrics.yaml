@@ -53,21 +53,35 @@ metrics:
 - Encoder/z_mean
 - Policy/encoder_grad_norm
 - Grad/enc_step
-# --- constraint health: IPO barrier + 4 core constraints (margin>0 = satisfied) ---
-# Priority chosen 2026-06-02: barrier_penalty (global health) + attitude/cumul_yaw/
-# yaw_rate (yaw stability) + thruster_util (control authority).
-# margin = budget - cost (all comparable at the 0 line); viol = actual violation amount.
+# --- constraint health: IPO barrier + ALL 10 constraints (margin>0 = satisfied) ---
+# Expanded 4->10 (2026-06-14): the 2026-06-02 "4 core + on-demand" choice hid the 2nd
+# binding constraint (rp_vel_settling, J_C/d_k=0.504) and every early-satisfy candidate
+# the user flagged for the constraint-rebalance/removal direction. Full-set tracking is
+# the prerequisite for that next experiment (need before/after viol+margin per constraint).
+# viol = J_C - d_k (starts at -d_k, rises toward 0 = healthy); margin ~= -viol in slack regime.
+# budgets (config.py:57-69): thruster_util 0.40, rp_vel_settling 0.20, rp_rate/yaw_rate 0.10,
+# arm_torque 0.08, manipulability 0.05, arm_joint_vel 0.02, attitude/joint1_pos/cumul_yaw 0.01.
 - barrier_penalty
 - Constraint/margin/attitude
+- Constraint/margin/arm_torque
+- Constraint/margin/arm_joint_vel
+- Constraint/margin/joint1_pos
 - Constraint/margin/cumul_yaw
-- Constraint/margin/yaw_rate
 - Constraint/margin/thruster_util
+- Constraint/margin/rp_rate
+- Constraint/margin/yaw_rate
+- Constraint/margin/rp_vel_settling
+- Constraint/margin/manipulability
 - Constraint/viol/attitude
+- Constraint/viol/arm_torque
+- Constraint/viol/arm_joint_vel
+- Constraint/viol/joint1_pos
 - Constraint/viol/cumul_yaw
-- Constraint/viol/yaw_rate
 - Constraint/viol/thruster_util
-# Secondary constraints (add on demand, per 2026-06-02 decision): arm_torque,
-# arm_joint_vel, joint1_pos, manipulability, rp_rate, rp_vel_settling.
+- Constraint/viol/rp_rate
+- Constraint/viol/yaw_rate
+- Constraint/viol/rp_vel_settling
+- Constraint/viol/manipulability
 # --- DR curriculum (DORAEMON): is the env still too easy at the end? ---
 # success_rate vs alpha(0.5): if success stays HIGH while entropy/std plateau, there is
 # headroom DORAEMON is not using (env ended too easy). entropy_before = cumulative
@@ -100,7 +114,7 @@ groups:
   trpo: [entropy, noise_std, line_search_success, kl, Policy/surrogate_loss, Grad/actor_step, Grad/sigma_step]
   critic: [Loss/value_function, Loss/cost_value]
   encoder: [Encoder/z_std, Encoder/z_min, Encoder/z_max, Policy/encoder_grad_norm, Grad/enc_step]
-  constraint: [barrier_penalty, Constraint/margin/attitude, Constraint/margin/cumul_yaw, Constraint/margin/yaw_rate, Constraint/margin/thruster_util, Constraint/viol/attitude, Constraint/viol/cumul_yaw, Constraint/viol/yaw_rate, Constraint/viol/thruster_util]
+  constraint: [barrier_penalty, Constraint/margin/attitude, Constraint/margin/arm_torque, Constraint/margin/arm_joint_vel, Constraint/margin/joint1_pos, Constraint/margin/cumul_yaw, Constraint/margin/thruster_util, Constraint/margin/rp_rate, Constraint/margin/yaw_rate, Constraint/margin/rp_vel_settling, Constraint/margin/manipulability, Constraint/viol/attitude, Constraint/viol/arm_torque, Constraint/viol/arm_joint_vel, Constraint/viol/joint1_pos, Constraint/viol/cumul_yaw, Constraint/viol/thruster_util, Constraint/viol/rp_rate, Constraint/viol/yaw_rate, Constraint/viol/rp_vel_settling, Constraint/viol/manipulability]
   doraemon: [doraemon_success_rate, DORAEMON/entropy_before, DORAEMON/kl_step, DORAEMON/ess_ratio]
 # Markers proving the report was grounded in the training-log engine (analyze_training.py)
 # rather than hand-extracted final scalars. >=1 must appear or the lint loud-fails.
