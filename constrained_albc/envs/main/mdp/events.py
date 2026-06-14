@@ -472,20 +472,15 @@ def randomize_joint_gains(
 # --- Joint Effort Limit Randomization ---
 
 
-def randomize_joint_effort_limit(
-    env: ALBCEnv,
-    env_ids: torch.Tensor,
-    dr: DRSampler,
-) -> None:
-    """Randomize ALBC joint effort limits (scale applied to asset default)."""
-    scale = dr.get(dr.cfg.joint_effort_limit_range)
+def _write_albc_effort_limit(env: ALBCEnv, env_ids: torch.Tensor, effort: torch.Tensor) -> None:
+    """Write an ALBC joint effort-limit tensor to sim + sync actuator buffers.
 
-    num_joints = len(env._albc_joint_ids)
-    effort = (env._default_effort_limit * scale).unsqueeze(-1).expand(-1, num_joints)
-
+    Shared by DR (randomize_joint_effort_limit) and fault (apply_joint_fault). ``effort``
+    shape (len(env_ids), num_albc_joints). Includes the Isaac Lab #128 actuator-buffer
+    sync workaround so the limit takes effect on the next physics step.
+    """
     env._robot.write_joint_effort_limit_to_sim(effort, joint_ids=env._albc_joint_ids, env_ids=env_ids)
 
-    # Sync actuator internal buffers (Isaac Lab #128 workaround)
     albc_ids_t = torch.tensor(env._albc_joint_ids, device=env.device)
     for actuator in env._robot.actuators.values():
         jids = actuator.joint_indices
@@ -498,6 +493,33 @@ def randomize_joint_effort_limit(
         elif jids == slice(None):
             actuator.effort_limit[env_ids[:, None], albc_ids_t] = effort
             actuator.effort_limit_sim[env_ids[:, None], albc_ids_t] = effort
+
+
+def randomize_joint_effort_limit(
+    env: ALBCEnv,
+    env_ids: torch.Tensor,
+    dr: DRSampler,
+) -> None:
+    """Randomize ALBC joint effort limits (scale applied to asset default)."""
+    scale = dr.get(dr.cfg.joint_effort_limit_range)
+
+    num_joints = len(env._albc_joint_ids)
+    effort = (env._default_effort_limit * scale).unsqueeze(-1).expand(-1, num_joints)
+
+    _write_albc_effort_limit(env, env_ids, effort)
+
+
+def apply_joint_fault(env: ALBCEnv, env_ids: torch.Tensor, joint_health: torch.Tensor) -> None:
+    """Scale the CURRENT ALBC joint effort limit by per-env joint health (fault).
+
+    Reads the post-DR effort limit (so a fault degrades on top of whatever DR set) and
+    multiplies it by ``joint_health[env_ids]`` (shape (len(env_ids),), broadcast over
+    joints), writing the faulted limit back to sim. Must run AFTER
+    randomize_joint_effort_limit, else DR would overwrite the fault.
+    """
+    cur = env._robot.data.joint_effort_limits[env_ids][:, env._albc_joint_ids]  # (M, num_joints)
+    faulted = cur * joint_health[env_ids].unsqueeze(-1)
+    _write_albc_effort_limit(env, env_ids, faulted)
 
 
 # --- Body Mass Randomization ---

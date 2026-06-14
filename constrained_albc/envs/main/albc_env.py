@@ -26,8 +26,10 @@ from marinelab.physics import HydrodynamicsModel
 
 from .config import ALBCEnvCfg
 from .mdp.constraints import compute_all_costs
+from .mdp import faults
 from .mdp.events import (
     DRSampler,
+    apply_joint_fault,
     randomize_body_mass,
     randomize_hydrodynamics,
     randomize_joint_effort_limit,
@@ -112,6 +114,7 @@ class ALBCEnv(DirectRLEnv):
         self._init_task_and_rewards()
         self._init_state_buffers()
         self._init_thrusters()
+        self._init_faults()
         self._init_doraemon()
         self._init_payload_viz()
 
@@ -345,7 +348,29 @@ class ALBCEnv(DirectRLEnv):
             num_envs=self.num_envs,
             device=self.device,
             enable_randomization=self.cfg.randomization.enable,
+            enable_fault=self.cfg.fault.enable,
         )
+
+    def _init_faults(self) -> None:
+        """Initialize per-env fault buffers (None when fault injection is disabled).
+
+        Buffers stay None unless cfg.fault.enable -> the apply_* helpers and the eval
+        snapshot both skip absent buffers, keeping a fault-disabled env byte-identical.
+        Thruster health lives inside the ThrusterModel (set via _init_thrusters'
+        enable_fault); only the sensor / joint buffers live on the env.
+        """
+        if self.cfg.fault.enable:
+            self._sensor_noise_scale = torch.zeros(self.num_envs, device=self.device)
+            self._joint_health = torch.ones(self.num_envs, device=self.device)
+            # base_std for the extra per-env sensor noise = the always-on obs-noise std,
+            # so a fault scales the EXISTING sensor-noise pattern rather than inventing one.
+            from .config import _OBS_NOISE_STD
+
+            self._fault_obs_base_std = torch.tensor(_OBS_NOISE_STD, device=self.device)
+        else:
+            self._sensor_noise_scale = None
+            self._joint_health = None
+            self._fault_obs_base_std = None
 
     def _init_doraemon(self) -> None:
         """Initialize DORAEMON adaptive DR scheduler if enabled."""
@@ -950,6 +975,13 @@ class ALBCEnv(DirectRLEnv):
         if self.cfg.use_integral_obs:
             policy_obs = torch.cat([policy_obs, self._error_integral], dim=-1)
 
+        # Per-env sensor-noise fault: extra noise on top of the always-on noise model.
+        # No-op (identity) when fault is disabled -> obs byte-identical. base_std is the
+        # 69D _OBS_NOISE_STD, so integral dims (std 0) and command dims (std 0) get none.
+        policy_obs = faults.apply_sensor_noise(
+            policy_obs, self._sensor_noise_scale, base_std=self._fault_obs_base_std
+        )
+
         observations = {"policy": policy_obs}
         assert policy_obs.shape[-1] == self.cfg.observation_space, (
             f"emitted policy obs dim {policy_obs.shape[-1]} != "
@@ -1349,6 +1381,14 @@ class ALBCEnv(DirectRLEnv):
                 time_constant_scale=rand_cfg.time_constant_scale,
             )
 
+        # Thruster fault: resample per-env per-thruster health for the reset envs.
+        # No-op when fault disabled (set_thruster_health returns early on a None buffer).
+        if self.cfg.fault.enable and self._thruster is not None:
+            health = faults.sample_thruster_health(
+                len(env_ids), self.cfg.thrusters.num_thrusters, self.cfg.fault, self.device
+            )
+            self._thruster.set_thruster_health(env_ids, health)
+
     def _reset_task_and_state(self, env_ids: torch.Tensor) -> None:
         """Reset robot pose, joint DR, and velocity commands."""
         rand_cfg = self.cfg.randomization
@@ -1372,6 +1412,19 @@ class ALBCEnv(DirectRLEnv):
             randomize_joint_effort_limit(env=self, env_ids=env_ids, dr=dr)
             randomize_joint_friction(env=self, env_ids=env_ids, dr=dr)
             self._current_dr_sampler = None  # Clear after use
+
+        # Fault injection (independent of DR): resample per-env sensor-noise scale and
+        # joint health for the reset envs, then degrade the (post-DR) effort limit by
+        # joint health. Runs AFTER joint-effort DR so a fault degrades on top of it.
+        if self.cfg.fault.enable:
+            n = len(env_ids)
+            self._sensor_noise_scale[env_ids] = faults.sample_uniform_per_env(
+                n, self.cfg.fault.sensor_noise_scale_range, self.device
+            )
+            self._joint_health[env_ids] = faults.sample_uniform_per_env(
+                n, self.cfg.fault.joint_health_range, self.device
+            )
+            apply_joint_fault(env=self, env_ids=env_ids, joint_health=self._joint_health)
 
         # Sample commands
         self._sample_velocity_command(env_ids)
