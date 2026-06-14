@@ -144,3 +144,61 @@ def test_segmented_cli_emits_json():
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
     assert payload["levels"]["hard"]["axes"]["yaw"]["post_switch"]["peak_max"] >= 0.0
+
+
+# --- failure_dr coverage: per-env DR/FAULT <-> failure join surfaced to omx report ---
+
+def _write_failure_npz(eval_dir: str, level: str = "none", n: int = 64, t: int = 120) -> None:
+    """Write a data_<level>.npz whose worst-roll envs have the lowest fault_thruster_3.
+
+    Self-contained (no Isaac Sim): a dead thruster drives roll error, so the adapter's
+    join must surface fault_thruster_3 as the top fault correlate.
+    """
+    import numpy as np
+
+    rng = np.random.default_rng(0)
+    health3 = rng.uniform(0.2, 1.0, n).astype(np.float32)
+    err_roll = (1.0 - health3)[None, :] * 100.0 + rng.normal(0, 0.05, (t, n)).astype(np.float32)
+    np.savez(
+        os.path.join(eval_dir, f"data_{level}.npz"),
+        error_roll=err_roll,
+        error_pitch=rng.normal(0, 0.1, (t, n)).astype(np.float32),
+        terminated=np.zeros((t, n), dtype=bool),
+        warmup_steps=np.int64(t // 2),
+        fault_thruster_3=health3,
+        fault_sensor_noise=rng.normal(0, 0.01, n).astype(np.float32),
+        dr_cog_y=rng.normal(0, 0.01, n).astype(np.float32),
+    )
+
+
+def test_adapter_exposes_analyze_failure_dr():
+    """The adapter must expose analyze_failure_dr() for the per-env DR/FAULT join."""
+    mod = _load_adapter()
+    assert hasattr(mod, "analyze_failure_dr"), "adapter must expose analyze_failure_dr()"
+
+
+def test_analyze_failure_dr_separates_dr_and_fault(tmp_path):
+    """analyze_failure_dr delegates to the join engine and returns dr+fault rankings."""
+    eval_dir = tmp_path / "eval"
+    eval_dir.mkdir()
+    _write_failure_npz(str(eval_dir), "none")
+    mod = _load_adapter()
+    out = mod.analyze_failure_dr(str(eval_dir), levels=["none"])
+    lvl = out["levels"]["none"]
+    assert "dr_ranking" in lvl and "fault_ranking" in lvl
+    assert lvl["fault_ranking"][0]["name"] == "fault_thruster_3"
+    assert lvl["fault_ranking"][0]["correlation"] < -0.5  # low health <-> failing
+
+
+def test_failure_dr_cli_emits_json(tmp_path):
+    """The adapter's failure-dr subcommand is runnable and emits JSON for omx report."""
+    eval_dir = tmp_path / "eval"
+    eval_dir.mkdir()
+    _write_failure_npz(str(eval_dir), "none")
+    result = subprocess.run(
+        [sys.executable, ADAPTER, "failure-dr", str(eval_dir), "--levels", "none"],
+        capture_output=True, text=True, timeout=60,
+    )
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["levels"]["none"]["fault_ranking"][0]["name"] == "fault_thruster_3"
