@@ -163,6 +163,15 @@ sp_static.add_argument(
     help="Inference-time encoder z-ablation (gap-#1 diagnostic): zero=z->0, "
     "mean=z->encode(nominal). Unset=normal eval (default).",
 )
+sp_static.add_argument(
+    "--flat-target",
+    dest="flat_target",
+    action="store_true",
+    default=False,
+    help="Zero all attitude/yaw/lin commands (pure station-keeping at (0,0)). "
+    "Isolates joint1 drift: a monotonic ramp in joint1_target with no command "
+    "is the free-DOF drift signature. Keeps the trajectory length/DR sweep.",
+)
 
 # ----------------------------------------------------------------------------
 # periodic: mid-episode periodic DR change, hover robustness
@@ -1077,6 +1086,12 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         segment_duration=args_cli.segment_duration,
         step_dt=step_dt,
     )
+    if getattr(args_cli, "flat_target", False):
+        # Pure station-keeping: zero every command channel so the only thing that
+        # can move joint1 is the policy's own bias -> isolates free-DOF drift.
+        for _k in targets:
+            targets[_k] = np.zeros_like(targets[_k])
+        print("[INFO] --flat-target: all commands zeroed (station-keeping drift check).")
     print(
         f"[INFO] Trajectory: {len(segment_names)} segs x {args_cli.segment_duration}s"
         f" = {len(time_s)} steps ({time_s[-1]:.0f}s)"
