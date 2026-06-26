@@ -89,12 +89,18 @@ def _reward_cfg(**kw):
 
 
 def _env(*, lin_err=None, att_err=None, yaw_err=None, actions=None,
-         prev=None, prev_prev=None, bias_ema=None, bias_w=None, reward_cfg=None):
+         prev=None, prev_prev=None, bias_ema=None, bias_w=None, reward_cfg=None,
+         joint_pos=None):
     rm = SimpleNamespace(_bias_w=bias_w) if bias_w is not None else None
+    robot = (
+        SimpleNamespace(data=SimpleNamespace(joint_pos=joint_pos))
+        if joint_pos is not None else None
+    )
     return SimpleNamespace(
         _lin_vel_err=lin_err, _att_rp_err=att_err, _yaw_rate_err=yaw_err,
         _actions=actions, _prev_actions=prev, _prev_prev_actions=prev_prev,
         _bias_ema=bias_ema, _reward_manager=rm, _albc_joint_ids=JOINT_IDS,
+        _robot=robot,
         cfg=SimpleNamespace(reward=reward_cfg or _reward_cfg()),
     )
 
@@ -185,3 +191,67 @@ def test_reward_manager_preallocates_bias_w():
     rm = R.RewardManager(cfg, num_envs=4, device="cpu")
     assert hasattr(rm, "_bias_w")
     assert torch.allclose(rm._bias_w, torch.tensor([1.5, 1.0, 1.0, 1.0, 1.0, 1.0]))
+
+
+# ---------------------------------------------------------------------------
+# joint1_centering_penalty: wrap(theta1)^2, zero at nominal, wrap-correct
+# ---------------------------------------------------------------------------
+
+
+def _joint_env(theta1):
+    """Env with a robot whose joint1 (idx 0) is at theta1. Joint2 (idx 1) free."""
+    jp = torch.tensor([[float(theta1), 0.7]])  # (1, 2): [theta1, theta2]
+    return _env(joint_pos=jp)
+
+
+def test_joint1_centering_zero_at_nominal():
+    # theta1 = 0 (nominal) -> wrap(0)^2 = 0
+    assert R.joint1_centering_penalty(_joint_env(0.0)).item() == pytest.approx(0.0)
+
+
+def test_joint1_centering_grows_with_abs_theta1():
+    """Penalty increases monotonically with angular distance from nominal."""
+    small = R.joint1_centering_penalty(_joint_env(0.3)).item()
+    large = R.joint1_centering_penalty(_joint_env(1.0)).item()
+    assert 0.0 < small < large
+    # exact: wrap(0.3)=0.3 -> 0.09, wrap(1.0)=1.0 -> 1.0
+    assert small == pytest.approx(0.09)
+    assert large == pytest.approx(1.0)
+
+
+def test_joint1_centering_wraps_full_revolution():
+    """theta1 = 2*pi is physically nominal -> penalty ~0, NOT (2*pi)^2."""
+    import math
+    pen_2pi = R.joint1_centering_penalty(_joint_env(2.0 * math.pi)).item()
+    assert pen_2pi == pytest.approx(0.0, abs=1e-10)
+    # and theta1 = pi + 0.1 wraps to -(pi - 0.1), same magnitude as pi - 0.1
+    a = R.joint1_centering_penalty(_joint_env(math.pi + 0.1)).item()
+    b = R.joint1_centering_penalty(_joint_env(-(math.pi - 0.1))).item()
+    assert a == pytest.approx(b)
+
+
+def test_joint1_centering_symmetric_sign():
+    """Penalty depends on |wrap(theta1)|, symmetric in sign."""
+    pos = R.joint1_centering_penalty(_joint_env(0.5)).item()
+    neg = R.joint1_centering_penalty(_joint_env(-0.5)).item()
+    assert pos == pytest.approx(neg)
+
+
+def test_joint1_centering_only_reads_joint1():
+    """Centering must ignore joint2 (idx 1) entirely."""
+    jp_a = torch.tensor([[0.4, 0.0]])
+    jp_b = torch.tensor([[0.4, 1.3]])  # same theta1, different theta2
+    ra = R.joint1_centering_penalty(_env(joint_pos=jp_a)).item()
+    rb = R.joint1_centering_penalty(_env(joint_pos=jp_b)).item()
+    assert ra == pytest.approx(rb)
+
+
+def test_joint1_center_disabled_by_default():
+    """ALBCRewardCfg default k_joint1_center == 0.0 (no-op for existing runs)."""
+    cfg = R.ALBCRewardCfg()
+    assert cfg.k_joint1_center == 0.0
+
+
+def test_joint1_center_registered_in_names():
+    """RewardManager tracks joint1_center in episode sums."""
+    assert "joint1_center" in R.RewardManager._NAMES
