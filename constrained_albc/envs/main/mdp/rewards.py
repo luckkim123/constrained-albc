@@ -169,13 +169,24 @@ def bias_ema_penalty(env: ALBCEnv) -> torch.Tensor:
     return (env._bias_ema.pow(2) * w).sum(dim=-1)
 
 
+def ee_anchor(env: ALBCEnv) -> torch.Tensor:
+    """r_anchor = |ee_target - nom_ee|^2. Continuous restoring cost on EE position.
+
+    Always-on (unlike an IPO constraint which vanishes inside its budget), so the
+    policy receives a restoring gradient that keeps the arm EE near nominal,
+    suppressing the joint1 drift that motivated the EE-action redesign.
+    """
+    nom = torch.tensor(env.cfg.reward.nom_ee, device=env._ee_layer.ee_target.device)
+    return (env._ee_layer.ee_target - nom).pow(2).sum(dim=-1)
+
+
 # --- Reward Manager ---
 
 
 class RewardManager:
-    """Computes 6-term tracking reward with dt-scaling and episode tracking."""
+    """Computes 7-term tracking reward with dt-scaling and episode tracking."""
 
-    _NAMES = ["att_rp", "yaw_vel", "torque", "thruster", "smoothness", "bias"]
+    _NAMES = ["att_rp", "yaw_vel", "torque", "thruster", "smoothness", "bias", "anchor"]
 
     def __init__(self, cfg: ALBCRewardCfg, num_envs: int, device: str) -> None:
         self._cfg = cfg
@@ -196,6 +207,7 @@ class RewardManager:
             ("thruster", cfg.k_thr, thruster_energy(env)),
             ("smoothness", cfg.k_s, action_smoothness(env)),
             ("bias", cfg.k_bias, bias_ema_penalty(env)),
+            ("anchor", cfg.k_anchor, ee_anchor(env)),
         ]
         for name, weight, value in terms:
             scaled = value * weight * dt
