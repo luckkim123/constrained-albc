@@ -556,6 +556,14 @@ def run_evaluation(
     yaw_rate = np.zeros((total_steps, num_envs))
     # Action magnitude
     action_magnitude = np.zeros((total_steps, num_envs))
+    # Joint1 (arm rotation) trajectory for flat-target drift analysis. joint1_cmd
+    # is the policy's action[0] (the delta fed to the integrator); joint1_target is
+    # the integrated setpoint (_joint_pos_targets[:,0]); joint1_pos is the measured
+    # joint angle. A monotonic ramp in joint1_target at a flat (0,0) command is the
+    # drift signature; a bounded target near nominal means centering worked.
+    joint1_cmd = np.zeros((total_steps, num_envs))
+    joint1_pos = np.zeros((total_steps, num_envs))
+    joint1_target = np.zeros((total_steps, num_envs))
     # z-ablation diagnostic (#1-A): ||action(z) - action(z_ablated)|| per env-step.
     # Only populated when the policy has an active z-ablation; stays zeros otherwise.
     delta_action = np.zeros((total_steps, num_envs))
@@ -615,6 +623,13 @@ def run_evaluation(
         # Collect action magnitude
         action_magnitude[step_idx] = torch.norm(actions, dim=-1).cpu().numpy()
 
+        # Joint1 trajectory (per-axis action[0] + integrated target + measured pos)
+        joint1_cmd[step_idx] = actions[:, 0].detach().cpu().numpy()
+        joint1_target[step_idx] = raw_env._joint_pos_targets[:, 0].detach().cpu().numpy()
+        joint1_pos[step_idx] = (
+            raw_env._robot.data.joint_pos[:, raw_env._albc_joint_ids[0]].detach().cpu().numpy()
+        )
+
         # Attitude: actual + error
         roll_cur, pitch_cur, _ = euler_xyz_from_quat(raw_env._robot.data.root_quat_w)
         actual_roll[step_idx] = torch.rad2deg(roll_cur).cpu().numpy()
@@ -673,6 +688,11 @@ def run_evaluation(
         "yaw_rate": yaw_rate,
         "action_magnitude": action_magnitude,
         "delta_action": delta_action,
+        # Joint1 drift diagnostics (per-step, (T, num_envs)): policy command,
+        # integrated target, measured position. Used by the flat-target drift check.
+        "joint1_cmd": joint1_cmd,
+        "joint1_target": joint1_target,
+        "joint1_pos": joint1_pos,
         "terminated": terminated,
         "time_to_failure": time_to_failure,
         "steps_per_segment": steps_per_seg,
