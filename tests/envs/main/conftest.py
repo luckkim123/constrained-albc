@@ -112,12 +112,28 @@ def _stub_isaaclab() -> None:
     ilu_utils.configclass = _stub_configclass
     sys.modules["isaaclab.utils"] = ilu_utils
 
-    # isaaclab.utils.noise: three noise cfg classes used in ALBCEnvCfg fields
+    # isaaclab.utils.noise: real minimal dataclasses so tests can call len() on
+    # noise_cfg.std / bias_noise_cfg.n_min / bias_noise_cfg.n_max.
+    @dataclasses.dataclass
+    class _GaussianNoiseCfg:
+        mean: float = 0.0
+        std: tuple = ()
+
+    @dataclasses.dataclass
+    class _UniformNoiseCfg:
+        n_min: tuple = ()
+        n_max: tuple = ()
+
+    @dataclasses.dataclass
+    class _NoiseModelWithAdditiveBiasCfg:
+        noise_cfg: object = dataclasses.field(default_factory=_GaussianNoiseCfg)
+        bias_noise_cfg: object = dataclasses.field(default_factory=_UniformNoiseCfg)
+
     ilu_noise = types.ModuleType("isaaclab.utils.noise")
     ilu_noise.__path__ = []
-    ilu_noise.GaussianNoiseCfg = _Stub
-    ilu_noise.NoiseModelWithAdditiveBiasCfg = _Stub
-    ilu_noise.UniformNoiseCfg = _Stub
+    ilu_noise.GaussianNoiseCfg = _GaussianNoiseCfg
+    ilu_noise.NoiseModelWithAdditiveBiasCfg = _NoiseModelWithAdditiveBiasCfg
+    ilu_noise.UniformNoiseCfg = _UniformNoiseCfg
     sys.modules["isaaclab.utils.noise"] = ilu_noise
 
     # isaaclab.sim: accessed as `sim_utils.X(...)` so needs auto-attr via _Stub

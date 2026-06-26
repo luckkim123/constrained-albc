@@ -78,6 +78,7 @@ def compute_policy_obs(
             joint_pos,  # 2D: joint positions (raw cumulative)
             joint_vel,  # 2D: joint velocities
             env._manipulability.unsqueeze(-1),  # 1D: Yoshikawa manipulability
+            *([env._ee_layer.forward_current(joint_pos)] if env.cfg.ee_action_enable else []),  # 2D EE pos (FK), EE-action only
             # Thruster State (6D)
             thr_state,  # 6D: filtered thruster output
         ],

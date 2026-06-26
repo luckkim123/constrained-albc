@@ -245,6 +245,16 @@ _OBS_BIAS_MIN = tuple(-x for x in _OBS_BIAS_MAG)
 _OBS_BIAS_MAX = _OBS_BIAS_MAG
 
 
+def resolve_observation_space(cfg: "ALBCEnvCfg") -> int:
+    """69D baseline; +2D when EE position is added to the observation."""
+    return 71 if cfg.ee_action_enable else 69
+
+
+# +2D EE-position noise/bias slices, appended to proprioception when EE enabled.
+_EE_OBS_NOISE_STD = (0.02, 0.02)  # match joint_pos noise scale
+_EE_OBS_BIAS_MAG = (0.02, 0.02)
+
+
 @configclass
 class ALBCEnvCfg(DirectRLEnvCfg):
     """Attitude-only ALBC environment configuration.
@@ -452,3 +462,14 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # Constraints (10 terms: 5 probabilistic + 5 average)
     # ==========================================================================
     constraints: ALBCConstraintCfg = ALBCConstraintCfg(terms=_FULL_DOF_CONSTRAINT_TERMS)
+
+    def __post_init__(self) -> None:
+        self.observation_space = resolve_observation_space(self)
+        if self.ee_action_enable:
+            noise_71 = _OBS_NOISE_STD[:14] + _EE_OBS_NOISE_STD + _OBS_NOISE_STD[14:]
+            bmin_71 = _OBS_BIAS_MIN[:14] + tuple(-x for x in _EE_OBS_BIAS_MAG) + _OBS_BIAS_MIN[14:]
+            bmax_71 = _OBS_BIAS_MAX[:14] + _EE_OBS_BIAS_MAG + _OBS_BIAS_MAX[14:]
+            self.observation_noise_model = NoiseModelWithAdditiveBiasCfg(
+                noise_cfg=GaussianNoiseCfg(mean=0.0, std=noise_71),
+                bias_noise_cfg=UniformNoiseCfg(n_min=bmin_71, n_max=bmax_71),
+            )

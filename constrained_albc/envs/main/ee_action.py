@@ -75,3 +75,7 @@ class EEActionLayer:
         q_ee = q_ee * scale
         self._ee_target = q_ee
         return self._kin.inverse(q_ee, cur_joint)
+
+    def forward_current(self, joint: torch.Tensor) -> torch.Tensor:
+        """FK of given joints (EE position). Shape (N,2). For observation."""
+        return self._kin.forward(joint)
