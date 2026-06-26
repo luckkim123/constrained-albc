@@ -5,7 +5,7 @@ from constrained_albc.envs.main.config import ALBCEnvCfg
 def test_obs_space_71_when_ee_enabled():
     cfg = ALBCEnvCfg()
     cfg.ee_action_enable = True
-    cfg.__post_init__() if hasattr(cfg, "__post_init__") else None
+    cfg.__post_init__()
     # observation_space must reflect the +2D EE term when enabled
     from constrained_albc.envs.main.config import resolve_observation_space
 
@@ -31,3 +31,5 @@ def test_noise_model_71d_when_ee_enabled():
 def test_noise_model_69d_when_ee_disabled():
     cfg = ALBCEnvCfg()
     assert len(cfg.observation_noise_model.noise_cfg.std) == 69
+    assert len(cfg.observation_noise_model.bias_noise_cfg.n_min) == 69
+    assert len(cfg.observation_noise_model.bias_noise_cfg.n_max) == 69

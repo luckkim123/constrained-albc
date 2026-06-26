@@ -6,17 +6,19 @@
 """Observation functions for the attitude-only tracking environment (no linear velocity).
 
     o_t (69D): Unified policy observation = current proprioception (20D) + temporal history (46D) + integral (3D)
+    When ee_action_enable=True, o_t expands to 71D (current proprioception becomes 22D; +2D EE position).
     p_t (27D): Privileged info (simulator-only DR params) + measured root_lin_vel_b (3D, critic-only)
 
 The encoder receives p_t to compress physical unknowns into latent z.
 The actor receives o_t + z. The critic receives o_t + z + p_t (asymmetric).
 Linear velocity is excluded from o_t (no DVL on the real robot); it appears only in p_t.
 
-Current proprioception (20D) -- measurable on real robot:
+Current proprioception (20D; 22D when ee_action_enable=True) -- measurable on real robot:
     Command (3D):       ang_cmd(3) [att_rp(2) + yaw_rate(1)]   -- no lin_vel command
     Body State (6D):    euler(3), ang_vel(3)                   -- no measured lin_vel
     Arm State (5D):     joint_pos(2), joint_vel(2), manipulability(1)
-    Thruster (6D):      filtered output (T0-T5)
+    EE Position (2D, only when ee_action_enable=True): end-effector position (FK of joints)
+    Thruster (6D):      filtered output (T0-T5) -- baseline [14:20]; shifts to [16:22] when EE enabled
 
 Temporal history (46D) -- ring buffer, stride=3:
     Joint tracking (12D):   (q_des_prev - q_actual, joint_vel) x 3 steps
@@ -42,7 +44,7 @@ def compute_policy_obs(
     env: ALBCEnv,
     robot: Articulation,
 ) -> torch.Tensor:
-    """Compute current proprioception (20D).
+    """Compute current proprioception (20D; 22D when ee_action_enable=True).
 
     Measurable on real robot (IMU, motor encoders, ESC feedback).
     Linear velocity is excluded -- no DVL on real robot.
@@ -59,8 +61,11 @@ def compute_policy_obs(
         [11:13] joint velocities
         [13]    manipulability index w (normalized [0, 1])
 
+    EE Position (2D, only when ee_action_enable=True):
+        [14:16] end-effector position (FK of joints); thruster then shifts to [16:22]
+
     Thruster State (6D):
-        [14:20] thruster filtered output (T0-T5)
+        [14:20] thruster filtered output (T0-T5) baseline; [16:22] when ee_action_enable=True
     """
     roll, pitch, yaw = env._euler_cache
     joint_pos = robot.data.joint_pos[:, env._albc_joint_ids]

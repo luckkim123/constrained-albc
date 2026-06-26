@@ -260,7 +260,7 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     """Attitude-only ALBC environment configuration.
 
     8D action (2D arm delta + 6D thruster), 69D observation (20D current + 46D history
-    + 3D integral), 27D privileged (incl. measured lin_vel). Attitude-only: roll/pitch
+    + 3D integral) (71D when ee_action_enable=True), 27D privileged (incl. measured lin_vel). Attitude-only: roll/pitch
     attitude + yaw rate, no linear velocity tracking. TRPO + IPO + Asymmetric Encoder
     with 10 constraints (5 prob + 5 avg).
 
@@ -451,7 +451,7 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     """Hide bar when |cog_offset| < this value (m)."""
 
     # ==========================================================================
-    # Observation Noise (69D)
+    # Observation Noise (69D baseline; rebuilt to 71D in __post_init__ when ee_action_enable=True)
     # ==========================================================================
     observation_noise_model: NoiseModelWithAdditiveBiasCfg = NoiseModelWithAdditiveBiasCfg(
         noise_cfg=GaussianNoiseCfg(mean=0.0, std=_OBS_NOISE_STD),
