@@ -175,8 +175,14 @@ def ee_anchor(env: ALBCEnv) -> torch.Tensor:
     Always-on (unlike an IPO constraint which vanishes inside its budget), so the
     policy receives a restoring gradient that keeps the arm EE near nominal,
     suppressing the joint1 drift that motivated the EE-action redesign.
+
+    Returns zeros on the joint-delta baseline (env._ee_layer is None), so the
+    eager every-step evaluation in RewardManager.compute() is inert when the
+    EE-action toggle is off (k_anchor defaults to 0.0 there anyway).
     """
-    nom = torch.tensor(env.cfg.reward.nom_ee, device=env._ee_layer.ee_target.device)
+    if env._ee_layer is None:
+        return torch.zeros(env.num_envs, device=env.device)
+    nom = env._reward_manager._nom_ee
     return (env._ee_layer.ee_target - nom).pow(2).sum(dim=-1)
 
 
@@ -194,6 +200,8 @@ class RewardManager:
         self._episode_sums = {n: torch.zeros(num_envs, dtype=torch.float32, device=device) for n in self._NAMES}
         # Preallocated per-axis bias weights (used by bias_ema_penalty each step).
         self._bias_w = torch.tensor(cfg.bias_weights, dtype=torch.float32, device=device)
+        # Preallocated nominal EE position (used by ee_anchor each step).
+        self._nom_ee = torch.tensor(cfg.nom_ee, dtype=torch.float32, device=device)
 
     def compute(self, robot: Articulation, dt: float, env: ALBCEnv, **_ctx: Any) -> torch.Tensor:
         """Compute total reward (dt-scaled)."""

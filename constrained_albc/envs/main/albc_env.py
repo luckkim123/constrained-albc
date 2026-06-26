@@ -549,9 +549,15 @@ class ALBCEnv(DirectRLEnv):
     def _apply_joint_pd_action(self, actions: torch.Tensor) -> None:
         """Map normalized arm actions [-1,1] to joint PD targets.
 
-        Joint-delta (baseline): q_des += delta_scale * a (pure integrator).
-        EE-action (toggle): q_des = IK(EE_target_integrated_with_leak(a)),
-        which removes the joint integrator entirely so joint1 cannot drift.
+        Joint-delta (baseline, _ee_layer is None): q_des += delta_scale * a, a pure
+        integrator. Delta parameterization limits per-step position change (max
+        0.08 rad/step), preventing PD actuator saturation. Both joints are
+        continuous rotation motors with no physical position limits; joint1 cable
+        wrapping is protected by the joint1_position_cost constraint, not by clamping.
+
+        EE-action (toggle on, _ee_layer set): q_des = IK(EE_target integrated with a
+        leak toward nominal). This removes the joint integrator entirely so joint1
+        cannot drift (the real-robot drift fix).
 
         Args:
             actions: Normalized actions [-1, 1]. Shape: (num_envs, 2).
