@@ -323,6 +323,18 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     delta_scale: float = 0.10
 
     # ==========================================================================
+    # EE-Position Action (toggle; off = joint-delta baseline, byte-identical)
+    # ==========================================================================
+    ee_action_enable: bool = False
+    """When True, arm action is EE-delta + differentiable IK instead of joint-delta."""
+    ee_delta_scale: float = 0.02
+    """Per-step EE displacement scale (meters) for the normalized arm action."""
+    ee_leak: float = 0.02
+    """Leak-to-nominal rate of the EE integrator (drift safety net)."""
+    nom_ee: tuple[float, float] = (0.233, 0.233)
+    """Nominal EE position = FK(nominal_joint_pos) = FK(0, pi/2)."""
+
+    # ==========================================================================
     # Temporal History (ring buffer, recorded every ``hist_stride`` control steps)
     # ==========================================================================
     hist_len: int = 3

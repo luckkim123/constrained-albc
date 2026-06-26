@@ -82,6 +82,10 @@ class ALBCRewardCfg:
     bias_ema_alpha: float = 0.99  # effective window ~100 steps = 2 s at 50 Hz
     # Per-axis weights for bias penalty so roll (weak authority) gets stronger bias signal.
     bias_weights: tuple[float, float, float] = (1.5, 1.0, 1.0)
+    # EE-anchor reward: -k_anchor * |EE - nom_ee|^2. Continuous restoring force
+    # on the arm EE position (drift suppression). 0 disables (baseline parity).
+    k_anchor: float = 0.0
+    nom_ee: tuple[float, float] = (0.233, 0.233)
 
 
 # --- Reward Functions ---
