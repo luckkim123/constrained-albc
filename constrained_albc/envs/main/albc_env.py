@@ -267,6 +267,19 @@ class ALBCEnv(DirectRLEnv):
         self._nominal_joint_pos = torch.tensor(self.cfg.nominal_joint_pos, device=self.device)
         self._delta_scale = self.cfg.delta_scale
         self._joint_pos_targets = self._nominal_joint_pos.expand(self.num_envs, -1).clone()
+        # EE-action layer (None when disabled -> joint-delta baseline path).
+        if self.cfg.ee_action_enable:
+            from .ee_action import EEActionLayer
+
+            self._ee_layer = EEActionLayer(
+                self.num_envs,
+                self.device,
+                ee_delta_scale=self.cfg.ee_delta_scale,
+                ee_leak=self.cfg.ee_leak,
+                nom_ee=self.cfg.nom_ee,
+            )
+        else:
+            self._ee_layer = None
         self._control_step_counter = 0
 
     def _init_history_buffers(self) -> None:
@@ -534,17 +547,20 @@ class ALBCEnv(DirectRLEnv):
         self._update_payload_viz()
 
     def _apply_joint_pd_action(self, actions: torch.Tensor) -> None:
-        """Accumulate delta joint targets: q_des += delta_scale * a_t.
+        """Map normalized arm actions [-1,1] to joint PD targets.
 
-        Delta parameterization limits per-step position change (max 0.08 rad/step),
-        preventing PD actuator saturation. Both joints are continuous rotation
-        motors with no physical position limits. Joint1 cable wrapping is
-        protected by the joint1_position_cost constraint, not by clamping.
+        Joint-delta (baseline): q_des += delta_scale * a (pure integrator).
+        EE-action (toggle): q_des = IK(EE_target_integrated_with_leak(a)),
+        which removes the joint integrator entirely so joint1 cannot drift.
 
         Args:
             actions: Normalized actions [-1, 1]. Shape: (num_envs, 2).
         """
-        self._joint_pos_targets += self._delta_scale * actions
+        if self._ee_layer is None:
+            self._joint_pos_targets += self._delta_scale * actions
+        else:
+            cur_joint = self._robot.data.joint_pos[:, self._albc_joint_ids]
+            self._joint_pos_targets = self._ee_layer.step(actions, cur_joint)
 
     def _update_manipulability(self) -> None:
         """Compute Yoshikawa manipulability index from current arm configuration.
@@ -1275,6 +1291,8 @@ class ALBCEnv(DirectRLEnv):
         for buf in (self._actions, self._prev_actions, self._prev_prev_actions):
             buf[env_ids] = 0.0
         self._joint_pos_targets[env_ids] = self._robot.data.joint_pos[env_ids][:, self._albc_joint_ids]
+        if self._ee_layer is not None:
+            self._ee_layer.reset(env_ids, self._robot.data.joint_pos[env_ids][:, self._albc_joint_ids])
         if self._hist_buf is not None:
             self._hist_buf[env_ids] = 0.0
             self._hist_step_counter[env_ids] = 0
