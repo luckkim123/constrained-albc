@@ -953,7 +953,10 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         print(f"[INFO] v3 ood-range-scale {scale:.2f}: widened {widened} DR ranges by {(scale-1)*100:+.0f}%\n")
 
     # ---- Output directory ----
-    output_dir, _handled = _resolve_eval_output_dir(resume_path, "static")
+    # Flat-target eval gets its own mode tag so its eval/static_flat_<ts>/ dir does
+    # not collide with (or look identical to) the tilted eval/static_<ts>/ dir.
+    _static_mode = "static_flat" if getattr(args_cli, "flat_target", False) else "static"
+    output_dir, _handled = _resolve_eval_output_dir(resume_path, _static_mode)
     if not _handled and resume_path:
         suffix = f"eval_dr_ood_{args_cli.ood_scale:.1f}x" if args_cli.ood_scale else "eval_dr"
         output_dir = os.path.join(os.path.dirname(resume_path), suffix)
