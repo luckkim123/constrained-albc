@@ -14,6 +14,16 @@ from __future__ import annotations
 
 import math
 
+from marinelab.assets import (
+    ALBC_CFG,
+    ALBC_JOINT_NAMES,
+    ALBCBuoyHydrodynamicsCfg,
+    ALBCHydrodynamicsCfg,
+    HydrodynamicsCfg,
+    OceanCurrentCfg,
+    ThrusterCfg,
+)
+
 import isaaclab.sim as sim_utils
 from isaaclab.envs import DirectRLEnvCfg, ViewerCfg
 from isaaclab.scene import InteractiveSceneCfg
@@ -22,22 +32,14 @@ from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.noise import GaussianNoiseCfg, NoiseModelWithAdditiveBiasCfg, UniformNoiseCfg
 
-from marinelab.assets import (
-    ALBC_JOINT_NAMES,
-    ALBC_CFG,
-    ALBCBuoyHydrodynamicsCfg,
-    ALBCHydrodynamicsCfg,
-    HydrodynamicsCfg,
-    OceanCurrentCfg,
-    ThrusterCfg,
-)
-
 from .doraemon import DoraemonCfg
 from .mdp.constraints import (
     ALBCConstraintCfg,
     ConstraintTermCfg,
     attitude_limit_cost,
     cumulative_yaw_cost,
+    joint1_centering_cost,
+    joint1_cumulative_cost,
     joint1_position_cost,
     manipulability_cost,
     rp_rate_cost,
@@ -440,3 +442,39 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # Constraints (10 terms: 5 probabilistic + 5 average)
     # ==========================================================================
     constraints: ALBCConstraintCfg = ALBCConstraintCfg(terms=_FULL_DOF_CONSTRAINT_TERMS)
+
+    # --- joint1-constraint-redesign experiment (off by default = byte-identical) ---
+    # Selects which continuous joint1 anti-drift constraint to append (vs the shipped
+    # reward centering). 'none' = no extra term (shipped behavior). 'A' = average cost
+    # on the instantaneous wrapped angle. 'B' = average cost on the integrated-command
+    # displacement (drift-correct). A constraint term cannot be added via a hydra scalar
+    # override (it bundles a function ref + budget), so it is toggled by this cfg field
+    # and materialized in __post_init__. For A/B, also set reward k_joint1_center=0.0 so
+    # exactly one centering mechanism is active (single-variable discipline).
+    joint1_constraint_arm: str = "none"  # one of {"none", "A", "B"}
+    joint1_constraint_budget: float = 0.05  # per-step average budget d_k for arm A/B
+
+    def __post_init__(self) -> None:
+        """Materialize the joint1-constraint-redesign experiment arm (off by default).
+
+        'none' leaves the shipped 10-term constraint set untouched (byte-identical).
+        'A'/'B' append exactly one continuous Average term so the IPO budget governs
+        its strength via the per-constraint barrier; the experiment also sets reward
+        k_joint1_center=0.0 (hydra) so only one centering mechanism is active.
+        """
+        arm = self.joint1_constraint_arm
+        if arm == "none":
+            return
+        if arm == "A":
+            term = ConstraintTermCfg(
+                func=joint1_centering_cost, budget=self.joint1_constraint_budget, name="joint1_centering"
+            )
+        elif arm == "B":
+            term = ConstraintTermCfg(
+                func=joint1_cumulative_cost, budget=self.joint1_constraint_budget, name="joint1_cumulative"
+            )
+        else:
+            raise ValueError(f"joint1_constraint_arm must be one of 'none'/'A'/'B', got {arm!r}")
+        # Copy the shared term list before appending so the module-level
+        # _FULL_DOF_CONSTRAINT_TERMS (shared with full_dof) is never mutated.
+        self.constraints.terms = [*self.constraints.terms, term]
