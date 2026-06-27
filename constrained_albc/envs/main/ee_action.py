@@ -49,8 +49,13 @@ class EEActionLayer:
         return self._ee_target
 
     def reset(self, env_ids: torch.Tensor, cur_joint: torch.Tensor) -> None:
-        """Reset the EE target of the given envs to FK of their current joints."""
-        self._ee_target[env_ids] = self._kin.forward(cur_joint[env_ids])
+        """Reset the EE target of the given envs to FK of their current joints.
+
+        cur_joint is already pre-indexed by the caller (shape (len(env_ids), 2)),
+        so forward() must not be re-indexed with env_ids (that would be an OOB
+        access for any non-zero env index, causing a CUDA device-side assert).
+        """
+        self._ee_target[env_ids] = self._kin.forward(cur_joint)
 
     def step(self, a_arm: torch.Tensor, cur_joint: torch.Tensor) -> torch.Tensor:
         """Integrate EE-delta with leak, clamp to workspace, solve IK.
