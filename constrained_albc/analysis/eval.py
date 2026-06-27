@@ -844,6 +844,25 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     # ---- Load checkpoint ----
     agent_cfg = cli_args.update_rsl_rl_cfg(agent_cfg, args_cli)
 
+    # Auto-sync policy_obs_dim when ee_action_enable=True (mirrors train.py).
+    # An EE-action checkpoint was trained with a 71D policy obs (69 + 2 EE position),
+    # so its actor expects policy_obs_dim=71. The agent cfg hardcodes 69 and has no
+    # knowledge of the EE toggle; without this sync the policy guard
+    # (_policy_base.py: "Policy obs dim != expected") aborts eval. Pass
+    # `env.ee_action_enable=true` as a hydra override to evaluate an EE-action run.
+    # Toggle-off: condition false, policy_obs_dim stays 69 (byte-identical to baseline).
+    if getattr(env_cfg, "ee_action_enable", False):
+        from constrained_albc.envs.main.config import resolve_observation_space
+
+        new_policy_obs_dim = resolve_observation_space(env_cfg)  # 71 when EE on
+        if hasattr(agent_cfg, "policy") and hasattr(agent_cfg.policy, "policy_obs_dim"):
+            if agent_cfg.policy.policy_obs_dim != new_policy_obs_dim:
+                print(
+                    f"[INFO] ee_action_enable=True: auto-syncing policy_obs_dim "
+                    f"{agent_cfg.policy.policy_obs_dim} -> {new_policy_obs_dim}"
+                )
+            agent_cfg.policy.policy_obs_dim = new_policy_obs_dim
+
     # Student mode short-circuits the teacher-runner checkpoint search (mirrors segmented):
     # resume_path = student_ckpt so eval output lands under the STUDENT's run_id tree, while
     # params / DORAEMON DR resolve from the teacher's run dir.
