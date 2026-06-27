@@ -217,6 +217,24 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         env_cfg.seed = seed
         agent_cfg.seed = seed
 
+    # Auto-sync policy_obs_dim when ee_action_enable=True.
+    # env_cfg.observation_space is already correct (71D) via apply_ee_obs_space() called
+    # in ALBCEnvCfg.__post_init__ and again in ALBCEnv.__init__. The agent policy cfg
+    # hardcodes policy_obs_dim=69 and has no knowledge of the EE toggle, so we sync here
+    # -- after all hydra/CLI overrides are final -- to keep EE a single toggle with no
+    # per-launch CLI override needed on the agent side.
+    # Toggle-off (ee_action_enable=False): condition is false, policy_obs_dim stays 69.
+    if getattr(env_cfg, "ee_action_enable", False):
+        new_policy_obs_dim = env_cfg.observation_space  # 71 when EE on
+        # agent_cfg.policy is a configclass; access via attribute.
+        if hasattr(agent_cfg, "policy") and hasattr(agent_cfg.policy, "policy_obs_dim"):
+            if agent_cfg.policy.policy_obs_dim != new_policy_obs_dim:
+                print(
+                    f"[INFO] ee_action_enable=True: auto-syncing policy_obs_dim "
+                    f"{agent_cfg.policy.policy_obs_dim} -> {new_policy_obs_dim}"
+                )
+            agent_cfg.policy.policy_obs_dim = new_policy_obs_dim
+
     # specify directory for logging experiments
     log_root_path = os.path.join("logs", "rsl_rl", agent_cfg.experiment_name)
     log_root_path = os.path.abspath(log_root_path)

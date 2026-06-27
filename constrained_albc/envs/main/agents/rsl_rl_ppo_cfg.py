@@ -136,6 +136,7 @@ class _EncoderPolicyCfg(RslRlPpoActorCriticCfg):
     encoder_obs_normalization: bool = False
     # Observation dimensions
     policy_obs_dim: int = 69  # 20D current proprio + 46D temporal history + 3D integral
+    # Auto-synced to 71 by train.py when ee_action_enable=True (+2D EE position)
     privileged_dim: int = 27
 
 
@@ -145,8 +146,8 @@ class _ALBCPolicyCfg(_EncoderPolicyCfg):
 
     Architecture (27D->9D encoder, 8D action):
         Encoder: p_t(27D) -> static_minmax -> MLP[256,128,64] -> LN -> softsign -> z(9D)
-        Actor:   cat([o_t(69D), z(9D)]) = 78D -> MLP[256,128,64] -> 8D
-        Critic:  cat([o_t(69D), z(9D), p_t(27D)]) = 105D -> MLP[512,256,128] -> 1D
+        Actor:   cat([o_t(69D), z(9D)]) = 78D -> MLP[256,128,64] -> 8D  (71+9=80D when EE on)
+        Critic:  cat([o_t(69D), z(9D), p_t(27D)]) = 105D -> MLP[512,256,128] -> 1D  (71+9+27=107D when EE on)
         Cost:    same 105D input -> MLP[512,256,128] -> K (multi-head)
     """
 
@@ -301,7 +302,7 @@ class _ALBCNoEncoderPolicyCfg(RslRlPpoActorCriticCfg):
     critic_hidden_dims: list[int] = [512, 256, 128]
     activation: str = "elu"
     # Observation dimensions
-    policy_obs_dim: int = 69
+    policy_obs_dim: int = 69  # Auto-synced to 71 by train.py when ee_action_enable=True
     privileged_dim: int = 27
     # Cost critic for IPO
     num_constraints: int = 0  # Auto-synced from env config
