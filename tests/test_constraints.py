@@ -16,6 +16,13 @@ symbol and drive the cost functions with lightweight tensor stand-ins for
 ``env`` / ``robot``.
 """
 
+# ---------------------------------------------------------------------------
+# Load constraints.py directly via importlib, bypassing constrained_albc.__init__
+# (which imports albc_env -> isaaclab.sim, requiring a full Isaac Sim runtime).
+# constraints.py only needs the `configclass` decorator from isaaclab.utils, so
+# we mock that single symbol.
+# ---------------------------------------------------------------------------
+import dataclasses
 import importlib.util
 import sys
 import types
@@ -25,16 +32,24 @@ from types import SimpleNamespace
 import pytest
 import torch
 
-# ---------------------------------------------------------------------------
-# Load constraints.py directly via importlib, bypassing constrained_albc.__init__
-# (which imports albc_env -> isaaclab.sim, requiring a full Isaac Sim runtime).
-# constraints.py only needs the `configclass` decorator from isaaclab.utils, so
-# we mock that single symbol.
-# ---------------------------------------------------------------------------
+
+def _mock_configclass(cls):
+    """Stand-in for isaaclab's @configclass: make the class a dataclass so it gets a real
+    __init__ (the real decorator does this), converting mutable class-level defaults to
+    default_factory so dataclass() accepts them (the real one also handles mutables)."""
+    for name, value in list(vars(cls).items()):
+        if name.startswith("__"):
+            continue
+        if isinstance(value, (list, dict, set)) and name in getattr(cls, "__annotations__", {}):
+            default = value
+            setattr(cls, name, dataclasses.field(default_factory=lambda d=default: type(d)(d)))
+    return dataclasses.dataclass(cls)
+
+
 for _pkg in ("isaaclab", "isaaclab.utils"):
     if _pkg not in sys.modules:
         sys.modules[_pkg] = types.ModuleType(_pkg)
-sys.modules["isaaclab.utils"].configclass = lambda cls: cls  # no-op decorator
+sys.modules["isaaclab.utils"].configclass = _mock_configclass
 
 _CONSTRAINTS_PATH = (
     Path(__file__).resolve().parent.parent
@@ -325,55 +340,66 @@ def test_compute_all_costs_stacks_K():
 
 
 # ---------------------------------------------------------------------------
-# joint1-constraint-redesign wiring: ALBCEnvCfg.__post_init__ appends exactly one
-# Average term for arm A/B and leaves arm 'none' byte-identical, WITHOUT mutating
-# the shared module-level _FULL_DOF_CONSTRAINT_TERMS (also used by full_dof).
+# joint1-constraint-redesign wiring: apply_joint1_constraint_arm(env_cfg) appends
+# exactly one Average term for arm A/B and leaves arm 'none' byte-identical, WITHOUT
+# mutating the shared module-level _FULL_DOF_CONSTRAINT_TERMS (also used by full_dof).
 #
-# config.py pulls in isaaclab/marinelab at import, so we reproduce the post_init
-# list-op against constraints.py (loaded sim-free above) -- pinning the two
-# load-bearing contracts (no-op off; non-shared append) without an Isaac runtime.
+# These call the REAL helper (not a reproduction). The helper is invoked from
+# ALBCEnv.__init__ (AFTER hydra applies overrides), NOT a cfg __post_init__ -- because
+# __post_init__ runs pre-override and would always see arm='none', silently leaving the
+# shipped 10-term set: a baseline-dup masquerading as arm A/B. A real run with
+# joint1_constraint_arm=A that still showed only 10 constraints proved that failure;
+# test_apply_arm_appends_real_term is the regression guard.
 # ---------------------------------------------------------------------------
 
 
-def _materialize_arm(arm, budget, shared_terms):
-    """Reproduce ALBCEnvCfg.__post_init__'s term-list op against the real cost funcs."""
-    terms = SimpleNamespace(terms=list(shared_terms))  # mimic cfg.constraints
-    if arm == "none":
-        return terms
-    if arm == "A":
-        term = SimpleNamespace(func=C.joint1_centering_cost, params={}, budget=budget, name="joint1_centering")
-    elif arm == "B":
-        term = SimpleNamespace(func=C.joint1_cumulative_cost, params={}, budget=budget, name="joint1_cumulative")
-    else:
-        raise ValueError(arm)
-    terms.terms = [*terms.terms, term]
-    return terms
+def _cfg_with_terms(arm, budget, n_shared=10):
+    """A minimal env_cfg stand-in: a constraints object holding a shared term list."""
+    shared = [SimpleNamespace(name=f"t{i}") for i in range(n_shared)]
+    constraints = SimpleNamespace(terms=shared)
+    cfg = SimpleNamespace(
+        joint1_constraint_arm=arm,
+        joint1_constraint_budget=budget,
+        constraints=constraints,
+    )
+    return cfg, shared
 
 
-def test_post_init_none_is_noop():
+def test_apply_arm_none_is_noop():
     """arm 'none' leaves the 10-term shipped set untouched (byte-identical)."""
-    shared = [SimpleNamespace(name=f"t{i}") for i in range(10)]
-    out = _materialize_arm("none", 0.05, shared)
-    assert [t.name for t in out.terms] == [f"t{i}" for i in range(10)]
+    cfg, _ = _cfg_with_terms("none", 0.05)
+    C.apply_joint1_constraint_arm(cfg)
+    assert [t.name for t in cfg.constraints.terms] == [f"t{i}" for i in range(10)]
 
 
-def test_post_init_appends_one_term_for_A_and_B():
-    """arm A/B append exactly one continuous Average term with the given budget."""
-    shared = [SimpleNamespace(name=f"t{i}") for i in range(10)]
+def test_apply_arm_appends_real_term():
+    """arm A/B append exactly one continuous Average term with the given budget.
+
+    Calls the real helper, so it would FAIL if the helper stopped materializing the term
+    (the silent-baseline-dup failure that a live arm=A run actually exhibited).
+    """
     for arm, fname, cost_fn in (
         ("A", "joint1_centering", C.joint1_centering_cost),
         ("B", "joint1_cumulative", C.joint1_cumulative_cost),
     ):
-        out = _materialize_arm(arm, 0.07, shared)
-        assert len(out.terms) == 11
-        assert out.terms[-1].name == fname
-        assert out.terms[-1].budget == 0.07
-        assert out.terms[-1].func is cost_fn  # binary-indicator regression guard: continuous func
+        cfg, _ = _cfg_with_terms(arm, 0.07)
+        C.apply_joint1_constraint_arm(cfg)
+        terms = cfg.constraints.terms
+        assert len(terms) == 11, f"arm {arm} did not append the 11th term"
+        assert terms[-1].name == fname
+        assert terms[-1].budget == 0.07
+        assert terms[-1].func is cost_fn  # binary-indicator regression guard: continuous func
 
 
-def test_post_init_does_not_mutate_shared_list():
+def test_apply_arm_rejects_unknown():
+    """An unknown arm value is a loud error, not a silent no-op."""
+    cfg, _ = _cfg_with_terms("X", 0.05)
+    with pytest.raises(ValueError):
+        C.apply_joint1_constraint_arm(cfg)
+
+
+def test_apply_arm_does_not_mutate_shared_list():
     """Appending must NOT mutate the shared _FULL_DOF_CONSTRAINT_TERMS (full_dof reuses it)."""
-    shared = [SimpleNamespace(name=f"t{i}") for i in range(10)]
-    _materialize_arm("A", 0.05, shared)
-    _materialize_arm("B", 0.05, shared)
-    assert len(shared) == 10  # untouched after both arms materialized
+    cfg, shared = _cfg_with_terms("A", 0.05)
+    C.apply_joint1_constraint_arm(cfg)
+    assert len(shared) == 10  # the original shared list object is untouched (new list built)

@@ -15,6 +15,7 @@ import logging
 import math
 
 import torch
+from marinelab.physics import HydrodynamicsModel
 
 import isaaclab.sim as sim_utils
 from isaaclab.assets import Articulation
@@ -22,10 +23,8 @@ from isaaclab.envs import DirectRLEnv
 from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
 from isaaclab.utils.math import euler_xyz_from_quat, quat_apply, quat_apply_inverse
 
-from marinelab.physics import HydrodynamicsModel
-
 from .config import ALBCEnvCfg
-from .mdp.constraints import compute_all_costs
+from .mdp.constraints import apply_joint1_constraint_arm, compute_all_costs
 from .mdp.events import (
     DRSampler,
     randomize_body_mass,
@@ -117,6 +116,13 @@ class ALBCEnv(DirectRLEnv):
 
         # DR sampler shared between _reset_physics() and _reset_task_and_state()
         self._current_dr_sampler: DRSampler | None = None
+
+        # Materialize the joint1-constraint-redesign experiment arm (no-op unless
+        # cfg.joint1_constraint_arm is 'A'/'B'). MUST happen here, after hydra has applied
+        # its overrides to self.cfg, NOT in a cfg __post_init__ (which runs pre-override and
+        # would silently leave the shipped 10-term set -> a baseline-dup). See
+        # constraints.apply_joint1_constraint_arm.
+        apply_joint1_constraint_arm(self.cfg)
 
         # Cache config-static values (avoids repeated attribute lookups)
         self._constraints_cfg = getattr(self.cfg, "constraints", None)

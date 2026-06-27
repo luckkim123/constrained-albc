@@ -298,6 +298,31 @@ def joint1_cumulative_cost(
 # =============================================================================
 
 
+def apply_joint1_constraint_arm(env_cfg) -> None:
+    """Append the joint1-constraint-redesign experiment term to env_cfg.constraints, in place.
+
+    MUST be called from ALBCEnv.__init__ (after hydra has applied its overrides), NOT from a
+    cfg __post_init__: __post_init__ runs at cfg construction, BEFORE hydra's
+    update_class_from_dict sets joint1_constraint_arm, so it would always see 'none' and
+    silently leave the shipped 10-term set untouched (a baseline-dup masquerading as arm A/B).
+
+    arm='none' is a no-op (byte-identical to the shipped config). 'A'/'B' append exactly one
+    continuous Average term whose IPO budget governs its strength. The shared module-level
+    _FULL_DOF_CONSTRAINT_TERMS (also used by full_dof) is never mutated: a new list is built.
+    """
+    arm = getattr(env_cfg, "joint1_constraint_arm", "none")
+    if arm == "none":
+        return
+    budget = env_cfg.joint1_constraint_budget
+    if arm == "A":
+        term = ConstraintTermCfg(func=joint1_centering_cost, budget=budget, name="joint1_centering")
+    elif arm == "B":
+        term = ConstraintTermCfg(func=joint1_cumulative_cost, budget=budget, name="joint1_cumulative")
+    else:
+        raise ValueError(f"joint1_constraint_arm must be one of 'none'/'A'/'B', got {arm!r}")
+    env_cfg.constraints.terms = [*env_cfg.constraints.terms, term]
+
+
 def compute_all_costs(
     robot: Articulation,
     env: ALBCEnv,
