@@ -24,7 +24,7 @@ from isaaclab.utils.math import euler_xyz_from_quat, quat_apply, quat_apply_inve
 
 from marinelab.physics import HydrodynamicsModel
 
-from .config import ALBCEnvCfg
+from .config import ALBCEnvCfg, apply_ee_obs_space
 from .mdp.constraints import compute_all_costs
 from .mdp.events import (
     DRSampler,
@@ -72,6 +72,15 @@ class ALBCEnv(DirectRLEnv):
             render_mode: Render mode for visualization.
             **kwargs: Additional arguments.
         """
+        # Re-resolve observation_space and noise model from the current cfg state.
+        # When launched via train.py + hydra, ALBCEnvCfg.__post_init__ runs before the
+        # hydra CLI override (e.g. env.ee_action_enable=true) is applied, so
+        # observation_space is frozen at 69D even when ee_action_enable ends up True.
+        # Calling apply_ee_obs_space here -- after hydra has written the final field
+        # values but before super().__init__() reads cfg.observation_space -- fixes the
+        # timing gap without changing any values when ee_action_enable=False.
+        apply_ee_obs_space(cfg)
+
         # Convert noise config tuples to tensors before DirectRLEnv creates the noise model.
         # Tuples are used in config for OmegaConf/Hydra serialization compatibility.
         self._convert_noise_cfg_tuples(cfg)

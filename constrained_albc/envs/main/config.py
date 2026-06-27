@@ -250,6 +250,29 @@ def resolve_observation_space(cfg: "ALBCEnvCfg") -> int:
     return 71 if cfg.ee_action_enable else 69
 
 
+def apply_ee_obs_space(cfg: "ALBCEnvCfg") -> None:
+    """Re-resolve observation_space and noise model from the current cfg state.
+
+    Called from both ALBCEnvCfg.__post_init__ (direct construction path) and
+    ALBCEnv.__init__ (hydra path, where __post_init__ ran before the override was
+    applied).  Having a single function here ensures both paths stay in sync.
+
+    Toggle-off (ee_action_enable=False): sets observation_space=69 and leaves the
+    noise model as the 69D default -- identical to the pre-fix behavior.
+    Toggle-on  (ee_action_enable=True):  sets observation_space=71 and rebuilds
+    the noise model to 71D by inserting the EE noise slices at index 14.
+    """
+    cfg.observation_space = resolve_observation_space(cfg)
+    if cfg.ee_action_enable:
+        noise_71 = _OBS_NOISE_STD[:14] + _EE_OBS_NOISE_STD + _OBS_NOISE_STD[14:]
+        bmin_71 = _OBS_BIAS_MIN[:14] + tuple(-x for x in _EE_OBS_BIAS_MAG) + _OBS_BIAS_MIN[14:]
+        bmax_71 = _OBS_BIAS_MAX[:14] + _EE_OBS_BIAS_MAG + _OBS_BIAS_MAX[14:]
+        cfg.observation_noise_model = NoiseModelWithAdditiveBiasCfg(
+            noise_cfg=GaussianNoiseCfg(mean=0.0, std=noise_71),
+            bias_noise_cfg=UniformNoiseCfg(n_min=bmin_71, n_max=bmax_71),
+        )
+
+
 # +2D EE-position noise/bias slices, appended to proprioception when EE enabled.
 _EE_OBS_NOISE_STD = (0.02, 0.02)  # match joint_pos noise scale
 _EE_OBS_BIAS_MAG = (0.02, 0.02)
@@ -464,12 +487,4 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     constraints: ALBCConstraintCfg = ALBCConstraintCfg(terms=_FULL_DOF_CONSTRAINT_TERMS)
 
     def __post_init__(self) -> None:
-        self.observation_space = resolve_observation_space(self)
-        if self.ee_action_enable:
-            noise_71 = _OBS_NOISE_STD[:14] + _EE_OBS_NOISE_STD + _OBS_NOISE_STD[14:]
-            bmin_71 = _OBS_BIAS_MIN[:14] + tuple(-x for x in _EE_OBS_BIAS_MAG) + _OBS_BIAS_MIN[14:]
-            bmax_71 = _OBS_BIAS_MAX[:14] + _EE_OBS_BIAS_MAG + _OBS_BIAS_MAX[14:]
-            self.observation_noise_model = NoiseModelWithAdditiveBiasCfg(
-                noise_cfg=GaussianNoiseCfg(mean=0.0, std=noise_71),
-                bias_noise_cfg=UniformNoiseCfg(n_min=bmin_71, n_max=bmax_71),
-            )
+        apply_ee_obs_space(self)
