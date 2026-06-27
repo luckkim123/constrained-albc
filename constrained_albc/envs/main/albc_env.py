@@ -138,17 +138,18 @@ class ALBCEnv(DirectRLEnv):
 
         # Validate observation dimension contract (fails loud at construction, not first step).
         # observation_space (config) must equal the actual o_t assembled in _get_observations():
-        #   proprio (20D, compute_policy_obs) + history (10*hist_len + 8*hist_action_len) + integral.
+        #   proprio (20D baseline, compute_policy_obs) + history (10*hist_len + 8*hist_action_len) + integral.
         # Mirrors the existing state_space / control_freq guards above. Runs once -- obs dim is
         # step-invariant -- and survives `python -O` (unlike assert; cf. constraint_trpo hot-path assert).
-        #   - PROPRIO_DIM = 20 is the compute_policy_obs() contract (3 ang_cmd + 6 body + 5 arm + 6 thruster);
+        #   - PROPRIO_DIM baseline = 20: 3 ang_cmd + 6 body + 5 arm + 6 thruster;
         #     no measured lin_vel (no DVL on real robot).
+        #   - When ee_action_enable=True, compute_policy_obs appends 2D EE position -> PROPRIO_DIM = 22.
         #   - history contributes 0 when self._hist_buf is None (hist_len == 0); per step it is
         #     joint(4) + body(6) -> 10*hist_len, plus action(8) -> 8*hist_action_len.
         #   - integral contributes self.cfg.integral_dims only when self.cfg.use_integral_obs.
         #   - On mismatch, raise ValueError with expected vs computed and the relevant cfg flags,
         #     matching the f-string style of the state_space / control_freq guards.
-        PROPRIO_DIM = 20
+        PROPRIO_DIM = 20 + (2 if self.cfg.ee_action_enable else 0)
         expected_obs_dim = PROPRIO_DIM
         if self._hist_buf is not None:
             expected_obs_dim += 10 * self._hist_len + 8 * self._hist_action_len
