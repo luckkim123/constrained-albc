@@ -218,14 +218,19 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         agent_cfg.seed = seed
 
     # Auto-sync policy_obs_dim when ee_action_enable=True.
-    # env_cfg.observation_space is already correct (71D) via apply_ee_obs_space() called
-    # in ALBCEnvCfg.__post_init__ and again in ALBCEnv.__init__. The agent policy cfg
-    # hardcodes policy_obs_dim=69 and has no knowledge of the EE toggle, so we sync here
-    # -- after all hydra/CLI overrides are final -- to keep EE a single toggle with no
-    # per-launch CLI override needed on the agent side.
+    # The agent policy cfg hardcodes policy_obs_dim=69 and has no knowledge of the EE
+    # toggle, so we sync it here -- after all hydra/CLI overrides are final -- to keep EE
+    # a single toggle with no per-launch CLI override needed on the agent side.
     # Toggle-off (ee_action_enable=False): condition is false, policy_obs_dim stays 69.
     if getattr(env_cfg, "ee_action_enable", False):
-        new_policy_obs_dim = env_cfg.observation_space  # 71 when EE on
+        # NOTE: do NOT read env_cfg.observation_space here -- it is stale (69) at this
+        # point. Hydra's from_dict() flips ee_action_enable=True but does not re-run
+        # ALBCEnvCfg.__post_init__/apply_ee_obs_space, so observation_space is only
+        # rebuilt to 71 later inside ALBCEnv.__init__ (at gym.make, AFTER this block).
+        # resolve_observation_space() derives the dim from the live toggle (-> 71).
+        from constrained_albc.envs.main.config import resolve_observation_space
+
+        new_policy_obs_dim = resolve_observation_space(env_cfg)  # 71 when EE on
         # agent_cfg.policy is a configclass; access via attribute.
         if hasattr(agent_cfg, "policy") and hasattr(agent_cfg.policy, "policy_obs_dim"):
             if agent_cfg.policy.policy_obs_dim != new_policy_obs_dim:
