@@ -496,3 +496,31 @@
 - **Pages:** state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md
 - **Summary:** updated 'state_dependent_std: robustness-vs-nominal trade-off, NOT difficulty-adaptive (Phase-2 falsification)'
 
+## [2026-06-27T05:56:13.546012] query
+- **Pages:** exp_analyze_must_run_analyze_training_py_for_training_side_diagn.md, coverage_lint_ok_is_a_floor_not_a_quality_gate_re_analysis_uses_.md, report_completeness_gate_must_run_before_writing_not_after.md, engine_gap_analyze_training_py_needs_the_logs_run_dir_not_the_ex.md, engine_gap_omx_cli_skill_gaps_found_during_dr_harder_reporting_2.md, experiment_result_recording_location_experiments_tree_is_ssot_no.md, engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md, engine_gap_confirmed_analyze_training_py_constraint_reward_prefi.md, experiment_output_directory_standard_logs_vs_experiments_index_t.md, engine_gap_analyze_training_deep_plot_has_2_blank_panels_inconsi.md, engine_gap_omx_cli_gaps_found_re_analyzing_teacher_2026_06_06_ro.md, don_t_trust_an_engine_s_empty_zero_output_cross_check_the_raw_tb.md, omx_cli_tools_not_just_the_engine_silent_fail_on_misuse_empty_ab.md, constrained_albc_experiment_conventions.md, cross_run_reference_values_must_be_re_extracted_fresh_never_carr.md, doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md, experiment_launch_checklist_run_id_wandb_latest_alias_naming.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, analysis_engine_map_what_is_grow_able_vs_off_limits.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md
+- **Summary:** query 'exp-analyze report' -> 20 of 56
+
+## [2026-06-27T05:57:55.370657] query
+- **Pages:** training_log_analysis_engine_reference_adapter.md, exp_analyze_must_run_analyze_training_py_for_training_side_diagn.md, engine_gap_analyze_training_deep_plot_has_2_blank_panels_inconsi.md, engine_gap_confirmed_analyze_training_py_constraint_reward_prefi.md, analysis_engine_map_what_is_grow_able_vs_off_limits.md, analysis_refactor_2026_06_05_new_sim_free_modules_and_engine_gap.md, engine_gap_analyze_training_py_needs_the_logs_run_dir_not_the_ex.md, don_t_trust_an_engine_s_empty_zero_output_cross_check_the_raw_tb.md, engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md, engine_gap_eval_adapter_only_covers_static_periodic_unsupported_.md, engine_gap_heavy_tail_json_pct_peak_gt_thresh_exceeds_100_at_ood.md, engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md, eval_analysis_core_does_stats_adapter_does_heavy_tail.md, omx_cli_tools_not_just_the_engine_silent_fail_on_misuse_empty_ab.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, engine_gap_omx_cli_skill_gaps_found_during_dr_harder_reporting_2.md, coverage_lint_ok_is_a_floor_not_a_quality_gate_re_analysis_uses_.md, engine_gap_omx_cli_gaps_found_re_analyzing_teacher_2026_06_06_ro.md, constraint_viol_trajectory_barrier_sign_metrics_4_10_starts_at_d.md, experiment_output_directory_standard_logs_vs_experiments_index_t.md
+- **Summary:** query 'analysis engine reference adapter how to analyze training' -> 20 of 64
+
+## [2026-06-27T05:57:55.729018] query
+- **Pages:** dr_harder_campaign_synthesis_speed_kills_attitude_center_shift_o.md, exp_analyze_must_run_analyze_training_py_for_training_side_diagn.md, reward_penalty_terms_thruster_smoothness_bias_block_3_temporal_b.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md, kl_ub_0_12_trades_attitude_for_translation_e1_dr_harder.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, experiment_result_recording_location_experiments_tree_is_ssot_no.md, cross_run_reference_values_must_be_re_extracted_fresh_never_carr.md, sequential_overnight_campaign_wall_clock_budget_not_crashes_kill.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, teacher_cross_axis_correlation_collapses_none_hard_axis_decorrel.md, analysis_refactor_2026_06_05_new_sim_free_modules_and_engine_gap.md, coverage_lint_ok_is_a_floor_not_a_quality_gate_re_analysis_uses_.md, dr_harder_ood_verdict_e2_best_survives_ood_the_harder_curriculum.md, engine_gap_analyze_training_deep_plot_has_2_blank_panels_inconsi.md, engine_gap_omx_cli_gaps_found_re_analyzing_teacher_2026_06_06_ro.md, engine_gap_omx_cli_skill_gaps_found_during_dr_harder_reporting_2.md, omx_cli_tools_not_just_the_engine_silent_fail_on_misuse_empty_ab.md, report_completeness_gate_must_run_before_writing_not_after.md, static_eval_plots_regenerate_sim_free_from_npz_reconstruct_segme.md
+- **Summary:** query 'attitude SS error survival manipulability EE action workspace' -> 20 of 64
+
+## [2026-06-27T09:03:56.761023] add
+- **Pages:** ee_action_redesign_meets_joint1_drift_goal_at_constraint_level.md
+- **Summary:** created 'EE-action redesign meets joint1 drift goal at constraint level'
+
+## [2026-06-27T09:04:10.974301] add
+- **Pages:** doraemon_slow_dr_expansion_separate_kl_step_from_ess_ratio_to_fi.md
+- **Summary:** created 'DORAEMON slow DR expansion: separate kl_step from ess_ratio to find cause'
+
+## [2026-06-27T09:04:34.517481] add
+- **Pages:** engine_gap_wiki_from_report_rejects_section_intro_evidence_witho.md
+- **Summary:** created 'engine-gap: wiki --from-report rejects section-intro [EVIDENCE] without [FINDING]'
+
+## [2026-06-27T09:13:14.653866] add
+- **Pages:** ee_action_enabled_path_hardening_follow_ups_deferred_not_merge_b.md
+- **Summary:** created 'EE-action enabled-path hardening follow-ups (deferred, not merge blockers)'
+

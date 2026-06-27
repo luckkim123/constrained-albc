@@ -1,6 +1,6 @@
 # Wiki Index
 
-> 64 pages | Last updated: 2026-06-14T07:38:30.793420
+> 68 pages | Last updated: 2026-06-27T09:13:14.653866
 
 ## convention
 
@@ -16,6 +16,7 @@
 ## debugging
 
 - [DON'T trust an engine's empty/zero output — cross-check the raw TB tag set first](don_t_trust_an_engine_s_empty_zero_output_cross_check_the_raw_tb.md) - # DON'T trust an engine's empty/zero output — cross-check the raw TB tag set ...
+- [DORAEMON slow DR expansion: separate kl_step from ess_ratio to find cause](doraemon_slow_dr_expansion_separate_kl_step_from_ess_ratio_to_fi.md) - # DORAEMON slow DR expansion: separate kl_step from ess_ratio to find cause
 - [DR-harder reports measure only in-distribution; OOD eval is the missing decisive test](dr_harder_reports_measure_only_in_distribution_ood_eval_is_the_m.md) - # DR-harder reports measure only in-distribution; OOD eval is the missing dec...
 - [ENGINE-GAP: analyze_training deep-plot has 2 blank panels + inconsistent legends; no DORAEMON curriculum plot](engine_gap_analyze_training_deep_plot_has_2_blank_panels_inconsi.md) - # ENGINE-GAP: analyze_training deep-plot has 2 blank panels + inconsistent le...
 - [heavy-tail vs sample-mean divergence are independent](heavy_tail_vs_sample_mean_divergence_are_independent.md) - # heavy-tail vs sample-mean divergence are independent
@@ -32,6 +33,8 @@
 - [DORAEMON alpha is a feasibility FLOOR, not a DR-expansion lever (E5 dr-harder)](doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md) - # DORAEMON alpha is a feasibility FLOOR, not a DR-expansion lever (E5 dr-harder)
 - [DR-harder campaign synthesis: speed kills attitude, center-shift overfits](dr_harder_campaign_synthesis_speed_kills_attitude_center_shift_o.md) - # DR-harder campaign synthesis: speed kills attitude, center-shift overfits
 - [DR-harder OOD verdict: E2-best survives OOD; the harder curriculum (E1) generalizes WORST](dr_harder_ood_verdict_e2_best_survives_ood_the_harder_curriculum.md) - # DR-harder OOD verdict: E2-best survives OOD; the harder curriculum (E1) gen...
+- [EE-action enabled-path hardening follow-ups (deferred, not merge blockers)](ee_action_enabled_path_hardening_follow_ups_deferred_not_merge_b.md) - # EE-action enabled-path hardening follow-ups (deferred, not merge blockers)
+- [EE-action redesign meets joint1 drift goal at constraint level](ee_action_redesign_meets_joint1_drift_goal_at_constraint_level.md) - # EE-action redesign meets joint1 drift goal at constraint level
 - [engine-gap: analyze_training.py emits no reward 8-term decomposition scalars](engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md) - # engine-gap: analyze_training.py emits no reward 8-term decomposition scalars
 - [engine-gap: analyze_training.py needs the logs/ run dir, not the experiments/ run dir (events under train symlink)](engine_gap_analyze_training_py_needs_the_logs_run_dir_not_the_ex.md) - # engine-gap: analyze_training.py needs the logs/ run dir, not the experiment...
 - [RETRACTED — barrier_alpha is 0.02 not 0.05 (this claim was WRONG)](engine_gap_barrier_alpha_is_0_02_not_0_05_dr_harder_docs_drift.md) - # RETRACTED — this page's claim (barrier_alpha=0.02) was WRONG
@@ -42,6 +45,7 @@
 - [engine-gap: heavy_tail.json pct_peak_gt_thresh exceeds 100% at ood level (denominator bug)](engine_gap_heavy_tail_json_pct_peak_gt_thresh_exceeds_100_at_ood.md) - # engine-gap: heavy_tail.json pct_peak_gt_thresh exceeds 100% at ood level (d...
 - [engine-gap: omx CLI gaps found re-analyzing teacher (2026-06-06 round 2)](engine_gap_omx_cli_gaps_found_re_analyzing_teacher_2026_06_06_ro.md) - # engine-gap: omx CLI gaps found re-analyzing teacher (2026-06-06 round 2)
 - [engine-gap: omx CLI/skill gaps found during dr-harder reporting (2026-06-06)](engine_gap_omx_cli_skill_gaps_found_during_dr_harder_reporting_2.md) - # engine-gap: omx CLI/skill gaps found during dr-harder reporting (2026-06-06)
+- [engine-gap: wiki --from-report rejects section-intro [EVIDENCE] without [FINDING]](engine_gap_wiki_from_report_rejects_section_intro_evidence_witho.md) - # engine-gap: wiki --from-report rejects section-intro [EVIDENCE] without [FI...
 - [eval analysis: core does stats, adapter does heavy-tail](eval_analysis_core_does_stats_adapter_does_heavy_tail.md) - # eval analysis: core does stats, adapter does heavy-tail
 - [exp-analyze MUST run analyze_training.py for training-side diagnosis](exp_analyze_must_run_analyze_training_py_for_training_side_diagn.md) - # exp-analyze MUST run analyze_training.py for training-side diagnosis
 - [kl_ub up and per-difficulty learning are antagonistic; the dr_harder verdict is budget-conditional](kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md) - # kl_ub up and per-difficulty learning are antagonistic; the dr_harder verdic...
