@@ -1,6 +1,6 @@
 # Wiki Index
 
-> 68 pages | Last updated: 2026-06-27T09:13:14.653866
+> 70 pages | Last updated: 2026-06-27T10:35:05.415030
 
 ## convention
 
@@ -42,6 +42,7 @@
 - [engine-gap: eval adapter covers static + segmented; periodic still unsupported](engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md) - # engine-gap: eval adapter covers static + segmented; periodic still unsupported
 - [engine-gap: eval adapter only covers static; periodic unsupported, segmented partial](engine_gap_eval_adapter_only_covers_static_periodic_unsupported_.md) - # engine-gap: eval adapter only covers static; periodic unsupported, segmente...
 - [engine-gap: eval npz saves no raw obs/std/privileged — blocks exact per-env std reconstruction](engine_gap_eval_npz_saves_no_raw_obs_std_privileged_blocks_exact.md) - # engine-gap: eval npz saves no raw obs/std/privileged — blocks exact per-env...
+- [engine-gap: flat-target eval records joint1 trajectory but renders no drift plot](engine_gap_flat_target_eval_records_joint1_trajectory_but_render.md) - # engine-gap: flat-target eval records joint1 trajectory but renders no drift...
 - [engine-gap: heavy_tail.json pct_peak_gt_thresh exceeds 100% at ood level (denominator bug)](engine_gap_heavy_tail_json_pct_peak_gt_thresh_exceeds_100_at_ood.md) - # engine-gap: heavy_tail.json pct_peak_gt_thresh exceeds 100% at ood level (d...
 - [engine-gap: omx CLI gaps found re-analyzing teacher (2026-06-06 round 2)](engine_gap_omx_cli_gaps_found_re_analyzing_teacher_2026_06_06_ro.md) - # engine-gap: omx CLI gaps found re-analyzing teacher (2026-06-06 round 2)
 - [engine-gap: omx CLI/skill gaps found during dr-harder reporting (2026-06-06)](engine_gap_omx_cli_skill_gaps_found_during_dr_harder_reporting_2.md) - # engine-gap: omx CLI/skill gaps found during dr-harder reporting (2026-06-06)
@@ -58,6 +59,7 @@
 - [constraint budget x0.5 binds only thruster_util -> authority starvation](constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md) - # constraint budget x0.5 binds only thruster_util -> authority starvation
 - [dr-harder heavy-tail correction: %peak>20 is NOT zero at medium/hard](dr_harder_heavy_tail_correction_peak_20_is_not_zero_at_medium_ha.md) - # dr-harder heavy-tail correction: %peak>20 is NOT zero at medium/hard
 - [dr-harder: reward decomposition confirms eval trades on the training side](dr_harder_reward_decomposition_confirms_eval_trades_on_the_train.md) - # dr-harder: reward decomposition confirms eval trades on the training side
+- [EE-action joint1 drift gone DIRECTLY via flat-target, but settle position is bimodal](ee_action_joint1_drift_gone_directly_via_flat_target_but_settle_.md) - # EE-action joint1 drift gone DIRECTLY via flat-target, but settle position i...
 - [Autonomous campaign tail-run died from MISSING launch automation, not wall-clock](sequential_overnight_campaign_wall_clock_budget_not_crashes_kill.md) - # Autonomous campaign tail-run died from MISSING launch automation, not wall-...
 - [teacher: cross-axis correlation collapses none->hard (axis decorrelation)](teacher_cross_axis_correlation_collapses_none_hard_axis_decorrel.md) - # teacher: cross-axis correlation collapses none->hard (axis decorrelation)
 - [teacher dr_harder: DORAEMON curriculum froze before run end (unused headroom)](teacher_dr_harder_doraemon_curriculum_froze_before_run_end_unuse.md) - # teacher dr_harder: DORAEMON curriculum froze before run end (unused headroom)
