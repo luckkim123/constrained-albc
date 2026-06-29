@@ -55,16 +55,31 @@ def _infer_teacher_dims(sd: dict) -> dict:
     The dims differ per campaign (main full-DOF teacher = 87 obs / 24 priv;
     attitude-only teacher = 69 obs / 27 priv), so hardcoding StudentCfg defaults
     would mis-shape the model and fail to load. The checkpoint is the single
-    source of truth -- read the dims straight from its tensor shapes."""
+    source of truth -- read the dims straight from its tensor shapes.
+
+    num_constraints likewise varies (baseline = 10; the joint1-constraint
+    campaign added an 11th constraint head). cost_critic is NOT exported, but its
+    output head still has to be sized to match the checkpoint or load_state_dict
+    raises a shape mismatch -- strict=False only forgives missing/unexpected keys,
+    not a same-named tensor of a different shape. So read its head count from the
+    highest-index cost_critic.*.weight row count."""
     policy_obs_dim = sd["actor_obs_normalizer._mean"].shape[1]   # (1, obs)
     latent_dim = sd["_encoder_output_norm.weight"].shape[0]      # (latent,)
     privileged_dim = sd["encoder.0.weight"].shape[1]             # (256, priv)
     num_actions = sd["actor.6.weight"].shape[0]                  # (actions, 64)
+    cost_weight_keys = [
+        k for k in sd if k.startswith("cost_critic.") and k.endswith(".weight")
+    ]
+    num_constraints = (
+        sd[max(cost_weight_keys, key=lambda k: int(k.split(".")[1]))].shape[0]
+        if cost_weight_keys else 10
+    )
     return {
         "policy_obs_dim": policy_obs_dim,
         "latent_dim": latent_dim,
         "privileged_dim": privileged_dim,
         "num_actions": num_actions,
+        "num_constraints": num_constraints,
     }
 
 
@@ -137,7 +152,7 @@ def build_teacher_model(ckpt_path: str, device) -> nn.Module:
         activation="elu",
         init_noise_std=0.7,
         critic_uses_z=True,
-        num_constraints=10,
+        num_constraints=dims["num_constraints"],
         cost_critic_hidden_dims=(512, 256, 128),
     )
     policy.to(dev)
