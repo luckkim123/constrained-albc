@@ -134,9 +134,19 @@ four `*_hidden_dims` lists. Fields like `init_noise_std=0.7` and the
 `*_normalization` flags do not change layer shapes.
 
 **Encoder input normalization** is static min-max (HORA-style), not
-`EmpiricalNormalization`: the cfg passes a 27-element `_PRIV_OBS_LOWER` /
-`_PRIV_OBS_UPPER` and the encoder computes `(2*p_t - (U+L)) / (U-L)`. It is
+`EmpiricalNormalization`: the encoder computes `(2*p_t - (U+L)) / (U-L)`. It is
 deterministic with no running statistics, which avoids `z` drift / KL spikes.
+
+The bounds `[U, L]` are **derived from the DR config** at runner build time
+(`derive_priv_obs_bounds_from_dr()` in `envs/main/utils/priv_obs_bounds.py`,
+injected by `ConstraintEncoderRunner.__init__` like the `num_constraints`
+auto-sync), so bound = DR range exactly (margin 0) and a DR change auto-syncs.
+The old hardcoded `_PRIV_OBS_LOWER/UPPER` in `agents/rsl_rl_ppo_cfg.py` remain
+only as a construct-time fallback (still imported by `student/teacher.py`); they
+had drifted from DR (payload-mass overflow, stale CoG-xy radius) — the reason for
+the derivation refactor. A terminal `_assert_bounds_match_dr()` fails loud if a
+future DR change desyncs the derived bounds. (Branch `exp/dr-derived-norm-bounds`,
+audit item B1; see `docs/plans/2026-06-30-dr-derived-priv-obs-normalization-bounds.md`.)
 
 ### 3.1 Class hierarchy
 
@@ -158,11 +168,13 @@ subclasses inherit from it **as siblings**:
 Algorithm body: `algorithms/constraint_trpo.py`. Objective (from the module
 docstring):
 
-```
-maximize  E[A(s,a)] + (1/t) * sum_k log(d_k^i - J_hat_Ck)
-s.t.      KL(pi || pi_i) <= delta
-where     d_k^i = max(d_k, J_Ck + alpha * d_k)
-```
+$$
+\begin{aligned}
+\max_{\pi}\quad & \mathbb{E}\!\left[A(s,a)\right] + \frac{1}{t}\sum_{k} \log\!\left(d_k^{i} - \hat{J}_{C_k}\right) \\
+\text{s.t.}\quad & \mathrm{KL}\!\left(\pi \,\|\, \pi_i\right) \le \delta \\
+\text{where}\quad & d_k^{i} = \max\!\left(d_k,\; J_{C_k} + \alpha\, d_k\right)
+\end{aligned}
+$$
 
 Per-update flow:
 
@@ -170,15 +182,27 @@ Per-update flow:
 ROLLOUT -> reward GAE + per-constraint cost GAE (K constraints)
   |
 update():
-  - IPO adaptive thresholds:  d_k^i = max(d_k, J_Ck + alpha*d_k)   # raise threshold on violation, avoid -log blow-up
-  - surrogate = -E[adv*ratio]  +  (-sum log(margin)/t)  +  (-entropy bonus)
-       g = grad(surrogate) over policy_params (actor + encoder + log_std);  clip |g| <= 1.0
-       nat_grad = CG(F^-1 g, cg_iters=10);  FVP: F*v = grad^2 KL(Normal)*v + cg_damping*v
-       step = -sqrt(max_kl / (0.5 * nat_grad^T g)) * nat_grad
-       line search: accept iff delta_surrogate > 0 AND KL <= max_kl * 1.5  (backtrack x10)
+  - IPO adaptive thresholds (raise threshold on violation, avoid -log blow-up)
+  - build surrogate, take a natural-gradient TRPO step (see equations below)
   - clamp log_std to [log min_std, log max_std]  (per-dim)
   - Adam MSE on critic + cost_critic (num_learning_epochs x num_mini_batches)
 ```
+
+The natural-gradient step inside `update()`:
+
+$$
+\begin{aligned}
+\text{IPO threshold:}\quad & d_k^{i} = \max\!\left(d_k,\; J_{C_k} + \alpha\, d_k\right) \\
+\text{surrogate:}\quad & L = -\,\mathbb{E}\!\left[A\cdot r\right] \;-\; \frac{1}{t}\sum_k \log(\text{margin}_k) \;-\; \beta_{\text{ent}}\, H \\
+\text{gradient:}\quad & g = \nabla_{\theta} L \quad \text{over } \theta = (\text{actor},\, \text{encoder},\, \log\sigma),\quad \lVert g \rVert \le 1.0 \\
+\text{natural grad:}\quad & \tilde{g} = F^{-1} g \;\;(\text{CG, } \texttt{cg\_iters}=10),\quad Fv = \nabla^2_{\theta}\,\mathrm{KL}(\mathcal{N})\,v + \lambda_{\text{cg}}\, v \\
+\text{step:}\quad & \Delta\theta = -\sqrt{\frac{\delta_{\max}}{\tfrac{1}{2}\,\tilde{g}^{\top} g}}\;\tilde{g} \\
+\text{line search:}\quad & \text{accept iff } \Delta L > 0 \ \text{and}\ \mathrm{KL} \le 1.5\,\delta_{\max}\quad(\text{backtrack} \times 10)
+\end{aligned}
+$$
+
+where $r$ is the importance ratio, $H$ the policy entropy, $\beta_{\text{ent}}$ the
+entropy coefficient, $\lambda_{\text{cg}}$ the CG damping, and $\delta_{\max}=\texttt{max\_kl}$.
 
 **Parameter-group split** (by name prefix): names matching
 `("critic.", "cost_critic.", ...)` go to an **Adam** optimizer (`value_lr`); all
