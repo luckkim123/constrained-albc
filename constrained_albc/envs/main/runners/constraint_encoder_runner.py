@@ -21,6 +21,7 @@ import torch
 from rsl_rl.runners import OnPolicyRunner
 
 from ..utils.logging import flush_metrics, log_encoder_metrics
+from ..utils.priv_obs_bounds import derive_priv_obs_bounds_from_dr
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +66,32 @@ class ConstraintEncoderRunner(OnPolicyRunner):
             self._constraint_names = constraints_cfg.constraint_names
         else:
             self._constraint_names = ()
+
+        # Override encoder normalization bounds with DR-derived values.
+        # The hardcoded _PRIV_OBS_LOWER/UPPER in rsl_rl_ppo_cfg.py are only a
+        # construct-time fallback; here we recompute the bounds directly from the
+        # live DR config so they cannot drift from the ranges DR actually samples
+        # (spec: docs/plans/2026-06-30-dr-derived-priv-obs-normalization-bounds.md).
+        # Guard: PPO/NoEncoder variants may not carry encoder bound keys.
+        policy_cfg = train_cfg["policy"]
+        env_cfg = env.unwrapped.cfg
+        if (
+            "encoder_obs_lower" in policy_cfg
+            and "encoder_obs_upper" in policy_cfg
+            and env_cfg.thrusters is not None
+        ):
+            # Pass the LIVE hydro cfg (not a fresh default) so a task that overrides
+            # hydrodynamics flows into the bounds -- closing the same base-drift vector
+            # this refactor exists to eliminate (spec section 4).
+            lower, upper = derive_priv_obs_bounds_from_dr(
+                env_cfg.randomization,
+                env_cfg.ocean_current.max_velocity,
+                env_cfg.thrusters,
+                hydro_cfg=env_cfg.hydrodynamics,
+            )
+            logger.info("Overriding encoder_obs_lower/upper with DR-derived bounds (margin 0)")
+            policy_cfg["encoder_obs_lower"] = lower
+            policy_cfg["encoder_obs_upper"] = upper
 
         # Value normalization flag (set via train_cfg or algorithm config)
         self._normalize_value = train_cfg.get("normalize_value", False)

@@ -34,6 +34,15 @@ _runner_module.ALBCConstraintTRPO = ConstraintTRPO
 # Each pair is (lower, upper) with ~10% margin beyond Hard DR range.
 # Layout: hydro(7) + dynamics(5) + payload(4) + actuator(4) + env(4)
 #
+# DEPRECATED as the live source of truth: ConstraintEncoderRunner.__init__ now
+# OVERRIDES encoder_obs_lower/upper at build time with DR-derived bounds via
+# utils.priv_obs_bounds.derive_priv_obs_bounds_from_dr (margin 0, exactly the DR
+# range). These literals had drifted from DR and contained real normalization
+# bugs (payload mass overflow, stale cog xy radius). They are kept ONLY as a
+# construct-time fallback so the cfg still builds standalone, and because
+# student/teacher.py still imports them (migration is a follow-up).
+# Spec: docs/plans/2026-06-30-dr-derived-priv-obs-normalization-bounds.md
+#
 # Base values from ALBCHydrodynamicsCfg:
 #   volume=0.009, CoG=(0,0,-0.05), CoB=(0,0,0), Ixx=0.0994
 #   lin_damp_roll=0.3, quad_damp_roll=1.0, mass=9.18, added_mass_surge=8.0
@@ -153,6 +162,8 @@ class _ALBCPolicyCfg(_EncoderPolicyCfg):
     class_name: str = "ALBCActorCriticEncoder"
     critic_uses_z: bool = True
     encoder_output_norm: bool = True  # LayerNorm before softsign
+    # Fallback defaults only -- ConstraintEncoderRunner.__init__ overrides these
+    # with DR-derived bounds at build time (see spec / module-level note above).
     encoder_obs_lower: list[float] = _PRIV_OBS_LOWER
     encoder_obs_upper: list[float] = _PRIV_OBS_UPPER
     # Cost critic for IPO
