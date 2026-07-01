@@ -169,3 +169,95 @@ def test_build_plot_data_orders_by_abs_correlation():
 def test_build_plot_data_empty_ranking_safe():
     pdata = fd.build_failure_dr_plot_data({"axis": "roll", "dr_ranking": []}, top_n=5)
     assert pdata["bars"] == []
+
+
+# ---- 7. fault join: the same worst-env<->value join generalized to fault_<name> ----
+
+def _data_with_fault(n=64, t=200, warmup=50, seed=0):
+    """Synthetic eval dict where a dead thruster (low fault_thruster_3) drives roll error.
+
+    Mirrors _data() but the failing signal lives in a fault_ channel, not a dr_ one:
+    roll steady-state error grows as thruster 3 health DROPS (a dead actuator => worse
+    tracking), so the worst-k envs MUST have the lowest fault_thruster_3 and the join
+    must detect a strong NEGATIVE correlation on that fault. dr_ channels are present
+    but uncorrelated -- the join must separate fault from dr, not blend them.
+    """
+    rng = np.random.default_rng(seed)
+    health3 = np.linspace(0.2, 1.0, n).astype(np.float32)  # env i gets increasing health
+    rng.shuffle(health3)                                   # break index<->magnitude order
+    # roll error grows as health drops: err ~ (1 - health) * scale.
+    base_err = (1.0 - health3)[None, :] * 100.0 + rng.normal(0, 0.05, (t, n)).astype(np.float32)
+    return {
+        "error_roll": base_err,
+        "error_pitch": rng.normal(0, 0.1, (t, n)).astype(np.float32),
+        "warmup_steps": warmup,
+        "terminated": np.zeros((t, n), dtype=bool),
+        # fault channels (the FTC signal of record)
+        "fault_thruster_3": health3,
+        "fault_thruster_0": rng.uniform(0.9, 1.0, n).astype(np.float32),  # healthy, irrelevant
+        "fault_sensor_noise": rng.normal(0, 0.01, n).astype(np.float32),  # irrelevant noise
+        # dr channels present but uncorrelated -- must NOT be confused with the fault culprit
+        "dr_cog_y": rng.normal(0, 0.01, n).astype(np.float32),
+        "dr_payload_mass": (1.5 + rng.normal(0, 0.3, n)).astype(np.float32),
+    }
+
+
+def test_join_separates_dr_and_fault_rankings():
+    """dr and fault are ranked in SEPARATE lists, not blended into one."""
+    d = _data_with_fault(seed=1)
+    result = fd.join_failure_dr(d, axis="roll", k=10)
+    assert "dr_ranking" in result and "fault_ranking" in result
+    dr_names = {r["name"] for r in result["dr_ranking"]}
+    fault_names = {r["name"] for r in result["fault_ranking"]}
+    # disjoint by prefix: dr_ keys only in dr_ranking, fault_ keys only in fault_ranking
+    assert all(n.startswith("dr_") for n in dr_names)
+    assert all(n.startswith("fault_") for n in fault_names)
+    assert {"dr_cog_y", "dr_payload_mass"} <= dr_names
+    assert {"fault_thruster_3", "fault_thruster_0", "fault_sensor_noise"} <= fault_names
+
+
+def test_join_flags_dead_thruster_as_fault_culprit():
+    """The dead thruster (lowest health <-> worst roll) tops the fault ranking."""
+    d = _data_with_fault(seed=2)
+    result = fd.join_failure_dr(d, axis="roll", k=10)
+    top = result["fault_ranking"][0]
+    assert top["name"] == "fault_thruster_3", f"expected thruster_3 culprit, got {top['name']}"
+    assert top["correlation"] < -0.5            # strong NEGATIVE corr (low health -> failing)
+    assert top["failing_mean"] < top["population_mean"]  # failing envs got lower health
+
+
+def test_join_dr_ranking_unchanged_when_no_fault_present():
+    """Backward compat: a dr-only npz yields the same dr_ranking and an empty fault_ranking."""
+    d = _data(seed=3)  # the original dr-only fixture
+    result = fd.join_failure_dr(d, axis="roll", k=10)
+    assert result["dr_ranking"][0]["name"] == "dr_cog_y"  # unchanged behavior
+    assert result["fault_ranking"] == []                  # no fault_ keys -> empty, graceful
+
+
+def test_join_fault_only_npz_has_empty_dr_ranking():
+    """A fault-only npz (no dr_ snapshot) still produces a fault_ranking."""
+    d = _data_with_fault(seed=4)
+    for k in [key for key in d if key.startswith("dr_")]:
+        del d[k]
+    result = fd.join_failure_dr(d, axis="roll", k=10)
+    assert result["dr_ranking"] == []
+    assert result["fault_ranking"][0]["name"] == "fault_thruster_3"
+
+
+def test_build_plot_data_strips_fault_prefix():
+    """Plot labels strip the fault_ prefix, not just dr_."""
+    d = _data_with_fault(seed=5)
+    join = fd.join_failure_dr(d, axis="roll", k=10)
+    pdata = fd.build_failure_dr_plot_data(join, top_n=3, ranking_key="fault_ranking")
+    assert len(pdata["bars"]) == 3
+    # the top fault bar's name keeps the full key; the strip happens at label time
+    assert pdata["bars"][0]["name"] == "fault_thruster_3"
+
+
+def test_analyze_levels_carries_fault_ranking():
+    """Multi-level analysis carries fault_ranking per level alongside dr_ranking."""
+    all_data = {"none": _data_with_fault(seed=1), "hard": _data_with_fault(seed=2)}
+    out = fd.analyze_failure_dr_levels(all_data, axis="roll", k=10)
+    for lvl in out["levels"]:
+        assert "fault_ranking" in out["levels"][lvl]
+        assert out["levels"][lvl]["fault_ranking"][0]["name"] == "fault_thruster_3"

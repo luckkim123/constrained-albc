@@ -18,6 +18,7 @@ finding.
 Usage:
     python3 eval_adapter.py heavy-tail <eval_dir> [--levels none soft medium hard]
     python3 eval_adapter.py segmented <eval_dir> [--levels none soft medium hard]
+    python3 eval_adapter.py failure-dr <eval_dir> [--levels ...] [--axis roll] [--k 10]
 """
 from __future__ import annotations
 
@@ -115,6 +116,28 @@ def analyze_segmented(eval_dir: str, levels=None) -> dict:
     return out
 
 
+def analyze_failure_dr(eval_dir: str, levels=None, axis: str = "roll", k: int = 10) -> dict:
+    """Per-env DR/FAULT <-> failure join for omx report (sim-free, structured).
+
+    Pure delegation to the join engine `_analyze.failure_dr.analyze_failure_dr_levels`:
+    loads each level's data_<level>.npz and correlates the worst-k failing envs against
+    their per-env dr_<name> AND fault_<name> channels, returning a per-level
+    {dr_ranking, fault_ranking} structure (the FTC fault signal surfaced beside DR).
+    Computes nothing here, so it cannot drift from the engine of record. A level whose
+    npz carries neither dr_ nor fault_ keys yields empty rankings, not a crash.
+    """
+    from _analyze.eval_dr import _ed_load_level  # sim-free npz loader
+    from _analyze.failure_dr import analyze_failure_dr_levels  # sim-free join engine
+
+    lvls = list(levels) if levels else list(_DEFAULT_LEVELS)
+    all_data: dict = {}
+    for lvl in lvls:
+        d = _ed_load_level(eval_dir, lvl)
+        if d is not None and any(key.startswith(("dr_", "fault_")) for key in d):
+            all_data[lvl] = d
+    return analyze_failure_dr_levels(all_data, axis=axis, k=k)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="OMX sim-free eval analysis adapter")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -126,6 +149,12 @@ def main(argv: list[str] | None = None) -> int:
     sg.add_argument("eval_dir", help="dir holding summary_segmented.json")
     sg.add_argument("--levels", nargs="+", default=None,
                     help="DR levels (default: none soft medium hard)")
+    fd = sub.add_parser("failure-dr", help="per-env DR/FAULT <-> failure join, ranked by |corr| (static)")
+    fd.add_argument("eval_dir", help="dir holding data_<level>.npz with dr_/fault_ snapshots")
+    fd.add_argument("--levels", nargs="+", default=None,
+                    help="DR levels (default: none soft medium hard)")
+    fd.add_argument("--axis", default="roll", help="failing axis to join against (default roll)")
+    fd.add_argument("--k", type=int, default=10, help="num worst envs treated as failing (default 10)")
     args = parser.parse_args(argv)
 
     if args.cmd == "heavy-tail":
@@ -134,6 +163,10 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.cmd == "segmented":
         out = analyze_segmented(args.eval_dir, levels=args.levels)
+        print(json.dumps(out))
+        return 0
+    if args.cmd == "failure-dr":
+        out = analyze_failure_dr(args.eval_dir, levels=args.levels, axis=args.axis, k=args.k)
         print(json.dumps(out))
         return 0
     return 2

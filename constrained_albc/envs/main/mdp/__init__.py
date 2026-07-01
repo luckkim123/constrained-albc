@@ -18,8 +18,10 @@ from .constraints import (
     velocity_limit_cost,
     yaw_rate_cost,
 )
+from . import faults
 from .events import (
     DRSampler,
+    apply_joint_fault,
     randomize_body_mass,
     randomize_hydrodynamics,
     randomize_joint_effort_limit,

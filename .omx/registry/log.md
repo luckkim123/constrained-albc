@@ -476,6 +476,7 @@
 - **Pages:** constraint_viol_trajectory_barrier_sign_metrics_4_10_starts_at_d.md
 - **Summary:** created 'Constraint/viol trajectory + barrier sign + metrics 4->10: starts at -d_k rising=healthy, barrier mostly-negative=healthy, early-satisfy tail=over-loose candidate'
 
+
 ## [2026-06-14T07:37:55.125761] add
 - **Pages:** omx_wiki_has_no_delete_subcommand_by_design_removal_is_gc_apply_.md
 - **Summary:** created 'omx wiki has no delete subcommand by design: removal is gc-apply, duplicates come from add-with-new-title'

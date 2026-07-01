@@ -329,24 +329,25 @@ def _ed_run_failure_dr(eval_dir: str, levels: list[str], axis: str, k: int) -> N
     all_data: dict[str, dict] = {}
     for lvl in levels:
         d = _ed_load_level(eval_dir, lvl)
-        if d is not None and any(key.startswith("dr_") for key in d):
+        if d is not None and any(key.startswith(("dr_", "fault_")) for key in d):
             all_data[lvl] = d
     if not all_data:
-        print("\n[failure_dr] no per-env DR (dr_*) in npz -- skipped "
-              "(re-run eval with the dr-snapshot build to enable)", file=sys.stderr)
+        print("\n[failure_dr] no per-env DR (dr_*) or fault (fault_*) in npz -- skipped "
+              "(re-run eval with the dr-snapshot build, or --fault, to enable)", file=sys.stderr)
         return
 
     result = fd.analyze_failure_dr_levels(all_data, axis=axis, k=k)
-    print(f"\n=== FAILURE <-> DR JOIN (axis={axis}, worst-{k} envs) ===")
+    print(f"\n=== FAILURE <-> DR/FAULT JOIN (axis={axis}, worst-{k} envs) ===")
     for lvl, jr in result["levels"].items():
-        if not jr["dr_ranking"]:
-            continue
-        top3 = jr["dr_ranking"][:3]
-        print(f"  [{lvl}] binding DR (|corr| desc):")
-        for r in top3:
-            arrow = "higher" if r["shift"] > 0 else "lower"
-            print(f"    {r['name']:22s} corr={r['correlation']:+.3f}  "
-                  f"failing-env mean {r['failing_mean']:+.4f} ({arrow} than pop {r['population_mean']:+.4f})")
+        for rank_key, label in (("dr_ranking", "DR"), ("fault_ranking", "FAULT")):
+            ranking = jr.get(rank_key, [])
+            if not ranking:
+                continue
+            print(f"  [{lvl}] binding {label} (|corr| desc):")
+            for r in ranking[:3]:
+                arrow = "higher" if r["shift"] > 0 else "lower"
+                print(f"    {r['name']:22s} corr={r['correlation']:+.3f}  "
+                      f"failing-env mean {r['failing_mean']:+.4f} ({arrow} than pop {r['population_mean']:+.4f})")
     out = os.path.join(eval_dir, "failure_dr_correlation.png")
     saved = fd.plot_failure_dr(result, out, top_n=8)
     if saved:

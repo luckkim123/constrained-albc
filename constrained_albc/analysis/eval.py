@@ -36,7 +36,10 @@ from _eval_dr.metrics import (  # type: ignore[import-not-found]  # noqa: E402
     compute_metrics,
     compute_seg_metrics,
 )
-from _eval_dr.dr_snapshot import per_env_dr_from_tensors  # type: ignore[import-not-found]  # noqa: E402
+from _eval_dr.dr_snapshot import (  # type: ignore[import-not-found]  # noqa: E402
+    per_env_dr_from_tensors,
+    per_env_fault_from_tensors,
+)
 from _eval_dr.trajectory import (  # type: ignore[import-not-found]  # noqa: E402
     ATT_AMP_DEG,
     LIN_VEL_AMP,
@@ -68,6 +71,12 @@ def _add_common(sp: argparse.ArgumentParser) -> None:
     sp.add_argument("--output_dir", type=str, default=None, help="Output directory.")
     sp.add_argument("--seed", type=int, default=42, help="Random seed.")
     sp.add_argument("--agent", type=str, default="rsl_rl_cfg_entry_point", help="RSL-RL config entry point.")
+    sp.add_argument(
+        "--fault",
+        action="store_true",
+        help="Enable per-env fault injection (cfg.fault.enable). Records fault_<name>[N] "
+        "per-env into data_<level>.npz alongside dr_<name>. Off -> npz is fault-free.",
+    )
     cli_args.add_rsl_rl_args(sp)
 
 
@@ -526,6 +535,39 @@ def _read_per_env_dr(raw_env) -> dict[str, np.ndarray]:
     return per_env_dr_from_tensors(tensors)
 
 
+def _read_per_env_fault(raw_env) -> dict[str, np.ndarray]:
+    """Read each env's post-reset FAULT tensors and shape them into fault_<name>[N].
+
+    Namespace-disjoint from _read_per_env_dr (dr_ vs fault_): a fault is an actuator /
+    sensor FAILURE, not a DR physical-parameter spread, so it gets its own axis for the
+    failing-env join. Every buffer is read defensively with getattr -- if fault injection
+    is disabled (or this env predates the fault buffers) the channel is simply absent and
+    no fault_ key is emitted, leaving the npz byte-identical to the fault-free case.
+
+    Buffer locations:
+        thruster_health  raw_env._thruster._thruster_health  (N, 6) -- in the marinelab model
+        sensor_noise     raw_env._sensor_noise_scale          (N,)   -- on the env
+        joint_health     raw_env._joint_health                (N,)   -- on the env
+    """
+
+    def _np(t):
+        return t.detach().cpu().numpy()
+
+    tensors: dict[str, np.ndarray] = {}
+
+    thruster = getattr(raw_env, "_thruster", None)
+    if thruster is not None and getattr(thruster, "_thruster_health", None) is not None:
+        tensors["thruster_health"] = _np(thruster._thruster_health)
+
+    if getattr(raw_env, "_sensor_noise_scale", None) is not None:
+        tensors["sensor_noise"] = _np(raw_env._sensor_noise_scale)
+
+    if getattr(raw_env, "_joint_health", None) is not None:
+        tensors["joint_health"] = _np(raw_env._joint_health)
+
+    return per_env_fault_from_tensors(tensors)
+
+
 def run_evaluation(
     env,
     policy,
@@ -593,6 +635,9 @@ def run_evaluation(
     # Snapshot each env's now-fixed DR (post-clamp physics tensors = what the policy
     # experiences). Saved per-env so analysis can join failing envs <-> their DR.
     per_env_dr = _read_per_env_dr(raw_env)
+    # Snapshot each env's now-fixed FAULT (thruster health / sensor noise / joint health).
+    # Empty when fault injection is disabled -> npz stays byte-identical to the DR-only case.
+    per_env_fault = _read_per_env_fault(raw_env)
 
     target_roll_rad = np.deg2rad(target_roll_deg)
     target_pitch_rad = np.deg2rad(target_pitch_deg)
@@ -713,6 +758,8 @@ def run_evaluation(
         "has_lin_vel": has_lin_vel,
         # Per-env DR sampled values (dr_<name>[num_envs]) for failure<->DR join analysis.
         **per_env_dr,
+        # Per-env fault values (fault_<name>[num_envs]); empty when fault disabled.
+        **per_env_fault,
     }
     # lin-vel arrays/targets only when the env tracks lin-vel (attitude_only omits
     # them -> compute_metrics sees no lin_vel keys and the npz stays lin-vel-free).
@@ -857,6 +904,10 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     env_cfg.sim.device = args_cli.device if args_cli.device is not None else env_cfg.sim.device
     if hasattr(env_cfg, "doraemon"):
         env_cfg.doraemon.enable = False
+    # Fault injection: opt-in via --fault. Independent of observation_noise_model (which
+    # eval turns off above) -- fault sensor noise is added directly in _get_observations.
+    if getattr(args_cli, "fault", False) and hasattr(env_cfg, "fault"):
+        env_cfg.fault.enable = True
 
     # Compute episode_length_s from trajectory (see TRAJECTORY_N_SEGMENTS).
     env_cfg.episode_length_s = TRAJECTORY_N_SEGMENTS * args_cli.segment_duration + 10.0
@@ -1480,6 +1531,10 @@ def run_periodic(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     env_cfg.sim.device = args_cli.device if args_cli.device is not None else env_cfg.sim.device
     if hasattr(env_cfg, "doraemon"):
         env_cfg.doraemon.enable = False
+    # Fault injection: opt-in via --fault. Independent of observation_noise_model (which
+    # eval turns off above) -- fault sensor noise is added directly in _get_observations.
+    if getattr(args_cli, "fault", False) and hasattr(env_cfg, "fault"):
+        env_cfg.fault.enable = True
 
     # Episode must be long enough for all DR steps
     env_cfg.episode_length_s = args_cli.step_duration * args_cli.num_steps + 10.0
@@ -1861,6 +1916,10 @@ def run_segmented(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     env_cfg.sim.device = args_cli.device if args_cli.device is not None else env_cfg.sim.device
     if hasattr(env_cfg, "doraemon"):
         env_cfg.doraemon.enable = False
+    # Fault injection: opt-in via --fault. Independent of observation_noise_model (which
+    # eval turns off above) -- fault sensor noise is added directly in _get_observations.
+    if getattr(args_cli, "fault", False) and hasattr(env_cfg, "fault"):
+        env_cfg.fault.enable = True
     # Upright init (no attitude noise)
     if hasattr(env_cfg, "play_init_attitude_noise_deg"):
         env_cfg.play_init_attitude_noise_deg = 0.0

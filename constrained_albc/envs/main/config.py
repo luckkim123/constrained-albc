@@ -245,6 +245,43 @@ _OBS_BIAS_MIN = tuple(-x for x in _OBS_BIAS_MAG)
 _OBS_BIAS_MAX = _OBS_BIAS_MAG
 
 
+# ==========================================================================
+# Fault Injection (per-env actuator / sensor FAILURE -- FTC infrastructure)
+#
+# Distinct from DomainRandomizationCfg: DR spreads a PHYSICAL PARAMETER across
+# envs (every env is a valid-but-different vehicle); a FAULT models a component
+# FAILING (a thruster dies, a sensor degrades, a joint stiffens). Faults are
+# sampled per-env at reset, fixed for the episode, and recorded into the eval
+# npz (fault_<name>[N]) so heavy-tail analysis can join failing envs <-> faults.
+#
+# Default enable=False -> no fault buffers allocated -> byte-identical to the
+# fault-free env. The minimal preset below exists to drive a fault_enable=True
+# eval that proves fault_* keys land in the npz; it is intentionally mild
+# (proves the pipeline, not a stress test).
+# ==========================================================================
+@configclass
+class FaultInjectionCfg:
+    """Per-env fault injection configuration (off by default)."""
+
+    enable: bool = False
+
+    # -- Thruster fault (per-env per-thruster health in [0, 1]) --
+    # Each env: each thruster independently fails with prob `thruster_fail_prob`;
+    # a failed thruster keeps a residual health sampled from `thruster_health_range`
+    # (0 = fully dead, 0.5 = half degradation). Healthy thrusters stay at 1.0.
+    thruster_fail_prob: float = 0.10
+    thruster_health_range: tuple[float, float] = (0.0, 0.5)
+
+    # -- Sensor noise fault (per-env extra observation noise scale) --
+    # Per-env multiplier ADDED on top of the always-on _OBS_NOISE_STD model:
+    # extra_noise = scale[env] * N(0, 1) * obs_noise_std. 0 = nominal sensor.
+    sensor_noise_scale_range: tuple[float, float] = (0.0, 2.0)
+
+    # -- Joint fault (per-env arm joint response health in [0, 1]) --
+    # Scales the joint effort limit (1.0 = nominal, 0.5 = half torque authority).
+    joint_health_range: tuple[float, float] = (0.5, 1.0)
+
+
 @configclass
 class ALBCEnvCfg(DirectRLEnvCfg):
     """Attitude-only ALBC environment configuration.
@@ -388,6 +425,11 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # Domain Randomization
     # ==========================================================================
     randomization: HardDomainRandomizationCfg = HardDomainRandomizationCfg()
+
+    # ==========================================================================
+    # Fault Injection (off by default; FTC infrastructure, see FaultInjectionCfg)
+    # ==========================================================================
+    fault: FaultInjectionCfg = FaultInjectionCfg()
     # performance_lb: DORAEMON binary-success threshold on accumulated episode return
     # (albc_env.py: _episode_return_accum += reward; success = return >= performance_lb).
     # Calibrated 68.0 -> 250.0 from a recon run (trpo_baseline_260608_160453, lb=68, 1146 iter):
