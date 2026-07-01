@@ -343,6 +343,45 @@ constraint 선택은 MLP 레이어 수·차원·activation을 **바꾸지 않는
 
 ---
 
+## 9. 설계 근거와 문헌상 위치
+
+2026-06-30 policy head(std 파라미터화, action output, entropy)의 코드 + 문헌 검토
+결론. 각 선택이 분야 표준인지 프로젝트 고유 확장인지 기록해, 후속 작업이 무엇이
+합의에 기대고 무엇이 우리 실측에 기대는지 구분할 수 있게 한다.
+
+| 선택 | 위치 | 근거 |
+|---|---|---|
+| Global state-independent `log_std` | **표준** (on-policy PPO/TRPO) | "37 Implementation Details of PPO"(state-independent, init 0); HORA `self.sigma = nn.Parameter`; rsl_rl `state_dependent_std=False` 기본값. state-dependent std는 SAC 관행. |
+| Linear action output (tanh/clamp 없음) | **표준** (PPO/TRPO) | raw Gaussian mean + 환경단 `[-1,1]` 해석; tanh-squashing은 SAC 특성(Jacobian 보정 필요). `MLP` 마지막 레이어 linear(`last_activation=None`), `act()`에 clamp 없음. |
+| `min_std` floor / `max_std` cap | **프로젝트 커스텀** (rsl_rl 상류에 없음) | floor=premature std collapse 방지/exploration 보존, cap=발산 방지. 일부 robot-RL repo(MoE-Loco "clip min std 0.05")에 유사 사례 있으나 표준 레시피 아님. TRPO step 후 `constraint_trpo.py`에서 적용. |
+| TRPO에 entropy bonus 추가 | **비표준** (PPO엔 표준, 순수 TRPO엔 아님) | EnTRPO(arXiv:2110.13373)가 "TRPO + entropy regularization"을 *novelty*로 발표 — 표준이면 논문이 안 됨. PPO는 양수 `entropy_coef`가 일상(rsl_rl 0.01, IsaacLab AnymalB 0.005). |
+| Per-dim entropy / min_std (arm vs thruster) | **프로젝트 커스텀** | task 특수: arm dim이 더 빨리 붕괴(iter ~1404)해 entropy push(0.01 vs 0.001)와 floor(0.10 vs 0.05)를 더 세게. |
+
+### 9.1 TRPO인데도 entropy가 붕괴하는 이유
+
+"TRPO의 KL trust region이 entropy collapse를 *막아준다*"는 흔한 오해다. 막지
+못한다 — trust region은 각 스텝의 **크기**만 제한하지 **방향**은 제한하지
+않는다. 목적함수의 gradient가 매 스텝 std 감소 방향을 가리키면 각 스텝은 작아도
+정책은 꾸준히 entropy 0으로 걸어가고, trust region은 그 하강을 늦출 뿐이다.
+std를 누르는 두 압력:
+
+1. **Surrogate(advantage).** policy gradient는 high-advantage action의 확률을
+   높이는데, Gaussian에서 특정 action에 확률을 몰아주는 것 = std 축소다. 이는
+   PPO/TRPO 공통의 구조적 압력으로 trust region이 못 막는다.
+2. **IPO log-barrier (프로젝트 특이 증폭).** std가 크면 가끔 constraint 위반
+   action을 샘플해 margin `d_k - hat{J}_{C_k}`이 줄고 barrier term `log(...)`이
+   작아진다. 그래서 barrier가 "위험 샘플을 안 내도록 std를 줄여라"는 압력을 더한다
+   — constraint가 정책을 "조심스럽게"(낮은 노이즈) 만든다.
+
+순수 TRPO는 압력 1만, 우리는 1 + 2라서 entropy가 vanilla TRPO보다 *빨리* 붕괴하고,
+그래서 (프로젝트 커스텀) entropy bonus가 필요하다. 실측: `entropy_coef=0` -> 노이즈
+0.12 붕괴; `entropy_coef=0.003` -> 0.55 회복. 압력 2는 메커니즘 추론 + 일반
+constrained-RL 문헌 지지(constraint가 exploration 억제: ESB-CPO arXiv:2302.14339,
+safe-RL 리뷰 arXiv:2508.09128)까지이며, **통제 실험으로 분리 입증된 것은 아니다** —
+보류된 검증 실험은 `docs/plans/2026-06-30-entropy-collapse-ipo-barrier-experiment.md` 참조.
+
+---
+
 ## 소스 파일
 
 - `constrained_albc/envs/main/encoder/_policy_base.py` — `PolicyBase`, global `log_std`, Gaussian, critic/cost_critic 구성

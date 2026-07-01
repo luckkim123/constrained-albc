@@ -255,6 +255,50 @@ policy cfg is overwritten at runtime; `cost_critic` is only built when K > 0.
 
 ---
 
+## 6. Design rationale and literature standing
+
+Conclusions from a 2026-06-30 code + literature walk-through of the policy head
+(std parameterization, action output, entropy). Each row records whether the
+choice is a field standard or a project-specific extension, so future work knows
+what rests on consensus vs. on our own measurements.
+
+| Choice | Standing | Evidence |
+|---|---|---|
+| Global state-independent `log_std` | **Standard** for on-policy PPO/TRPO | "37 Implementation Details of PPO" (state-independent, init 0); HORA `self.sigma = nn.Parameter`; rsl_rl `state_dependent_std=False` default. State-dependent std is the SAC norm, not TRPO. |
+| Linear action output (no tanh/clamp) | **Standard** for PPO/TRPO | raw Gaussian mean + env-side `[-1,1]` interpretation; tanh-squashing is a SAC trait (needs Jacobian correction). `MLP` last layer is linear (`last_activation=None`); `act()` does no clamping. |
+| `min_std` floor / `max_std` cap | **Project-custom** (not in rsl_rl upstream) | floor = prevents premature std collapse / preserves exploration; cap = prevents divergence. Similar floors seen in some robot-RL repos (e.g. MoE-Loco "clip min std 0.05") but no standardized recipe. Applied after the TRPO step in `constraint_trpo.py`. |
+| Entropy bonus added to TRPO | **Non-standard** (standard for PPO, not pure TRPO) | EnTRPO (arXiv:2110.13373) positions "TRPO + entropy regularization" as a *novelty* — if it were standard it would not be a paper. PPO routinely uses a positive `entropy_coef` (rsl_rl 0.01, IsaacLab AnymalB 0.005). |
+| Per-dim entropy / min_std (arm vs thruster) | **Project-custom** | task-specific: arm dims collapse faster (by iter ~1404), so they get a stronger entropy push (0.01 vs 0.001) and a higher floor (0.10 vs 0.05). |
+
+### 6.1 Why entropy collapses despite TRPO
+
+A common misconception is that TRPO's KL trust region *prevents* entropy
+collapse. It does not — the trust region bounds the **size** of each step, not
+its **direction**. If the objective's gradient points toward smaller std at every
+step, each step stays small but the policy walks steadily toward zero entropy;
+the trust region only slows the descent. Two pressures push std down here:
+
+1. **Surrogate (advantage).** Policy gradient raises the probability of
+   high-advantage actions; for a Gaussian, concentrating probability on a chosen
+   action *is* shrinking std. This is the structural PPO/TRPO-common pressure the
+   trust region cannot block.
+2. **IPO log-barrier (project-specific amplifier).** A large std occasionally
+   samples constraint-violating actions, which shrinks the constraint margin
+   `d_k - hat{J}_{C_k}` and lowers the barrier term `log(...)`. The barrier
+   therefore adds pressure to reduce std so the policy stops sampling risky
+   actions — i.e. constraints make the policy "cautious" (lower noise).
+
+Because pure TRPO has only pressure 1 while we have 1 + 2, our entropy collapses
+*faster* than vanilla TRPO, which is why a (project-custom) entropy bonus is
+needed. Measured: `entropy_coef=0` -> noise collapses to 0.12; `entropy_coef=0.003`
+-> noise recovers to 0.55. Pressure 2 is a mechanism inference plus general
+constrained-RL literature support (constraints suppress exploration: ESB-CPO
+arXiv:2302.14339; safe-RL review arXiv:2508.09128); it is **not** isolated by a
+controlled experiment — see the deferred test in
+`docs/plans/2026-06-30-entropy-collapse-ipo-barrier-experiment.md`.
+
+---
+
 ## Source files
 
 - `constrained_albc/envs/main/encoder/_policy_base.py` — `PolicyBase`, global `log_std`, Gaussian, critic/cost_critic
