@@ -16,6 +16,13 @@ symbol and drive the cost functions with lightweight tensor stand-ins for
 ``env`` / ``robot``.
 """
 
+# ---------------------------------------------------------------------------
+# Load constraints.py directly via importlib, bypassing constrained_albc.__init__
+# (which imports albc_env -> isaaclab.sim, requiring a full Isaac Sim runtime).
+# constraints.py only needs the `configclass` decorator from isaaclab.utils, so
+# we mock that single symbol.
+# ---------------------------------------------------------------------------
+import dataclasses
 import importlib.util
 import sys
 import types
@@ -25,16 +32,24 @@ from types import SimpleNamespace
 import pytest
 import torch
 
-# ---------------------------------------------------------------------------
-# Load constraints.py directly via importlib, bypassing constrained_albc.__init__
-# (which imports albc_env -> isaaclab.sim, requiring a full Isaac Sim runtime).
-# constraints.py only needs the `configclass` decorator from isaaclab.utils, so
-# we mock that single symbol.
-# ---------------------------------------------------------------------------
+
+def _mock_configclass(cls):
+    """Stand-in for isaaclab's @configclass: make the class a dataclass so it gets a real
+    __init__ (the real decorator does this), converting mutable class-level defaults to
+    default_factory so dataclass() accepts them (the real one also handles mutables)."""
+    for name, value in list(vars(cls).items()):
+        if name.startswith("__"):
+            continue
+        if isinstance(value, (list, dict, set)) and name in getattr(cls, "__annotations__", {}):
+            default = value
+            setattr(cls, name, dataclasses.field(default_factory=lambda d=default: type(d)(d)))
+    return dataclasses.dataclass(cls)
+
+
 for _pkg in ("isaaclab", "isaaclab.utils"):
     if _pkg not in sys.modules:
         sys.modules[_pkg] = types.ModuleType(_pkg)
-sys.modules["isaaclab.utils"].configclass = lambda cls: cls  # no-op decorator
+sys.modules["isaaclab.utils"].configclass = _mock_configclass
 
 _CONSTRAINTS_PATH = (
     Path(__file__).resolve().parent.parent
@@ -65,12 +80,28 @@ def _robot(*, applied_torque=None, joint_vel=None, joint_pos=None, ang_vel=None,
     return SimpleNamespace(data=data, device=device)
 
 
-def _env(*, euler=None, cumulative_yaw=None, att_rp_err=None, manipulability=None, thruster_state=None):
+def _env(
+    *,
+    euler=None,
+    cumulative_yaw=None,
+    joint_pos_targets=None,
+    nominal_joint_pos=None,
+    att_rp_err=None,
+    manipulability=None,
+    thruster_state=None,
+    albc_joint_ids=None,
+):
     thruster = None if thruster_state is None else SimpleNamespace(state=thruster_state)
+    if nominal_joint_pos is None:
+        nominal_joint_pos = torch.zeros(2)
+    if albc_joint_ids is None:
+        albc_joint_ids = JOINT_IDS
     return SimpleNamespace(
-        _albc_joint_ids=JOINT_IDS,
+        _albc_joint_ids=albc_joint_ids,
         _euler_cache=euler,
         _cumulative_yaw=cumulative_yaw,
+        _joint_pos_targets=joint_pos_targets,
+        _nominal_joint_pos=nominal_joint_pos,
         _att_rp_err=att_rp_err,
         _manipulability=manipulability,
         _thruster=thruster,
@@ -182,6 +213,112 @@ def test_manipulability_inverse_direction():
     assert torch.allclose(cost, torch.tensor([0.25, 0.0, 0.0]))
 
 
+# ---------------------------------------------------------------------------
+# joint1 centering / cumulative drift constraints (the redesign experiment)
+# A = joint1_centering_cost: wrap(theta1)^2 on the MEASURED instantaneous angle.
+# B = joint1_cumulative_cost: |unwrapped cumulative joint1| on the env accumulator.
+# ---------------------------------------------------------------------------
+
+
+def test_joint1_centering_cost_zero_at_nominal():
+    """A: wrap(0)^2 == 0 -- no cost when the arm is centered."""
+    robot = _robot(joint_pos=torch.tensor([[0.0, 99.0]]))
+    assert C.joint1_centering_cost(robot, _env()).item() == pytest.approx(0.0)
+
+
+def test_joint1_centering_cost_grows_with_abs_theta1():
+    """A: monotone increasing in |theta1| inside one revolution; symmetric in sign."""
+    small = C.joint1_centering_cost(_robot(joint_pos=torch.tensor([[0.3, 0.0]])), _env()).item()
+    large = C.joint1_centering_cost(_robot(joint_pos=torch.tensor([[1.0, 0.0]])), _env()).item()
+    neg = C.joint1_centering_cost(_robot(joint_pos=torch.tensor([[-1.0, 0.0]])), _env()).item()
+    assert large > small > 0.0
+    assert large == pytest.approx(neg)  # even-symmetric
+
+
+def test_joint1_centering_cost_wraps_full_revolution():
+    """A: theta1 = 2*pi folds to 0 (continuous motor) -- cost ~0, NOT (2*pi)^2.
+
+    This fold is correct for the instantaneous-angle form (A); it is exactly the
+    property that makes A blind to a full-turn of drift, motivating cumulative B.
+    """
+    import math
+
+    pen_2pi = C.joint1_centering_cost(_robot(joint_pos=torch.tensor([[2.0 * math.pi, 0.0]])), _env()).item()
+    assert pen_2pi == pytest.approx(0.0, abs=1e-6)
+
+
+def test_joint1_centering_cost_only_reads_joint1():
+    """A: joint2 (index 1) must not affect the cost."""
+    a = C.joint1_centering_cost(_robot(joint_pos=torch.tensor([[0.5, 0.0]])), _env()).item()
+    b = C.joint1_centering_cost(_robot(joint_pos=torch.tensor([[0.5, 5.0]])), _env()).item()
+    assert a == pytest.approx(b)
+
+
+def test_joint1_cumulative_cost_abs_displacement_from_nominal():
+    """B: cost = |integrated command - nominal|, unwrapped -- a full turn is NOT free.
+
+    Reads _joint_pos_targets[:,0] (the integrator drift lives in), not the measured
+    angle. Displacement from nominal in either direction counts. With nominal=0 here:
+    targets [0, 1.5, -1.5, 2*pi] -> cost [0, 1.5, 1.5, 2*pi].
+    """
+    import math
+
+    targets = torch.tensor([[0.0, 0.0], [1.5, 0.0], [-1.5, 0.0], [2.0 * math.pi, 0.0]])
+    env = _env(joint_pos_targets=targets, nominal_joint_pos=torch.zeros(2))
+    cost = C.joint1_cumulative_cost(None, env)
+    assert torch.allclose(cost, torch.tensor([0.0, 1.5, 1.5, 2.0 * math.pi]), atol=1e-6)
+
+
+def test_joint1_cumulative_cost_relative_to_nonzero_nominal():
+    """B: displacement is measured from nominal, not absolute zero."""
+    targets = torch.tensor([[0.5, 0.0], [1.5, 0.0]])
+    env = _env(joint_pos_targets=targets, nominal_joint_pos=torch.tensor([0.5, 0.0]))
+    cost = C.joint1_cumulative_cost(None, env)
+    assert torch.allclose(cost, torch.tensor([0.0, 1.0]), atol=1e-6)  # |0.5-0.5|, |1.5-0.5|
+
+
+def test_joint1_cumulative_cost_uses_local_nominal_index_not_global_dof_id():
+    """B: nominal must be read at LOCAL index 0, robust to a non-[0,1] global DOF layout.
+
+    _nominal_joint_pos is a length-2 LOCAL tensor [joint1, joint2]; _albc_joint_ids are
+    GLOBAL DOF ids. If the global id space differs from [0,1] (joints added/reordered in
+    the USD), indexing the length-2 nominal with a global id reads the wrong value or
+    IndexErrors. Here joint1's global id is 3, but its nominal must still come from local 0.
+    """
+    targets = torch.tensor([[1.5, 0.0]])  # joint1 command = 1.5
+    env = _env(
+        joint_pos_targets=targets,
+        nominal_joint_pos=torch.tensor([0.5, 1.0]),  # local: joint1 nominal=0.5, joint2=1.0
+        albc_joint_ids=[3, 4],  # global DOF ids != local [0,1]
+    )
+    cost = C.joint1_cumulative_cost(None, env)
+    assert cost.item() == pytest.approx(1.0)  # |1.5 - 0.5(local joint1 nominal)|, NOT a [3] read
+
+
+def test_joint1_cumulative_cost_distinguishes_full_turn_from_nominal():
+    """B vs A contrast: at a full turn, A (measured, wrapped) folds to ~0 but B
+    (integrated command, unwrapped) reports ~2*pi -- the point of the cumulative form.
+    """
+    import math
+
+    a = C.joint1_centering_cost(_robot(joint_pos=torch.tensor([[2.0 * math.pi, 0.0]])), _env()).item()
+    targets = torch.tensor([[2.0 * math.pi, 0.0]])
+    b = C.joint1_cumulative_cost(None, _env(joint_pos_targets=targets, nominal_joint_pos=torch.zeros(2))).item()
+    assert a == pytest.approx(0.0, abs=1e-6)
+    assert b == pytest.approx(2.0 * math.pi, abs=1e-6)
+
+
+def test_joint1_cumulative_cost_only_reads_joint1():
+    """B: joint2 (index 1) target must not affect the cost."""
+    a = C.joint1_cumulative_cost(
+        None, _env(joint_pos_targets=torch.tensor([[1.0, 0.0]]), nominal_joint_pos=torch.zeros(2))
+    ).item()
+    b = C.joint1_cumulative_cost(
+        None, _env(joint_pos_targets=torch.tensor([[1.0, 9.0]]), nominal_joint_pos=torch.zeros(2))
+    ).item()
+    assert a == pytest.approx(b)
+
+
 def test_compute_all_costs_stacks_K():
     """compute_all_costs stacks per-term costs into (num_envs, K)."""
 
@@ -200,3 +337,69 @@ def test_compute_all_costs_stacks_K():
     out = C.compute_all_costs(None, None, cfg)
     assert out.shape == (2, 2)
     assert torch.equal(out, torch.tensor([[1.0, 0.0], [0.0, 2.0]]))
+
+
+# ---------------------------------------------------------------------------
+# joint1-constraint-redesign wiring: apply_joint1_constraint_arm(env_cfg) appends
+# exactly one Average term for arm A/B and leaves arm 'none' byte-identical, WITHOUT
+# mutating the shared module-level _FULL_DOF_CONSTRAINT_TERMS (also used by full_dof).
+#
+# These call the REAL helper (not a reproduction). The helper is invoked from
+# ALBCEnv.__init__ (AFTER hydra applies overrides), NOT a cfg __post_init__ -- because
+# __post_init__ runs pre-override and would always see arm='none', silently leaving the
+# shipped 10-term set: a baseline-dup masquerading as arm A/B. A real run with
+# joint1_constraint_arm=A that still showed only 10 constraints proved that failure;
+# test_apply_arm_appends_real_term is the regression guard.
+# ---------------------------------------------------------------------------
+
+
+def _cfg_with_terms(arm, budget, n_shared=10):
+    """A minimal env_cfg stand-in: a constraints object holding a shared term list."""
+    shared = [SimpleNamespace(name=f"t{i}") for i in range(n_shared)]
+    constraints = SimpleNamespace(terms=shared)
+    cfg = SimpleNamespace(
+        joint1_constraint_arm=arm,
+        joint1_constraint_budget=budget,
+        constraints=constraints,
+    )
+    return cfg, shared
+
+
+def test_apply_arm_none_is_noop():
+    """arm 'none' leaves the 10-term shipped set untouched (byte-identical)."""
+    cfg, _ = _cfg_with_terms("none", 0.05)
+    C.apply_joint1_constraint_arm(cfg)
+    assert [t.name for t in cfg.constraints.terms] == [f"t{i}" for i in range(10)]
+
+
+def test_apply_arm_appends_real_term():
+    """arm A/B append exactly one continuous Average term with the given budget.
+
+    Calls the real helper, so it would FAIL if the helper stopped materializing the term
+    (the silent-baseline-dup failure that a live arm=A run actually exhibited).
+    """
+    for arm, fname, cost_fn in (
+        ("A", "joint1_centering", C.joint1_centering_cost),
+        ("B", "joint1_cumulative", C.joint1_cumulative_cost),
+    ):
+        cfg, _ = _cfg_with_terms(arm, 0.07)
+        C.apply_joint1_constraint_arm(cfg)
+        terms = cfg.constraints.terms
+        assert len(terms) == 11, f"arm {arm} did not append the 11th term"
+        assert terms[-1].name == fname
+        assert terms[-1].budget == 0.07
+        assert terms[-1].func is cost_fn  # binary-indicator regression guard: continuous func
+
+
+def test_apply_arm_rejects_unknown():
+    """An unknown arm value is a loud error, not a silent no-op."""
+    cfg, _ = _cfg_with_terms("X", 0.05)
+    with pytest.raises(ValueError):
+        C.apply_joint1_constraint_arm(cfg)
+
+
+def test_apply_arm_does_not_mutate_shared_list():
+    """Appending must NOT mutate the shared _FULL_DOF_CONSTRAINT_TERMS (full_dof reuses it)."""
+    cfg, shared = _cfg_with_terms("A", 0.05)
+    C.apply_joint1_constraint_arm(cfg)
+    assert len(shared) == 10  # the original shared list object is untouched (new list built)

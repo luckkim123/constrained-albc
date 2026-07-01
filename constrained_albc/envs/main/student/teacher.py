@@ -19,6 +19,25 @@ from .config import StudentCfg
 logger = logging.getLogger(__name__)
 
 
+def _infer_num_constraints(state_dict: dict, default: int = 10) -> int:
+    """Read the teacher's constraint count from its cost_critic output head.
+
+    cost_critic is an MLP whose final Linear layer has one row per constraint, so
+    its weight shape is (num_constraints, hidden). The count varies across teachers
+    (baseline=10, joint1-constraint Arm A/B=11), so we read it from the checkpoint
+    rather than hardcode it. Picks the highest-index cost_critic.*.weight key (the
+    output layer). Falls back to `default` if no cost_critic key is present.
+    """
+    weight_keys = [
+        k for k in state_dict if k.startswith("cost_critic.") and k.endswith(".weight")
+    ]
+    if not weight_keys:
+        return default
+    # Highest numeric layer index = the output head.
+    output_key = max(weight_keys, key=lambda k: int(k.split(".")[1]))
+    return state_dict[output_key].shape[0]
+
+
 class FrozenTeacher(nn.Module):
     """Wraps r13_A's ActorCriticEncoder; exposes encode(), normalize_obs(), actor_forward().
 
@@ -49,6 +68,16 @@ class FrozenTeacher(nn.Module):
         # Easiest path: reuse ActorCriticEncoder via a minimal dummy obs dict.
         from tensordict import TensorDict
 
+        # The teacher's cost_critic has one output head per constraint. The count is
+        # not fixed across teachers: the joint1-constraint campaign added an 11th
+        # constraint, so a baseline teacher has 10 heads and an Arm-A/B teacher 11.
+        # Read it from the checkpoint so any N-constraint teacher loads without a
+        # shape mismatch (cost_critic itself is unused by distillation, but its
+        # keys must match for state_dict loading).
+        ckpt_path = os.path.join(cfg.teacher_run_dir, cfg.teacher_checkpoint)
+        ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
+        num_constraints = _infer_num_constraints(ckpt["model_state_dict"], default=10)
+
         dummy_obs = TensorDict(
             {
                 "policy": torch.zeros(1, cfg.policy_obs_dim),
@@ -77,17 +106,15 @@ class FrozenTeacher(nn.Module):
             activation="elu",
             init_noise_std=0.7,
             critic_uses_z=True,
-            num_constraints=10,
+            num_constraints=num_constraints,
             cost_critic_hidden_dims=(512, 256, 128),
         )
         self.policy.to(device)
 
-        # Load r13_A state dict.
+        # Load the teacher state dict (ckpt was already read above to size cost_critic).
         # Note: ActorCriticEncoder.load_state_dict() is overridden to return bool
         # (RSL-RL API contract). We call nn.Module.load_state_dict directly to
         # get the standard (missing_keys, unexpected_keys) NamedTuple.
-        ckpt_path = os.path.join(cfg.teacher_run_dir, cfg.teacher_checkpoint)
-        ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
         result = nn.Module.load_state_dict(self.policy, ckpt["model_state_dict"], strict=False)
         missing = result.missing_keys
         unexpected = result.unexpected_keys

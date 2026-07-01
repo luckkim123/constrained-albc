@@ -14,6 +14,16 @@ from __future__ import annotations
 
 import math
 
+from marinelab.assets import (
+    ALBC_CFG,
+    ALBC_JOINT_NAMES,
+    ALBCBuoyHydrodynamicsCfg,
+    ALBCHydrodynamicsCfg,
+    HydrodynamicsCfg,
+    OceanCurrentCfg,
+    ThrusterCfg,
+)
+
 import isaaclab.sim as sim_utils
 from isaaclab.envs import DirectRLEnvCfg, ViewerCfg
 from isaaclab.scene import InteractiveSceneCfg
@@ -21,16 +31,6 @@ from isaaclab.sim import PhysxCfg, SimulationCfg
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.noise import GaussianNoiseCfg, NoiseModelWithAdditiveBiasCfg, UniformNoiseCfg
-
-from marinelab.assets import (
-    ALBC_JOINT_NAMES,
-    ALBC_CFG,
-    ALBCBuoyHydrodynamicsCfg,
-    ALBCHydrodynamicsCfg,
-    HydrodynamicsCfg,
-    OceanCurrentCfg,
-    ThrusterCfg,
-)
 
 from .doraemon import DoraemonCfg
 from .mdp.constraints import (
@@ -440,3 +440,19 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # Constraints (10 terms: 5 probabilistic + 5 average)
     # ==========================================================================
     constraints: ALBCConstraintCfg = ALBCConstraintCfg(terms=_FULL_DOF_CONSTRAINT_TERMS)
+
+    # --- joint1-constraint-redesign experiment (off by default = byte-identical) ---
+    # Selects which continuous joint1 anti-drift constraint to append (vs the shipped
+    # reward centering). 'none' = no extra term (shipped behavior). 'A' = average cost
+    # on the instantaneous wrapped angle. 'B' = average cost on the integrated-command
+    # displacement (drift-correct). For A/B, also set reward k_joint1_center=0.0 so
+    # exactly one centering mechanism is active (single-variable discipline).
+    #
+    # NOTE: the extra term is materialized by apply_joint1_constraint_arm() called from
+    # ALBCEnv.__init__, NOT from a cfg __post_init__. A constraint term bundles a function
+    # ref + budget, so it cannot be added by a hydra scalar; and __post_init__ runs at cfg
+    # construction BEFORE hydra applies the override (update_class_from_dict), so toggling
+    # there would always see arm='none' and silently produce a baseline-dup. The env reads
+    # cfg AFTER hydra, so that is the correct materialization point.
+    joint1_constraint_arm: str = "none"  # one of {"none", "A", "B"}
+    joint1_constraint_budget: float = 0.05  # per-step average budget d_k for arm A/B

@@ -9,6 +9,9 @@ experiments/
 .omc/
 docs/superpowers/
 
+# generated PDFs in docs/reference/ are derivatives of the .md SSOT; regenerate via pandoc, never commit
+docs/reference/*.pdf
+
 # npz-replay test fixtures (large binary eval outputs; provenance in SOURCE.txt)
 # encoder/  is excluded from this ignore rule so the mini checkpoint can be committed
 tests/fixtures/*

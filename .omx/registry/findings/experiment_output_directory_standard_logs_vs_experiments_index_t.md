@@ -1,8 +1,8 @@
 ---
 title: "experiment output directory standard (logs vs experiments index tree)"
-tags: ["albc", "conventions", "directory", "layout", "run_id", "experiments", "logs"]
+tags: ["albc", "conventions", "directory", "layout", "run_id", "experiments", "logs", "legacy", "index", "retired"]
 created: 2026-06-07T06:04:28.720146
-updated: 2026-06-07T06:04:28.720146
+updated: 2026-06-30T07:06:52.385941
 sources: []
 links: ["constrained_albc_experiment_conventions.md", "experiment_launch_checklist_run_id_wandb_latest_alias_naming.md", "experiment_result_recording_location_experiments_tree_is_ssot_no.md"]
 category: convention
@@ -45,4 +45,15 @@ constrained-albc/
 8. baseline alias = <group>/baseline -> <reference run_id> (campaign baseline pointer, optional).
 
 RELATED RULES: run_id naming + e-number campaign-continuity + wandb single-project + launch checklist are in [[experiment_launch_checklist_run_id_wandb_latest_alias_naming.md]]. Result recording (report.md/README/DESIGN) is in [[experiment_result_recording_location_experiments_tree_is_ssot_no.md]]. The experiment-discipline hub is [[constrained_albc_experiment_conventions.md]]. eval output placement (--output_dir forbidden, checkpoint via `train` symlink path) is in rule 03-analysis-quality.
+
+---
+
+## Update (2026-06-30T07:06:52.385941)
+
+LEGACY / RETIRED-RUN convention (established 2026-06-30 cleanup):
+
+- ONE legacy place: experiments/legacy/ and logs/legacy/ are the single home for retired/closed runs. Do NOT scatter a per-campaign legacy/ inside the active tree (e.g. the old experiments/rsl_rl/<exp>/legacy/dr_harder was folded up into experiments/legacy/rsl_rl/<exp>/dr_harder_e1e4_campaign on 2026-06-30). Active tree (experiments/rsl_rl/, logs/rsl_rl/) holds ONLY the run the next experiment builds on.
+- Legacy MIRRORS the standard tree: experiments/legacy/rsl_rl/<exp>/<group>/<run_id>/ + logs/legacy/rsl_rl/<exp>/<group>/<run_id>/. Same mirror means the `train` symlink is recomputed (realpath --relative-to) to point experiments/legacy/.../run/train -> ../../../../../../logs/legacy/.../run (6-up when grouped, 5-up when ungrouped). Pre-run_id-standard frozen artifacts (2026-04 r2~r13 PNG plots, final_models) stay at experiments/legacy/plots and experiments/legacy/final_models (no logs side — raw logs were deleted at repo-split).
+- Legacy checkpoint policy: trim to model_<final>.pt ONLY (numeric sort, e.g. model_4999.pt); move intermediate model_*.pt to /workspace/.trash/ (recoverable). NEVER alpha-sort (model_950 > model_4999 is the model-trim disaster). Active runs keep their full checkpoint set.
+- MASTER INDEX: experiments/INDEX.md is the one-page grep map of every run (run_id | group | date | active/legacy/retired | 1-line result | report+logs path). It points at each run's analysis/diagnose-*/report.md (the SSOT); it does not duplicate metrics. Update it whenever a run is added or a line is retired.
 

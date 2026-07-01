@@ -240,12 +240,85 @@ policy cfg is overwritten at runtime; `cost_critic` is only built when K > 0.
 
 ---
 
-## 5. Notes and limitations
+## 5. Cost critic and constraints (K)
+
+A separate cost critic network **exists**, and it is a **single multi-head MLP**
+(not one network per constraint):
+
+- **Architecture**: identical 105D asymmetric input (`cat[o_t, z, p_t]`), hidden
+  `[512, 256, 128]`, activation `elu` — same shape as the reward critic but with K
+  scalar outputs. Built only when `num_constraints > 0`, else `None`
+  (`_policy_base.py`). cfg `cost_critic_hidden_dims` at `:160`.
+- **Heads**: K scalar outputs, one head per constraint (`evaluate_costs()` returns
+  K values from the same critic_obs). Cost returns/advantages are shaped `(T,N,K)`.
+- **Naming convention**: the `cost_critic.*` prefix is what routes it to the Adam
+  value optimizer instead of the TRPO natural-gradient group.
+
+**`num_constraints` (K) is runtime-resolved.** The static cfg default is `0`
+placeholder (`:159`); `constraint_encoder_runner.py` overwrites it from
+`len(cfg.constraints.terms)` before `super().__init__()`, so `cost_critic` is sized
+correctly at build time.
+
+### 5.1 K on this branch
+
+On `main` and with `joint1_constraint_arm="none"` (the default), **K = 10**
+(5 probabilistic + 5 average), defined in `envs/main/config.py` constraint terms.
+
+On the `exp/joint1-constraint-redesign` branch, `config.py` adds an
+**off-by-default** joint1 anti-drift constraint:
+
+- `joint1_constraint_arm: str = "none"` (one of `"none"`, `"A"`, `"B"`),
+  `joint1_constraint_budget: float = 0.05` (per-step average budget `d_k`).
+- When set to `"A"` or `"B"`, `apply_joint1_constraint_arm()` (called from
+  `ALBCEnv.__init__`, not a cfg `__post_init__`) appends one extra constraint term
+  → **K = 11**, so the cost critic gets **one additional head**.
+- `"B"` selects `joint1_cumulative_cost` (average of the commanded integrator);
+  `"A"` selects the measured-angle variant.
+
+The MLP layer counts, dims, and activations are **unchanged** by the constraint
+choice — only the cost-critic output width (K) moves.
+
+---
+
+## 6. Where to change what (next-experiment knob map)
+
+Unless noted, all in `constrained_albc/envs/main/agents/rsl_rl_ppo_cfg.py`.
+
+| Architecture knob | Value | Location (file:line) |
+|---|---|---|
+| actor hidden | [256, 128, 64] | `:126` |
+| critic hidden | [512, 256, 128] | `:127` |
+| cost_critic hidden | [512, 256, 128] | `:160` |
+| actor/critic activation | elu | `:128` |
+| encoder hidden | [256, 128, 64] | `:130` |
+| encoder activation | elu | `:135` |
+| encoder_latent_dim (z) | 9 | `:134` |
+| encoder_output_norm (pre-softsign LayerNorm) | True | `:155` |
+| encoder static min-max bounds | DR-derived (`derive_priv_obs_bounds_from_dr`), fallback `_PRIV_OBS_LOWER/UPPER` | `utils/priv_obs_bounds.py` |
+| encoder_obs_normalization | False | `:136` |
+| critic_uses_z (105D vs 96D) | True | `:154` |
+| init_noise_std | 0.7 | `:123` |
+| min_std / max_std (algo clamp) | 0.05 / 2.0 | `:221` / `:222` |
+| min_std_per_dim | (0.10, 0.10, 0.05 x6) | `:225` |
+| entropy_coef / per_dim | 0.003 / (0.01 x2, 0.001 x6) | `:212` / `:218` |
+| max_kl / cg_iters / cg_damping | 0.005 / 10 / 0.1 | `:180-182` |
+| barrier_t / barrier_alpha (IPO) | 100.0 / 0.05 | `:206` / `:207` |
+| num_constraints (auto-sync K) | 0 -> runtime 10 (11 with joint1 arm) | `:159` (real K = `config.py` constraint terms) |
+| policy_obs_dim / privileged_dim | 69 / 27 | `:138` / `:139` |
+| joint1 constraint arm / budget (`exp/joint1-constraint-redesign` branch) | "none" / 0.05 | `envs/main/config.py` |
+
+---
+
+## 7. Notes and limitations
 
 - **`state_dependent_std` does not exist in `envs/main`.** `std` is a single
   global `log_std` parameter broadcast across the batch. The per-state std head
   is a separate, unmerged experiment branch (`exp/attitude-only-state-std`); it
   is not part of `main`.
+- **No encoder auxiliary losses.** No reconstruction/KL/contrastive head on the
+  encoder; the only inference hook is a default-disabled z-ablation
+  (`mode=None`). This matches the project rule (reconstruction loss failed: the
+  decoder ignored `z` and `z` collapsed).
 - The exact runtime `K` (number of constraints) and the physical meaning of each
   `_PRIV_OBS_LOWER/UPPER` entry are defined in the env config / `mdp/`; only the
   length (27) was cross-checked here.
@@ -255,7 +328,7 @@ policy cfg is overwritten at runtime; `cost_critic` is only built when K > 0.
 
 ---
 
-## 6. Design rationale and literature standing
+## 8. Design rationale and literature standing
 
 Conclusions from a 2026-06-30 code + literature walk-through of the policy head
 (std parameterization, action output, entropy). Each row records whether the
@@ -270,7 +343,7 @@ what rests on consensus vs. on our own measurements.
 | Entropy bonus added to TRPO | **Non-standard** (standard for PPO, not pure TRPO) | EnTRPO (arXiv:2110.13373) positions "TRPO + entropy regularization" as a *novelty* — if it were standard it would not be a paper. PPO routinely uses a positive `entropy_coef` (rsl_rl 0.01, IsaacLab AnymalB 0.005). |
 | Per-dim entropy / min_std (arm vs thruster) | **Project-custom** | task-specific: arm dims collapse faster (by iter ~1404), so they get a stronger entropy push (0.01 vs 0.001) and a higher floor (0.10 vs 0.05). |
 
-### 6.1 Why entropy collapses despite TRPO
+### 8.1 Why entropy collapses despite TRPO
 
 A common misconception is that TRPO's KL trust region *prevents* entropy
 collapse. It does not — the trust region bounds the **size** of each step, not
