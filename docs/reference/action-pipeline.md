@@ -13,12 +13,16 @@
 > rather than duplicating.
 >
 > **Branch note.** The physical-parameter facts below track marinelab `main`
-> (the default install target; local `main` = `8364cd6`). Two unmerged marinelab
-> experiment branches each touch the thruster model in opposite directions — the
-> per-thruster fault path (`origin/main`, commit `0c882df`) and the non-linear
-> thrust curve (`exp/thruster-curve`, commit `d34debc`, off-by-default). Both are
-> flagged in §6/§7 so the document stays correct regardless of which is checked
-> out.
+> (the default install target; local `main` = `8364cd6`). The per-thruster fault
+> path is **already merged into `main`** (merge commit "merge(new-baseline):
+> per-env per-thruster fault"; `0c882df` is the original `feat` commit, now part
+> of `main` history) — on `main`, fault is present and off-by-default, the
+> non-linear thrust curve is absent. The non-linear thrust curve remains a
+> **separate unmerged branch**, `exp/thruster-curve` (`d34debc`, off-by-default).
+> Fault was additionally merged *into* `exp/thruster-curve` (marinelab commit
+> `0ed193e`, unpushed), so that branch now carries **both** — pipeline order
+> curve → coeff → health → clamp. Both knobs are flagged in §5.3/§5.4/§7 so the
+> document stays correct regardless of which branch is checked out.
 
 ---
 
@@ -58,6 +62,18 @@ accumulator on PD targets), while the thruster dims are a **force low-pass filte
 (first-order ESC lag). (c) The observation feeds back the *filtered* thruster state,
 not the raw command, so the policy sees an ESC-feedback-like signal.
 
+One vector driving two dynamics is not itself a problem: the policy only emits
+normalized `[-1, 1]` commands, and the env absorbs the scale/dynamics differences
+(`delta_scale=0.10` vs. `thrust_coeff=40`). The output layer is already 8
+independent scalar heads (linear last layer, per-dim `log_std`); only the hidden
+trunk (`[256, 128, 64]`) is shared, so "single vs. multi-head" really asks whether
+arm and thruster should share that trunk. They currently do, which is the natural
+choice given the two subsystems must *coordinate* for attitude control (thruster
+generates attitude torque, arm motion perturbs it via reaction force/CoG shift). A
+trunk split is only justified by measured gradient interference (e.g., cosine
+similarity between arm-loss and thruster-loss gradients, or a separate-network
+ablation) — not proposed here without that evidence.
+
 ---
 
 ## 2. Action space — 8D
@@ -93,7 +109,7 @@ Both action entry points return the raw network output:
 `main-network-architecture.md` §4 and §8. They are **out of scope here** — this
 document starts once a sampled `a` exists.
 
-### 3.2 Clamp #1 — vecenv wrapper (`clip_actions`, may be a no-op)
+### 3.2 Clamp #1 — vecenv wrapper (`clip_actions`, currently a no-op)
 
 `RslRlVecEnvWrapper.step()` clamps *before* handing actions to the env
 (`isaaclab_rl/rsl_rl/vecenv_wrapper.py:151–154`):
@@ -106,6 +122,14 @@ if self.clip_actions is not None:
 The value comes from `agent_cfg.clip_actions` at wrapper construction
 (`scripts/train.py:292`: `RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)`).
 When `clip_actions is None`, this is a no-op and only clamp #2 applies.
+
+**Currently a confirmed no-op, not a hypothetical.** `rsl_rl_ppo_cfg.py` does not
+set `clip_actions`, so it inherits the isaaclab base default `clip_actions=None`
+(`rl_cfg.py:181`); `train.py:292` passes that `None` through, and
+`train_student.py:120` passes `clip_actions=None` explicitly. So in every launch
+path today, clamp #1 is skipped and **only clamp #2 bounds actions** — the
+entropy-collapse / boundary-mass-waste discussion in §8 attaches to clamp #2
+alone.
 
 ### 3.3 Clamp #2 — env action buffer (always)
 
@@ -160,6 +184,21 @@ joint1 cable wrapping is protected by the `joint1_position_cost` **constraint**
 joint1 anti-drift work is a constraint-redesign problem, not a clamp: see
 `main-network-architecture.md` §5.1 and the joint1 campaign docs.)
 
+**This is a position-command integrator, not a PID error-integrator — the reset
+trigger is episode-scoped, never target-reached.** `_joint_pos_targets` accumulates
+the *commanded* position (`q_des += delta_scale * a`), not an error signal, so it
+grows unbounded *within* an episode and is only re-initialized at episode reset
+(`_reset_action_buffers`, `:1311`, called from the env reset at `:1309`) — per-env,
+to the *measured* joint position, not to `0` or to `nominal_joint_pos`. Resetting to
+the measured position is deliberate anti-bump init: PD torque ≈
+`Kp * (q_des - q_measured)`, so `q_des = q_measured` at reset makes the error zero
+even under a randomized initial pose. A "reset the integrator once the joint reaches
+its target, then compute the next target" scheme (the waypoint / error-integrator
+mental model) is **wrong for this structure and would break control** — reaching the
+target is a *hold* state, not a reset trigger, and zeroing `q_des` on reach would
+fling the arm back to `0`/nominal mid-episode. The only valid reset trigger is the
+episode boundary.
+
 ### 4.2 PD actuator
 
 `_apply_action` (`:780`) writes the accumulated targets:
@@ -185,8 +224,30 @@ budgets** on the *measured* torque/velocity — they penalize, they do not clip.
 policy can exceed 4.189 rad/s (paying constraint cost) up to the 6.28 rad/s physical
 cap. Do not treat the constraint limit as a physical limit.
 
-DR randomizes the joint gains/effort/friction per env at reset (`config.py:126–131,
-183–184`); a joint fault scales the effort limit by per-env health
+**Kp/Kd basis is theoretical, not hardware-measured, and there is no sim↔hardware
+gain mapping.** The `ω_n ≈ 57.7 rad/s` / damping-ratio-`0.7` figures in the table
+above come from a second-order calc assuming `J ≈ 0.15 kg·m²` (`albc.py:198–201`
+comments) — they are not derived from a step-response measurement, and the file
+names no motor model. The real arm hardware is a Dynamixel XM430-W350 with its own
+~1 kHz internal PID (`sim-to-real.md:13,19`); there is no code mapping the sim
+`ImplicitActuatorCfg` gains to the Dynamixel's register-space gains — the direct
+mapping is not possible (registers are not SI units, conversion is per-model), and
+the required step-response system identification is an open TODO
+(`sim-to-real.md:230–231`). Sim continuous-PD vs. real discrete-PID (1 kHz,
+integer registers, PWM saturation, firmware filters) is a **structural** gap that DR
+cannot cover — the same class of sim-to-real gap as the thruster deadband/quadratic
+curve (§5.3).
+
+DR randomizes the joint gains/effort/friction **per env at reset only**
+(`randomize_joint_gains`, `mdp/events.py:457–469`; applied in `albc_env.py:1410–1419`
+when `rand_cfg.enable`), not per-step, and not under a DORAEMON curriculum (the range
+is fixed). Stiffness/damping DR samples an **absolute range that overwrites the
+nominal 100/3 values** — it is not a scaled window centered on nominal, and 100/3 is
+only the DR-off value. Default range (`config.py:126–127`): stiffness `[40, 120]`,
+damping `[0.5, 5.0]`. Hard range (`config.py:183–184`, encoder training): stiffness
+`[30, 150]`, damping `[0.3, 7.0]`. `effort_limit` DR is a multiplicative scale
+`[0.7, 1.0]` (`config.py:129`); joint friction DR adds static `[0, 0.03]` / viscous
+`[0, 0.2]`. Separately, a joint fault scales the effort limit by per-env health
 (`faults.apply_joint_health`, `faults.py:80`).
 
 ---
@@ -271,7 +332,7 @@ This is a structural non-linearity DR cannot emulate (a multiplicative scale can
 create a zero-region or a quadratic shape) — see the sim-to-real audit. It is an
 off-by-default toggle (`getattr` fallback → byte-identical), not baseline behavior.
 
-### 5.4 Optional per-thruster fault (marinelab `main`, off by default)
+### 5.4 Optional per-thruster fault (merged into marinelab `main`, off by default)
 
 On marinelab `main`, `ThrusterModel.__init__` takes `enable_fault`
 (`thruster.py:41`); when True it allocates a per-env per-thruster health buffer
@@ -284,12 +345,19 @@ reduced peak force. `set_thruster_health` (`:168`) injects it; the env samples i
 `config.py:266`); it is FTC-research infrastructure, distinct from DR (a fault =
 component *failure*, DR = a valid-but-different vehicle).
 
-> **Working-tree caveat.** The `exp/thruster-curve` branch (§5.3) was forked before
-> the fault commit, so its `thruster.py` has **no** `enable_fault` parameter. If that
-> branch is checked out while `config.py:432` still declares `fault: FaultInjectionCfg`
-> and `_init_thrusters` passes `enable_fault=...` (`albc_env.py:357`), the constructor
-> would reject the kwarg. That is a branch-divergence artifact, not the shipped
-> `main` state; both experiment branches are slated to converge to `main`.
+**Fault is already on `main`, not a pending experiment.** The fault path landed via
+merge commit "merge(new-baseline): per-env per-thruster fault" — `0c882df` is the
+original `feat` commit, now part of `main` history, not an unmerged branch tip.
+
+> **`exp/thruster-curve` now carries both fault and the curve.** The
+> `exp/thruster-curve` branch (§5.3) was originally forked before the fault commit,
+> so its `thruster.py` lacked `enable_fault`. Fault has since been merged *into*
+> `exp/thruster-curve` (marinelab commit `0ed193e`, unpushed), restoring the
+> `enable_fault` constructor parameter with pipeline order curve → coeff → health →
+> clamp — so that branch's `thruster.py` no longer rejects the `enable_fault` kwarg
+> `_init_thrusters` passes (`albc_env.py:357`) against `config.py:432`'s
+> `fault: FaultInjectionCfg`. Net effect: `main` has fault, no curve; `exp/thruster-curve`
+> has both.
 
 ---
 
@@ -326,7 +394,7 @@ only *which parts are action-derived*.
 | thrust_coefficient | 40.0 | `config.py:87` |
 | time_constant_up / down | 0.1 / 0.05 | `config.py:88–89` |
 | allocation matrix (6×6 TAM) | see §5.2 | `config.py:90–97` |
-| `clip_actions` (vecenv clamp) | `agent_cfg.clip_actions` | `scripts/train.py:292`, `vecenv_wrapper.py:151` |
+| `clip_actions` (vecenv clamp) | `agent_cfg.clip_actions`, currently `None` → no-op | `scripts/train.py:292`, `vecenv_wrapper.py:151`, `rl_cfg.py:181` |
 | env action clamp | `[-1, 1]` (always) | `albc_env.py:452` |
 | thruster command clamp | `[-1, 1]` (always) | `thruster.py:108` |
 | `enable_thrust_curve` / `thrust_deadband` | False / 0.075 (`exp/thruster-curve`) | `marinelab/assets/uuv_cfg.py:143,148` |
@@ -344,6 +412,19 @@ only *which parts are action-derived*.
   correction) is *not* used and would be a different algorithm. The MLP last layer is
   linear (`last_activation=None`); no `act()` clamping. (Same finding as
   `main-network-architecture.md` §8.)
+- **The external clamp does not break credit assignment, but it does distort it.**
+  The policy gradient uses `log pi(a_raw | o)` — the raw, un-clamped sampled action —
+  so the update always credits the value the policy actually emitted, not the
+  clamped one; there is no gradient/env inconsistency from clamping per se. The real
+  cost is that clamping *collapses* the out-of-range region: `a = 1.5` and `a = 3.5`
+  both saturate to `1.0`, so the env cannot distinguish them, and probability mass
+  placed there is wasted, producing a structural downward pressure on `log_std`
+  (§3.3, and `main-network-architecture.md` §8). Tanh-squashing (SAC-style) avoids
+  this by keeping all mass in `(-1, 1)` with a smooth gradient, at the cost of the
+  log-prob Jacobian correction and a different algorithm class — see the tanh
+  discussion above; this project stays on the external-clamp path and offsets the
+  side-effects with the entropy bonus and per-dim `min_std` floor
+  (`main-network-architecture.md` §4).
 - **Two clamps are redundant-by-design, not a bug.** Clamp #1 (vecenv, optional)
   and clamp #2 (env buffer, always) both target `[-1, 1]`; the env clamp is the
   authoritative one, the wrapper clamp is a library-level guard that is a no-op when
@@ -352,10 +433,12 @@ only *which parts are action-derived*.
   clamp to joint limits — the joints are continuous-rotation, and drift is a
   *constraint* problem (`joint1_position_cost`, `cumulative_yaw_cost`), not a clamp.
   Treating it as a bug and adding a clamp would silently change the control authority.
-- **Thruster fault vs. thrust curve are mutually exclusive across the two live
-  experiment branches** (§5.3–5.4) only because those branches were forked at
-  different points; on `main` the fault path is present and the curve is absent. This
-  document's default narrative is marinelab `main`.
+- **Thruster fault and thrust curve are independent toggles, not mutually
+  exclusive.** Fault (§5.4) is merged into `main` (present, off-by-default); the
+  thrust curve (§5.3) remains an unmerged `exp/thruster-curve` addition. Fault has
+  additionally been merged into `exp/thruster-curve` (`0ed193e`, unpushed), so that
+  branch carries both, in pipeline order curve → coeff → health → clamp. This
+  document's default narrative is marinelab `main` (fault present, curve absent).
 - This is a static code-structure reference. Whether the policy actually *uses* its
   full action range, or whether the thruster filter lag matters for a given maneuver,
   are runtime-dynamics questions for eval/analysis, not this document.

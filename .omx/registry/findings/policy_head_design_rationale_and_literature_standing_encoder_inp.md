@@ -2,7 +2,7 @@
 title: "policy head design rationale and literature standing (encoder input / softsign / obs norm / std / entropy)"
 tags: []
 created: 2026-06-30T09:31:19.010530
-updated: 2026-06-30T09:31:19.010530
+updated: 2026-07-01T10:05:54.346965
 sources: []
 links: ["encoder_priv_obs_normalization_bounds_must_be_dr_derived_not_har.md", "state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md"]
 category: reference
@@ -25,3 +25,18 @@ OBS SCALE imbalance -- two field camps. (a) running mean/std (VecNormalize, rsl_
 REJECTED IDEA: make obs scale a POLICY OUTPUT (actor emits scale, scale normalizes next-step input). Do NOT do this. (1) Circular dependency: the stabilizer becomes an output of the thing it stabilizes -> input scale depends on policy depends on scaled input. (2) Degenerate solutions: scale->0 kills obs, scale-blowup dominates one dim -- policy games normalization for easier optimization. (3) Credit assignment: scale affects reward only via a 2nd-order indirect path, policy gradient cannot reliably assign credit. The salvageable intuition (learnable scale) is fine ONLY as a learnable normalization LAYER (params, not per-step policy OUTPUT) -- open-loop learned transform, not closed-loop policy->input. Our LayerNorm ablation already failed, so even that is disfavored here. NOT a literature-cited failure -- argued from RL first principles + our ablation.
 
 See also [[encoder_priv_obs_normalization_bounds_must_be_dr_derived_not_har]] (the static min-max BOUNDS that feed the encoder), [[state_dependent_std_robustness_vs_nominal_trade_off_not_difficul]] (the per-state std head experiment branch).
+
+---
+
+## Update (2026-07-01T10:05:54.346965)
+
+ADDENDUM 2026-07-01 (std/entropy clamp mechanics, conversational code walk-through, no code change). Extends the ACTOR STD / ENTROPY notes with three points confirmed from constraint_trpo.py + rsl_rl_ppo_cfg.py + _policy_base.py.
+
+STD IS PER-DIM BY CONSTRUCTION, not because of any floor. _policy_base.py:96 log_std = nn.Parameter(log(init_noise_std * ones(num_actions))) -> 8 independent learnable log_std values (one per action dim), standard Gaussian-policy structure (rsl_rl does the same). So arm dims and thruster dims learn DIFFERENT std by default. The "per-dim floor" does NOT create per-dim learning (that already exists); it only makes the post-step CLAMP floor differ per dim.
+
+min_std vs min_std_per_dim = FALLBACK (if/else), not both. rsl_rl_ppo_cfg.py: min_std=0.05 (scalar, all dims) and min_std_per_dim=(0.10,0.10,0.05x6) (vector, arm=0.10 thruster=0.05). constraint_trpo.py:124-128: if min_std_per_dim non-empty -> _log_min_std tensor set (per-dim wins); else None (scalar fallback). Clamp at :487-491: if _log_min_std is not None -> torch.max(log_std, _log_min_std) per-dim; else clamp_(min=log(min_std)) scalar. CURRENT config fills min_std_per_dim, so per-dim (0.10/0.05) is ACTIVE and scalar min_std=0.05 is UNUSED (dormant fallback for ablation cfgs that leave the tuple empty).
+
+FLOOR IS A POST-STEP DEFENSE, NOT LEARNING. The floor runs AFTER the TRPO step (constraint_trpo.py:484 "Safety clamp log_std after TRPO step") as a with-torch.no_grad() clamp -- it does not participate in gradients. Learning is done by policy gradient + entropy bonus; the floor only prevents collapse below the per-dim minimum. WHY per-dim: rsl_rl_ppo_cfg.py:235 "Arm dims collapse to scalar min_std by iter 1404; thruster dims stay above 0.14" -- arm std dies faster, so arm floor raised 0.05->0.10 and arm entropy pressure raised (entropy_coef_per_dim=(0.01,0.01,0.001x6), arm 10x the thruster coef). A single scalar floor cannot raise "arm only", hence the per-dim vector.
+
+ENTROPY BONUS ON TRPO IS NON-STANDARD (EnTRPO-style), justified by run data. Entropy regularization itself (loss -= coef*H) is fully standard for A2C/PPO. But ORIGINAL TRPO (Schulman 2015) has NO entropy term -- the trust region is supposed to control step size instead. This code ADDS -coef*H to the TRPO surrogate (constraint_trpo.py:466-480), because with the IPO log-barrier the trust region alone did not stop entropy collapse. rsl_rl_ppo_cfg.py:221-222 records the run evidence: entropy_coef=0.003 -> noise recovered 0.36->0.55 after iter 3758; entropy_coef=0 -> noise collapsed to 0.12. Standard-vs-custom summary: scalar range values (max_std=2.0, min_std=0.05) are inside common ranges; the NON-standard parts are (a) per-dim floor structure, (b) per-dim entropy coef, (c) entropy bonus grafted onto TRPO. init_noise_std=0.7 (vs common 1.0) is a conservative convention, NOT a tuned optimum -- lower init keeps early TRPO+IPO KL steps conservative and reduces [-1,1] action-clamp saturation, but the exact 0.7 is not ablation-verified.
+
