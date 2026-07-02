@@ -10,13 +10,13 @@
 
 ### 1.1 Actuator Gap
 
-| Property | Simulation (Current) | Real (Dynamixel XM430) |
+| Property | Simulation (Current) | Real (Dynamixel XW540-T260) |
 |:---|:---|:---|
 | PD Control | PhysX implicit PD (continuous) | Internal PID (~1kHz) |
 | Command Rate | Every physics step (200Hz) | 10Hz (USB bulk read/write) |
 | Response Delay | 0 | 50-100ms settling |
-| Gain Uncertainty | DR +-20% | Register-dependent |
-| Actuator Model | `ImplicitActuatorCfg` | Dynamixel XM430-W350 |
+| Gain Uncertainty | DR: abs range [40,120] Nm/rad | Register-dependent |
+| Actuator Model | `ImplicitActuatorCfg` | Dynamixel XW540-T260 |
 
 ### 1.2 Sensor Gap
 
@@ -48,18 +48,24 @@
 actuators={
     "arm": ImplicitActuatorCfg(
         joint_names_expr=["joint.*"],
-        stiffness=100.0,   # Asset default (DR: +-20%)
-        damping=3.0,       # Asset default (DR: +-20%)
+        stiffness=100.0,   # Asset default (DR: abs range [40,120], hard [30,150])
+        damping=3.0,       # Asset default (DR: abs range [0.5,5.0], hard [0.3,7.0])
     ),
 },
 ```
 
 PhysX computes continuous PD internally. Commands are applied immediately with no delay.
 
-| Environment | Kp Center | Kd Center | DR Range |
+| Environment | Kp (DR-off) | Kd (DR-off) | DR Range |
 |:---|:---|:---|:---|
-| Base RL (v0, Base-v0) | 100.0 | 3.0 | +-20% ([80,120], [2.4,3.6]) |
+| Base RL (v0, Base-v0) | 100.0 | 3.0 | Kp [40,120] (hard [30,150]), Kd [0.5,5.0] (hard [0.3,7.0]) |
 | TDC (TDC-v0) | 200.0 | 10.0 | +-20% ([160,240], [8,12]) |
+
+Note: DR samples Kp/Kd by **uniform sampling of a fixed absolute range** and overwrites the joint gain
+(`randomize_joint_gains`, `mdp/events.py:457-469`, `dr.get(cfg.joint_stiffness_range)`) -- it is not a
++-percentage scaled around the nominal 100.0/3.0. Those nominal values are only what is used when DR is
+disabled, not a preserved center. (This applies to the Base RL row above; the TDC row's ranges are
+unverified this pass and left as previously documented.)
 
 Reason Kp/Kd are high in the TDC environment: the TDC controller requires fast position tracking.
 High stiffness is needed to accurately track the small delta position commands of DLS IK.
@@ -100,7 +106,7 @@ Current status: reverted to `ImplicitActuatorCfg`. DelayedPDActuator is left as 
 
 | Environment | Kp | Kd | Delay | Gain DR |
 |:---|:---|:---|:---|:---|
-| `Isaac-FullDOF-TRPO-v0` (train) | 100 | 3 | 0 | +-20% |
+| `Isaac-FullDOF-TRPO-v0` (train) | 100 | 3 | 0 | abs range [40,120]/[0.5,5.0] (hard [30,150]/[0.3,7.0]) |
 | `Isaac-FullDOF-TDC-v0` | 200 | 10 | 0 | +-20% |
 
 ---
@@ -129,7 +135,7 @@ Step response measurement procedure for real-hardware calibration.
 
 ### 4.1 Equipment
 
-- Dynamixel XM430-W350 (ALBC arm joints)
+- Dynamixel XW540-T260 (ALBC arm joints)
 - Dynamixel SDK (Python/C++)
 - U2D2 interface
 - Bulk read at ~100Hz (position, velocity, current)
@@ -191,6 +197,12 @@ Example: 15ms / 5ms = 3 steps.
 The Dynamixel PID gain register is not in SI units.
 PWM = Kp_dxl * pos_error + Ki_dxl * integral + Kd_dxl * vel.
 Since the conversion coefficient differs per motor model, step-response-based system identification is more practical.
+
+Measured on the real joint driver (`agent-jetson` repo, `joint_angle_command.cpp` + `dynamixel_config.h`): the driver
+actively writes Position P/I/D gain registers 84/82/80 with P=800, I=1, D=40, and also sets the Profile Velocity
+register. These are raw integer register values (model-specific PWM scaling), not SI units, so they cannot be
+substituted directly for the sim `ImplicitActuatorCfg` Kp/Kd. The nonzero I gain also means the real controller has
+a structurally different form from the sim's continuous PhysX PD (no integral term).
 
 ---
 

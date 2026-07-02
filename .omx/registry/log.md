@@ -601,3 +601,55 @@
 - **Pages:** policy_head_design_rationale_and_literature_standing_encoder_inp.md
 - **Summary:** created 'policy head design rationale and literature standing (encoder input / softsign / obs norm / std / entropy)'
 
+## [2026-07-01T10:03:58.936046] query
+- **Pages:** policy_head_design_rationale_and_literature_standing_encoder_inp.md, state_dependent_std_difficulty_null_now_confirmed_on_real_dr_med.md, analysis_refactor_2026_06_05_new_sim_free_modules_and_engine_gap.md, engine_gap_eval_npz_saves_no_raw_obs_std_privileged_blocks_exact.md, ocean_nominal_shift_collapses_actor_entropy_e2_dr_harder.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, constrained_albc_experiment_conventions.md, doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md, our_doraemon_original_both_entropy_max_center_can_move_kl_ub_is_.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md, experiment_output_directory_standard_logs_vs_experiments_index_t.md, kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md, teacher_encoder_0_dead_latent_dims_keys_on_lateral_cog_cob_offse.md, doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md, engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md, engine_gap_eval_adapter_only_covers_static_periodic_unsupported_.md, experiment_result_recording_location_experiments_tree_is_ssot_no.md, hmm_regime_count_separates_dr_harder_runs_overfit_vs_healthy.md
+- **Summary:** query 'actor policy std entropy clamp per-dim floor' -> 20 of 69
+
+## [2026-07-01T10:04:01.575798] query
+- **Pages:** sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, analysis_refactor_2026_06_05_new_sim_free_modules_and_engine_gap.md, reward_penalty_terms_thruster_smoothness_bias_block_3_temporal_b.md, constraint_viol_trajectory_barrier_sign_metrics_4_10_starts_at_d.md, training_diagnosis_decision_tree.md, sequential_overnight_campaign_wall_clock_budget_not_crashes_kill.md, state_dependent_std_difficulty_null_now_confirmed_on_real_dr_med.md, training_anomaly_thresholds_tb_tag_alert_table.md, experiment_output_directory_standard_logs_vs_experiments_index_t.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, static_eval_plots_regenerate_sim_free_from_npz_reconstruct_segme.md, arm_a_measured_angle_joint1_constraint_recovers_not_diverges_the.md, barrier_alpha_runtime_0_05_agent_cfg_injects_over_ctor_default_0.md, don_t_trust_an_engine_s_empty_zero_output_cross_check_the_raw_tb.md, encoder_priv_obs_normalization_bounds_must_be_dr_derived_not_har.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, dr_harder_ood_verdict_e2_best_survives_ood_the_harder_curriculum.md, engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md
+- **Summary:** query 'thruster sim-to-real deadband thrust curve' -> 20 of 73
+
+## [2026-07-01T10:04:25.717834] query
+- **Pages:** per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, experiment_output_directory_standard_logs_vs_experiments_index_t.md, policy_head_design_rationale_and_literature_standing_encoder_inp.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md, reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md, reward_penalty_terms_thruster_smoothness_bias_block_3_temporal_b.md, state_dependent_std_difficulty_null_now_confirmed_on_real_dr_med.md, constrained_albc_experiment_conventions.md, engine_gap_eval_npz_saves_no_raw_obs_std_privileged_blocks_exact.md, experiment_result_recording_location_experiments_tree_is_ssot_no.md, constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md, engine_gap_eval_adapter_only_covers_static_periodic_unsupported_.md, experiment_launch_checklist_run_id_wandb_latest_alias_naming.md, ocean_nominal_shift_collapses_actor_entropy_e2_dr_harder.md, our_doraemon_original_both_entropy_max_center_can_move_kl_ub_is_.md, engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, teacher_encoder_0_dead_latent_dims_keys_on_lateral_cog_cob_offse.md, training_diagnosis_decision_tree.md
+- **Summary:** query 'per-dim min_std floor arm thruster entropy_coef_per_dim non-standard clamp' -> 20 of 72
+
+## [2026-07-01T10:05:27.006437] add
+- **Pages:** thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md
+- **Summary:** created 'Thruster nonlinear curve (T200 sim-to-real): off-by-default deadband + signed-square toggle (d34debc)'
+
+## [2026-07-01T10:05:54.346965] add
+- **Pages:** policy_head_design_rationale_and_literature_standing_encoder_inp.md
+- **Summary:** updated 'policy head design rationale and literature standing (encoder input / softsign / obs norm / std / entropy)'
+
+## [2026-07-01T10:13:17.438887] query
+- **Pages:** teacher_encoder_0_dead_latent_dims_keys_on_lateral_cog_cob_offse.md, encoder_priv_obs_normalization_bounds_must_be_dr_derived_not_har.md, policy_head_design_rationale_and_literature_standing_encoder_inp.md, engine_gap_eval_npz_saves_no_raw_obs_std_privileged_blocks_exact.md, analysis_refactor_2026_06_05_new_sim_free_modules_and_engine_gap.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, coverage_lint_ok_is_a_floor_not_a_quality_gate_re_analysis_uses_.md, don_t_trust_an_engine_s_empty_zero_output_cross_check_the_raw_tb.md, dr_harder_ood_verdict_e2_best_survives_ood_the_harder_curriculum.md, engine_gap_analyze_training_deep_plot_has_2_blank_panels_inconsi.md, engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md, engine_gap_analyze_training_py_needs_the_logs_run_dir_not_the_ex.md, engine_gap_confirmed_analyze_training_py_constraint_reward_prefi.md, engine_gap_omx_cli_gaps_found_re_analyzing_teacher_2026_06_06_ro.md, exp_analyze_must_run_analyze_training_py_for_training_side_diagn.md, joint1_cumulative_ipo_constraint_generalizes_drift_bounded_at_oo.md, joint1_cumulative_rotation_constraint_never_binds_policy_parks_a.md, reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md, static_eval_plots_regenerate_sim_free_from_npz_reconstruct_segme.md, training_anomaly_thresholds_tb_tag_alert_table.md
+- **Summary:** query 'encoder latent z dim ablation sweep coupling student retrain' -> 20 of 63
+
+## [2026-07-01T10:14:00.708833] add
+- **Pages:** encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md
+- **Summary:** created 'Encoder latent z_dim ablation: coupling points + constraints for a future sweep (from-scratch, student sync, verify via z_sweep)'
+
+## [2026-07-02T06:15:16.894017] add
+- **Pages:** action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md
+- **Summary:** created 'action pipeline behavior walk-through (two clamps / raw gaussian vs tanh / delta integrator reset / single-vector two-dynamics / arm PD gain DR)'
+
+## [2026-07-02T06:40:18.957508] query
+- **Pages:** thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, analysis_refactor_2026_06_05_new_sim_free_modules_and_engine_gap.md, constraint_viol_trajectory_barrier_sign_metrics_4_10_starts_at_d.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md, constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md, sequential_overnight_campaign_wall_clock_budget_not_crashes_kill.md, experiment_output_directory_standard_logs_vs_experiments_index_t.md, reward_penalty_terms_thruster_smoothness_bias_block_3_temporal_b.md, state_dependent_std_difficulty_null_now_confirmed_on_real_dr_med.md, static_eval_plots_regenerate_sim_free_from_npz_reconstruct_segme.md, arm_a_measured_angle_joint1_constraint_recovers_not_diverges_the.md, policy_head_design_rationale_and_literature_standing_encoder_inp.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, training_diagnosis_decision_tree.md, barrier_alpha_runtime_0_05_agent_cfg_injects_over_ctor_default_0.md, don_t_trust_an_engine_s_empty_zero_output_cross_check_the_raw_tb.md, encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md, encoder_priv_obs_normalization_bounds_must_be_dr_derived_not_har.md
+- **Summary:** query 'thruster curve sim to real deploy' -> 20 of 76
+
+## [2026-07-02T06:40:19.317340] query
+- **Pages:** action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md, arm_a_measured_angle_joint1_constraint_recovers_not_diverges_the.md, engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md, joint1_anti_drift_constrain_the_command_cumulative_arm_b_not_the.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, constraint_viol_trajectory_barrier_sign_metrics_4_10_starts_at_d.md, coverage_lint_ok_is_a_floor_not_a_quality_gate_re_analysis_uses_.md, don_t_trust_an_engine_s_empty_zero_output_cross_check_the_raw_tb.md, doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md, encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md, encoder_priv_obs_normalization_bounds_must_be_dr_derived_not_har.md, engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md, kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md, policy_head_design_rationale_and_literature_standing_encoder_inp.md, reward_penalty_terms_thruster_smoothness_bias_block_3_temporal_b.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, training_diagnosis_decision_tree.md, analysis_refactor_2026_06_05_new_sim_free_modules_and_engine_gap.md, baseline_repro_reproduces_teacher_deterministically_e4_control.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md
+- **Summary:** query 'dynamixel arm PD gain actuator' -> 20 of 38
+
+## [2026-07-02T06:41:50.281806] add
+- **Pages:** actuator_hardware_identification_arm_xw540_t260_board_measured_p.md
+- **Summary:** created "Actuator hardware identification: arm=XW540-T260 (board-measured), prior 'no PID-gain code' claim corrected, thrust-curve keep-off, step-response prereqs"
+
+## [2026-07-02T06:42:16.361252] add
+- **Pages:** action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md
+- **Summary:** updated 'action pipeline behavior walk-through (two clamps / raw gaussian vs tanh / delta integrator reset / single-vector two-dynamics / arm PD gain DR)'
+
+## [2026-07-02T06:42:32.542076] add
+- **Pages:** thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md
+- **Summary:** updated 'Thruster nonlinear curve (T200 sim-to-real): off-by-default deadband + signed-square toggle (d34debc)'
+
