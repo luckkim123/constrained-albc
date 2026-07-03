@@ -314,6 +314,77 @@ All in `constrained_albc/envs/main/agents/rsl_rl_ppo_cfg.py` unless noted.
 
 ---
 
+## 11. Action bounding: is the clamp justified + unverified experiment room
+
+> **Verdict (2026-07-02 review, literature + code cross-checked).** The current
+> raw Gaussian + `[-1,1]` hard clamp is **justified and standard**. Switching to
+> tanh-squashing is not an improvement — it moves the problem. Below is the evidence,
+> plus the unverified experiment room that does *not* touch the clamp.
+
+### 11.1 Why the clamp is justified
+
+The action sample is a raw Gaussian with no clamp (`actor_critic_encoder.py:277`
+`distribution.sample()`, "no action clamping"). The clamp happens only in the env
+buffer (`albc_env.py:452` `self._actions = actions.clone().clamp(-1.0, 1.0)`). The
+vecenv `clip_actions` (Clamp#0) is unset → isaaclab default `None` → **no-op**; the
+only active clamp is this single env buffer.
+
+log-prob is computed on the **pre-clamp raw sample** (`constraint_trpo.py:459`) and
+the clamp applies only to env dynamics. So "policy density" and "executed action" are
+each internally consistent — the **standard on-policy PPO/TRPO convention** of
+treating the clamp as part of the environment, not the policy (SB3 PPO =
+`DiagGaussianDistribution` + clip, no tanh; the PPO/TRPO papers use plain Gaussians).
+
+### 11.2 Why NOT to switch to tanh (moving the problem, not improving)
+
+1. **This task's optimal action is at the *center* of the action space.** The arm is
+   a delta integrator (`albc_env.py:567-578` `q_des += 0.10·a`) so idle (a≈0) is
+   optimal with no boundary attractor; the thrusters are hover so a small-command
+   equilibrium (near 0) is optimal. So tanh saturation ($1-\tanh^2(u)\to0$ at the
+   boundary) killing the gradient **barely applies** here. (The old EE-position
+   absolute mode had the optimum at the workspace *boundary*, where tanh/clamp caused
+   gradient freeze — `project_delta_ee_decision.md`. That failure mechanism is absent
+   in the current joint-space mode, so applying "tanh = arm freeze" to the present
+   task is wrong.)
+2. **on-policy TRPO + tanh is not a validated combination.** tanh-squashing is a
+   defining element of the SAC family (off-policy, reparameterization,
+   entropy-in-objective), where the Jacobian correction
+   $-\sum_i\log(1-\tanh^2(u_i))$ is natural to that objective (Haarnoja 2018,
+   arXiv:1801.01290 App.C). TRPO's KL trust region is computed over the policy
+   distribution; adding tanh changes the geometry of "policy" and "KL" — no literature
+   validates squashed-Gaussian TRPO (**no source found**). That is a full
+   ConstraintTRPO+IPO+FVP redesign (§5) with no upside per §11.2-1.
+3. **Omitting the correction breaks the entropy math.** Adding tanh but dropping the
+   Jacobian correction makes log-prob use the wrong density, so the entropy bonus is
+   systematically wrong near the boundary → the collapse-defense math of §4/§6 breaks.
+
+### 11.3 The clamp's one unmeasured value + experiment room (docs only, no code change; check this before launching)
+
+Justified does not mean "harmless." The known defect of clipping is not vanishing
+gradient but **log-prob bias for out-of-bound samples** (Fujita & Maeda 2018,
+arXiv:1802.07564, CAPG), which grows the more often actions saturate the boundary.
+Per §11.2-1, with the optimum at center and small std (floor 0.05~0.10), saturation is
+*presumed* rare so the bias is likely small in practice — but **this is not measured.**
+That gap is the basis of the remaining experiments:
+
+| # | Experiment | Rationale | Nature |
+|---|---|---|---|
+| 1 | **Add `clip_fraction` logging** (`|a|≥1` rate) | Not logged today (code-confirmed). Must measure saturation frequency to judge whether the §11.3 bias is a real problem. Literature also recommends "measure this before changing the pipeline" | **Code change** (a few log lines, algorithm unchanged, no training gate). Top priority |
+| 2 | Revisit `max_std=2.0` / `init_noise_std=0.7` | Other knobs (entropy_coef 0.003, per-dim coef, arm floor) have empirical backing; only these two have zero justification comments = inertia | Comparison training run (training gate). Depends on experiment 1 |
+| 3 | Isolate the IPO barrier→entropy causality (`entropy_coef_per_dim=0` vs current) | §6 admits this is "inferred, not isolated"; the referenced plan file is also absent | Comparison training run (training gate). tanh-independent |
+
+**Discarded**: tanh vs raw+clamp comparison run — ruled out in §11.2.
+
+> **Literature sources.** Haarnoja et al. 2018 (SAC, arXiv:1801.01290) — tanh Jacobian
+> correction. Fujita & Maeda 2018 (Clipped Action Policy Gradient, ICML,
+> arXiv:1802.07564) — clip-bias theory. Schulman 2015 (TRPO, arXiv:1502.05477) / 2017
+> (PPO, arXiv:1707.06347) — plain-Gaussian convention. Chou et al. 2017 (ICML, Beta
+> policy) — both clip and squash have boundary artifacts. "No literature validating
+> squashed TRPO" and "no paper directly comparing tanh vs clip at boundary optima" are
+> flagged as no-source-found (not fabricated — the gap is stated).
+
+---
+
 ## Source files
 
 - `constrained_albc/envs/main/encoder/_policy_base.py` — `log_std` parameter (`:96`), `_update_distribution` (`:128`)

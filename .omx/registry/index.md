@@ -1,9 +1,10 @@
 # Wiki Index
 
-> 77 pages | Last updated: 2026-07-02T06:42:32.542076
+> 78 pages | Last updated: 2026-07-02T09:00:08.575699
 
 ## convention
 
+- [Action bounding is justified (raw Gaussian + external clamp) -- tanh ruled out, 3 experiment leads remain](action_bounding_is_justified_raw_gaussian_external_clamp_tanh_ru.md) - # Action bounding is justified (raw Gaussian + external clamp) -- tanh ruled ...
 - [constrained-albc experiment conventions](constrained_albc_experiment_conventions.md) - # constrained-albc experiment conventions
 - [coverage lint ok is a floor not a quality gate; re-analysis uses OLD report as base, never shrinks](coverage_lint_ok_is_a_floor_not_a_quality_gate_re_analysis_uses_.md) - # coverage lint ok is a floor not a quality gate; re-analysis uses OLD report...
 - [cross-run reference values must be RE-EXTRACTED fresh, never carried forward (E4 stale-teacher-column gate)](cross_run_reference_values_must_be_re_extracted_fresh_never_carr.md) - # cross-run reference values must be RE-EXTRACTED fresh, never carried forwar...

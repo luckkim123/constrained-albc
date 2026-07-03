@@ -301,6 +301,70 @@ entropy bonus가 압력 1+2에 졌고 clamp가 선을 지키고 있다는 뜻이
 
 ---
 
+## 11. Action bounding: clamp는 정당한가 + 미검증 실험 여지
+
+> **결론 (2026-07-02 검토, 문헌 + 코드 대조).** 현재 raw Gaussian + `[-1,1]` hard
+> clamp 구성은 **정당하고 표준**이다. tanh-squashing으로 바꾸는 것은 개선이 아니라
+> 문제를 옮기는 것이다. 아래는 근거와, clamp를 건드리지 *않는* 미검증 실험 여지다.
+
+### 11.1 clamp가 정당한 이유
+
+action 샘플은 clamp 없는 raw Gaussian이다 (`actor_critic_encoder.py:277`
+`distribution.sample()`, "no action clamping"). clamp는 env buffer에서만 일어난다
+(`albc_env.py:452` `self._actions = actions.clone().clamp(-1.0, 1.0)`). vecenv
+`clip_actions`(Clamp#0)는 미설정 → isaaclab default `None` → **no-op**; 실제 작동하는
+clamp는 이 env buffer 하나뿐이다.
+
+log-prob은 **clamp 전 raw 샘플**에 대해 계산되고(`constraint_trpo.py:459`), clamp는
+env dynamics에만 적용된다. 따라서 "policy 밀도"와 "실행 액션"이 각자 일관된다 — clamp를
+policy가 아니라 environment의 일부로 보는 **on-policy PPO/TRPO 표준 관행**이다
+(SB3 PPO=`DiagGaussianDistribution`+clip, tanh 없음; PPO/TRPO 원논문도 plain Gaussian).
+
+### 11.2 tanh로 바꾸면 안 되는 이유 (개선이 아니라 이전)
+
+1. **이 태스크는 최적 액션이 액션 공간 *중앙*이다.** arm은 delta integrator
+   (`albc_env.py:567-578` `q_des += 0.10·a`)라 idle(a≈0)이 최적이고 경계 attractor가
+   없다; thruster는 hover라 소량 command 평형(0 근처)이 최적이다. 따라서 tanh saturation
+   ($1-\tanh^2(u)\to0$ at boundary)이 gradient를 죽이는 문제는 이 태스크에 **거의 해당
+   안 된다**. (과거 EE-position absolute mode는 최적점이 workspace *경계*라 tanh/clamp가
+   gradient-freeze를 냈다 — `project_delta_ee_decision.md`. 그 실패 메커니즘은 현재
+   joint-space에는 없으므로 "tanh=arm freeze" 논리를 현재에 그대로 적용하면 틀린다.)
+2. **on-policy TRPO + tanh는 검증된 조합이 아니다.** tanh-squashing은 SAC 계열
+   (off-policy, reparameterization, entropy-in-objective)의 정의적 요소이고 Jacobian
+   보정 $-\sum_i\log(1-\tanh^2(u_i))$가 그 objective상 자연스럽다 (Haarnoja 2018,
+   arXiv:1801.01290 App.C). TRPO의 KL trust region은 정책 분포 위에서 계산되는데 tanh를
+   넣으면 "policy"·"KL"의 기하가 바뀐다 — squashed-Gaussian TRPO를 검증한 문헌은 **없다**
+   (출처 없음). 즉 ConstraintTRPO+IPO+FVP 전체(§5) 재설계 부담인데 §11.2-1 때문에 upside가
+   없다.
+3. **보정 누락 시 entropy 계산이 틀어진다.** tanh만 넣고 Jacobian 보정을 빠뜨리면 log-prob이
+   잘못된 밀도로 계산돼 entropy bonus가 경계 근처에서 체계적으로 틀린다 → §4·§6의 collapse
+   방어 수학이 깨진다.
+
+### 11.3 clamp의 유일한 미측정 값 + 실험 여지 (코드 변경 없이 문서만; 착수 전 이 절 확인)
+
+clamp가 정당해도 "완벽 무해"는 아니다. clip의 알려진 결함은 gradient 소실이 아니라
+**경계 밖 샘플의 log-prob bias**다 (Fujita & Maeda 2018, arXiv:1802.07564, CAPG). 이
+bias는 액션이 경계에 자주 saturate될수록 커진다. §11.2-1처럼 최적점이 중앙 + std가 작으면
+(floor 0.05~0.10) saturate가 드물어 bias가 실전에서 작을 것으로 *추정*되나 — **실측 안
+됨**. 이것이 남은 실험들의 근거다:
+
+| # | 실험 | 근거 | 성격 |
+|---|---|---|---|
+| 1 | **`clip_fraction` 로깅 추가** (`|a|≥1` 비율) | 현재 미로깅(코드 확인). saturate 빈도를 재야 §11.3 bias가 실전 문제인지 판단 가능. 문헌도 "파이프라인 바꾸기 전 이것부터 재라" 권고 | **코드 변경**(로깅 몇 줄, 알고리즘 불변, 훈련 게이트 무관). 최우선 |
+| 2 | `max_std=2.0` / `init_noise_std=0.7` 재검토 | 다른 knob(entropy_coef 0.003, per-dim coef, arm floor)은 실측 근거 있으나 이 둘만 근거 코멘트 0건 = 관성 | 비교 학습런(훈련 게이트). 실험 1 결과에 종속 |
+| 3 | IPO barrier→entropy 인과 분리 (`entropy_coef_per_dim=0` vs 현행) | 문서 §6이 "inferred, not isolated"로 자인, 참조 계획서도 부재 | 비교 학습런(훈련 게이트). tanh와 무관, 독립 |
+
+**폐기**: tanh vs raw+clamp 비교런 — §11.2에서 부적절 확정.
+
+> **문헌 출처.** Haarnoja et al. 2018 (SAC, arXiv:1801.01290) — tanh Jacobian 보정.
+> Fujita & Maeda 2018 (Clipped Action Policy Gradient, ICML, arXiv:1802.07564) — clip
+> bias 이론. Schulman 2015 (TRPO, arXiv:1502.05477) / 2017 (PPO, arXiv:1707.06347) —
+> plain Gaussian 관행. Chou et al. 2017 (ICML, Beta policy) — clip·squash 둘 다 경계
+> artifact 지적. "squashed TRPO 검증 문헌 없음"·"경계 최적점 tanh-vs-clip 직접 비교 논문
+> 없음"은 조사상 출처 없음(날조 아님, 공백 명시).
+
+---
+
 ## 소스 파일
 
 - `constrained_albc/envs/main/encoder/_policy_base.py` — `log_std` 파라미터(`:96`), `_update_distribution`(`:128`)

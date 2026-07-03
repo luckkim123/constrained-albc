@@ -653,3 +653,15 @@
 - **Pages:** thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md
 - **Summary:** updated 'Thruster nonlinear curve (T200 sim-to-real): off-by-default deadband + signed-square toggle (d34debc)'
 
+## [2026-07-02T07:58:24.396650] query
+- **Pages:** sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md, actuator_hardware_identification_arm_xw540_t260_board_measured_p.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, constraint_viol_trajectory_barrier_sign_metrics_4_10_starts_at_d.md, sequential_overnight_campaign_wall_clock_budget_not_crashes_kill.md, analysis_refactor_2026_06_05_new_sim_free_modules_and_engine_gap.md, arm_a_measured_angle_joint1_constraint_recovers_not_diverges_the.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, encoder_priv_obs_normalization_bounds_must_be_dr_derived_not_har.md, state_dependent_std_difficulty_null_now_confirmed_on_real_dr_med.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, don_t_trust_an_engine_s_empty_zero_output_cross_check_the_raw_tb.md, experiment_output_directory_standard_logs_vs_experiments_index_t.md, doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md, cross_run_reference_values_must_be_re_extracted_fresh_never_carr.md, failure_dr_join_now_covers_fault_channels_not_just_dr_per_env_fa.md, joint1_anti_drift_constrain_the_command_cumulative_arm_b_not_the.md, p2_p3_analysis_fixes_do_not_change_static_eval_summary_json_numb.md
+- **Summary:** query 'what must be measured on real robot sim to real system identification' -> 20 of 77
+
+## [2026-07-02T08:51:07.153669] add
+- **Pages:** sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md
+- **Summary:** updated 'sim hydro nominal is analytical (not measured); IMU+pressure can anchor rotation/heave but not surge/sway/TAM'
+
+## [2026-07-02T09:00:08.575699] add
+- **Pages:** action_bounding_is_justified_raw_gaussian_external_clamp_tanh_ru.md
+- **Summary:** created 'Action bounding is justified (raw Gaussian + external clamp) -- tanh ruled out, 3 experiment leads remain'
+

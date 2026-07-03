@@ -38,6 +38,29 @@
 | Cable Forces | None | Tether drag + tension |
 | Joint Friction | DR: static [0, 0.05], viscous [0, 0.3] | Coulomb + viscous (temperature dependent) |
 
+### 1.4 What is actually measurable with the onboard sensor suite
+
+A 2026-07-02 audit enumerated all sim parameters and narrowed the real-hardware measurement
+program to **3 genuine targets**, then checked each against the actual onboard sensors. The real
+robot carries **IMU + pressure ONLY** — no DVL, and **no load cell / force-torque sensor**.
+
+| Measurement target | IMU + pressure + Dynamixel bus telemetry? | Needs load cell? | Why |
+|:---|:---|:---|:---|
+| TAM roll/pitch moment-arm | No | Yes | measures FORCE; a single thruster's angular accel folds unknown inertia $I$ + added-mass $A$ into $M = (I + A)\dot\omega$ (underdetermined) — IMU cannot recover force |
+| Thrust curve (deadband + nonlinearity) | No | Yes | same — force is not recoverable from IMU acceleration |
+| Arm joint step-response | Yes | No | Dynamixel bus telemetry (present position/velocity/current); uses neither IMU nor pressure — see §4 |
+| (bonus) Net buoyancy | Yes | No | thrusters off, log depth $z(t)$ with the pressure sensor — simplest onboard measurement |
+
+A free-decay test (tilt-and-release with IMU) is observable but **useless for parameter ID**: the
+oscillation frequency lumps GM, inertia, and added-mass into one equation,
+$\omega_n^2 = \rho g V\,GM / (I + A)$, so none of them is separable from a single measurement.
+
+**Verdict**: without a load cell, the only real measurement that reduces the gap now is the **arm
+step-response** (bus telemetry, §4), with **net buoyancy** (pressure) as a cheap bonus. The TAM
+moment-arm and thrust curve cannot be measured onboard, so their sim-to-real uncertainty is
+handled by **Domain Randomization bands** instead of measurement (TAM and `max_thrust` currently
+have no DR band — a silent systematic-bias risk).
+
 ---
 
 ## 2. Actuator Modeling

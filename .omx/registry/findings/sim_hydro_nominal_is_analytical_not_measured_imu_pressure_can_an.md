@@ -1,8 +1,8 @@
 ---
 title: "sim hydro nominal is analytical (not measured); IMU+pressure can anchor rotation/heave but not surge/sway/TAM"
-tags: ["measurement", "system-id", "domain-randomization", "sim-to-real", "damping", "free-decay", "TAM", "sensors", "fault-tolerant-control"]
+tags: ["measurement", "system-id", "domain-randomization", "sim-to-real", "damping", "free-decay", "TAM", "sensors", "fault-tolerant-control", "thruster", "load-cell", "arm-step-response"]
 created: 2026-06-14T07:38:12.841674
-updated: 2026-06-14T07:38:12.841674
+updated: 2026-07-02T08:51:07.153669
 sources: []
 links: []
 category: reference
@@ -32,3 +32,31 @@ TWO-STRATEGY PLAN (deferred, recorded at docs/plans/2026-06-14-sim-param-measure
 A) measurable -> add free-decay logging mode to robot, run tank protocol, offline LSQ/EKF fit, anchor sim nominal (or recenter DR) to measured value.
 B) un-measurable-but-important (TAM, max_thrust) -> widen DR to physically-defensible range (per-thruster gain/voltage/mounting variation; size from spec/literature, not a round number), re-train as a comparison experiment (baseline tag + exp branch per rule02), check heavy-tail/OOD don't regress.
 FTC connection: this anchoring is a prerequisite for fault-tolerant-control work -- the sim domain must demonstrably COVER the real domain before fault robustness is meaningful, and faults must later be recorded per-env like DR (blocked today by eval-npz-saves-no-raw-obs).
+
+---
+
+## Update (2026-07-02T08:51:07.153669)
+
+ADDENDUM (2026-07-02) — measurement feasibility revisited under a HARDER sensor constraint (no load cell), and a correction to the free-decay optimism above.
+
+An audit enumerated 95 sim parameters and adversarially verified which MUST be physically measured on the real UUV. Result: only 3 genuine measurement targets — (a) TAM roll/pitch moment-arm, (b) thruster command->thrust curve (deadband + nonlinearity), (c) arm joint step-response (Dynamixel XW540-T260 discrete-PID vs sim continuous-PD).
+
+CONSTRAINT UPDATE — the real robot has IMU + pressure ONLY, and NO load cell / force-torque sensor either. This tightens the earlier "IMU+pressure only, no DVL" boundary.
+
+CORRECTION to the 2026-06-14 body above — free-decay is MEASURABLE but NON-SEPARABLE, so DOWNGRADE the earlier "measurable -> anchor rotational damping/GM" claim. A tilt-and-release free-decay with IMU is observable, but the oscillation frequency lumps GM, inertia, and added-mass into a single equation: $\omega_n^2 = \rho g V\,GM / (I + A)$ — GM, $I$, $A$ are NOT separable from one measurement. So free-decay is USELESS for parameter ID (it identifies a lumped quantity, not any single sim nominal). The 2026-06-14 optimism that free-decay could anchor rotational damping / GM is retracted; damping-from-envelope still needs an independent GM/added-mass value to be meaningful.
+
+SENSOR REACHABILITY of the 3 targets under IMU + pressure + Dynamixel-bus-telemetry ONLY:
+- TAM moment-arm and thrust curve REQUIRE a load cell / force sensor — they measure FORCE, which IMU (an accelerometer) cannot recover: a single thruster's angular accel folds in unknown inertia $I$ + added-mass $A$ via $M = (I + A)\dot\omega$ (underdetermined). NOT measurable with the current suite.
+- arm step-response IS measurable — via Dynamixel bus telemetry (PresentPosition / PresentVelocity / PresentCurrent). Uses NEITHER IMU nor pressure. This is the only one of the 3 doable now.
+- net buoyancy IS measurable — thrusters off, log depth $z(t)$ with the pressure sensor; the simplest onboard measurement (cheap useful bonus, not one of the 3 gap targets but worth recording).
+
+CORE IRONY / HONEST LIMIT — what is measurable onboard = what does NOT need measuring (arm dynamics + buoyancy, already inside DR); what NEEDS measuring (TAM / thrust) = what onboard sensors CANNOT measure. The single dangerous silent-bias risk (TAM & max_thrust have NO DR band, per the body above) is exactly the axis onboard sensors cannot reach.
+
+PRACTICAL VERDICT (no load cell):
+- arm step-response (bus telemetry) = the ONLY real measurement that reduces the gap now -> do it (see the arm step-response protocol / thruster & actuator cards).
+- net buoyancy (pressure) = cheap useful bonus -> do it.
+- TAM roll/pitch arm + thrust curve = measurement IMPOSSIBLE without a load cell -> handle by ADDING Domain Randomization bands (TAM & max_thrust currently have NO DR band — the silent-bias risk), NOT by chasing a measurement.
+- free-decay / IMU-noise -> SKIP (non-separable per the correction above; sim noise std already >= real).
+
+Cross-links: actuator_hardware_identification_arm_xw540_t260_board_measured_p.md (arm XW540-T260 board-measured registers / discrete-PID structural gap), thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md (thrust deadband + nonlinear curve, off-by-default).
+
