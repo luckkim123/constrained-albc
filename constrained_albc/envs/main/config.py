@@ -70,16 +70,54 @@ _FULL_DOF_CONSTRAINT_TERMS: list[ConstraintTermCfg] = [
 ]
 
 
+# Original sim thruster order (as authored from the ALBC ROS control package
+# config/TAM.yaml). Columns are sim thrusters T0-T5. Preserved verbatim for
+# physical audit; the live allocation_matrix below is derived from this by
+# reordering columns via _ESC_CHANNEL_ORDER.
+_BASE_ALLOCATION_MATRIX: tuple[tuple[float, ...], ...] = (
+    (0.707, -0.707, 0.707, -0.707, 0.0, 0.0),  # Fx surge
+    (-0.707, -0.707, 0.707, 0.707, 0.0, 0.0),  # Fy sway
+    (0.0, 0.0, 0.0, 0.0, 1.0, 1.0),  # Fz heave
+    (0.007, 0.007, -0.007, -0.007, 0.0, 0.0),  # Mx roll
+    (0.007, -0.007, 0.007, -0.007, 0.145, -0.145),  # My pitch
+    (0.144, 0.144, 0.144, 0.144, 0.0, 0.0),  # Mz yaw
+)
+
+# ESC channel order: new column j = original sim column _ESC_CHANNEL_ORDER[j].
+# Firmware (agent-jetson) wiring: m0,m3 = vertical (heave); m1,m2,m4,m5 = horizontal.
+# Vertical pair (m0<-T4, m3<-T5) and "which channels are vertical" are CONFIRMED.
+# Horizontal-4 individual mapping (m1<-T0, m2<-T1, m4<-T2, m5<-T3) is PROVISIONAL,
+# pending B1 watertank measurement -- edit ONLY this tuple to update it.
+_ESC_CHANNEL_ORDER: tuple[int, ...] = (4, 0, 1, 5, 2, 3)
+
+
+def _reorder_columns(
+    base: tuple[tuple[float, ...], ...], order: tuple[int, ...]
+) -> tuple[tuple[float, ...], ...]:
+    """Reorder each row's columns so new column j = base column order[j].
+
+    Physics is invariant under this column permutation (singular values
+    identical); it only relabels sim thrusters to firmware ESC channels.
+    """
+    return tuple(tuple(row[j] for j in order) for row in base)
+
+
 @configclass
 class ALBCThrusterCfg(ThrusterCfg):
     """ALBC 6-thruster configuration.
 
-    TAM from the ALBC ROS control package (config/TAM.yaml) (verified against actuators.xacro).
-    Thruster parameters use BlueROV T200 as baseline; DR covers real-robot differences.
+    TAM from the ALBC ROS control package (config/TAM.yaml) (verified against
+    actuators.xacro). Columns are then reordered to the robot firmware ESC wiring
+    via _ESC_CHANNEL_ORDER, so the live column order no longer matches the raw
+    TAM.yaml/xacro sim order (original sim order preserved in
+    _BASE_ALLOCATION_MATRIX). Thruster parameters use BlueROV T200 as baseline;
+    DR covers real-robot differences.
 
-    Layout:
-        T0-T3: Horizontal (45-degree vectored) for surge, sway, yaw
-        T4-T5: Vertical for heave, pitch
+    Layout (channels ordered to match robot firmware ESC wiring, m0..m5):
+        m0, m3:         Vertical (heave)
+        m1, m2, m4, m5: Horizontal (45-degree vectored) for surge, sway, yaw
+    (original sim thruster order preserved in _BASE_ALLOCATION_MATRIX;
+     reorder via _ESC_CHANNEL_ORDER)
     """
 
     num_thrusters: int = 6
@@ -87,13 +125,8 @@ class ALBCThrusterCfg(ThrusterCfg):
     thrust_coefficient: float = 40.0
     time_constant_up: float = 0.1
     time_constant_down: float = 0.05
-    allocation_matrix: tuple[tuple[float, ...], ...] = (
-        (0.707, -0.707, 0.707, -0.707, 0.0, 0.0),  # Fx surge
-        (-0.707, -0.707, 0.707, 0.707, 0.0, 0.0),  # Fy sway
-        (0.0, 0.0, 0.0, 0.0, 1.0, 1.0),  # Fz heave
-        (0.007, 0.007, -0.007, -0.007, 0.0, 0.0),  # Mx roll
-        (0.007, -0.007, 0.007, -0.007, 0.145, -0.145),  # My pitch
-        (0.144, 0.144, 0.144, 0.144, 0.0, 0.0),  # Mz yaw
+    allocation_matrix: tuple[tuple[float, ...], ...] = _reorder_columns(
+        _BASE_ALLOCATION_MATRIX, _ESC_CHANNEL_ORDER
     )
 
 

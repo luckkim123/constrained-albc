@@ -16,7 +16,7 @@ Current proprioception (20D) -- measurable on real robot:
     Command (3D):       ang_cmd(3) [att_rp(2) + yaw_rate(1)]   -- no lin_vel command
     Body State (6D):    euler(3), ang_vel(3)                   -- no measured lin_vel
     Arm State (5D):     joint_pos(2), joint_vel(2), manipulability(1)
-    Thruster (6D):      filtered output (T0-T5)
+    Thruster (6D):      filtered output (ESC channels m0-m5)
 
 Temporal history (46D) -- ring buffer, stride=3:
     Joint tracking (12D):   (q_des_prev - q_actual, joint_vel) x 3 steps
@@ -60,7 +60,7 @@ def compute_policy_obs(
         [13]    manipulability index w (normalized [0, 1])
 
     Thruster State (6D):
-        [14:20] thruster filtered output (T0-T5)
+        [14:20] thruster filtered output (ESC channels m0-m5)
     """
     roll, pitch, yaw = env._euler_cache
     joint_pos = robot.data.joint_pos[:, env._albc_joint_ids]
