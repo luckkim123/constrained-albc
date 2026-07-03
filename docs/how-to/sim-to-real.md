@@ -134,6 +134,40 @@ Current status: reverted to `ImplicitActuatorCfg`. DelayedPDActuator is left as 
 
 ---
 
+### 2.4 Thruster Channel Ordering (sim TAM <-> firmware ESC)
+
+The sim thruster allocation matrix (TAM) column order MUST match the physical
+robot firmware's ESC channel order. In `envs/main`/`envs/full_dof` the thruster is
+NOT a USD prim -- it is an analytical model: `ThrusterModel.compute_wrench()`
+applies `einsum("ij,nj->ni", TAM, thrust)` to turn a 6D per-thruster command into
+a body wrench (`Fx..Mz`) injected as an external force. Column `j` of the TAM is the
+ONLY thing that defines what physical direction sim thruster slot `j` produces, so
+matching the robot is purely a TAM column-order question -- no USD edit is involved.
+
+The robot firmware (agent-jetson `pid.cpp`) wires `m0,m3` = vertical (heave/depth,
+`PID_control_depth`) and `m1,m2,m4,m5` = horizontal (`PID_control_yaw`). The sim
+originally had heave on columns `T4,T5`. The fix (2026-07-03, main `238932c`)
+reorders the TAM columns to firmware order via a single named constant:
+
+```python
+# config.py (identical in envs/main and envs/full_dof)
+_ESC_CHANNEL_ORDER = (4, 0, 1, 5, 2, 3)  # new column j = base column ORDER[j]
+allocation_matrix = _reorder_columns(_BASE_ALLOCATION_MATRIX, _ESC_CHANNEL_ORDER)
+```
+
+- Reorder columns in sim (canonical) rather than keeping a permutation adapter in
+  the deploy mixer -- an adapter makes a "temporary" mapping permanent (a hidden
+  sim-real seam). After reorder + retrain, sim slot order == firmware ESC order and
+  the deploy mixer permutation becomes identity.
+- Column permutation is physics-invariant (singular values / achievable-wrench space
+  unchanged; `new = old @ P`). It only relabels slots, so there is no "regressed ->
+  revert" path -- it is not an A/B experiment.
+- The vertical pair (`m0<-T4`, `m3<-T5`) is CONFIRMED. The horizontal-4 individual
+  mapping (`m1<-T0, m2<-T1, m4<-T2, m5<-T3`) is PROVISIONAL, pending B1 watertank
+  measurement -- to update it, edit ONLY the `_ESC_CHANNEL_ORDER` tuple.
+- Old checkpoints were trained on the old column order -> DO NOT load them under the
+  new TAM. Retrain from scratch (fold in with other confirmed pre-retrain fixes).
+
 ## 3. Isaac Gym Reference
 
 Actuator configuration of the original Isaac Gym implementation:
@@ -283,6 +317,9 @@ on the real robot, Dynamixel generates the trajectory internally, so the positio
 - [ ] TDC controller node: 50Hz (matching simulation control_decimation=4)
 - [ ] FK/IK: same parameters as simulation (L1=L2=0.233m)
 - [ ] Latency measurement: end-to-end (command -> actuator movement)
+- [ ] Thruster channel order: confirm sim TAM `_ESC_CHANNEL_ORDER` matches the
+      firmware ESC wiring; deploy mixer permutation should be identity (see 2.4).
+      After B1 watertank, confirm the horizontal-4 mapping and update the tuple.
 
 ### 7.4 Validation
 
@@ -313,4 +350,4 @@ on the real robot, Dynamixel generates the trajectory internally, so the positio
 ---
 
 **Created**: 2026-02-11
-**Updated**: 2026-02-11
+**Updated**: 2026-07-03

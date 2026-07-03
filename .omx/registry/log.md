@@ -665,3 +665,11 @@
 - **Pages:** action_bounding_is_justified_raw_gaussian_external_clamp_tanh_ru.md
 - **Summary:** created 'Action bounding is justified (raw Gaussian + external clamp) -- tanh ruled out, 3 experiment leads remain'
 
+## [2026-07-03T07:25:15.566964] query
+- **Pages:** constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md, reward_penalty_terms_thruster_smoothness_bias_block_3_temporal_b.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, failure_dr_join_now_covers_fault_channels_not_just_dr_per_env_fa.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md, training_anomaly_thresholds_tb_tag_alert_table.md, training_diagnosis_decision_tree.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, policy_head_design_rationale_and_literature_standing_encoder_inp.md, action_bounding_is_justified_raw_gaussian_external_clamp_tanh_ru.md, actuator_hardware_identification_arm_xw540_t260_board_measured_p.md, analysis_refactor_2026_06_05_new_sim_free_modules_and_engine_gap.md, barrier_alpha_runtime_0_05_agent_cfg_injects_over_ctor_default_0.md, constraint_viol_trajectory_barrier_sign_metrics_4_10_starts_at_d.md, constrainttrpo_health_thresholds.md, don_t_trust_an_engine_s_empty_zero_output_cross_check_the_raw_tb.md, dr_harder_ood_verdict_e2_best_survives_ood_the_harder_curriculum.md, encoder_priv_obs_normalization_bounds_must_be_dr_derived_not_har.md
+- **Summary:** query 'thruster allocation matrix channel order' -> 20 of 26
+
+## [2026-07-03T07:26:21.665355] add
+- **Pages:** tam_columns_must_match_robot_firmware_esc_channel_order_reorder_.md
+- **Summary:** created 'TAM columns must match robot firmware ESC channel order (reorder + retrain, not a mixer permutation)'
+

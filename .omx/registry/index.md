@@ -1,6 +1,6 @@
 # Wiki Index
 
-> 78 pages | Last updated: 2026-07-02T09:00:08.575699
+> 79 pages | Last updated: 2026-07-03T07:26:21.665355
 
 ## convention
 
@@ -13,6 +13,7 @@
 - [experiment result recording location (experiments tree is SSOT, not docs/results)](experiment_result_recording_location_experiments_tree_is_ssot_no.md) - # experiment result recording location (experiments tree is SSOT, not docs/re...
 - [failure_dr join now covers fault_ channels, not just dr_ (per-env failure<->FAULT correlation enabled)](failure_dr_join_now_covers_fault_channels_not_just_dr_per_env_fa.md) - # failure_dr join now covers fault_ channels, not just dr_ (per-env failure<-...
 - [omx wiki has no delete subcommand by design: removal is gc-apply, duplicates come from add-with-new-title](omx_wiki_has_no_delete_subcommand_by_design_removal_is_gc_apply_.md) - # omx wiki has no delete subcommand by design: removal is gc-apply, duplicate...
+- [TAM columns must match robot firmware ESC channel order (reorder + retrain, not a mixer permutation)](tam_columns_must_match_robot_firmware_esc_channel_order_reorder_.md) - # TAM columns must match robot firmware ESC channel order (reorder + retrain,...
 - [train.py --run_group creates the <group> layer (no more manual post-move)](train_py_run_group_creates_the_group_layer_no_more_manual_post_m.md) - # train.py --run_group creates the <group> layer (no more manual post-move)
 
 ## debugging
