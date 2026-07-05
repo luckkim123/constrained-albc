@@ -56,8 +56,8 @@ From `ALBCEnvCfg` (`config.py`):
 
 | Command | cfg field | Range | Meaning | Location |
 |---|---|---|---|---|
-| roll/pitch attitude | `att_cmd_rp_range` | (-π/6, π/6) = ±30° | absolute roll & pitch attitude target (rad) | `config.py:377` |
-| yaw rate | `yaw_rate_cmd_range` | (-0.5, 0.5) | body-frame yaw angular-velocity target (rad/s) | `config.py:379` |
+| roll/pitch attitude | `att_cmd_rp_range` | (-π/6, π/6) = ±30° | absolute roll & pitch attitude target (rad) | `config.py:410` |
+| yaw rate | `yaw_rate_cmd_range` | (-0.5, 0.5) | body-frame yaw angular-velocity target (rad/s) | `config.py:412` |
 
 Note the **mixed command type**: roll/pitch are *attitude* (position) targets, while
 yaw is a *rate* (velocity) target. There is no yaw *attitude* command and no
@@ -65,9 +65,9 @@ linear-velocity command at all. Timing/zeroing knobs:
 
 | cfg field | Value | Meaning | Location |
 |---|---|---|---|
-| `vel_cmd_resample_steps` | 250 | resample every 250 control steps = 5 s at 50 Hz | `config.py:381` |
-| `vel_cmd_zero_prob` | 0.1 | per-env chance a resample yields a zero (hover) command | `config.py:383` |
-| `play_mode` | False | eval mode: fix all commands to zero (hover), no resampling | `config.py:386` |
+| `vel_cmd_resample_steps` | 250 | resample every 250 control steps = 5 s at 50 Hz | `config.py:414` |
+| `vel_cmd_zero_prob` | 0.1 | per-env chance a resample yields a zero (hover) command | `config.py:416` |
+| `play_mode` | False | eval mode: fix all commands to zero (hover), no resampling | `config.py:419` |
 
 The `vel_cmd_*` names are legacy (they once drove a linear-velocity command); they
 are retained now only as the shared command-timing/zeroing knobs and no longer
@@ -150,6 +150,11 @@ reset to 0 at each sample, and also at reset with episode-length jitter, so envs
 desynchronize). So within one 3000-step episode an env sees a new command roughly
 every 5 s — the policy must *track a changing target*, not a fixed one.
 
+Note: at the initial full-batch reset every env's resample counter starts at 0 (the
+episode-length jitter applies to `episode_length_buf`, not to `_vel_cmd_step_counter`),
+so the first mid-episode resample fires batch-synchronized at step 250; desync only
+emerges later via staggered terminations.
+
 ---
 
 ## 5. Command in the observation and the tracking error
@@ -167,7 +172,7 @@ return torch.cat([
 ```
 
 The command is **noise-free** in the observation noise model: the first 3 dims of
-`_OBS_NOISE_STD` (`config.py:206`, `# ang_cmd ... (our command, no noise)`) and of
+`_OBS_NOISE_STD` (`config.py:239`, `# ang_cmd ... (our command, no noise)`) and of
 the bias model are `0.0`. This is deliberate — the command is our own set-point, not
 a sensor reading, so it carries no sensor noise. (This is the same distinction
 `exploration-and-noise.md` §7 draws for observation noise generally.)
@@ -199,7 +204,7 @@ error-gated (only accumulates when `|err| < reward sigma`) and appended to the 6
 observation as the trailing 3D. Its purpose (Hwangbo-2017 pattern) is to give the
 policy a memory of *sustained* offset that per-step tracking reward ignores. The
 integral cfg (`integral_leak=0.99`, `integral_clamp=2.0`, `integral_gated=True`) is
-in `config.py:310–314`.
+in `config.py:345–346`.
 
 ---
 
@@ -247,7 +252,7 @@ kernel `_exp_quad_saturating` (`mdp/rewards.py:97–117`):
 | Term | Consumes | cfg (k, σ) | Location |
 |---|---|---|---|
 | `att_rp_tracking` | `_att_rp_err` (roll,pitch), roll-weighted | k=9.0, σ=0.10, quad_ratio=0.833, `att_roll_weight=1.5` | `rewards.py:70,128–138` |
-| `yaw_vel_tracking` | `_yaw_rate_err` | k=3.5, σ=0.10, quad_ratio=1.0, tanh_coef=0.3 | `config.py:390`, `rewards.py:141–144` |
+| `yaw_vel_tracking` | `_yaw_rate_err` | k=3.5, σ=0.10, quad_ratio=1.0, tanh_coef=0.3 | `config.py:423`, `rewards.py:141–144` |
 
 Roll is up-weighted (`att_roll_weight=1.5`) inside the attitude error because roll
 has weak TAM actuation (the 0.007 m roll arm vs. the 0.145 m pitch arm — see
@@ -262,17 +267,17 @@ command → error → reward.
 
 | Knob | Value | Location |
 |---|---|---|
-| `att_cmd_rp_range` | (-π/6, π/6) = ±30° | `config.py:377` |
-| `yaw_rate_cmd_range` | (-0.5, 0.5) rad/s | `config.py:379` |
-| `vel_cmd_resample_steps` | 250 (5 s @ 50 Hz) | `config.py:381` |
-| `vel_cmd_zero_prob` | 0.1 | `config.py:383` |
-| `play_mode` (eval = hover) | False | `config.py:386` |
+| `att_cmd_rp_range` | (-π/6, π/6) = ±30° | `config.py:410` |
+| `yaw_rate_cmd_range` | (-0.5, 0.5) rad/s | `config.py:412` |
+| `vel_cmd_resample_steps` | 250 (5 s @ 50 Hz) | `config.py:414` |
+| `vel_cmd_zero_prob` | 0.1 | `config.py:416` |
+| `play_mode` (eval = hover) | False | `config.py:419` |
 | command buffer `_ang_cmd` | (N, 3) [roll, pitch, yaw_rate] | `albc_env.py:304` |
 | `cmd_*_scale` (INACTIVE, always 1.0) | 1.0 | `albc_env.py:319–321`, `1368–1369` |
-| command in obs (first 3D, noise-free) | — | `observations.py:71–73`, `config.py:206` |
+| command in obs (first 3D, noise-free) | — | `observations.py:71–73`, `config.py:239` |
 | error compute (attitude wrapped) | — | `albc_env.py:1000–1007` |
-| integral (3 channels, gated leaky) | leak 0.99 / clamp 2.0 | `config.py:310–314`, `albc_env.py:1018–1038` |
-| att / yaw tracking reward (k, σ) | 9.0 / 3.5, 0.10 | `rewards.py:70`, `config.py:390` |
+| integral (3 channels, gated leaky) | leak 0.99 / clamp 2.0 | `config.py:345–346`, `albc_env.py:1018–1038` |
+| att / yaw tracking reward (k, σ) | 9.0 / 3.5, 0.10 | `rewards.py:70`, `config.py:423` |
 
 ---
 

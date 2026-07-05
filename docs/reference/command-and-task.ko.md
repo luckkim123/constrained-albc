@@ -53,8 +53,8 @@ command 난이도가 아니다. command 난이도는 고정 config knob이지 cu
 
 | Command | cfg field | 범위 | 의미 | 위치 |
 |---|---|---|---|---|
-| roll/pitch attitude | `att_cmd_rp_range` | (-π/6, π/6) = ±30° | 절대 roll & pitch attitude 목표 (rad) | `config.py:377` |
-| yaw rate | `yaw_rate_cmd_range` | (-0.5, 0.5) | body-frame yaw 각속도 목표 (rad/s) | `config.py:379` |
+| roll/pitch attitude | `att_cmd_rp_range` | (-π/6, π/6) = ±30° | 절대 roll & pitch attitude 목표 (rad) | `config.py:410` |
+| yaw rate | `yaw_rate_cmd_range` | (-0.5, 0.5) | body-frame yaw 각속도 목표 (rad/s) | `config.py:412` |
 
 **혼합 command 타입**에 주목: roll/pitch는 *attitude*(위치) 목표인 반면 yaw는
 *rate*(속도) 목표다. yaw *attitude* command도, linear-velocity command도 전혀 없다.
@@ -62,9 +62,9 @@ command 난이도가 아니다. command 난이도는 고정 config knob이지 cu
 
 | cfg field | 값 | 의미 | 위치 |
 |---|---|---|---|
-| `vel_cmd_resample_steps` | 250 | 250 control step마다 리샘플 = 50 Hz에서 5 s | `config.py:381` |
-| `vel_cmd_zero_prob` | 0.1 | 리샘플이 zero(hover) command를 낼 env별 확률 | `config.py:383` |
-| `play_mode` | False | eval 모드: 모든 command를 0(hover)으로 고정, 리샘플 없음 | `config.py:386` |
+| `vel_cmd_resample_steps` | 250 | 250 control step마다 리샘플 = 50 Hz에서 5 s | `config.py:414` |
+| `vel_cmd_zero_prob` | 0.1 | 리샘플이 zero(hover) command를 낼 env별 확률 | `config.py:416` |
+| `play_mode` | False | eval 모드: 모든 command를 0(hover)으로 고정, 리샘플 없음 | `config.py:419` |
 
 `vel_cmd_*` 이름은 legacy다(한때 linear-velocity command를 구동했음); 지금은 공유
 command-타이밍/제로화 knob으로만 남아있고 더는 linear velocity를 만들지 않는다.
@@ -143,6 +143,11 @@ if resample_steps > 0:
 3000-step episode 안에서 env는 대략 5 s마다 새 command를 본다 — 정책은 고정 target이
 아니라 *변하는 target을 추종*해야 한다.
 
+참고: 초기 full-batch reset에서는 모든 env의 리샘플 카운터가 0에서 시작하며
+(episode-length jitter는 `episode_length_buf`에만 적용되고 `_vel_cmd_step_counter`에는
+적용되지 않음), 따라서 첫 mid-episode 리샘플은 step 250에 batch 동기로 발화한다;
+desync는 이후 staggered termination을 통해서만 나타난다.
+
 ---
 
 ## 5. Observation 속의 command와 tracking error
@@ -160,7 +165,7 @@ return torch.cat([
 ```
 
 command는 observation noise model에서 **noise-free**다: `_OBS_NOISE_STD`
-(`config.py:206`, `# ang_cmd ... (our command, no noise)`)의 첫 3 dim과 bias 모델이
+(`config.py:239`, `# ang_cmd ... (our command, no noise)`)의 첫 3 dim과 bias 모델이
 `0.0`이다. 의도적이다 — command는 센서 읽기가 아니라 우리 자신의 set-point라 센서
 noise를 갖지 않는다. (이건 `exploration-and-noise.ko.md` §7이 observation noise 전반에
 대해 긋는 것과 같은 구분이다.)
@@ -191,7 +196,7 @@ clamp, 같은 3 channel `[roll, pitch, yaw_rate]`. error-gated이고(`|err| < re
 sigma`일 때만 누적) 69D observation에 trailing 3D로 append된다. 목적(Hwangbo-2017
 패턴)은 per-step tracking reward가 무시하는 *지속적* offset의 기억을 정책에 주는
 것이다. integral cfg(`integral_leak=0.99`, `integral_clamp=2.0`, `integral_gated=True`)는
-`config.py:310-314`에 있다.
+`config.py:345-346`에 있다.
 
 ---
 
@@ -238,7 +243,7 @@ command error는 공유 지수-이차 kernel `_exp_quad_saturating`
 | 항 | 소비 | cfg (k, σ) | 위치 |
 |---|---|---|---|
 | `att_rp_tracking` | `_att_rp_err` (roll,pitch), roll-weighted | k=9.0, σ=0.10, quad_ratio=0.833, `att_roll_weight=1.5` | `rewards.py:70,128-138` |
-| `yaw_vel_tracking` | `_yaw_rate_err` | k=3.5, σ=0.10, quad_ratio=1.0, tanh_coef=0.3 | `config.py:390`, `rewards.py:141-144` |
+| `yaw_vel_tracking` | `_yaw_rate_err` | k=3.5, σ=0.10, quad_ratio=1.0, tanh_coef=0.3 | `config.py:423`, `rewards.py:141-144` |
 
 roll은 attitude error 안에서 up-weight된다(`att_roll_weight=1.5`) — roll의 TAM
 actuation이 약하기 때문(0.007 m roll arm vs 0.145 m pitch arm — `action-pipeline.ko.md`
@@ -252,17 +257,17 @@ actuation이 약하기 때문(0.007 m roll arm vs 0.145 m pitch arm — `action-
 
 | Knob | 값 | 위치 |
 |---|---|---|
-| `att_cmd_rp_range` | (-π/6, π/6) = ±30° | `config.py:377` |
-| `yaw_rate_cmd_range` | (-0.5, 0.5) rad/s | `config.py:379` |
-| `vel_cmd_resample_steps` | 250 (5 s @ 50 Hz) | `config.py:381` |
-| `vel_cmd_zero_prob` | 0.1 | `config.py:383` |
-| `play_mode` (eval = hover) | False | `config.py:386` |
+| `att_cmd_rp_range` | (-π/6, π/6) = ±30° | `config.py:410` |
+| `yaw_rate_cmd_range` | (-0.5, 0.5) rad/s | `config.py:412` |
+| `vel_cmd_resample_steps` | 250 (5 s @ 50 Hz) | `config.py:414` |
+| `vel_cmd_zero_prob` | 0.1 | `config.py:416` |
+| `play_mode` (eval = hover) | False | `config.py:419` |
 | command 버퍼 `_ang_cmd` | (N, 3) [roll, pitch, yaw_rate] | `albc_env.py:304` |
 | `cmd_*_scale` (비활성, 항상 1.0) | 1.0 | `albc_env.py:319-321`, `1368-1369` |
-| command in obs (첫 3D, noise-free) | — | `observations.py:71-73`, `config.py:206` |
+| command in obs (첫 3D, noise-free) | — | `observations.py:71-73`, `config.py:239` |
 | error compute (attitude wrapped) | — | `albc_env.py:1000-1007` |
-| integral (3 channel, gated leaky) | leak 0.99 / clamp 2.0 | `config.py:310-314`, `albc_env.py:1018-1038` |
-| att / yaw tracking reward (k, σ) | 9.0 / 3.5, 0.10 | `rewards.py:70`, `config.py:390` |
+| integral (3 channel, gated leaky) | leak 0.99 / clamp 2.0 | `config.py:345-346`, `albc_env.py:1018-1038` |
+| att / yaw tracking reward (k, σ) | 9.0 / 3.5, 0.10 | `rewards.py:70`, `config.py:423` |
 
 ---
 
