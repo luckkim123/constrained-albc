@@ -673,3 +673,51 @@
 - **Pages:** tam_columns_must_match_robot_firmware_esc_channel_order_reorder_.md
 - **Summary:** created 'TAM columns must match robot firmware ESC channel order (reorder + retrain, not a mixer permutation)'
 
+## [2026-07-05T07:57:30.678216] query
+- **Pages:** encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md, experiment_launch_checklist_run_id_wandb_latest_alias_naming.md, sequential_overnight_campaign_wall_clock_budget_not_crashes_kill.md, experiment_output_directory_standard_logs_vs_experiments_index_t.md, dr_harder_campaign_synthesis_speed_kills_attitude_center_shift_o.md, experiment_result_recording_location_experiments_tree_is_ssot_no.md, tam_columns_must_match_robot_firmware_esc_channel_order_reorder_.md, baseline_repro_reproduces_teacher_deterministically_e4_control.md, constrained_albc_experiment_conventions.md, action_bounding_is_justified_raw_gaussian_external_clamp_tanh_ru.md, cross_run_reference_values_must_be_re_extracted_fresh_never_carr.md, thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md, encoder_priv_obs_normalization_bounds_must_be_dr_derived_not_har.md, engine_gap_analyze_training_py_needs_the_logs_run_dir_not_the_ex.md, kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md, our_doraemon_original_both_entropy_max_center_can_move_kl_ub_is_.md, static_eval_plots_regenerate_sim_free_from_npz_reconstruct_segme.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, constraint_viol_trajectory_barrier_sign_metrics_4_10_starts_at_d.md, coverage_lint_ok_is_a_floor_not_a_quality_gate_re_analysis_uses_.md
+- **Summary:** query 'baseline retrain campaign from-scratch experiment batch' -> 20 of 55
+
+## [2026-07-05T08:04:23.839168] query
+- **Pages:** baseline_repro_reproduces_teacher_deterministically_e4_control.md, tam_columns_must_match_robot_firmware_esc_channel_order_reorder_.md, kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md, our_doraemon_original_both_entropy_max_center_can_move_kl_ub_is_.md, sequential_overnight_campaign_wall_clock_budget_not_crashes_kill.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md, constrained_albc_experiment_conventions.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, constraint_viol_trajectory_barrier_sign_metrics_4_10_starts_at_d.md, doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md, doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md, experiment_launch_checklist_run_id_wandb_latest_alias_naming.md, experiment_output_directory_standard_logs_vs_experiments_index_t.md, experiment_result_recording_location_experiments_tree_is_ssot_no.md, kl_ub_0_12_trades_attitude_for_translation_e1_dr_harder.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, state_dependent_std_difficulty_null_now_confirmed_on_real_dr_med.md
+- **Summary:** query 'next retrain manifest roster rides on baseline' -> 20 of 79
+
+## [2026-07-05T08:05:40.008780] add
+- **Pages:** leaky_integral_and_ema_bias_carry_over_the_mid_episode_command_r.md
+- **Summary:** created 'Leaky-integral and EMA-bias carry over the mid-episode command resample (unexamined side-effect, harm unproven, A/B design ready)'
+
+## [2026-07-05T08:06:16.009224] add
+- **Pages:** next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md
+- **Summary:** created 'Next from-scratch retrain manifest: what rides on the post-TAM baseline retrain (sim fixes + learning-dynamics experiments)'
+
+## [2026-07-05T08:07:05.090813] query
+- **Pages:** next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, experiment_output_directory_standard_logs_vs_experiments_index_t.md, experiment_result_recording_location_experiments_tree_is_ssot_no.md, leaky_integral_and_ema_bias_carry_over_the_mid_episode_command_r.md, tam_columns_must_match_robot_firmware_esc_channel_order_reorder_.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md, constraint_viol_trajectory_barrier_sign_metrics_4_10_starts_at_d.md, engine_gap_analyze_training_py_needs_the_logs_run_dir_not_the_ex.md, kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md, train_py_run_group_creates_the_group_layer_no_more_manual_post_m.md, don_t_trust_an_engine_s_empty_zero_output_cross_check_the_raw_tb.md, dr_harder_reward_decomposition_confirms_eval_trades_on_the_train.md, encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md, encoder_priv_obs_normalization_bounds_must_be_dr_derived_not_har.md, engine_gap_omx_cli_skill_gaps_found_during_dr_harder_reporting_2.md, exp_analyze_must_run_analyze_training_py_for_training_side_diagn.md, experiment_launch_checklist_run_id_wandb_latest_alias_naming.md, policy_head_design_rationale_and_literature_standing_encoder_inp.md, action_bounding_is_justified_raw_gaussian_external_clamp_tanh_ru.md, arm_a_measured_angle_joint1_constraint_recovers_not_diverges_the.md
+- **Summary:** query 'retrain manifest roster learning-dynamics experiments' -> 20 of 30
+
+## [2026-07-06T01:49:30.779497] query
+- **Pages:** constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, constraint_viol_trajectory_barrier_sign_metrics_4_10_starts_at_d.md, constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md, engine_gap_confirmed_analyze_training_py_constraint_reward_prefi.md, reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md, arm_a_measured_angle_joint1_constraint_recovers_not_diverges_the.md, encoder_priv_obs_normalization_bounds_must_be_dr_derived_not_har.md, joint1_cumulative_rotation_constraint_never_binds_policy_parks_a.md, barrier_alpha_runtime_0_05_agent_cfg_injects_over_ctor_default_0.md, encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md, engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md, engine_gap_barrier_alpha_is_0_02_not_0_05_dr_harder_docs_drift.md, joint1_anti_drift_constrain_the_command_cumulative_arm_b_not_the.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, action_bounding_is_justified_raw_gaussian_external_clamp_tanh_ru.md, constrainttrpo_health_thresholds.md, joint1_cumulative_ipo_constraint_generalizes_drift_bounded_at_oo.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md, constrained_albc_experiment_conventions.md, don_t_trust_an_engine_s_empty_zero_output_cross_check_the_raw_tb.md
+- **Summary:** query 'constraint margin normalization' -> 20 of 38
+
+## [2026-07-06T01:49:46.990070] query
+- **Pages:** sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md, analysis_refactor_2026_06_05_new_sim_free_modules_and_engine_gap.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, ocean_nominal_shift_collapses_actor_entropy_e2_dr_harder.md, static_eval_plots_regenerate_sim_free_from_npz_reconstruct_segme.md, actuator_hardware_identification_arm_xw540_t260_board_measured_p.md, imu_45deg_offset_pitch_negation_sim_uncompensated_2026_07_05.md, leaky_integral_and_ema_bias_carry_over_the_mid_episode_command_r.md, our_doraemon_original_both_entropy_max_center_can_move_kl_ub_is_.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md, encoder_priv_obs_normalization_bounds_must_be_dr_derived_not_har.md, policy_head_design_rationale_and_literature_standing_encoder_inp.md, state_dependent_std_difficulty_null_now_confirmed_on_real_dr_med.md, tam_columns_must_match_robot_firmware_esc_channel_order_reorder_.md, tam_vertical_single_motor_dual_esc_measured_2026_07_05.md, analysis_engine_map_what_is_grow_able_vs_off_limits.md, arm_a_measured_angle_joint1_constraint_recovers_not_diverges_the.md, baseline_repro_reproduces_teacher_deterministically_e4_control.md
+- **Summary:** query 'sim hydro nominal analytical' -> 20 of 36
+
+## [2026-07-06T02:12:16.207679] add
+- **Pages:** doraemon_optimize_entropy_accept_can_leak_the_success_floor_late.md
+- **Summary:** created 'DORAEMON _optimize_entropy accept can leak the success floor (latent divergence from reference, dead path so far)'
+
+## [2026-07-06T02:12:16.581631] add
+- **Pages:** frontier_seeking_dr_curriculum_literature_survey_adr_currot_acce.md
+- **Summary:** created 'Frontier-seeking DR curriculum literature survey (ADR/CURROT/ACCEL) and why naive success-oscillation is unsound'
+
+## [2026-07-06T02:12:29.071910] add
+- **Pages:** student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md
+- **Summary:** created 'Student distillation roll heavy-tail is a teacher-policy property (TCN==GRU), not a distillation artifact'
+
+## [2026-07-06T02:12:29.437680] add
+- **Pages:** e5_alpha075_ood_per_axis_generalization_gap_universal_failure_ro.md
+- **Summary:** created 'E5 alpha075 OOD per-axis generalization gap (universal failure = roll DC-bias doubles OOD)'
+
+## [2026-07-06T02:12:29.812639] add
+- **Pages:** teacher_dr_harder_doraemon_curriculum_froze_before_run_end_unuse.md
+- **Summary:** updated 'teacher dr_harder: DORAEMON curriculum froze before run end (unused headroom)'
+
