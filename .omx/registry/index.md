@@ -1,6 +1,6 @@
 # Wiki Index
 
-> 87 pages | Last updated: 2026-07-06T02:12:29.812639
+> 79 pages | Last updated: 2026-07-06T02:16:31.477399
 
 ## convention
 
@@ -19,14 +19,11 @@
 
 ## debugging
 
-- [DON'T trust an engine's empty/zero output — cross-check the raw TB tag set first](don_t_trust_an_engine_s_empty_zero_output_cross_check_the_raw_tb.md) - # DON'T trust an engine's empty/zero output — cross-check the raw TB tag set ...
-- [DR-harder reports measure only in-distribution; OOD eval is the missing decisive test](dr_harder_reports_measure_only_in_distribution_ood_eval_is_the_m.md) - # DR-harder reports measure only in-distribution; OOD eval is the missing dec...
 - [ENGINE-GAP: analyze_training deep-plot has 2 blank panels + inconsistent legends; no DORAEMON curriculum plot](engine_gap_analyze_training_deep_plot_has_2_blank_panels_inconsi.md) - # ENGINE-GAP: analyze_training deep-plot has 2 blank panels + inconsistent le...
 - [heavy-tail vs sample-mean divergence are independent](heavy_tail_vs_sample_mean_divergence_are_independent.md) - # heavy-tail vs sample-mean divergence are independent
 - [HMM regime count separates dr-harder runs (overfit vs healthy)](hmm_regime_count_separates_dr_harder_runs_overfit_vs_healthy.md) - # HMM regime count separates dr-harder runs (overfit vs healthy)
 - [kl_ub 0.12 trades attitude for translation (E1 dr-harder)](kl_ub_0_12_trades_attitude_for_translation_e1_dr_harder.md) - # kl_ub 0.12 trades attitude for translation (E1 dr-harder)
 - [ocean nominal shift collapses actor entropy (E2 dr-harder)](ocean_nominal_shift_collapses_actor_entropy_e2_dr_harder.md) - # ocean nominal shift collapses actor entropy (E2 dr-harder)
-- [omx CLI tools (not just the engine) silent-fail on misuse — empty != absent](omx_cli_tools_not_just_the_engine_silent_fail_on_misuse_empty_ab.md) - # omx CLI tools (not just the engine) silent-fail on misuse — empty != absent
 - [report completeness gate must run BEFORE writing, not after](report_completeness_gate_must_run_before_writing_not_after.md) - # report completeness gate must run BEFORE writing, not after
 - [static-eval plots regenerate sim-free from npz (reconstruct segment metadata)](static_eval_plots_regenerate_sim_free_from_npz_reconstruct_segme.md) - # static-eval plots regenerate sim-free from npz (reconstruct segment metadata)
 - [training diagnosis decision tree](training_diagnosis_decision_tree.md) - # training diagnosis decision tree
@@ -40,15 +37,11 @@
 - [ee_leak=0 + k_anchor=0 does NOT blow up joint1 settle (Pade/IK clamp bounds it); settle still bimodal](ee_leak_0_k_anchor_0_does_not_blow_up_joint1_settle_pade_ik_clam.md) - # ee_leak=0 + k_anchor=0 does NOT blow up joint1 settle (Pade/IK clamp bounds...
 - [engine-gap: analyze_training.py emits no reward 8-term decomposition scalars](engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md) - # engine-gap: analyze_training.py emits no reward 8-term decomposition scalars
 - [engine-gap: analyze_training.py needs the logs/ run dir, not the experiments/ run dir (events under train symlink)](engine_gap_analyze_training_py_needs_the_logs_run_dir_not_the_ex.md) - # engine-gap: analyze_training.py needs the logs/ run dir, not the experiment...
-- [RETRACTED — barrier_alpha is 0.02 not 0.05 (this claim was WRONG)](engine_gap_barrier_alpha_is_0_02_not_0_05_dr_harder_docs_drift.md) - # RETRACTED — this page's claim (barrier_alpha=0.02) was WRONG
-- [engine-gap CONFIRMED: analyze_training.py constraint+reward prefix mismatch (code lines)](engine_gap_confirmed_analyze_training_py_constraint_reward_prefi.md) - # engine-gap CONFIRMED: analyze_training.py constraint+reward prefix mismatch...
 - [engine-gap: eval adapter covers static + segmented; periodic still unsupported](engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md) - # engine-gap: eval adapter covers static + segmented; periodic still unsupported
-- [engine-gap: eval adapter only covers static; periodic unsupported, segmented partial](engine_gap_eval_adapter_only_covers_static_periodic_unsupported_.md) - # engine-gap: eval adapter only covers static; periodic unsupported, segmente...
 - [engine-gap: eval npz saves no raw obs/std/privileged — blocks exact per-env std reconstruction](engine_gap_eval_npz_saves_no_raw_obs_std_privileged_blocks_exact.md) - # engine-gap: eval npz saves no raw obs/std/privileged — blocks exact per-env...
 - [engine-gap: flat-target eval records joint1 trajectory but renders no drift plot](engine_gap_flat_target_eval_records_joint1_trajectory_but_render.md) - # engine-gap: flat-target eval records joint1 trajectory but renders no drift...
 - [engine-gap: heavy_tail.json pct_peak_gt_thresh exceeds 100% at ood level (denominator bug)](engine_gap_heavy_tail_json_pct_peak_gt_thresh_exceeds_100_at_ood.md) - # engine-gap: heavy_tail.json pct_peak_gt_thresh exceeds 100% at ood level (d...
 - [engine-gap: omx CLI gaps found re-analyzing teacher (2026-06-06 round 2)](engine_gap_omx_cli_gaps_found_re_analyzing_teacher_2026_06_06_ro.md) - # engine-gap: omx CLI gaps found re-analyzing teacher (2026-06-06 round 2)
-- [engine-gap: omx CLI/skill gaps found during dr-harder reporting (2026-06-06)](engine_gap_omx_cli_skill_gaps_found_during_dr_harder_reporting_2.md) - # engine-gap: omx CLI/skill gaps found during dr-harder reporting (2026-06-06)
 - [eval analysis: core does stats, adapter does heavy-tail](eval_analysis_core_does_stats_adapter_does_heavy_tail.md) - # eval analysis: core does stats, adapter does heavy-tail
 - [exp-analyze MUST run analyze_training.py for training-side diagnosis](exp_analyze_must_run_analyze_training_py_for_training_side_diagn.md) - # exp-analyze MUST run analyze_training.py for training-side diagnosis
 - [joint1 anti-drift: constrain the COMMAND (cumulative, Arm B) not the MEASUREMENT (wrap, Arm A) to preserve attitude](joint1_anti_drift_constrain_the_command_cumulative_arm_b_not_the.md) - # joint1 anti-drift: constrain the COMMAND (cumulative, Arm B) not the MEASUR...
@@ -60,7 +53,6 @@
 
 - [attitude_only per-axis CV: roll DRIVES the heavy-tail crossover, yaw is the EXTREME tail](attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md) - # attitude_only per-axis CV: roll DRIVES the heavy-tail crossover, yaw is the...
 - [constraint budget x0.5 binds only thruster_util -> authority starvation](constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md) - # constraint budget x0.5 binds only thruster_util -> authority starvation
-- [dr-harder heavy-tail correction: %peak>20 is NOT zero at medium/hard](dr_harder_heavy_tail_correction_peak_20_is_not_zero_at_medium_ha.md) - # dr-harder heavy-tail correction: %peak>20 is NOT zero at medium/hard
 - [dr-harder: reward decomposition confirms eval trades on the training side](dr_harder_reward_decomposition_confirms_eval_trades_on_the_train.md) - # dr-harder: reward decomposition confirms eval trades on the training side
 - [joint1_cumulative IPO constraint generalizes (drift bounded at OOD) while the attitude tracker does not (roll OOD heavy-tail)](joint1_cumulative_ipo_constraint_generalizes_drift_bounded_at_oo.md) - # joint1_cumulative IPO constraint generalizes (drift bounded at OOD) while t...
 - [joint1 cumulative-rotation constraint never binds: policy parks at ~0.36 rev, +-4pi is a dead-zone rail](joint1_cumulative_rotation_constraint_never_binds_policy_parks_a.md) - # joint1 cumulative-rotation constraint never binds: policy parks at ~0.36 re...

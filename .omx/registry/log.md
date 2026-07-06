@@ -721,3 +721,7 @@
 - **Pages:** teacher_dr_harder_doraemon_curriculum_froze_before_run_end_unuse.md
 - **Summary:** updated 'teacher dr_harder: DORAEMON curriculum froze before run end (unused headroom)'
 
+## [2026-07-06T02:16:31.477399] gc-apply
+- **Pages:** engine_gap_barrier_alpha_is_0_02_not_0_05_dr_harder_docs_drift.md, dr_harder_heavy_tail_correction_peak_20_is_not_zero_at_medium_ha.md, engine_gap_eval_adapter_only_covers_static_periodic_unsupported_.md, dr_harder_reports_measure_only_in_distribution_ood_eval_is_the_m.md
+- **Summary:** deleted 4, merged 4 source(s)
+

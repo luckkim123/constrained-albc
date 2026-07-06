@@ -4,7 +4,7 @@ tags: ["engine-gap", "heavy-tail", "ood", "eval-adapter"]
 created: 2026-06-08T03:03:19.015251
 updated: 2026-06-08T03:03:19.015251
 sources: ["diagnose-20260608 dr_harder replot"]
-links: ["dr_harder_heavy_tail_correction_peak_20_is_not_zero_at_medium_ha.md"]
+links: ["teacher_dr_harder_yaw_is_the_only_heavy_tail_axis_roll_is_dc_bia.md"]
 category: decision
 confidence: high
 schemaVersion: 1

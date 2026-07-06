@@ -4,7 +4,7 @@ tags: ["albc", "envs-main", "command-resample", "leaky-integral", "bias-ema", "c
 created: 2026-07-05T08:05:40.008780
 updated: 2026-07-05T08:05:40.008780
 sources: []
-links: ["tam_columns_must_match_robot_firmware_esc_channel_order_reorder.md", "next_from_scratch_retrain_manifest.md"]
+links: ["tam_columns_must_match_robot_firmware_esc_channel_order_reorder_.md", "next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md"]
 category: reference
 confidence: medium
 schemaVersion: 1

@@ -4,7 +4,7 @@ tags: ["engine-gap", "analyze-training", "plot", "doraemon", "legend"]
 created: 2026-06-06T11:39:51.246514
 updated: 2026-06-06T11:40:30.436926
 sources: ["diagnose-20260606-202950"]
-links: ["engine_gap_omx_cli_skill_gaps_found_during_dr_harder_reporting_2.md"]
+links: ["engine_gap_omx_cli_gaps_found_re_analyzing_teacher_2026_06_06_ro.md"]
 category: debugging
 confidence: high
 schemaVersion: 1
