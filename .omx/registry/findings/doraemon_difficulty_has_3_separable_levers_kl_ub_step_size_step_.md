@@ -1,13 +1,15 @@
 ---
 title: "DORAEMON difficulty has 3 separable levers: kl_ub (step size), step_interval (dwell-time), max_iterations (number of expansions)"
-tags: ["doraemon", "kl_ub", "step_interval", "max_iterations", "performance_lb", "alpha", "curriculum", "dwell-time", "lever", "mechanism"]
+tags: ["doraemon", "kl_ub", "step_interval", "max_iterations", "performance_lb", "alpha", "curriculum", "dwell-time", "lever", "mechanism", "calibration", "correction"]
 created: 2026-06-14T04:21:12.692273
-updated: 2026-06-14T04:21:12.692273
+updated: 2026-07-07T18:59:50.923421
 sources: []
 links: ["kl_ub_0_12_trades_attitude_for_translation_e1_dr_harder.md", "kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md"]
 category: reference
 confidence: high
 schemaVersion: 1
+qualityScore: 100
+qualityReasons: []
 ---
 
 # DORAEMON difficulty has 3 separable levers: kl_ub (step size), step_interval (dwell-time), max_iterations (number of expansions)
@@ -47,4 +49,37 @@ CORRECTION to [[kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har
 performance_lb is an absolute return threshold (:39), so lb 90 (legacy dr_harder, E1 config) -> lb 250 (attitude_only baseline v2) is non-linear in "how hard it is to be counted success" because it interacts with the reward ceiling. Symptom of a WELL-tuned lb: success_rate converges to alpha=0.5 (the env is genuinely stressed). Symptom of TOO-LOW lb: success ~0.97 >> alpha (teacher) -> DORAEMON thinks it has slack -> expands endlessly (the legacy dr_harder failure mode the user described). So tune lb by the criterion "does success_rate settle at alpha at convergence", not by the absolute value.
 
 VERIFIED: doraemon.py:38-49 (cfg fields + defaults), :306 (binary success = return>=lb), :406-420 (step_interval update gate), :616 (Ghat>=alpha floor); E1 config/agent.yaml (kl_ub 0.12, performance_lb 90.0, max_iterations 5000); attitude_only baseline lb=250. Source: user mental-model check 2026-06-14.
+
+---
+
+## Update (2026-07-07T18:59:50.923421)
+
+## CORRECTION (2026-07-08): baseline v2 performance_lb calibration baseline is 68, NOT 90
+
+The "performance_lb tuning note" above anchors the baseline v2 calibration as `lb 90 (legacy
+dr_harder, E1 config) -> lb 250`. That baseline is WRONG. Verified against the code SSOT
+(config.py:486-499, the live DoraemonCfg override comment, 2026-07-08):
+
+- The attitude_only baseline v2 calibration was **68.0 -> 250.0**, NOT 90 -> 250.
+- 90.0 is the performance_lb of a SEPARATE campaign (legacy dr_harder E1); it is not the
+  calibration baseline for the shipped attitude_only default. Do not conflate the two.
+- The 250 value is the **p25 of the recon run's actual episode-return distribution**
+  (run `trpo_baseline_260608_160453`, lb=68, 1146 iter; DORAEMON buffer n=2000:
+  min=81.9 / p5=227 / p25=250 / median=264 / p95=291).
+- Why lb=68 failed: it sat BELOW the minimum observed return (81.9), so success=return>=68
+  was always 1 -> the feasibility constraint Ghat>=alpha was inert -> the curriculum widened
+  DR unconstrained (no self-pacing). lb=250 (p25) puts the STARTING success_rate at ~0.65
+  (above alpha=0.5 so DR still expands, but the signal is live again instead of pinned at 1).
+- Chosen BELOW the median (264) on purpose: so a reward plateau cannot drag success_rate to 0,
+  which would shrink the DR range.
+- Companion lever: kl_ub 0.06 -> 0.12 was moved TOGETHER with the lb raise by design (doubles
+  the per-step trust region to compensate for the slower expansion the raised lb induces).
+  lb alone makes DR easier; kl_ub alone leaves success_rate pinned at 1.
+
+The "tune lb by whether success_rate settles at alpha" PRINCIPLE in the note remains correct;
+only the numeric calibration baseline (90 -> 68) and the p25 provenance are corrected here.
+
+VERIFIED: config.py:486-499 (live DoraemonCfg override + calibration comment with the full
+return-distribution percentiles); doraemon.py:39 (engine default 80.0, stale for ALBC). The
+code comment is the primary source for the 250 provenance.
 
