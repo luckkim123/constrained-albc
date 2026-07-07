@@ -845,3 +845,7 @@
 - **Pages:** added_mass_scale_upper_half_is_inert_post_dr_0_95_i_clamp_caps_i.md
 - **Summary:** updated 'added_mass_scale upper half is INERT: post-DR 0.95*I clamp caps it (yaw eff bound ~1.01), so hydro DR cannot be widened up'
 
+## [2026-07-07T08:19:10.543428] add
+- **Pages:** buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md
+- **Summary:** updated 'buoyancy/gravity/restoring apply SEPARATELY to main body vs buoy(link3); gravity HAS DR (body_mass_scale+payload_mass); DR is body-shared not independent'
+

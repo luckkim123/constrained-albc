@@ -2,9 +2,9 @@
 title: "buoyancy/gravity/restoring apply SEPARATELY to main body vs buoy(link3); gravity HAS DR (body_mass_scale+payload_mass); DR is body-shared not independent"
 tags: []
 created: 2026-07-07T08:11:25.359795
-updated: 2026-07-07T08:11:25.359795
+updated: 2026-07-07T08:19:10.543428
 sources: []
-links: ["hydro_dr_train_eval_sampling_mismatch_is_real_but_left_as_is_opt.md", "uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload.md"]
+links: ["hydro_dr_train_eval_sampling_mismatch_is_real_but_left_as_is_opt.md", "uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload.md", "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md"]
 category: reference
 confidence: high
 schemaVersion: 1
@@ -37,4 +37,16 @@ So restoring is done by the MAIN body, net lift by the BUOY. The 0.059 is verifi
 ## The decorrelation caveat (open, ungated experiment)
 
 Because both bodies share one DORAEMON scale, real-world INDEPENDENT buoyancy error between the two physically-separate parts (main hull vs float, different waterproofing/tolerance) is NOT representable in training -- the same single-scalar-broadcast limit as the per-axis hydro case. Prompt PROMPT_main_buoy_hydro_dr_decorrelation.md proposes splitting volume_scale into `_main`/`_buoy` (NDIMS +1), keeping water_density shared (same tank=same water). GATED: needs eval evidence of main/buoy buoyancy-mismatch failure or a hardware tolerance argument -- do NOT run on intuition. Same decorrelation family as [[hydro_dr_train_eval_sampling_mismatch_is_real_but_left_as_is_opt]]. See also [[uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload]].
+
+---
+
+## Update (2026-07-07T08:19:10.543428)
+
+GATE VERDICT (2026-07-07, independent review): the "split main/buoy volume_scale into independent DORAEMON dims" experiment is DORMANT -- do NOT run it now. Both execution gates are UNMET:
+
+- Gate 1 (eval evidence): a full sweep of 29 experiments-tree reports + ~90 omx wiki findings found ZERO diagnosis pointing to a "two-body buoyancy moves by the same scale -> missed failure". Near-misses are all either single-body(main) volume sensitivity or damping/cog_z-driven heavy-tail -- different failure modes, not main<->buoy decorrelation.
+- Gate 2 (hardware tolerance): the two parts (main="base", buoy="link3") have distinct config/URDF nominals (volume 0.009 vs 0.00268) but there is NO measured tolerance / assembly drawing supporting INDEPENDENT buoyancy error. hydro nominal is analytical, not measured ([[sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an]]); net-buoyancy measurement is "possible but not yet done".
+- Decisive: the same hydro-decorrelation FAMILY was already resolved as option C (keep-as-is, user-approved 2026-07-07, [[hydro_dr_train_eval_sampling_mismatch_is_real_but_left_as_is_opt]]). volume_scale decorrelation is subordinate to that verdict.
+
+This is NOT a prompt failure -- it is the gate working as designed (blocking a dimension increase driven by "real gap might be large" intuition, per rules/03 No-Generic-Solutions-Without-Evidence). NOT discarded = DORMANT: if a future eval shows a genuine main/buoy buoyancy-mismatch heavy-tail (per-env), gate 1 opens and the prompt `PROMPT_main_buoy_hydro_dr_decorrelation.md` becomes the execution spec at that point (volume_scale -> _main/_buoy, NDIMS +1, water_density stays shared = same tank). Design note: the prompt's "fix hardcoded 16" invariant is unnecessary -- `NDIMS=len(_PARAM_DEFS)` is dynamic, no hardcode exists. Lesson: a conditional/gated prompt is "judge the run-condition", not "run it".
 
