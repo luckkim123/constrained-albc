@@ -54,6 +54,11 @@ _PARAM_DEFS: list[tuple[str, str, float, float]] = [
     ("inertia_scale", "inertia_scale", 0.75, 1.3),
     ("body_mass_scale", "body_mass_scale", 0.9, 1.1),
     ("payload_cog_offset_z", "payload_cog_offset_z", -0.03, 0.0),
+    # payload XY offset radius promoted to a DORAEMON curriculum as a NORMALIZED
+    # quantile u in [0,1]. cfg field is the (0,1) tuple payload_cog_offset_xy_u_range;
+    # events applies r = r_max * sqrt(u) (sqrt = area correction, kept in events).
+    # Nominal=0 (_NOMINAL_OVERRIDES below) -> curriculum starts with no XY offset.
+    ("payload_cog_offset_xy_u", "payload_cog_offset_xy_u_range", 0.0, 1.0),
     # r13: ocean current strength managed by DORAEMON.
     # Nominal=0 (_NOMINAL_OVERRIDES below) so curriculum starts with no current
     # and expands to full range (up to cfg.ocean_current.max_velocity) as policy
@@ -65,6 +70,7 @@ NDIMS = len(_PARAM_DEFS)
 # Per-parameter nominal overrides; defaults to midpoint of [lo, hi] when absent.
 _NOMINAL_OVERRIDES: dict[str, float] = {
     "ocean_current_strength": 0.0,
+    "payload_cog_offset_xy_u": 0.0,  # start with no XY offset, widen as policy masters it
 }
 
 # Default specs (base bounds) for callers without a DR cfg; matches pre-promotion PARAM_SPECS.

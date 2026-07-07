@@ -195,6 +195,12 @@ class DomainRandomizationCfg:
     # dominated per-env SS_std (CV 2.18). 0.08 caps torque at ~2.4 Nm so roll
     # can still stabilize within authority while keeping pitch/yaw challenge.
     payload_cog_offset_xy_radius: float = 0.08
+    # payload XY offset radius as a NORMALIZED area-quantile u in [0, 1], managed by
+    # DORAEMON. events applies radius = payload_cog_offset_xy_radius * sqrt(u) so the disk
+    # stays AREA-uniform (the sqrt is the area correction, applied in events, NOT here).
+    # Curriculum nominal u=0 (no XY offset) widening to u=1 (full radius). The normalized
+    # range is independent of the physical r_max (payload_cog_offset_xy_radius).
+    payload_cog_offset_xy_u_range: tuple[float, float] = (0.0, 1.0)
     payload_cog_offset_z: tuple[float, float] = (-0.05, 0.0)
     buoy_moment_arm: float = 0.180
 
