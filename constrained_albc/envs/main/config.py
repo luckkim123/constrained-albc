@@ -293,6 +293,27 @@ class FaultInjectionCfg:
 
 
 @configclass
+class ActuationNoiseCfg:
+    """Per-step multiplicative actuation noise (the 3rd actuation channel).
+
+    Independent of DomainRandomizationCfg (reset-time parameter spread) and
+    FaultInjectionCfg (reset-time actuator failure): this perturbs the COMMAND
+    every step -- applied = commanded * (1 + eps), eps ~ N(0, std), drawn per-env
+    per-actuator. Not identifiable by estimation; only closed-loop feedback can
+    reject it (the existing measured obs suffice -- no new obs field).
+
+    Off by default. When enabled, the env bridges thruster_noise_std into the
+    ThrusterCfg and passes enable_actuation_noise=True to ThrusterModel, and sets
+    the joint delta noise std on the env. sigma defaults are arbitrary (thrust
+    unmeasured) -- sweep targets.
+    """
+
+    enable: bool = False
+    thruster_noise_std: float = 0.05
+    joint_noise_std: float = 0.05
+
+
+@configclass
 class ALBCEnvCfg(DirectRLEnvCfg):
     """Attitude-only ALBC environment configuration.
 
@@ -440,6 +461,10 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # Fault Injection (off by default; FTC infrastructure, see FaultInjectionCfg)
     # ==========================================================================
     fault: FaultInjectionCfg = FaultInjectionCfg()
+
+    # Per-step multiplicative actuation noise (3rd channel; off by default). Sibling
+    # of fault/randomization -- independently toggleable, never entangled with them.
+    actuation_noise: ActuationNoiseCfg = ActuationNoiseCfg()
     # performance_lb: DORAEMON binary-success threshold on accumulated episode return
     # (albc_env.py: _episode_return_accum += reward; success = return >= performance_lb).
     # Calibrated 68.0 -> 250.0 from a recon run (trpo_baseline_260608_160453, lb=68, 1146 iter):
