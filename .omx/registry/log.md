@@ -853,3 +853,19 @@
 - **Pages:** hydro_dr_train_eval_sampling_mismatch_is_real_but_left_as_is_opt.md
 - **Summary:** updated 'hydro DR train/eval sampling mismatch is REAL but left as-is (option C): train scalar->6-axis broadcast, eval 6-axis independent'
 
+## [2026-07-07T18:40:16.041544] query
+- **Pages:** uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload_.md, buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md, teacher_encoder_0_dead_latent_dims_keys_on_lateral_cog_cob_offse.md, teacher_dr_harder_doraemon_curriculum_froze_before_run_end_unuse.md, doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md, doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md, doraemon_optimize_entropy_accept_can_leak_the_success_floor_late.md, dr_harder_ood_verdict_e2_best_survives_ood_the_harder_curriculum.md, encoder_priv_obs_normalization_bounds_must_be_dr_derived_not_har.md, engine_gap_analyze_training_deep_plot_has_2_blank_panels_inconsi.md, our_doraemon_original_both_entropy_max_center_can_move_kl_ub_is_.md, hydro_dr_train_eval_sampling_mismatch_is_real_but_left_as_is_opt.md, kl_ub_0_12_trades_attitude_for_translation_e1_dr_harder.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md, dr_harder_campaign_synthesis_speed_kills_attitude_center_shift_o.md, e5_alpha075_ood_per_axis_generalization_gap_universal_failure_ro.md, frontier_seeking_dr_curriculum_literature_survey_adr_currot_acce.md, imu_45deg_offset_pitch_negation_sim_uncompensated_2026_07_05.md, kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md
+- **Summary:** query 'payload cog offset DORAEMON radius' -> 20 of 40
+
+## [2026-07-07T18:40:16.415047] query
+- **Pages:** uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload_.md, teacher_dr_harder_doraemon_curriculum_froze_before_run_end_unuse.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md, hydro_dr_train_eval_sampling_mismatch_is_real_but_left_as_is_opt.md, teacher_dr_harder_yaw_is_the_only_heavy_tail_axis_roll_is_dc_bia.md, buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md, dr_harder_ood_verdict_e2_best_survives_ood_the_harder_curriculum.md, joint_dr_params_kp_kd_effort_friction_need_no_dedicated_measurem.md, our_doraemon_original_both_entropy_max_center_can_move_kl_ub_is_.md, constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md, doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md, dr_harder_reward_decomposition_confirms_eval_trades_on_the_train.md, failure_dr_join_now_covers_fault_channels_not_just_dr_per_env_fa.md, frontier_seeking_dr_curriculum_literature_survey_adr_currot_acce.md, kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md, added_mass_scale_upper_half_is_inert_post_dr_0_95_i_clamp_caps_i.md, dr_harder_campaign_synthesis_speed_kills_attitude_center_shift_o.md, hmm_regime_count_separates_dr_harder_runs_overfit_vs_healthy.md, joint1_anti_drift_constrain_the_command_cumulative_arm_b_not_the.md
+- **Summary:** query 'uniform-only DR roster NDIMS' -> 20 of 85
+
+## [2026-07-07T18:41:10.477183] add
+- **Pages:** uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload_.md
+- **Summary:** updated 'uniform-only DR full roster (9 params, DORAEMON-bypassing) + payload XY-radius vs Z curriculum split'
+
+## [2026-07-07T18:41:50.848338] add
+- **Pages:** added_mass_scale_upper_half_is_inert_post_dr_0_95_i_clamp_caps_i.md
+- **Summary:** updated 'added_mass_scale upper half is INERT: post-DR 0.95*I clamp caps it (yaw eff bound ~1.01), so hydro DR cannot be widened up'
+

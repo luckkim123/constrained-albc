@@ -2,7 +2,7 @@
 title: "added_mass_scale upper half is INERT: post-DR 0.95*I clamp caps it (yaw eff bound ~1.01), so hydro DR cannot be widened up"
 tags: []
 created: 2026-07-07T08:10:49.201758
-updated: 2026-07-07T08:12:42.891840
+updated: 2026-07-07T18:41:50.848338
 sources: []
 links: ["sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "hydro_dr_train_eval_sampling_mismatch_is_real_but_left_as_is_opt.md"]
 category: reference
@@ -45,4 +45,28 @@ CORRECTION (2026-07-07, reconciled with committed DR doc e1b3bca): the clamp cei
 Accurate statement (from committed `config.py` comment, envs/main + full_dof, e1b3bca): at the curriculum-saturated Beta(1,1)=UNIFORM endpoint, ~35-50% of scale>1 draws are clamped on ROTATIONAL axes (~76% on surge/sway); mean realized added_mass_scale is ~0.87. The high tail SURVIVES when a large `inertia_scale` is co-sampled -- so the upper tail of `added_mass_scale` is ATTENUATED, NOT eliminated. The "~1.01/~1.05/~1.09 effective ceiling" figures in the table above are the ceilings at NOMINAL inertia only (inertia_scale=1.0); with inertia_scale up to 2.0 the ceiling roughly doubles, letting some high-scale draws through.
 
 The load-bearing conclusion is unchanged: (1) the clamp is a real explicit-integration stability device, (2) you still cannot freely "widen added_mass up for robustness" -- the up-side is heavily attenuated and coupled to inertia_scale, not a free parameter -- but (3) it is NOT a hard dead-zone; the attenuation is probabilistic and inertia-dependent. The `PROMPT_added_mass_clamp_comment_fix.md` prompt is now SUPERSEDED: commit e1b3bca already added this (more accurate) clarification to both configs. Do not re-run that prompt.
+
+---
+
+## Update (2026-07-07T18:41:50.848338)
+
+## CORRECTION (2026-07-08): the clamp ceiling is a RANDOM VARIABLE, not a constant — "attenuated", not "dead/inert"
+
+The "yaw eff bound ~1.01", "INERT upper half", and the fixed-ceiling table above are computed at
+`inertia_scale = 1.0` and OVERSTATE the effect. `inertia_scale` is itself DR'd over `(0.4, 2.0)`
+(config.py `DomainRandomizationCfg`), and the clamp is `0.95 * (DR-randomized) rigid-body inertia`
+(events.py:260-271). So the effective ceiling is a **random variable co-sampled with the added_mass
+draw**, not the constant this card's table implies.
+
+Corrected characterization (matches committed code doc `e1b3bca` on the DomainRandomizationCfg docstring):
+- At the curriculum-saturated Beta(1,1)=UNIFORM endpoint, ~35-50% of `scale>1` draws are clamped on the
+  ROTATIONAL axes (~76% on surge/sway), and the mean *realized* `added_mass_scale` is ~0.87.
+- The high tail (scale ~1.5) SURVIVES when a large `inertia_scale` is co-sampled — so the upper half is
+  **ATTENUATED, not eliminated**. Saying it is "dead/inert" is the over-assertion (rules/03 "No Premature
+  Assertions"); the original error was treating the `inertia_scale=1` ceiling as fixed.
+
+The load-bearing conclusion is UNCHANGED: raising `added_mass_scale`'s upper bound ALONE has diminishing
+effect (you'd also have to raise base rigid-body inertia = a vehicle-model change), and the low tail
+(0.5-1.0) is fully exercised. So "don't widen hydro added_mass up" still holds — just for the accurate
+reason (attenuated tail + co-sampled ceiling), not "the upper half is dead".
 

@@ -2,7 +2,7 @@
 title: "uniform-only DR full roster (9 params, DORAEMON-bypassing) + payload XY-radius vs Z curriculum split"
 tags: []
 created: 2026-07-07T06:52:51.038810
-updated: 2026-07-07T06:52:51.038810
+updated: 2026-07-07T18:41:10.477183
 sources: []
 links: []
 category: reference
@@ -79,4 +79,39 @@ stays byte-identical (u~U(0,1) reproduces r_max*sqrt(U)). NDIMS 16->17. RESERVAT
 a small human-tuned value so curriculum gain is uncertain, and adding a dim dilutes KL budget across the
 other params -- a hypothesis to A/B, not a certain win. Correction prompt authored (not yet applied):
 /root/.claude/jobs/*/tmp/PROMPT_payload_radius_doraemon.md.
+
+---
+
+## Update (2026-07-07T18:41:10.477183)
+
+## UPDATE (2026-07-08): XY-radius DORAEMON promotion is now IMPLEMENTED (not pending) + NDIMS is branch-dependent
+
+The "pending-experiment" design above was **executed** by a separate SDD session. Status correction:
+
+- **Implemented** on worktree/branch `worktree-payload-radius-doraemon` (tip `eb47f0e`, 6 commits
+  `115fc2c..eb47f0e`), baseline tag `baseline-260707-payload-radius-dr`. New DORAEMON dim
+  `payload_cog_offset_xy_u` registered in `_PARAM_DEFS` (nominal 0 via `_NOMINAL_OVERRIDES`), events
+  applies `radius = r_max * sqrt(u)` with `u` sourced from DORAEMON. angle stays uniform. opus
+  whole-branch review = READY TO MERGE (Critical/Important 0). 18 albc + 6 marinelab tests pass.
+- **NOT merged to main** — held for GPU baseline comparison (comparison-experiment rule: adopt/discard
+  only after baseline-vs-change eval). A later branch-consolidation attempted `git rebase main` but
+  ABORTED on a STRUCTURAL conflict (main `3e1f81f` merged base+Hard DomainRandomizationCfg into ONE
+  class; the promotion branch still sits on the OLD two-class structure). User decision: leave un-rebased,
+  do the structural integration WITH A HUMAN after the GPU verdict. So as of 2026-07-08 the promotion
+  lives only on its worktree; main is unchanged.
+
+### NDIMS is BRANCH-DEPENDENT — never state it without naming the branch
+
+This card's "NDIMS=16" is the **main / pre-promotion** value. On `worktree-payload-radius-doraemon`
+NDIMS=**17** (the xy_u dim added). The same `doraemon.py` therefore has different `len(_PARAM_DEFS)`
+on different branches/worktrees. A session repeatedly gave wrong answers (16 -> "actually 17" -> ...)
+by reading whichever `doraemon.py` a delegated agent happened to open (the worktree copy) and treating
+it as the origin. RULE: answer code facts as "main=16, promotion worktree=17", run `git worktree list`
+before asserting, and when delegating a read, name the branch/path. This is the branch-awareness
+extension of the handle-directly-overuse lesson.
+
+### promotion's own latent caveat (reviewer Minor)
+`_sample_stashed_cog_offset` (the mid-episode PICK/carry re-sample path, albc_env.py) does NOT apply the
+curriculum — but `payload_toggle_steps=0` default means that path never runs in the default task, so it
+is inert for now.
 
