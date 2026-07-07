@@ -142,6 +142,18 @@ class DomainRandomizationCfg:
     in run 2026-04-09_16-41-45. All bounds widened by ~30-50% beyond prior limits.
     Physics stability constraints: added_mass/inertia ratio < 1.0 (init validation),
     post-DR per-axis clamp (0.95*I) ensures stability.
+
+    NOTE on added_mass_scale=(0.5, 1.5): the upper tail is heavily attenuated but
+    NOT dead. After DR, added mass is clamped per axis to 0.95 * (DR-randomized)
+    rigid-body inertia (mdp/events.py:260-271), and nominal added mass already sits
+    near that ceiling on this small vehicle (yaw M_a/I=0.94). The clamp threshold
+    scales with inertia_scale=(0.4, 2.0), so the effective ceiling is a random
+    variable, not a constant. At the curriculum-saturated endpoint (Beta(1,1)=UNIFORM)
+    ~35-50% of scale>1 draws are clamped on rotational axes (~76% on surge/sway) and
+    the mean *realized* added_mass_scale is ~0.87; the high tail (scale~1.5) survives
+    only when a large inertia_scale is co-sampled. Raising the upper bound alone has
+    diminishing effect without also raising base rigid-body inertia (a vehicle-model
+    change). The low tail (0.5-1.0) is fully exercised.
     """
 
     enable: bool = True
