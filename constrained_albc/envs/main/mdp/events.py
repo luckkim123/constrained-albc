@@ -429,8 +429,12 @@ def randomize_payload(
     if env._payload_cog_offset is not None:
         r_max = cfg.payload_cog_offset_xy_radius
         if r_max > 0:
-            angle = torch.rand(num_reset, device=device) * 2.0 * torch.pi
-            radius = r_max * torch.sqrt(torch.rand(num_reset, device=device))
+            angle = torch.rand(num_reset, device=device) * 2.0 * torch.pi  # unchanged (uniform)
+            # radius quantile u: DORAEMON-managed if present, else uniform [0,1] fallback (eval).
+            u = _sample_or_uniform(
+                "payload_cog_offset_xy_u", sampled, num_reset, (0.0, 1.0), device
+            )
+            radius = r_max * torch.sqrt(u)  # sqrt = area-uniform correction, PRESERVED
             env._payload_cog_offset[env_ids, 0] = radius * torch.cos(angle)
             env._payload_cog_offset[env_ids, 1] = radius * torch.sin(angle)
         else:
