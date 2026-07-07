@@ -2,14 +2,14 @@
 title: "hydro DR train/eval sampling mismatch is REAL but left as-is (option C): train scalar->6-axis broadcast, eval 6-axis independent"
 tags: ["hydro", "domain-randomization", "doraemon", "eval", "train-eval-mismatch", "variance-analysis", "added_mass", "damping"]
 created: 2026-07-07T07:55:02.624957
-updated: 2026-07-07T07:55:02.624957
+updated: 2026-07-07T08:21:42.923873
 sources: []
 links: []
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 ---
 
 # hydro DR train/eval sampling mismatch is REAL but left as-is (option C): train scalar->6-axis broadcast, eval 6-axis independent
@@ -46,4 +46,20 @@ When reading eval variance (per-env CV, heavy-tail vs sample-mean divergence per
 ## Related
 
 Overlaps with the "per-axis independent hydro DR experiment" prompt (option A = that experiment) and the added_mass-comment-correction prompt. This diagnosis was the gate: option C chosen means the per-axis experiment is NOT triggered by this finding.
+
+---
+
+## Update (2026-07-07T08:21:42.923873)
+
+GATE VERDICT (2026-07-07, independent review) on the sibling "per-axis independent hydro DR" experiment (PROMPT_per_axis_hydro_dr_experiment.md, = option A of this mismatch): DORMANT, do NOT run. Unlike the main/buoy volume case (absence of evidence), here the eval evidence actively COUNTER-argues the premise:
+
+- Gate 1 (eval axis-decorrelated hydro failure): UNMET and REFUTED. The `trpo_baseline_260608` report analyzed exactly this axis with the rules/03 method and concluded "NO pathological axis decorrelation (sample rank 56%)". The CV explosion (roll 9%->249%) is real but is a low-damping / cog-shifted-env HEAVY-TAIL, NOT hydro axis-decorrelation (heavy-tail != decorrelation, rules/03). Baseline generalizes gracefully, 100% survival. So baseline already refutes the experiment's premise that axis-decorrelated hydro failure exists.
+- Gate 2 (user picked option A in this sibling diagnosis): UNMET -- this mismatch is already option C (keep-as-is), no option-A selection.
+
+Additionally, even if a gate opened, the prompt is NOT executable as written -- 3 code defects to fix first:
+1. NDIMS is not uniformly 16: full_dof `_PARAM_DEFS`=17 (main=16). The prompt's "16->18" single value is wrong; recompute per-env from `len(_PARAM_DEFS)`.
+2. yaw double-randomization: yaw (index 5) is ALREADY separately randomized via `yaw_damping_scale` (uniform-only, `events.py:214`). Grouping roll/pitch/yaw into a "rot" group double-shakes yaw. The rot group must be roll/pitch only.
+3. eval fallback is ALREADY 6-axis-independent (`events.py:60`), so the prompt's "eval byte-identity" step 4 (assuming current axis-sharing) has a false premise -> needs redesign.
+
+DORMANT not discarded: if a future eval shows genuine axis-decorrelated hydro heavy-tail, gate 1 opens -- but only a REDESIGNED spec (3 defects fixed) may run. Lesson: a gated experiment prompt is "judge the run-condition", and the run-condition here is refuted, not merely unproven.
 

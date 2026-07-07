@@ -849,3 +849,7 @@
 - **Pages:** buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md
 - **Summary:** updated 'buoyancy/gravity/restoring apply SEPARATELY to main body vs buoy(link3); gravity HAS DR (body_mass_scale+payload_mass); DR is body-shared not independent'
 
+## [2026-07-07T08:21:42.923873] add
+- **Pages:** hydro_dr_train_eval_sampling_mismatch_is_real_but_left_as_is_opt.md
+- **Summary:** updated 'hydro DR train/eval sampling mismatch is REAL but left as-is (option C): train scalar->6-axis broadcast, eval 6-axis independent'
+
