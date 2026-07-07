@@ -1,15 +1,15 @@
 ---
 title: "uniform-only DR full roster (9 params, DORAEMON-bypassing) + payload XY-radius vs Z curriculum split"
-tags: []
+tags: ["payload", "doraemon", "dr", "ndims", "merge", "main"]
 created: 2026-07-07T06:52:51.038810
-updated: 2026-07-07T18:41:10.477183
+updated: 2026-07-07T18:53:11.982150
 sources: []
 links: []
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
+qualityScore: 100
+qualityReasons: []
 ---
 
 # uniform-only DR full roster (9 params, DORAEMON-bypassing) + payload XY-radius vs Z curriculum split
@@ -114,4 +114,40 @@ extension of the handle-directly-overuse lesson.
 `_sample_stashed_cog_offset` (the mid-episode PICK/carry re-sample path, albc_env.py) does NOT apply the
 curriculum — but `payload_toggle_steps=0` default means that path never runs in the default task, so it
 is inert for now.
+
+---
+
+## Update (2026-07-07T18:53:11.982150)
+
+## UPDATE (2026-07-08, later same day): XY-radius promotion MERGED TO MAIN — supersedes the "held for GPU verdict" note above
+
+The immediately-preceding UPDATE said "NOT merged to main / held for GPU verdict / main is
+unchanged / do the structural integration with a human later". **That is now stale.** Same day the
+user reversed the hold decision and adopted the promotion into main.
+
+- **MERGED to main**: constrained-albc main tip `b830043` (`merge --no-ff`). The 6 promotion commits
+  were REBASED onto the merged single-class `DomainRandomizationCfg` (main `3e1f81f`), resolving the
+  structural conflict, then merged. rebase also carried the promotion branch's own wiki commit `a790772`.
+- **Conflict resolution (what a human/agent must know for future edits here)**: merge-base was the OLD
+  two-class layout; main deleted the base class and kept a single class, the promotion branch added the
+  field to the (now-gone) base class. git could not auto-resolve "one side deleted the lines the other
+  edited". Real conflicts were only 3 files: `config.py` x2 (structure) + `analysis/dr_config.py` (both
+  sides added different keys to `_TRUE_NOMINAL_PHYSICS`). doraemon.py / events.py / tests applied cleanly
+  (main never touched them). Resolution kept main's single-class structure and ADDED the payload field /
+  dict entries on top. `payload_cog_offset_xy_radius` stays main's **0.08** (u_range is a normalized
+  quantile, independent of the physical r_max, so the 0.08-vs-0.10 question is moot).
+- **NDIMS on main is now 17** (was 16). The "NDIMS is branch-dependent, main=16" rule in the section
+  above is superseded: after this merge, main itself has NDIMS=17. The `_PARAM_DEFS` roster on main now
+  includes `payload_cog_offset_xy_u`, so payload XY-radius is no longer in the uniform-only-DR roster —
+  it is DORAEMON-managed. The uniform-only roster shrinks from 9 to 8 params on main.
+- **Verification**: `tests/test_doraemon.py test_dr_config.py test_priv_obs_bounds.py` = 44 passed / 2
+  skipped on the merged main tree (the NDIMS-17 assertion passes, confirming `len(_PARAM_DEFS)==17`).
+  A broader sweep showed 3 `tests/deploy/` failures, but those are PRE-EXISTING (reproduced on pre-merge
+  main `bc3878f` via a throwaway worktree) — the promotion did not introduce them.
+- **HONEST TRADEOFF (recorded in the merge commit)**: merged WITHOUT the GPU baseline-comparison verdict
+  that comparison-experiment isolation normally requires — the user consciously overrode that rule and
+  invariant #3. Mitigation: the curriculum dim starts at nominal u=0 (no XY offset), so the training
+  default behavior is unchanged until DORAEMON widens it. The GPU baseline verdict was NOT performed.
+- **Tree state**: constrained-albc is now a single main tree (payload-radius worktree/branch removed);
+  main is UNPUSHED (push is user-gated). marinelab side of unrelated actuation-noise stays un-consolidated.
 

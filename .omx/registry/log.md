@@ -869,3 +869,15 @@
 - **Pages:** added_mass_scale_upper_half_is_inert_post_dr_0_95_i_clamp_caps_i.md
 - **Summary:** updated 'added_mass_scale upper half is INERT: post-DR 0.95*I clamp caps it (yaw eff bound ~1.01), so hydro DR cannot be widened up'
 
+## [2026-07-07T18:47:41.602489] query
+- **Pages:** doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md, kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md, our_doraemon_original_both_entropy_max_center_can_move_kl_ub_is_.md, kl_ub_0_12_trades_attitude_for_translation_e1_dr_harder.md, doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md, dr_harder_campaign_synthesis_speed_kills_attitude_center_shift_o.md, constrained_albc_experiment_conventions.md, doraemon_optimize_entropy_accept_can_leak_the_success_floor_late.md, teacher_dr_harder_doraemon_curriculum_froze_before_run_end_unuse.md, dr_harder_reward_decomposition_confirms_eval_trades_on_the_train.md, reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md, uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload_.md, baseline_repro_reproduces_teacher_deterministically_e4_control.md, engine_gap_analyze_training_deep_plot_has_2_blank_panels_inconsi.md, experiment_launch_checklist_run_id_wandb_latest_alias_naming.md, experiment_output_directory_standard_logs_vs_experiments_index_t.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md, arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md, dr_harder_ood_verdict_e2_best_survives_ood_the_harder_curriculum.md, frontier_seeking_dr_curriculum_literature_survey_adr_currot_acce.md
+- **Summary:** query 'DORAEMON config performance_lb kl_ub' -> 20 of 75
+
+## [2026-07-07T18:53:11.982150] add
+- **Pages:** uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload_.md
+- **Summary:** updated 'uniform-only DR full roster (9 params, DORAEMON-bypassing) + payload XY-radius vs Z curriculum split'
+
+## [2026-07-07T18:59:50.923421] add
+- **Pages:** doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md
+- **Summary:** updated 'DORAEMON difficulty has 3 separable levers: kl_ub (step size), step_interval (dwell-time), max_iterations (number of expansions)'
+
