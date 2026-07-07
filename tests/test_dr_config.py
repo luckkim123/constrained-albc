@@ -118,3 +118,21 @@ def test_build_ood_dr_config_does_not_corrupt_hard_anchor():
     finally:
         dr_config._DORAEMON_FULL_DR = saved_full
         dr_config._DORAEMON_RAW = saved_raw
+
+
+def test_payload_cog_offset_xy_u_range_sweeps_with_dr_level():
+    """payload_cog_offset_xy_u_range is DORAEMON-managed during training.
+
+    Eval must scale this range with DR level so none/soft/medium/hard match
+    the training curriculum. Nominal=(0,0) (no XY offset), hard=(0,1) (full radius).
+    """
+    lo0, hi0 = dr_config.build_dr_config(0.0).payload_cog_offset_xy_u_range
+    lo1, hi1 = dr_config.build_dr_config(1.0).payload_cog_offset_xy_u_range
+
+    # Nominal (scale=0.0): collapse to (0,0) -- no XY offset
+    assert lo0 == pytest.approx(0.0)
+    assert hi0 == pytest.approx(0.0)
+
+    # Hard (scale=1.0): should reach toward (0,1) -- full radius sweep
+    assert lo1 == pytest.approx(0.0)
+    assert hi1 > 0.9
