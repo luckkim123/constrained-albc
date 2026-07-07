@@ -57,6 +57,7 @@ _APPLY_EXTREME_OOD: bool = False
 _DORAEMON_TO_DR_FIELD: dict[str, str] = {
     "payload_mass": "payload_mass_range",
     "water_density": "water_density_range",
+    "payload_cog_offset_xy_u": "payload_cog_offset_xy_u_range",
 }
 
 # All tuple fields in DomainRandomizationCfg that should be interpolated.
@@ -88,6 +89,10 @@ _DR_TUPLE_FIELDS = [
     # also scale this range with DR level so none/soft/medium/hard match training
     # curriculum stages. Nominal=(0,0) (no current), hard=(0,1) (full range).
     "ocean_current_strength_range",
+    # payload XY radius quantile is DORAEMON-managed during training. Eval must
+    # also scale this range with DR level so none/soft/medium/hard match the
+    # training curriculum. Nominal=(0,0) (no XY offset), hard=(0,1) (full radius).
+    "payload_cog_offset_xy_u_range",
 ]
 
 _DR_FLOAT_FIELDS = [
@@ -139,6 +144,8 @@ _TRUE_NOMINAL_PHYSICS: dict[str, float] = {
     # not a physics-true value.
     "joint_stiffness_range": 100.0,
     "joint_damping_range": 3.0,
+    # payload XY radius quantile: nominal u=0 -> range collapses to (0, 0) = no XY offset.
+    "payload_cog_offset_xy_u_range": 0.0,
 }
 
 
