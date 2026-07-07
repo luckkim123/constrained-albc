@@ -299,7 +299,10 @@ class ALBCEnv(DirectRLEnv):
         # that per-step tracking reward ignores.
         self._bias_ema = torch.zeros(self.num_envs, 6, device=self.device)
         self._vel_cmd_step_counter = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
-        # Per-env command range scales (DORAEMON-managed, default 1.0 if disabled)
+        # Per-env command range scales. Permanently 1.0 -- inert residue of a command-difficulty
+        # curriculum that was wired to DORAEMON then removed (f4583fd, 2026-04-06: it drove
+        # degenerate "barely-move" policies). Command is a task target, NOT physics DR; never
+        # DORAEMON-managed. See :1354 and docs/reference/command-and-task.md #6.
         self._cmd_lin_scale = torch.ones(self.num_envs, device=self.device)
         self._cmd_att_scale = torch.ones(self.num_envs, device=self.device)
         self._cmd_yaw_scale = torch.ones(self.num_envs, device=self.device)
@@ -578,7 +581,8 @@ class ALBCEnv(DirectRLEnv):
         Roll/pitch: attitude command (radians) from att_cmd_rp_range.
         Yaw: rate command (rad/s) from yaw_rate_cmd_range.
         Linear: velocity command (m/s) from vel_cmd_lin_range.
-        Ranges are scaled per-env by DORAEMON cmd_*_scale (default 1.0).
+        Ranges use per-env cmd_*_scale, which is permanently 1.0 (inert residue; command
+        difficulty is a fixed task knob, not DORAEMON-curriculum-managed).
         With probability ``vel_cmd_zero_prob``, an env receives a zero command.
 
         In play_mode, all commands are fixed to zero (hovering/station-keeping).
@@ -594,7 +598,7 @@ class ALBCEnv(DirectRLEnv):
         att_max = abs(self.cfg.att_cmd_rp_range[1])
         yaw_max = abs(self.cfg.yaw_rate_cmd_range[1])
 
-        # Per-env DORAEMON scales (1.0 when DORAEMON disabled)
+        # Per-env command-range scales (always 1.0; command difficulty is a fixed task knob, not DORAEMON)
         lin_s = self._cmd_lin_scale[env_ids].unsqueeze(1)  # (n, 1)
         att_s = self._cmd_att_scale[env_ids].unsqueeze(1)  # (n, 1)
         yaw_s = self._cmd_yaw_scale[env_ids]  # (n,)

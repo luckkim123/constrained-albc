@@ -82,7 +82,7 @@ build 시점에 `build_param_specs`가 `getattr(dr_cfg, field_name)`로 live bou
 | 10 | cog_offset_x | `cog_offset_x` | (-0.01, 0.01) | (-0.02, 0.02) | mid | 무게중심 전후 오프셋 **m 절대값**. |
 | 11 | cog_offset_y | `cog_offset_y` | (-0.01, 0.01) | (-0.02, 0.02) | mid | 무게중심 좌우 오프셋 **m 절대값**. |
 | 12 | inertia_scale | `inertia_scale` | (0.75, 1.3) | (0.4, 2.0) | mid | 강체 **관성모멘트** 배수(회전 응답성). added_mass/inertia < 1 제약 + post-DR 0.95·I clamp로 제한. |
-| 13 | body_mass_scale | `body_mass_scale` | (0.9, 1.1) | (0.75, 1.25) | mid | 본체 **질량** 배수. |
+| 13 | body_mass_scale | `body_mass_scale` | (0.9, 1.1) | (0.75, 1.25) | mid | 실제 PhysX 강체 질량 배수(`set_masses`), 모든 body(main + buoy)에 broadcast. PhysX가 이 질량에 중력을 적용하므로 관성뿐 아니라 **무게(중력)**도 randomize — 이것이 차량의 무게 DR. (payload 무게는 별도 채널: `payload_mass`를 gripper에 external wrench로.) |
 | 14 | payload_cog_offset_z | `payload_cog_offset_z` | (-0.03, 0.0) | (-0.05, 0.0) | mid | payload 무게중심 수직 오프셋 **m 절대값**. |
 | 15 | ocean_current_strength | `ocean_current_strength_range` | (0.0, 1.0) | (0.0, 1.0) \* | **0.0 (override)** | `ocean_current.max_velocity`에 곱하는 스칼라 [0,1]. 커리큘럼 시작 0(무해류), 정책이 쉬운 변형을 숙달하면 확장. |
 

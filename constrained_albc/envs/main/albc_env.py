@@ -275,6 +275,13 @@ class ALBCEnv(DirectRLEnv):
         self._prev_prev_actions = torch.zeros(self.num_envs, self.cfg.action_space, device=self.device)
         self._nominal_joint_pos = torch.tensor(self.cfg.nominal_joint_pos, device=self.device)
         self._delta_scale = self.cfg.delta_scale
+        # Joint delta actuation-noise std (3rd channel). None when disabled ->
+        # _apply_joint_pd_action skips the multiply (byte-identical).
+        self._joint_act_noise_std = (
+            self.cfg.actuation_noise.joint_noise_std
+            if self.cfg.actuation_noise.enable
+            else None
+        )
         self._joint_pos_targets = self._nominal_joint_pos.expand(self.num_envs, -1).clone()
         self._control_step_counter = 0
 
@@ -315,7 +322,10 @@ class ALBCEnv(DirectRLEnv):
         # that per-step tracking reward ignores.
         self._bias_ema = torch.zeros(self.num_envs, 3, device=self.device)
         self._vel_cmd_step_counter = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
-        # Per-env command range scales (DORAEMON-managed, default 1.0 if disabled)
+        # Per-env command range scales. Permanently 1.0 -- inert residue of a command-difficulty
+        # curriculum that was wired to DORAEMON then removed (f4583fd, 2026-04-06: it drove
+        # degenerate "barely-move" policies). Command is a task target, NOT physics DR; never
+        # DORAEMON-managed. See :1368 and docs/reference/command-and-task.md #6.
         self._cmd_lin_scale = torch.ones(self.num_envs, device=self.device)
         self._cmd_att_scale = torch.ones(self.num_envs, device=self.device)
         self._cmd_yaw_scale = torch.ones(self.num_envs, device=self.device)
@@ -349,12 +359,20 @@ class ALBCEnv(DirectRLEnv):
             return
         from marinelab.physics import ThrusterModel
 
+        # Bridge the actuation-noise thruster std into the ThrusterCfg so the model
+        # reads it via getattr. Only when the channel is enabled (else leave the cfg
+        # default 0.0 -> model stores None -> byte-identical). 3rd channel, independent
+        # of DR/fault.
+        if self.cfg.actuation_noise.enable:
+            self.cfg.thrusters.actuation_noise_std = self.cfg.actuation_noise.thruster_noise_std
+
         self._thruster = ThrusterModel(
             cfg=self.cfg.thrusters,
             num_envs=self.num_envs,
             device=self.device,
             enable_randomization=self.cfg.randomization.enable,
             enable_fault=self.cfg.fault.enable,
+            enable_actuation_noise=self.cfg.actuation_noise.enable,
         )
 
     def _init_faults(self) -> None:
@@ -575,7 +593,15 @@ class ALBCEnv(DirectRLEnv):
         Args:
             actions: Normalized actions [-1, 1]. Shape: (num_envs, 2).
         """
-        self._joint_pos_targets += self._delta_scale * actions
+        delta = self._delta_scale * actions
+        # Per-step multiplicative actuation noise on the joint delta (3rd channel).
+        # None guard -> byte-identical when off (no RNG consumed). Resampled each
+        # (control_decimation-gated) step -- with control_decimation=1 that is every
+        # step; if decimation rises, the resample period rises with it (intended).
+        if self._joint_act_noise_std is not None and self._joint_act_noise_std > 0.0:
+            noise = torch.randn_like(delta) * self._joint_act_noise_std
+            delta = delta * (1.0 + noise)
+        self._joint_pos_targets += delta
 
     def _update_manipulability(self) -> None:
         """Compute Yoshikawa manipulability index from current arm configuration.
@@ -612,7 +638,8 @@ class ALBCEnv(DirectRLEnv):
 
         Roll/pitch: attitude command (radians) from att_cmd_rp_range.
         Yaw: rate command (rad/s) from yaw_rate_cmd_range.
-        Ranges are scaled per-env by DORAEMON cmd_*_scale (default 1.0).
+        Ranges use per-env cmd_*_scale, which is permanently 1.0 (inert residue; command
+        difficulty is a fixed task knob, not DORAEMON-curriculum-managed).
         With probability ``vel_cmd_zero_prob``, an env receives a zero command.
         (The ``vel_cmd_*`` names are retained as the shared command-timing/zeroing knobs;
         they no longer drive any linear-velocity command.)
@@ -628,7 +655,7 @@ class ALBCEnv(DirectRLEnv):
         att_max = abs(self.cfg.att_cmd_rp_range[1])
         yaw_max = abs(self.cfg.yaw_rate_cmd_range[1])
 
-        # Per-env DORAEMON scales (1.0 when DORAEMON disabled)
+        # Per-env command-range scales (always 1.0; command difficulty is a fixed task knob, not DORAEMON)
         att_s = self._cmd_att_scale[env_ids].unsqueeze(1)  # (n, 1)
         yaw_s = self._cmd_yaw_scale[env_ids]  # (n,)
 
