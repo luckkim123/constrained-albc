@@ -67,24 +67,24 @@ build 시점에 `build_param_specs`가 `getattr(dr_cfg, field_name)`로 live bou
 
 ### 블록 A — DORAEMON 커리큘럼 관리 (16개, Beta 차원 순서)
 
-| # | name | `config.py` 필드 | SOFT 범위 | HARD 범위 | nominal |
-|:--|:---|:---|:---|:---|:---|
-| 0 | payload_mass | `payload_mass_range` | (0.0, 1.0) | (0.0, 3.0) | mid |
-| 1 | added_mass_scale | `added_mass_scale` | (0.85, 1.15) | (0.5, 1.5) | mid |
-| 2 | linear_damping_scale | `linear_damping_scale` | (0.5, 1.5) | (0.4, 1.7) | mid |
-| 3 | quadratic_damping_scale | `quadratic_damping_scale` | (0.5, 1.5) | (0.4, 1.7) | mid |
-| 4 | water_density | `water_density_range` | (995.0, 1025.0) | (995.0, 1025.0) \* | mid |
-| 5 | cog_offset_z | `cog_offset_z` | (-0.02, 0.02) | (-0.04, 0.04) | mid |
-| 6 | cob_offset_z | `cob_offset_z` | (-0.02, 0.02) | (-0.04, 0.04) | mid |
-| 7 | volume_scale | `volume_scale` | (0.9, 1.1) | (0.75, 1.25) | mid |
-| 8 | cob_offset_x | `cob_offset_x` | (-0.01, 0.01) | (-0.02, 0.02) | mid |
-| 9 | cob_offset_y | `cob_offset_y` | (-0.01, 0.01) | (-0.02, 0.02) | mid |
-| 10 | cog_offset_x | `cog_offset_x` | (-0.01, 0.01) | (-0.02, 0.02) | mid |
-| 11 | cog_offset_y | `cog_offset_y` | (-0.01, 0.01) | (-0.02, 0.02) | mid |
-| 12 | inertia_scale | `inertia_scale` | (0.75, 1.3) | (0.4, 2.0) | mid |
-| 13 | body_mass_scale | `body_mass_scale` | (0.9, 1.1) | (0.75, 1.25) | mid |
-| 14 | payload_cog_offset_z | `payload_cog_offset_z` | (-0.03, 0.0) | (-0.05, 0.0) | mid |
-| 15 | ocean_current_strength | `ocean_current_strength_range` | (0.0, 1.0) | (0.0, 1.0) \* | **0.0 (override)** |
+| # | name | `config.py` 필드 | SOFT 범위 | HARD 범위 | nominal | 의미 (무엇에 곱해지나 / 무엇을 모델링하나) |
+|:--|:---|:---|:---|:---|:---|:---|
+| 0 | payload_mass | `payload_mass_range` | (0.0, 1.0) | (0.0, 3.0) | mid | arm이 드는 payload 질량, **kg 절대값**. 매니퓰레이터의 최대 sim-to-real 불확실성. |
+| 1 | added_mass_scale | `added_mass_scale` | (0.85, 1.15) | (0.5, 1.5) | mid | 6-DOF **부가질량(added-mass)** 대각행렬 배수(가속 시 함께 밀리는 물의 관성). 단일 scale을 6 DOF에 broadcast. |
+| 2 | linear_damping_scale | `linear_damping_scale` | (0.5, 1.5) | (0.4, 1.7) | mid | **선형 항력**(∝속도, 느린 움직임 지배) 배수. |
+| 3 | quadratic_damping_scale | `quadratic_damping_scale` | (0.5, 1.5) | (0.4, 1.7) | mid | **2차 항력**(∝속도², 빠른 움직임 지배) 배수. |
+| 4 | water_density | `water_density_range` | (995.0, 1025.0) | (995.0, 1025.0) \* | mid | 물 밀도 **kg/m³ 절대값**, 담수→해수. 부력과 항력을 동시에 스케일. |
+| 5 | cog_offset_z | `cog_offset_z` | (-0.02, 0.02) | (-0.04, 0.04) | mid | 무게중심 수직 오프셋 **m 절대값**. cob와 함께 복원토크·metacentric height 결정. |
+| 6 | cob_offset_z | `cob_offset_z` | (-0.02, 0.02) | (-0.04, 0.04) | mid | 부력중심 수직 오프셋 **m 절대값**. metacentric height(자세 안정성) 지배. |
+| 7 | volume_scale | `volume_scale` | (0.9, 1.1) | (0.75, 1.25) | mid | 배수 **체적** 배수 → 부력 크기 직접 스케일. |
+| 8 | cob_offset_x | `cob_offset_x` | (-0.01, 0.01) | (-0.02, 0.02) | mid | 부력중심 전후 오프셋 **m 절대값** → roll/pitch 복원토크 편향. |
+| 9 | cob_offset_y | `cob_offset_y` | (-0.01, 0.01) | (-0.02, 0.02) | mid | 부력중심 좌우 오프셋 **m 절대값**. |
+| 10 | cog_offset_x | `cog_offset_x` | (-0.01, 0.01) | (-0.02, 0.02) | mid | 무게중심 전후 오프셋 **m 절대값**. |
+| 11 | cog_offset_y | `cog_offset_y` | (-0.01, 0.01) | (-0.02, 0.02) | mid | 무게중심 좌우 오프셋 **m 절대값**. |
+| 12 | inertia_scale | `inertia_scale` | (0.75, 1.3) | (0.4, 2.0) | mid | 강체 **관성모멘트** 배수(회전 응답성). added_mass/inertia < 1 제약 + post-DR 0.95·I clamp로 제한. |
+| 13 | body_mass_scale | `body_mass_scale` | (0.9, 1.1) | (0.75, 1.25) | mid | 본체 **질량** 배수. |
+| 14 | payload_cog_offset_z | `payload_cog_offset_z` | (-0.03, 0.0) | (-0.05, 0.0) | mid | payload 무게중심 수직 오프셋 **m 절대값**. |
+| 15 | ocean_current_strength | `ocean_current_strength_range` | (0.0, 1.0) | (0.0, 1.0) \* | **0.0 (override)** | `ocean_current.max_velocity`에 곱하는 스칼라 [0,1]. 커리큘럼 시작 0(무해류), 정책이 쉬운 변형을 숙달하면 확장. |
 
 \* `HardDomainRandomizationCfg`는 `water_density`와 `ocean_current_strength`를
 오버라이드하지 **않는다**. 이 둘은 hard == soft.
@@ -98,16 +98,22 @@ parameters"라고 한다 — 그 주석은 틀렸고 실제는 16개다.
 reset마다 uniform 샘플되며 커리큘럼이 **절대** 건드리지 않는다(Beta 없음, 확장
 없음). nominal은 n/a.
 
-| name | SOFT | HARD |
-|:---|:---|:---|
-| joint_damping_range (**arm 액추에이터**, PhysX) | (0.5, 5.0) | (0.3, 7.0) |
-| yaw_damping_scale (**유체역학** quad-damping, DOF-5) | (0.5, 1.5) | hard 오버라이드 없음 |
+| name | SOFT | HARD | 의미 (무엇에 곱해지나 / 무엇을 모델링하나) |
+|:---|:---|:---|:---|
+| joint_stiffness_range (**arm 액추에이터**, PhysX) | (40.0, 120.0) | (30.0, 150.0) | arm PD **P-gain**(Kp) **절대값**. sim base 100; 실측 ζ≈0.7이 이 regime 확인. |
+| joint_damping_range (**arm 액추에이터**, PhysX) | (0.5, 5.0) | (0.3, 7.0) | arm PD **D-gain**(Kd) **절대값**. sim base 3. |
+| joint_effort_limit_range | (0.7, 1.0) | (상속) | arm **토크 한계** 배수(1.0 = 정격). |
+| joint_static_friction_range | (0.0, 0.03) | (상속) | arm joint **정지(Coulomb) 마찰** 절대값. |
+| joint_viscous_friction_range | (0.0, 0.2) | (상속) | arm joint **점성 마찰** 절대값. |
+| thrust_coefficient_scale (**thruster**) | (0.8, 1.2) | (0.7, 1.3) | **추력계수** 배수(±20→±30% 힘 오차). T200 unit 편차 + 전진/후진 크기 비대칭 커버. |
+| time_constant_scale (**thruster**) | (0.8, 1.2) | (0.7, 1.3) | thruster **상승/하강 시상수** 배수(응답 지연). |
+| yaw_damping_scale (**유체역학** quad-damping, DOF-5) | (0.5, 1.5) | hard 오버라이드 없음 | **yaw**(DOF-5) 2차 감쇠에만 별도 scale, DOF-broadcast 2차 감쇠 이후 적용(index 5 덮어씀). |
 
 > **"damping" 이름 충돌 2건.** `joint_damping_range`는 *arm 액추에이터*의 PhysX
 > joint damping이고, `yaw_damping_scale`은 회전 DOF-5의 *유체역학* quadratic-damping
-> scale이다. 둘 다 "damping"을 포함하지만 무관한 물리량이다. (joint
-> stiffness/effort/friction, thruster scale 범위도 cfg 계열에 존재한다. 블록 A에
-> 없는 것은 uniform-only로 취급하고, 정확한 범위는 소스 cfg를 근거로 삼을 것.)
+> scale이다. 둘 다 "damping"을 포함하지만 무관한 물리량이다. 이 uniform-only
+> 액추에이터 범위들은 cfg 계열에 존재하나 DORAEMON 커리큘럼이 **절대** 건드리지
+> 않으며, 정확한 범위는 소스 cfg(`config.py`)를 근거로 삼는다.
 
 ### 블록 C — 스칼라 (`(lo, hi)` 튜플이 아님)
 

@@ -1,13 +1,15 @@
 ---
 title: "Next from-scratch retrain manifest: what rides on the post-TAM baseline retrain (sim fixes + learning-dynamics experiments)"
-tags: ["albc", "envs-main", "retrain-campaign", "sim-to-real-audit", "baseline-retrain", "manifest", "index", "experiment-roster", "from-scratch", "constraint-trpo"]
+tags: ["albc", "envs-main", "retrain-campaign", "sim-to-real-audit", "baseline-retrain", "manifest", "index", "experiment-roster", "from-scratch", "constraint-trpo", "velocity-limit"]
 created: 2026-07-05T08:06:16.009224
-updated: 2026-07-05T15:41:53
+updated: 2026-07-06T07:33:45.325955
 sources: []
-links: ["experiment_result_recording_location_experiments_tree_is_ssot_no.md", "tam_columns_must_match_robot_firmware_esc_channel_order_reorder_.md", "encoder_priv_obs_normalization_bounds_must_be_dr_derived_not_har.md", "thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md", "leaky_integral_and_ema_bias_carry_over_the_mid_episode_command_r.md", "encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md", "action_bounding_is_justified_raw_gaussian_external_clamp_tanh_ru.md"]
+links: ["experiment_result_recording_location_experiments_tree_is_ssot_no.md", "tam_columns_must_match_robot_firmware_esc_channel_order_reorder_.md", "encoder_priv_obs_normalization_bounds_must_be_dr_derived_not_har.md", "thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md", "leaky_integral_and_ema_bias_carry_over_the_mid_episode_command_r.md", "encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md", "action_bounding_is_justified_raw_gaussian_external_clamp_tanh_ru.md", "arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md"]
 category: convention
 confidence: high
 schemaVersion: 1
+qualityScore: 100
+qualityReasons: []
 ---
 
 # Next from-scratch retrain manifest: what rides on the post-TAM baseline retrain (sim fixes + learning-dynamics experiments)
@@ -69,4 +71,18 @@ retrain. Detail: `docs/plans/2026-07-05-command-sampling-resampling-review.md` s
 When the retrain group is created, this roster's content -> `experiments/rsl_rl/<exp>/<group>/DESIGN.md`; this card
 then becomes a pointer to that DESIGN.md. Until then this card is the roster SSOT and the `docs/plans/` files are the
 per-item details.
+
+---
+
+## Update (2026-07-06T07:33:45.325955)
+
+## Roster addition 2026-07-06 -- arm velocity_limit_sim (Group A/B sim-to-real fix)
+
+Add to the "sim-to-real audit fixes" roster (motivated by onboard 2026-07-06 measurement, user agrees in principle, applied at retrain not now):
+
+| Item | Status | Detail |
+|:---|:---|:---|
+| arm velocity_limit_sim 6.28 -> ~3.1 rad/s (measured plateau) + soft velocity_limit_cost 4.189 -> inside 3.1 (MUST, else dead constraint) | measured + ripple-analyzed, NOT applied (rides retrain) | [[arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt]] |
+
+Why it is a PAIR not one line: lowering only velocity_limit_sim inverts 4.189 (soft) vs 3.1 (hard) and silently kills the `velocity_limit_cost` constraint (always 0, zero gradient). Also review delta_scale=0.10 vs 3.1 reachability (target-runaway risk; resolve via delta sysid). Full ripple + checklist in the linked card.
 

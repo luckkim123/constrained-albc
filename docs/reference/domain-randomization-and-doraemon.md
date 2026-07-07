@@ -70,24 +70,24 @@ at build time `build_param_specs` reads live bounds from the DR cfg via
 
 ### Block A — DORAEMON-curriculum-managed (16 params, Beta-dimension order)
 
-| # | name | `config.py` field | SOFT range | HARD range | nominal |
-|:--|:---|:---|:---|:---|:---|
-| 0 | payload_mass | `payload_mass_range` | (0.0, 1.0) | (0.0, 3.0) | mid |
-| 1 | added_mass_scale | `added_mass_scale` | (0.85, 1.15) | (0.5, 1.5) | mid |
-| 2 | linear_damping_scale | `linear_damping_scale` | (0.5, 1.5) | (0.4, 1.7) | mid |
-| 3 | quadratic_damping_scale | `quadratic_damping_scale` | (0.5, 1.5) | (0.4, 1.7) | mid |
-| 4 | water_density | `water_density_range` | (995.0, 1025.0) | (995.0, 1025.0) \* | mid |
-| 5 | cog_offset_z | `cog_offset_z` | (-0.02, 0.02) | (-0.04, 0.04) | mid |
-| 6 | cob_offset_z | `cob_offset_z` | (-0.02, 0.02) | (-0.04, 0.04) | mid |
-| 7 | volume_scale | `volume_scale` | (0.9, 1.1) | (0.75, 1.25) | mid |
-| 8 | cob_offset_x | `cob_offset_x` | (-0.01, 0.01) | (-0.02, 0.02) | mid |
-| 9 | cob_offset_y | `cob_offset_y` | (-0.01, 0.01) | (-0.02, 0.02) | mid |
-| 10 | cog_offset_x | `cog_offset_x` | (-0.01, 0.01) | (-0.02, 0.02) | mid |
-| 11 | cog_offset_y | `cog_offset_y` | (-0.01, 0.01) | (-0.02, 0.02) | mid |
-| 12 | inertia_scale | `inertia_scale` | (0.75, 1.3) | (0.4, 2.0) | mid |
-| 13 | body_mass_scale | `body_mass_scale` | (0.9, 1.1) | (0.75, 1.25) | mid |
-| 14 | payload_cog_offset_z | `payload_cog_offset_z` | (-0.03, 0.0) | (-0.05, 0.0) | mid |
-| 15 | ocean_current_strength | `ocean_current_strength_range` | (0.0, 1.0) | (0.0, 1.0) \* | **0.0 (override)** |
+| # | name | `config.py` field | SOFT range | HARD range | nominal | meaning (what it multiplies / models) |
+|:--|:---|:---|:---|:---|:---|:---|
+| 0 | payload_mass | `payload_mass_range` | (0.0, 1.0) | (0.0, 3.0) | mid | Arm-carried payload mass in **kg (absolute)**. The dominant sim-to-real unknown for the manipulator. |
+| 1 | added_mass_scale | `added_mass_scale` | (0.85, 1.15) | (0.5, 1.5) | mid | Multiplier on the 6-DOF **added-mass** diagonal (inertia of water entrained during acceleration). Single scale broadcast to all 6 DOF. |
+| 2 | linear_damping_scale | `linear_damping_scale` | (0.5, 1.5) | (0.4, 1.7) | mid | Multiplier on **linear drag** (∝ velocity; dominates slow motion). |
+| 3 | quadratic_damping_scale | `quadratic_damping_scale` | (0.5, 1.5) | (0.4, 1.7) | mid | Multiplier on **quadratic drag** (∝ velocity²; dominates fast motion). |
+| 4 | water_density | `water_density_range` | (995.0, 1025.0) | (995.0, 1025.0) \* | mid | Water density in **kg/m³ (absolute)**, fresh→sea. Scales buoyancy and drag together. |
+| 5 | cog_offset_z | `cog_offset_z` | (-0.02, 0.02) | (-0.04, 0.04) | mid | Center-of-gravity vertical offset in **m (absolute)**. With cob, sets restoring-torque / metacentric height. |
+| 6 | cob_offset_z | `cob_offset_z` | (-0.02, 0.02) | (-0.04, 0.04) | mid | Center-of-buoyancy vertical offset in **m (absolute)**. Governs metacentric height (attitude stability). |
+| 7 | volume_scale | `volume_scale` | (0.9, 1.1) | (0.75, 1.25) | mid | Multiplier on displaced **volume** → directly scales buoyancy magnitude. |
+| 8 | cob_offset_x | `cob_offset_x` | (-0.01, 0.01) | (-0.02, 0.02) | mid | Center-of-buoyancy fore/aft offset in **m (absolute)** → biases roll/pitch restoring torque. |
+| 9 | cob_offset_y | `cob_offset_y` | (-0.01, 0.01) | (-0.02, 0.02) | mid | Center-of-buoyancy lateral offset in **m (absolute)**. |
+| 10 | cog_offset_x | `cog_offset_x` | (-0.01, 0.01) | (-0.02, 0.02) | mid | Center-of-gravity fore/aft offset in **m (absolute)**. |
+| 11 | cog_offset_y | `cog_offset_y` | (-0.01, 0.01) | (-0.02, 0.02) | mid | Center-of-gravity lateral offset in **m (absolute)**. |
+| 12 | inertia_scale | `inertia_scale` | (0.75, 1.3) | (0.4, 2.0) | mid | Multiplier on rigid-body **moment of inertia** (rotational responsiveness). Constrained by added_mass/inertia < 1 + post-DR 0.95·I clamp. |
+| 13 | body_mass_scale | `body_mass_scale` | (0.9, 1.1) | (0.75, 1.25) | mid | Multiplier on hull **body mass**. |
+| 14 | payload_cog_offset_z | `payload_cog_offset_z` | (-0.03, 0.0) | (-0.05, 0.0) | mid | Payload center-of-gravity vertical offset in **m (absolute)**. |
+| 15 | ocean_current_strength | `ocean_current_strength_range` | (0.0, 1.0) | (0.0, 1.0) \* | **0.0 (override)** | Scalar [0,1] multiplier on `ocean_current.max_velocity`. Curriculum starts at 0 (no current) and expands as the policy masters easier variants. |
 
 \* `HardDomainRandomizationCfg` does **not** override `water_density` or
 `ocean_current_strength`; for those two, hard == soft.
@@ -101,17 +101,23 @@ which is why a stale comment in the `HardDR` docstring (`config.py:187`) still s
 These are sampled uniformly every reset and are **never** touched by the
 curriculum (no Beta, no widening). Nominal is n/a.
 
-| name | SOFT | HARD |
-|:---|:---|:---|
-| joint_damping_range (**arm actuator**, PhysX) | (0.5, 5.0) | (0.3, 7.0) |
-| yaw_damping_scale (**hydrodynamic** quad-damping, DOF-5) | (0.5, 1.5) | no hard override |
+| name | SOFT | HARD | meaning (what it multiplies / models) |
+|:---|:---|:---|:---|
+| joint_stiffness_range (**arm actuator**, PhysX) | (40.0, 120.0) | (30.0, 150.0) | Arm PD **P-gain** (Kp) **absolute**. Sim base 100; measured ζ≈0.7 confirms this regime. |
+| joint_damping_range (**arm actuator**, PhysX) | (0.5, 5.0) | (0.3, 7.0) | Arm PD **D-gain** (Kd) **absolute**. Sim base 3. |
+| joint_effort_limit_range | (0.7, 1.0) | (inherits) | Multiplier on arm **torque limit** (1.0 = rated). |
+| joint_static_friction_range | (0.0, 0.03) | (inherits) | Arm joint **static (Coulomb) friction**, absolute. |
+| joint_viscous_friction_range | (0.0, 0.2) | (inherits) | Arm joint **viscous friction**, absolute. |
+| thrust_coefficient_scale (**thruster**) | (0.8, 1.2) | (0.7, 1.3) | Multiplier on **thrust coefficient** (±20→±30% force error). Covers T200 unit spread + fwd/rev magnitude asymmetry. |
+| time_constant_scale (**thruster**) | (0.8, 1.2) | (0.7, 1.3) | Multiplier on thruster **rise/fall time constant** (response lag). |
+| yaw_damping_scale (**hydrodynamic** quad-damping, DOF-5) | (0.5, 1.5) | no hard override | Extra scale on **yaw** (DOF-5) quadratic damping only, applied after the DOF-broadcast quad-damping (overwrites index 5). |
 
 > **Two "damping" name collisions.** `joint_damping_range` is the *arm
 > actuator's* PhysX joint damping; `yaw_damping_scale` is the *hydrodynamic*
 > quadratic-damping scale on rotational DOF-5. They are unrelated physical
-> quantities that both contain "damping". (Joint stiffness/effort/friction and
-> thruster scale ranges also exist on the cfg family; treat any not in Block A as
-> uniform-only — the source cfg is the authority for their exact ranges.)
+> quantities that both contain "damping". These uniform-only actuator ranges live
+> on the cfg family but are **never** touched by the DORAEMON curriculum; the
+> source cfg (`config.py`) is the authority for their exact ranges.
 
 ### Block C — Scalars (not `(lo, hi)` tuples)
 
