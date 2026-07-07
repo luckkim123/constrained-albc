@@ -85,7 +85,7 @@ at build time `build_param_specs` reads live bounds from the DR cfg via
 | 10 | cog_offset_x | `cog_offset_x` | (-0.01, 0.01) | (-0.02, 0.02) | mid | Center-of-gravity fore/aft offset in **m (absolute)**. |
 | 11 | cog_offset_y | `cog_offset_y` | (-0.01, 0.01) | (-0.02, 0.02) | mid | Center-of-gravity lateral offset in **m (absolute)**. |
 | 12 | inertia_scale | `inertia_scale` | (0.75, 1.3) | (0.4, 2.0) | mid | Multiplier on rigid-body **moment of inertia** (rotational responsiveness). Constrained by added_mass/inertia < 1 + post-DR 0.95·I clamp. |
-| 13 | body_mass_scale | `body_mass_scale` | (0.9, 1.1) | (0.75, 1.25) | mid | Multiplier on hull **body mass**. |
+| 13 | body_mass_scale | `body_mass_scale` | (0.9, 1.1) | (0.75, 1.25) | mid | Multiplier on the actual PhysX rigid-body mass (`set_masses`), broadcast to all bodies (main + buoy). Since PhysX applies gravity to this mass, it randomizes **weight** too, not just inertia — this is the vehicle's gravity/weight DR. (Payload weight is a separate channel: `payload_mass` as an external wrench on the gripper.) |
 | 14 | payload_cog_offset_z | `payload_cog_offset_z` | (-0.03, 0.0) | (-0.05, 0.0) | mid | Payload center-of-gravity vertical offset in **m (absolute)**. |
 | 15 | ocean_current_strength | `ocean_current_strength_range` | (0.0, 1.0) | (0.0, 1.0) \* | **0.0 (override)** | Scalar [0,1] multiplier on `ocean_current.max_velocity`. Curriculum starts at 0 (no current) and expands as the policy masters easier variants. |
 
