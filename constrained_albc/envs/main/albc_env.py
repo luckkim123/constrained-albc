@@ -575,7 +575,15 @@ class ALBCEnv(DirectRLEnv):
         Args:
             actions: Normalized actions [-1, 1]. Shape: (num_envs, 2).
         """
-        self._joint_pos_targets += self._delta_scale * actions
+        delta = self._delta_scale * actions
+        # Per-step multiplicative actuation noise on the joint delta (3rd channel).
+        # None guard -> byte-identical when off (no RNG consumed). Resampled each
+        # (control_decimation-gated) step -- with control_decimation=1 that is every
+        # step; if decimation rises, the resample period rises with it (intended).
+        if self._joint_act_noise_std is not None and self._joint_act_noise_std > 0.0:
+            noise = torch.randn_like(delta) * self._joint_act_noise_std
+            delta = delta * (1.0 + noise)
+        self._joint_pos_targets += delta
 
     def _update_manipulability(self) -> None:
         """Compute Yoshikawa manipulability index from current arm configuration.
