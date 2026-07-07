@@ -275,6 +275,13 @@ class ALBCEnv(DirectRLEnv):
         self._prev_prev_actions = torch.zeros(self.num_envs, self.cfg.action_space, device=self.device)
         self._nominal_joint_pos = torch.tensor(self.cfg.nominal_joint_pos, device=self.device)
         self._delta_scale = self.cfg.delta_scale
+        # Joint delta actuation-noise std (3rd channel). None when disabled ->
+        # _apply_joint_pd_action skips the multiply (byte-identical).
+        self._joint_act_noise_std = (
+            self.cfg.actuation_noise.joint_noise_std
+            if self.cfg.actuation_noise.enable
+            else None
+        )
         self._joint_pos_targets = self._nominal_joint_pos.expand(self.num_envs, -1).clone()
         self._control_step_counter = 0
 
@@ -349,12 +356,20 @@ class ALBCEnv(DirectRLEnv):
             return
         from marinelab.physics import ThrusterModel
 
+        # Bridge the actuation-noise thruster std into the ThrusterCfg so the model
+        # reads it via getattr. Only when the channel is enabled (else leave the cfg
+        # default 0.0 -> model stores None -> byte-identical). 3rd channel, independent
+        # of DR/fault.
+        if self.cfg.actuation_noise.enable:
+            self.cfg.thrusters.actuation_noise_std = self.cfg.actuation_noise.thruster_noise_std
+
         self._thruster = ThrusterModel(
             cfg=self.cfg.thrusters,
             num_envs=self.num_envs,
             device=self.device,
             enable_randomization=self.cfg.randomization.enable,
             enable_fault=self.cfg.fault.enable,
+            enable_actuation_noise=self.cfg.actuation_noise.enable,
         )
 
     def _init_faults(self) -> None:
