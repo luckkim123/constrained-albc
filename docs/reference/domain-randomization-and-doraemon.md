@@ -2,7 +2,7 @@
 
 > **Scope**: The domain-randomization (DR) system of the default task
 > `Isaac-ConstrainedALBC-TRPO-v0` (`constrained_albc/envs/main/`) — the
-> 16-parameter DORAEMON entropy-maximization curriculum in
+> 17-parameter DORAEMON entropy-maximization curriculum in
 > `marinelab/marinelab/algorithms/doraemon.py`, the two disjoint DR surfaces on
 > `DomainRandomizationCfg` / `HardDomainRandomizationCfg`, how per-env sampled
 > values reach the physics at reset, how the scheduler is stepped inside the
@@ -11,7 +11,7 @@
 > This is a code-level reference verified against disk (adversarially
 > cross-checked). It reflects the shipped default (`HardDomainRandomizationCfg`,
 > `doraemon.enable = True`). The legacy full-DOF variant (`envs/full_dof/`) shares
-> the identical 16-parameter DORAEMON surface but is out of scope here.
+> the identical 17-parameter DORAEMON surface but is out of scope here.
 >
 > **Korean version**: [`domain-randomization-and-doraemon.ko.md`](domain-randomization-and-doraemon.ko.md).
 > If you edit one, sync the other. This English file is the SSOT.
@@ -26,8 +26,8 @@ surface. Keeping them apart is the single most important thing to understand:
 
 | Surface | What it is | Managed by | Default state |
 |:---|:---|:---|:---|
-| **DORAEMON physics DR** | 16 physics parameters (masses, damping, buoyancy geometry, ocean current) | learned Beta curriculum (DORAEMON) | **on** (`enable=True`) |
-| **Uniform-only DR** | joint gains/friction/effort, thruster scales, payload disk radius | fixed uniform sampling per reset | on (when `randomization` active) |
+| **DORAEMON physics DR** | 17 physics parameters (masses, damping, buoyancy geometry, ocean current, payload XY-offset) | learned Beta curriculum (DORAEMON) | **on** (`enable=True`) |
+| **Uniform-only DR** | joint gains/friction/effort, thruster scales | fixed uniform sampling per reset | on (when `randomization` active) |
 | **Fault injection** | thruster/sensor/joint component failure | `FaultInjectionCfg`, uniform | **off** |
 
 **DORAEMON optimizes physics DR only.** Command/task difficulty is a fixed task
@@ -49,7 +49,7 @@ aspirational.
 
 ```
 marinelab/marinelab/algorithms/doraemon.py     # the ENGINE (robot-agnostic, 906 lines)
-constrained_albc/envs/main/doraemon.py         # ALBC coupling: _PARAM_DEFS (16 params) + re-export shim
+constrained_albc/envs/main/doraemon.py         # ALBC coupling: _PARAM_DEFS (17 params) + re-export shim
 constrained_albc/envs/main/config.py           # DomainRandomizationCfg / HardDR / FaultInjectionCfg + the live DoraemonCfg override
 constrained_albc/envs/main/mdp/events.py       # reset-time APPLICATION of sampled values to physics
 constrained_albc/envs/main/albc_env.py         # WIRING: samples, stashes, records episodes, owns _doraemon
@@ -68,7 +68,11 @@ ranges are the HARD column** (the shipped cfg is `HardDomainRandomizationCfg`).
 at build time `build_param_specs` reads live bounds from the DR cfg via
 `getattr(dr_cfg, field_name)`, so **`config.py` is the range SSOT**.
 
-### Block A — DORAEMON-curriculum-managed (16 params, Beta-dimension order)
+> **Update 2026-07-08**: `payload_cog_offset_xy_u` promoted to DORAEMON
+> (NDIMS 16 -> 17), merged to main (`b830043`). Curriculum starts at nominal
+> `u = 0` so default training behavior is unchanged until DORAEMON widens it.
+
+### Block A — DORAEMON-curriculum-managed (17 params, Beta-dimension order)
 
 | # | name | `config.py` field | SOFT range | HARD range | nominal | meaning (what it multiplies / models) |
 |:--|:---|:---|:---|:---|:---|:---|
@@ -87,14 +91,15 @@ at build time `build_param_specs` reads live bounds from the DR cfg via
 | 12 | inertia_scale | `inertia_scale` | (0.75, 1.3) | (0.4, 2.0) | mid | Multiplier on rigid-body **moment of inertia** (rotational responsiveness). Constrained by added_mass/inertia < 1 + post-DR 0.95·I clamp. |
 | 13 | body_mass_scale | `body_mass_scale` | (0.9, 1.1) | (0.75, 1.25) | mid | Multiplier on the actual PhysX rigid-body mass (`set_masses`), broadcast to all bodies (main + buoy). Since PhysX applies gravity to this mass, it randomizes **weight** too, not just inertia — this is the vehicle's gravity/weight DR. (Payload weight is a separate channel: `payload_mass` as an external wrench on the gripper.) |
 | 14 | payload_cog_offset_z | `payload_cog_offset_z` | (-0.03, 0.0) | (-0.05, 0.0) | mid | Payload center-of-gravity vertical offset in **m (absolute)**. |
-| 15 | ocean_current_strength | `ocean_current_strength_range` | (0.0, 1.0) | (0.0, 1.0) \* | **0.0 (override)** | Scalar [0,1] multiplier on `ocean_current.max_velocity`. Curriculum starts at 0 (no current) and expands as the policy masters easier variants. |
+| 15 | payload_cog_offset_xy_u | `payload_cog_offset_xy_u_range` | (0.0, 1.0) | (0.0, 1.0) | **0.0 (override)** | Normalized area-quantile u in [0,1] for the payload-CoG XY eccentricity. events maps it to physical radius via r = payload_cog_offset_xy_radius * sqrt(u) (sqrt = area-uniform correction). Curriculum starts at u=0 (no XY offset) and widens to u=1 (full r_max). The physical r_max (payload_cog_offset_xy_radius=0.08) is a fixed constant; only u is randomized. |
+| 16 | ocean_current_strength | `ocean_current_strength_range` | (0.0, 1.0) | (0.0, 1.0) \* | **0.0 (override)** | Scalar [0,1] multiplier on `ocean_current.max_velocity`. Curriculum starts at 0 (no current) and expands as the policy masters easier variants. |
 
 \* `HardDomainRandomizationCfg` does **not** override `water_density` or
 `ocean_current_strength`; for those two, hard == soft.
 
-`NDIMS = 16` (`envs/main/doraemon.py`). `ocean_current_strength` was added in r13,
+`NDIMS = 17` (`envs/main/doraemon.py`). `ocean_current_strength` was added in r13,
 which is why a stale comment in the `HardDR` docstring (`config.py:187`) still says
-"15 parameters" — that comment is wrong; the real count is 16.
+"15 parameters" — that comment is wrong; the real count is 17.
 
 ### Block B — Uniform-only (in `DomainRandomizationCfg`, *not* in `_PARAM_DEFS`)
 
@@ -123,7 +128,7 @@ curriculum (no Beta, no widening). Nominal is n/a.
 
 | name | SOFT | HARD | meaning |
 |:---|:---|:---|:---|
-| payload_cog_offset_xy_radius | 0.10 | 0.08 | disk radius for payload-CoG XY offset sampling |
+| payload_cog_offset_xy_radius | 0.08 | 0.08 | physical r_max constant; the XY offset radius is now DORAEMON-managed via payload_cog_offset_xy_u (Block A #15) as r = r_max * sqrt(u). This scalar only sets the ceiling. |
 | payload_cog_offset_z | (see Block A) | | |
 
 ### Fault injection (`FaultInjectionCfg`, off by default)
@@ -137,7 +142,7 @@ but through a distinct mechanism (see §5).
 
 ## 3. The Beta Distribution: Per-Parameter Curriculum State
 
-The curriculum state is **16 independent Beta distributions**, one per parameter,
+The curriculum state is **17 independent Beta distributions**, one per parameter,
 each defined over that parameter's physical `[lo, hi]` interval (stored as
 `_mins` / `_maxs` / `_ranges` inside `BetaDistribution`, `doraemon.py:115`). A
 "harder" curriculum = wider Betas = more entropy.
@@ -171,7 +176,7 @@ operates on the **unit** Betas only (the `log(range)` term cancels).
 measured on the *physical* scale (`doraemon.py:173`):
 
 $$
-H(\phi) = \sum_{i=1}^{16}\Big(H_{\mathrm{Beta}}(a_i,b_i) + \log(\text{hi}_i-\text{lo}_i)\Big)
+H(\phi) = \sum_{i=1}^{17}\Big(H_{\mathrm{Beta}}(a_i,b_i) + \log(\text{hi}_i-\text{lo}_i)\Big)
 $$
 
 This is the objective DORAEMON maximizes (§4).
@@ -285,7 +290,7 @@ $g(\phi) = \varepsilon - \mathrm{KL} \ge 0$ (`doraemon.py:551`; helper
 
 $$
 \mathrm{KL}(\phi\,\|\,\phi_{\text{prev}})
-= \sum_{i=1}^{16}\mathrm{KL}\!\Big(\mathrm{Beta}(a_i,b_i)\,\big\|\,\mathrm{Beta}(a_i^{\text{prev}},b_i^{\text{prev}})\Big)\le\varepsilon
+= \sum_{i=1}^{17}\mathrm{KL}\!\Big(\mathrm{Beta}(a_i,b_i)\,\big\|\,\mathrm{Beta}(a_i^{\text{prev}},b_i^{\text{prev}})\Big)\le\varepsilon
 $$
 
 **IS success-rate estimate (unnormalized).** Success is binary
@@ -369,8 +374,10 @@ after CoB/CoG offsets. When `enable = False` the randomizers early-return
 ### Payload
 
 Payload mass is absolute; the CoG XY offset is sampled on a disk of radius
-`payload_cog_offset_xy_radius` via `r = r_max * sqrt(U)` (uniform-over-area).
-`_apply_xyz_offset_with_doraemon` (`events.py:63`) and
+`payload_cog_offset_xy_radius` via `r = r_max * sqrt(u)` (area-uniform
+correction). `u` is now the DORAEMON-managed `payload_cog_offset_xy_u` dim
+(Block A #15), not a uniform `torch.rand` draw — only `r_max` is a fixed
+scalar (Block C). `_apply_xyz_offset_with_doraemon` (`events.py:63`) and
 `_clamp_payload_cog_stability` (`events.py:88`) enforce static stability.
 
 > **Payload toggle is off by default.** `_setup_payload_toggle` returns early
@@ -558,7 +565,7 @@ trap and the correcting fact with its anchor.
 
 6. **`_PARAM_DEFS` literal bounds are fallback-only.** `build_param_specs` reads
    live bounds from `config.py` via `getattr` — `config.py` is the range SSOT.
-   `NDIMS = 16` despite the "15 parameters" comment at `config.py:187`.
+   `NDIMS = 17` despite the "15 parameters" comment at `config.py:187`.
 
 7. **An update can be silently no-op'd three distinct ways** (SLSQP reject /
    `mode = -3` inverted-failure revert / ESS revert) that all leave the
@@ -591,7 +598,7 @@ trap and the correcting fact with its anchor.
 | `BetaDistribution` | `doraemon.py:115` |
 | `build_param_specs` | `doraemon.py:65` |
 | `CurriculumReplayer` | `doraemon.py:814` |
-| 16 param defs / overrides | `constrained_albc/envs/main/doraemon.py:41`, `:66` |
+| 17 param defs / overrides | `constrained_albc/envs/main/doraemon.py:41`, `:66` |
 | DR ranges (soft/hard) | `constrained_albc/envs/main/config.py:133`, `:184` |
 | **Live `DoraemonCfg` override** | `config.py:479` |
 | Reset-time application | `envs/main/mdp/events.py:46`, `:88`, `:144`, `:214` |
