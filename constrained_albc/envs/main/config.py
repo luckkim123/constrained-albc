@@ -132,57 +132,12 @@ class ALBCThrusterCfg(ThrusterCfg):
 
 @configclass
 class DomainRandomizationCfg:
-    """Configuration for domain randomization in ALBC environments."""
+    """Aggressive DR for encoder training (formerly HardDomainRandomizationCfg).
 
-    enable: bool = False
-
-    # -- Hydrodynamic Parameter Scales --
-    added_mass_scale: tuple[float, float] = (0.85, 1.15)
-    linear_damping_scale: tuple[float, float] = (0.5, 1.5)
-    quadratic_damping_scale: tuple[float, float] = (0.5, 1.5)
-    volume_scale: tuple[float, float] = (0.9, 1.1)
-
-    # -- Center of Buoyancy/Gravity Offset (meters) --
-    cob_offset_x: tuple[float, float] = (-0.01, 0.01)
-    cob_offset_y: tuple[float, float] = (-0.01, 0.01)
-    cob_offset_z: tuple[float, float] = (-0.02, 0.02)
-    cog_offset_x: tuple[float, float] = (-0.01, 0.01)
-    cog_offset_y: tuple[float, float] = (-0.01, 0.01)
-    cog_offset_z: tuple[float, float] = (-0.02, 0.02)
-
-    # -- Inertia / Mass --
-    inertia_scale: tuple[float, float] = (0.75, 1.3)
-    body_mass_scale: tuple[float, float] = (0.9, 1.1)
-    water_density_range: tuple[float, float] = (995.0, 1025.0)
-
-    # -- Joint Actuator --
-    joint_stiffness_range: tuple[float, float] = (40.0, 120.0)
-    joint_damping_range: tuple[float, float] = (0.5, 5.0)
-    yaw_damping_scale: tuple[float, float] = (0.5, 1.5)
-    joint_effort_limit_range: tuple[float, float] = (0.7, 1.0)
-    joint_static_friction_range: tuple[float, float] = (0.0, 0.03)
-    joint_viscous_friction_range: tuple[float, float] = (0.0, 0.2)
-
-    # -- Payload --
-    payload_mass_range: tuple[float, float] = (0.0, 1.0)
-    payload_cog_offset_xy_radius: float = 0.10
-    payload_cog_offset_z: tuple[float, float] = (-0.03, 0.0)
-    buoy_moment_arm: float = 0.180
-
-    # -- Thruster --
-    thrust_coefficient_scale: tuple[float, float] = (0.8, 1.2)
-    time_constant_scale: tuple[float, float] = (0.8, 1.2)
-
-    # -- Ocean Current (DORAEMON-managed) --
-    # Scalar strength [0, 1] multiplier on ocean_current.max_velocity.
-    # DORAEMON nominal=0 (no current at curriculum start) -> expands as policy
-    # masters easier variants. Bounds mirrored in HardDomainRandomizationCfg.
-    ocean_current_strength_range: tuple[float, float] = (0.0, 1.0)
-
-
-@configclass
-class HardDomainRandomizationCfg(DomainRandomizationCfg):
-    """Aggressive DR for encoder training. Widens all ranges significantly.
+    Merged 2026-07-07: the former base DomainRandomizationCfg (easy ranges, never
+    instantiated on any training/student path) and HardDomainRandomizationCfg were
+    collapsed into this single class. It now holds the Hard (training) values
+    directly; training DR ranges are byte-identical to the prior Hard class.
 
     Expanded 2026-04-10: DORAEMON saturated all 15 parameters at Beta(1,1)=UNIFORM
     in run 2026-04-09_16-41-45. All bounds widened by ~30-50% beyond prior limits.
@@ -191,18 +146,35 @@ class HardDomainRandomizationCfg(DomainRandomizationCfg):
     """
 
     enable: bool = True
+
+    # -- Hydrodynamic Parameter Scales --
     added_mass_scale: tuple[float, float] = (0.5, 1.5)
     linear_damping_scale: tuple[float, float] = (0.4, 1.7)
     quadratic_damping_scale: tuple[float, float] = (0.4, 1.7)
     volume_scale: tuple[float, float] = (0.75, 1.25)
+
+    # -- Center of Buoyancy/Gravity Offset (meters) --
     cob_offset_x: tuple[float, float] = (-0.02, 0.02)
     cob_offset_y: tuple[float, float] = (-0.02, 0.02)
     cob_offset_z: tuple[float, float] = (-0.04, 0.04)
     cog_offset_x: tuple[float, float] = (-0.02, 0.02)
     cog_offset_y: tuple[float, float] = (-0.02, 0.02)
     cog_offset_z: tuple[float, float] = (-0.04, 0.04)
+
+    # -- Inertia / Mass --
     inertia_scale: tuple[float, float] = (0.4, 2.0)
     body_mass_scale: tuple[float, float] = (0.75, 1.25)
+    water_density_range: tuple[float, float] = (995.0, 1025.0)
+
+    # -- Joint Actuator --
+    joint_stiffness_range: tuple[float, float] = (30.0, 150.0)
+    joint_damping_range: tuple[float, float] = (0.3, 7.0)
+    yaw_damping_scale: tuple[float, float] = (0.5, 1.5)
+    joint_effort_limit_range: tuple[float, float] = (0.7, 1.0)
+    joint_static_friction_range: tuple[float, float] = (0.0, 0.03)
+    joint_viscous_friction_range: tuple[float, float] = (0.0, 0.2)
+
+    # -- Payload --
     payload_mass_range: tuple[float, float] = (0.0, 3.0)
     # Reduced 2026-04-19 from 0.15 -> 0.08: outlier-env analysis of r9_tightrates
     # (eval_dr hard) showed 3 kg payload at 0.15 m offset generates ~4.5 Nm
@@ -212,12 +184,17 @@ class HardDomainRandomizationCfg(DomainRandomizationCfg):
     # can still stabilize within authority while keeping pitch/yaw challenge.
     payload_cog_offset_xy_radius: float = 0.08
     payload_cog_offset_z: tuple[float, float] = (-0.05, 0.0)
-    # -- Joint Actuator --
-    joint_stiffness_range: tuple[float, float] = (30.0, 150.0)
-    joint_damping_range: tuple[float, float] = (0.3, 7.0)
+    buoy_moment_arm: float = 0.180
+
     # -- Thruster --
     thrust_coefficient_scale: tuple[float, float] = (0.7, 1.3)
     time_constant_scale: tuple[float, float] = (0.7, 1.3)
+
+    # -- Ocean Current (DORAEMON-managed) --
+    # Scalar strength [0, 1] multiplier on ocean_current.max_velocity.
+    # DORAEMON nominal=0 (no current at curriculum start) -> expands as policy
+    # masters easier variants.
+    ocean_current_strength_range: tuple[float, float] = (0.0, 1.0)
 
 
 # ==========================================================================
@@ -457,7 +434,7 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # ==========================================================================
     # Domain Randomization
     # ==========================================================================
-    randomization: HardDomainRandomizationCfg = HardDomainRandomizationCfg()
+    randomization: DomainRandomizationCfg = DomainRandomizationCfg()
 
     # ==========================================================================
     # Fault Injection (off by default; FTC infrastructure, see FaultInjectionCfg)

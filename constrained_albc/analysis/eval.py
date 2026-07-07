@@ -94,7 +94,7 @@ sp_static.add_argument(
     action=argparse.BooleanOptionalAction,
     default=True,
     help="Use DORAEMON-learned DR (mean +/- 2*std) as hard level. Default: auto-load from run dir. "
-         "Use --no-doraemon-dr to fall back to HardDomainRandomizationCfg.",
+         "Use --no-doraemon-dr to fall back to the static hard DomainRandomizationCfg.",
 )
 sp_static.add_argument(
     "--doraemon-dr-from",
@@ -297,7 +297,6 @@ import isaaclab_tasks  # noqa: F401
 from constrained_albc.envs.main.algorithms import ConstraintTRPO
 from constrained_albc.envs.main.config import (
     DomainRandomizationCfg,
-    HardDomainRandomizationCfg,
 )
 from constrained_albc.envs.main.encoder import ActorCriticEncoder
 from constrained_albc.envs.main.mdp import (
@@ -394,10 +393,10 @@ def _plot_dr_distributions(
     doraemon_raw: dict[str, tuple[float, float]],
     output_dir: str,
 ) -> None:
-    """Visualize DR ranges per level, normalized to HardDomainRandomizationCfg.
+    """Visualize DR ranges per level, normalized to the hard DomainRandomizationCfg.
 
     Each row is one DR parameter; each row contains 4 horizontal bars (one per
-    DR level) showing the [lo, hi] range. The HardDomainRandomizationCfg range
+    DR level) showing the [lo, hi] range. The hard DomainRandomizationCfg range
     is the gray background and is normalized to [0, 1]. When DORAEMON state was
     loaded, the learned mean +/- 2*std is overlaid as a black star with caps.
     """
@@ -408,7 +407,7 @@ def _plot_dr_distributions(
     if n_params == 0 or n_levels == 0:
         return
 
-    hard = HardDomainRandomizationCfg()
+    hard = DomainRandomizationCfg()
     fig, ax = plt.subplots(figsize=(11, max(8.0, n_params * 0.45)))
 
     y_pos = np.arange(n_params, dtype=float)
@@ -477,7 +476,7 @@ def _plot_dr_distributions(
     ax.set_yticks(y_pos)
     ax.set_yticklabels(fields, fontsize=8)
     ax.set_xlabel(
-        "Normalized to HardDomainRandomizationCfg range  [0 = HardDR low, 1 = HardDR high]",
+        "Normalized to DomainRandomizationCfg range  [0 = HardDR low, 1 = HardDR high]",
         fontsize=10,
     )
     title = "DR Distribution per Level (normalized to HardDR range)"
@@ -1043,7 +1042,7 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     # ---- DORAEMON DR override ----
     # Default behavior: auto-load DORAEMON-learned distribution from the run dir
     # and use it as the hard-DR anchor. Use --no-doraemon-dr to fall back to
-    # HardDomainRandomizationCfg (the static training-time physics ranges).
+    # the static hard DomainRandomizationCfg (the training-time physics ranges).
     #
     # --doraemon-dr-from=<path> overrides the auto-load path with an explicit
     # run dir. This is used to evaluate every ablation variant on a common test
@@ -1073,9 +1072,9 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
             _dr_config_module._DORAEMON_RAW = raw
             print("[INFO] Hard DR = DORAEMON-learned distribution (mean +/- 2*std).\n")
         else:
-            print("[INFO] No DORAEMON state found in run dir. Falling back to HardDomainRandomizationCfg.\n")
+            print("[INFO] No DORAEMON state found in run dir. Falling back to the static hard DomainRandomizationCfg.\n")
     else:
-        print("\n[INFO] DORAEMON-DR disabled. Hard DR = HardDomainRandomizationCfg (static).\n")
+        print("\n[INFO] DORAEMON-DR disabled. Hard DR = static DomainRandomizationCfg.\n")
 
     # ---- Create env (initial DR = none) ----
     apply_dr_config(env_cfg, DR_SCALE["none"])
@@ -1540,7 +1539,7 @@ def run_periodic(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     env_cfg.episode_length_s = args_cli.step_duration * args_cli.num_steps + 10.0
 
     # Start with hard DR (will be re-randomized each step)
-    env_cfg.randomization = HardDomainRandomizationCfg()
+    env_cfg.randomization = DomainRandomizationCfg()
     env_cfg.randomization.enable = True
 
     # ---- Load checkpoint ----
@@ -1595,9 +1594,9 @@ def run_periodic(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
             _dr_config_module._DORAEMON_FULL_DR = cfg
             print("[INFO] Hard DR = DORAEMON-learned distribution (mean +/- 2*std).\n")
         else:
-            print("[INFO] No DORAEMON state found. Falling back to HardDomainRandomizationCfg.\n")
+            print("[INFO] No DORAEMON state found. Falling back to the static hard DomainRandomizationCfg.\n")
     else:
-        print("\n[INFO] DORAEMON-DR disabled. Hard DR = HardDomainRandomizationCfg (static).\n")
+        print("\n[INFO] DORAEMON-DR disabled. Hard DR = static DomainRandomizationCfg.\n")
 
     # ---- Create env ----
     env = gym.make(args_cli.task, cfg=env_cfg)
@@ -1977,7 +1976,7 @@ def run_segmented(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
             _dr_config_module._DORAEMON_RAW = raw
             print("[INFO] Hard DR = DORAEMON-learned distribution")
         else:
-            print("[INFO] No DORAEMON state; using static HardDomainRandomizationCfg")
+            print("[INFO] No DORAEMON state; using static DomainRandomizationCfg (hard)")
 
     # Create env (initial DR scale set per-level below)
     apply_dr_config(env_cfg, DR_SCALE["none"])

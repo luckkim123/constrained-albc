@@ -33,7 +33,7 @@ _RAW = {
     # a non-offset DORAEMON field that must NOT be treated as a magnitude axis
     "added_mass_scale": (1.4, 0.05),
 }
-# Fixed training ranges for held-out axes (from HardDomainRandomizationCfg).
+# Fixed training ranges for held-out axes (from the hard DomainRandomizationCfg).
 _HARD = {
     "thrust_coefficient_scale": (0.7, 1.3),
     "time_constant_scale": (0.7, 1.3),

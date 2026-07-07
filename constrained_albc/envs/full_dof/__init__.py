@@ -24,7 +24,6 @@ from .albc_env import ALBCEnv
 from .config import (
     ALBCEnvCfg,
     DomainRandomizationCfg,
-    HardDomainRandomizationCfg,
 )
 
 ##

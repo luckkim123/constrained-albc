@@ -56,7 +56,7 @@ def compute_ood_bounds(
         doraemon_raw: field -> (mean, std) from load_doraemon_dr's raw return.
             Only the magnitude (cog/cob offset) axes present here are used.
         hard_ranges: field -> (lo, hi) fixed training ranges for the held-out
-            (thruster) axes, read from HardDomainRandomizationCfg.
+            (thruster) axes, read from the hard DomainRandomizationCfg.
 
     Returns:
         field -> (lo, hi) for every OOD-overridden axis. Magnitude axes are

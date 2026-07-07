@@ -26,7 +26,6 @@ import os
 
 from constrained_albc.envs.main.config import (  # type: ignore[import-not-found]
     DomainRandomizationCfg,
-    HardDomainRandomizationCfg,
 )
 from constrained_albc.envs.main.doraemon import (  # type: ignore[import-not-found]
     _NOMINAL_OVERRIDES,
@@ -100,8 +99,10 @@ _DR_FLOAT_FIELDS = [
 # True physics-nominal values for the scale=0 ("none") DR anchor.
 # Scale fields -> 1.0 (no modification), offset fields -> 0.0 (centered),
 # payload -> 0.0 (no payload), water -> 1000.0 (pure water).
-# Joint actuator and buoy_moment_arm are asset-specific: omitted here so they
-# fall back to the base cfg midpoint (preserves prior behavior).
+# Joint actuator nominals are sim actual values (stiffness=100, damping=3), so this
+# dict is now the single SSOT for every interpolated tuple field. Only buoy_moment_arm
+# (a float) is omitted: it is asset-specific and its base default equals the nominal,
+# so it stays a no-op in the _DR_FLOAT_FIELDS loop.
 _TRUE_NOMINAL_PHYSICS: dict[str, float] = {
     # Scale fields
     "added_mass_scale": 1.0,
@@ -132,6 +133,12 @@ _TRUE_NOMINAL_PHYSICS: dict[str, float] = {
     # r13: ocean current strength tuple collapses to (0, 0) at nominal -> no current.
     # HardDR full range = (0, 1). Linear interpolation yields per-level strength range.
     "ocean_current_strength_range": 0.0,
+    # Joint actuator nominal = sim actual values (marinelab albc.py:198-199
+    # stiffness=100 damping=3), validated by onboard step-response (zeta~0.7 match).
+    # NOT the base range midpoint (was 80/2.75) -- that was an arithmetic midpoint,
+    # not a physics-true value.
+    "joint_stiffness_range": 100.0,
+    "joint_damping_range": 3.0,
 }
 
 
@@ -186,7 +193,7 @@ def load_doraemon_dr(run_dir: str) -> tuple[DomainRandomizationCfg | None, dict[
 
     Reads final mean/std from TensorBoard logs. Hard DR range = mean +/- 2*std,
     clamped to PARAM_SPEC bounds. Non-DORAEMON parameters (joint actuator,
-    thruster) start from HardDomainRandomizationCfg so the eval matches the
+    thruster) start from the hard DomainRandomizationCfg so the eval matches the
     physics ranges actually seen during training.
 
     Returns:
@@ -210,13 +217,13 @@ def load_doraemon_dr(run_dir: str) -> tuple[DomainRandomizationCfg | None, dict[
     if not any(t.startswith("DORAEMON/mean/") for t in all_tags):
         return None, {}
 
-    # Hard DR is the runtime physics range used during training; use it as the
-    # base config so non-DORAEMON fields (joint, thruster) match training.
-    cfg = HardDomainRandomizationCfg()
+    # DomainRandomizationCfg holds the runtime (training) physics range; use it as
+    # the base config so non-DORAEMON fields (joint, thruster) match training.
+    cfg = DomainRandomizationCfg()
     cfg.enable = True
 
     # CRITICAL: imported PARAM_SPECS uses base DomainRandomizationCfg bounds, but
-    # the runtime DORAEMON scheduler builds its specs from HardDomainRandomizationCfg
+    # the runtime DORAEMON scheduler builds its specs from the hard DomainRandomizationCfg
     # via build_param_specs(). Using the hardcoded PARAM_SPECS would clamp the
     # learned mean +/- 2*std into the much narrower base DR range, falsely shrinking
     # the hard-DR anchor. Use HardDR-derived specs to match the actual training bounds.
@@ -251,7 +258,7 @@ def load_doraemon_dr(run_dir: str) -> tuple[DomainRandomizationCfg | None, dict[
 
 
 def get_hard_dr_config() -> DomainRandomizationCfg:
-    """Get the hard DR config (DORAEMON if loaded, otherwise HardDomainRandomizationCfg).
+    """Get the hard DR config (DORAEMON if loaded, otherwise the static hard DomainRandomizationCfg).
 
     Returns a deep copy so callers can mutate it freely. The DORAEMON branch would
     otherwise hand out the shared module-global _DORAEMON_FULL_DR by reference:
@@ -261,7 +268,7 @@ def get_hard_dr_config() -> DomainRandomizationCfg:
     read OOD values for the hard level (visible as the hard bar exceeding the [0,1]
     HardDR band in summary_drdist.png).
     """
-    base = _DORAEMON_FULL_DR if _DORAEMON_FULL_DR is not None else HardDomainRandomizationCfg()
+    base = _DORAEMON_FULL_DR if _DORAEMON_FULL_DR is not None else DomainRandomizationCfg()
     cfg = copy.deepcopy(base)
     cfg.enable = True
     return cfg
@@ -300,7 +307,7 @@ def build_dr_config(scale: float) -> DomainRandomizationCfg:
 
     Hard anchor priority:
         1. _DORAEMON_FULL_DR (DORAEMON-learned distribution, if loaded)
-        2. HardDomainRandomizationCfg (matches training-time physics ranges)
+        2. the hard DomainRandomizationCfg (matches training-time physics ranges)
 
     Note: previously the fallback was the base DomainRandomizationCfg, which
     is far narrower than the actual training DR. That caused all four levels
@@ -312,7 +319,7 @@ def build_dr_config(scale: float) -> DomainRandomizationCfg:
         nominal.enable = True
         return nominal
 
-    full: DomainRandomizationCfg = _DORAEMON_FULL_DR if _DORAEMON_FULL_DR is not None else HardDomainRandomizationCfg()
+    full: DomainRandomizationCfg = _DORAEMON_FULL_DR if _DORAEMON_FULL_DR is not None else DomainRandomizationCfg()
     # Allow scale > 1.0 for OOD eval (extrapolate bounds beyond training distribution).
     f = scale
 

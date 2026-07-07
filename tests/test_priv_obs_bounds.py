@@ -10,7 +10,7 @@ torch/Isaac through utils/logging.py). DR/thruster/hydro inputs are lightweight
 stand-in objects carrying only the attributes the function reads, so the test
 never touches Isaac Sim or marinelab.
 
-A separate test exercises the real HardDomainRandomizationCfg inheritance path
+A separate test exercises the real (hard) DomainRandomizationCfg inheritance path
 but is skipped automatically if importing that cfg boots Isaac Sim.
 
 Spec: docs/plans/2026-06-30-dr-derived-priv-obs-normalization-bounds.md (section 3 table).
@@ -42,12 +42,12 @@ derive = priv_obs_bounds.derive_priv_obs_bounds_from_dr
 
 # ---------------------------------------------------------------------------
 # Lightweight stand-in cfgs (only the attributes the function reads).
-# Values mirror HardDomainRandomizationCfg + ALBCHydrodynamicsCfg + ALBCThrusterCfg.
+# Values mirror the hard DomainRandomizationCfg + ALBCHydrodynamicsCfg + ALBCThrusterCfg.
 # ---------------------------------------------------------------------------
 
 
 def _hard_dr():
-    """Stand-in HardDomainRandomizationCfg instance (Isaac-free)."""
+    """Stand-in hard DomainRandomizationCfg instance (Isaac-free)."""
     return types.SimpleNamespace(
         volume_scale=(0.75, 1.25),
         cog_offset_x=(-0.02, 0.02),
@@ -223,15 +223,16 @@ def test_subset_assertion_raises_when_dr_out_of_range():
 
 
 def test_inherited_dr_fields_resolve_on_real_hard_cfg():
-    """Real HardDomainRandomizationCfg: inherited water_density / ocean strength
-    must resolve via getattr. Skipped if importing the cfg boots Isaac Sim."""
+    """Real DomainRandomizationCfg: water_density / ocean strength must resolve via
+    getattr. These were formerly base-only (inherited); after the 2026-07-07 base+Hard
+    merge they live directly in the class. Skipped if importing the cfg boots Isaac Sim."""
     try:
-        from constrained_albc.envs.main.config import HardDomainRandomizationCfg
+        from constrained_albc.envs.main.config import DomainRandomizationCfg
     except Exception as exc:  # pragma: no cover - environment dependent
         pytest.skip(f"cfg import requires Isaac Sim: {exc}")
 
-    hard = HardDomainRandomizationCfg()
-    # getattr must resolve inherited fields not redeclared in Hard.
+    hard = DomainRandomizationCfg()
+    # getattr must resolve the formerly-inherited fields (now declared in-class).
     assert getattr(hard, "water_density_range") == pytest.approx((995.0, 1025.0))
     assert getattr(hard, "ocean_current_strength_range") == pytest.approx((0.0, 1.0))
 

@@ -54,7 +54,7 @@ def derive_priv_obs_bounds_from_dr(
     source.
 
     Args:
-        dr_cfg: DR config INSTANCE (e.g. ``HardDomainRandomizationCfg()``).
+        dr_cfg: DR config INSTANCE (e.g. ``DomainRandomizationCfg()``, the hard config).
             Fields are read via ``getattr`` so inherited fields
             (``water_density_range``, ``ocean_current_strength_range``) resolve
             through Python inheritance even though Hard does not redeclare them.

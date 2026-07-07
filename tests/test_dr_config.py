@@ -34,10 +34,10 @@ def test_build_dr_config_none_is_nominal():
 
 
 def test_build_dr_config_scale_one_matches_hard_dr():
-    """scale=1.0 (no DORAEMON loaded) -> fields match HardDomainRandomizationCfg."""
-    from constrained_albc.envs.main.config import HardDomainRandomizationCfg
+    """scale=1.0 (no DORAEMON loaded) -> fields match the hard DomainRandomizationCfg."""
+    from constrained_albc.envs.main.config import DomainRandomizationCfg
 
-    hard = HardDomainRandomizationCfg()
+    hard = DomainRandomizationCfg()
     cfg = dr_config.build_dr_config(1.0)
     # payload_mass_range should match hard DR at scale=1.0
     assert cfg.payload_mass_range == pytest.approx(hard.payload_mass_range)
@@ -61,12 +61,12 @@ def test_get_hard_dr_config_returns_independent_copy():
     anchor every later caller reads. Two calls must return distinct objects, and
     mutating one must not touch the global.
     """
-    from constrained_albc.envs.main.config import HardDomainRandomizationCfg
+    from constrained_albc.envs.main.config import DomainRandomizationCfg
 
     # Simulate a loaded DORAEMON distribution (the leak only bites when it's set).
     saved = dr_config._DORAEMON_FULL_DR
     try:
-        full = HardDomainRandomizationCfg()
+        full = DomainRandomizationCfg()
         full.cob_offset_x = (-0.0181, 0.0181)  # the clean hard anchor
         dr_config._DORAEMON_FULL_DR = full
 
@@ -91,12 +91,12 @@ def test_build_ood_dr_config_does_not_corrupt_hard_anchor():
     (build_dr_config(1.0)) must still see the clean DORAEMON cob/cog, NOT the
     1.5x-widened OOD magnitude bounds.
     """
-    from constrained_albc.envs.main.config import HardDomainRandomizationCfg
+    from constrained_albc.envs.main.config import DomainRandomizationCfg
 
     saved_full = dr_config._DORAEMON_FULL_DR
     saved_raw = dr_config._DORAEMON_RAW
     try:
-        full = HardDomainRandomizationCfg()
+        full = DomainRandomizationCfg()
         full.cob_offset_x = (-0.0181, 0.0181)
         dr_config._DORAEMON_FULL_DR = full
         # raw drives the OOD magnitude ceiling (mean + 2*std) * 1.5.

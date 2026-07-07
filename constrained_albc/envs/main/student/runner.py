@@ -35,11 +35,11 @@ except ImportError:
 
 
 def configure_env_for_student(env) -> None:
-    """Disable DORAEMON and force HardDR on the env before learning starts.
+    """Disable DORAEMON and force static hard DR on the env before learning starts.
 
-    Student training uses r13_A-era HardDomainRandomizationCfg uniformly and
-    disables DORAEMON's Beta curriculum so the teacher is never queried outside
-    the DR region it was trained on.
+    Student training uses the r13_A-era DomainRandomizationCfg (hard training
+    ranges) uniformly and disables DORAEMON's Beta curriculum so the teacher is
+    never queried outside the DR region it was trained on.
     """
     env_cfg = env.unwrapped.cfg
     doraemon_cfg = getattr(env_cfg, "doraemon", None)
@@ -47,11 +47,11 @@ def configure_env_for_student(env) -> None:
         doraemon_cfg.enable = False
         logger.info("[Student] DORAEMON disabled for supervised training.")
 
-    # Replace randomization cfg with HardDomainRandomizationCfg instance
-    from constrained_albc.envs.main.config import HardDomainRandomizationCfg
-    hard = HardDomainRandomizationCfg()
+    # Replace randomization cfg with a fresh DomainRandomizationCfg instance
+    from constrained_albc.envs.main.config import DomainRandomizationCfg
+    hard = DomainRandomizationCfg()
     env_cfg.randomization = hard
-    logger.info("[Student] Randomization forced to HardDomainRandomizationCfg.")
+    logger.info("[Student] Randomization forced to static hard DomainRandomizationCfg.")
 
     # Re-initialize env internals that cache randomization ranges.
     if hasattr(env.unwrapped, "_reload_randomization"):
