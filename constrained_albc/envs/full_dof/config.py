@@ -213,7 +213,7 @@ class DomainRandomizationCfg:
     # masters easier variants.
     ocean_current_strength_range: tuple[float, float] = (0.0, 1.0)
     # Observation-noise curriculum scale as a NORMALIZED knob u in [0, 1], managed by
-    # DORAEMON. _get_observations multiplies the 69D _OBS_NOISE_STD by this per-env scale
+    # DORAEMON. _get_observations multiplies the 87D _OBS_NOISE_STD by this per-env scale
     # and adds it as an EXTRA white-noise layer on top of the always-on noise_model.
     # Nominal u=0 -> no extra noise (byte-identical to today); u=1 -> +1x _OBS_NOISE_STD
     # (total std sqrt(2)x today). std only; the per-episode bias stays the static model.

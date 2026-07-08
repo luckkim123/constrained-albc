@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   [0,1] scale on the per-tree observation-noise std (69D main / 87D full_dof), applied as an
   extra white-noise layer in `_get_observations`. nominal=0 (byte-identical to today), widening
   to +1x std. std only; per-episode bias unchanged. Not in privileged obs (pure robustness;
-  state_space stays 27). Off by default (byte-identical when DORAEMON disabled). Both env trees
+  state_space unchanged: 27 main / 24 full_dof). Off by default (byte-identical when DORAEMON disabled). Both env trees
   (main + full_dof); full_dof gained a byte-identical port of `mdp/faults.py`
   (`apply_sensor_noise`) from main, since full_dof previously had no fault layer.
 
