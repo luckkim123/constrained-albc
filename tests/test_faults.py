@@ -73,6 +73,40 @@ def test_apply_sensor_noise_does_not_mutate_input():
     assert torch.equal(obs, obs_ref)
 
 
+def test_two_stacked_sensor_noise_layers_none_is_identity():
+    """Fault layer + DR layer, both off (scale None) -> obs byte-identical."""
+    torch.manual_seed(0)
+    obs = torch.randn(8, 69)
+    base = torch.ones(69)
+    out = faults.apply_sensor_noise(obs, None, base_std=base)   # fault layer off
+    out = faults.apply_sensor_noise(out, None, base_std=base)   # DR layer off
+    assert torch.equal(out, obs)  # same object, unchanged
+
+
+def test_dr_layer_off_preserves_fault_layer():
+    """DR layer off must not perturb an active fault layer's output."""
+    torch.manual_seed(0)
+    obs = torch.randn(4, 69)
+    base = torch.ones(69)
+    fault_scale = torch.full((4,), 0.5)
+    fault_noise = torch.randn(4, 69)
+    after_fault = faults.apply_sensor_noise(obs, fault_scale, base_std=base, noise=fault_noise)
+    after_dr = faults.apply_sensor_noise(after_fault, None, base_std=base)  # DR off
+    assert torch.equal(after_dr, after_fault)
+
+
+def test_dr_layer_adds_scaled_noise_on_top():
+    """DR layer on: adds dr_scale[:,None]*noise*base_std to whatever came before."""
+    torch.manual_seed(0)
+    obs = torch.zeros(4, 69)
+    base = torch.full((69,), 2.0)
+    dr_scale = torch.full((4,), 0.5)
+    dr_noise = torch.ones(4, 69)
+    out = faults.apply_sensor_noise(obs, dr_scale, base_std=base, noise=dr_noise)
+    # 0 + 0.5 * 1.0 * 2.0 = 1.0 per element
+    assert torch.allclose(out, torch.ones(4, 69))
+
+
 # ---- 2. thruster health sampling ---------------------------------------------
 
 
