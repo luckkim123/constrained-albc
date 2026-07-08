@@ -58,6 +58,7 @@ _DORAEMON_TO_DR_FIELD: dict[str, str] = {
     "payload_mass": "payload_mass_range",
     "water_density": "water_density_range",
     "payload_cog_offset_xy_u": "payload_cog_offset_xy_u_range",
+    "obs_noise_scale": "obs_noise_scale_range",
 }
 
 # All tuple fields in DomainRandomizationCfg that should be interpolated.
@@ -93,6 +94,10 @@ _DR_TUPLE_FIELDS = [
     # also scale this range with DR level so none/soft/medium/hard match the
     # training curriculum. Nominal=(0,0) (no XY offset), hard=(0,1) (full radius).
     "payload_cog_offset_xy_u_range",
+    # obs-noise curriculum scale is DORAEMON-managed during training. Eval must also
+    # scale this range with DR level so none/soft/medium/hard match the training
+    # curriculum. Nominal=(0,0) (no extra noise), hard=(0,1) (+1x _OBS_NOISE_STD).
+    "obs_noise_scale_range",
 ]
 
 _DR_FLOAT_FIELDS = [
@@ -146,6 +151,8 @@ _TRUE_NOMINAL_PHYSICS: dict[str, float] = {
     "joint_damping_range": 3.0,
     # payload XY radius quantile: nominal u=0 -> range collapses to (0, 0) = no XY offset.
     "payload_cog_offset_xy_u_range": 0.0,
+    # obs-noise scale: nominal u=0 -> range collapses to (0,0) = no extra noise.
+    "obs_noise_scale_range": 0.0,
 }
 
 
