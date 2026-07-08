@@ -11,10 +11,14 @@ NUMERICAL core lives here as pure torch functions so it is unit-testable on plai
 (no sim, no GPU): the env (albc_env.py) only decides WHEN to call them and WHERE to
 write the resulting buffers.
 
-Three faults (see FaultInjectionCfg):
+Three faults (see FaultInjectionCfg in main/config.py, where the full fault contract lives):
     thruster health [N,6]  -- per-thruster, applied inside the marinelab ThrusterModel
     sensor noise    [N]    -- per-env extra obs-noise scale, applied in _get_observations
     joint health    [N]    -- per-env effort-limit scale, applied at reset
+
+Ported verbatim from main/mdp/faults.py for the DORAEMON obs-noise DR layer. In this
+full_dof tree only apply_sensor_noise is currently wired up (albc_env.py); the other
+functions are kept for parity with main.
 
 Toggle-off contract: every apply_* function returns its input UNCHANGED when the fault
 buffer is None, so a fault-disabled env is byte-identical to the fault-free env.
