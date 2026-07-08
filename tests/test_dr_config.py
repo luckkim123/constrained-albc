@@ -136,3 +136,12 @@ def test_payload_cog_offset_xy_u_range_sweeps_with_dr_level():
     # Hard (scale=1.0): should reach toward (0,1) -- full radius sweep
     assert lo1 == pytest.approx(0.0)
     assert hi1 > 0.9
+
+
+def test_obs_noise_scale_range_sweeps_with_dr_level():
+    """obs_noise_scale_range is DORAEMON-managed; eval must sweep it 0->1 by DR level."""
+    from constrained_albc.analysis import dr_config
+    lo0, hi0 = dr_config.build_dr_config(0.0).obs_noise_scale_range
+    lo1, hi1 = dr_config.build_dr_config(1.0).obs_noise_scale_range
+    assert (lo0, hi0) == (0.0, 0.0)      # nominal: no extra noise
+    assert lo1 == 0.0 and hi1 > 0.9      # hard: sweeps toward full extra std

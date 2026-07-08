@@ -97,6 +97,7 @@ class _FakeDRCfg:
     payload_cog_offset_z = (-0.03, 0.0)
     ocean_current_strength_range = (0.0, 1.0)
     payload_cog_offset_xy_u_range = (0.0, 1.0)
+    obs_noise_scale_range = (0.0, 1.0)
 
 
 def test_build_param_specs_reads_bounds_and_midpoint_nominal():
@@ -115,6 +116,10 @@ def test_build_param_specs_reads_bounds_and_midpoint_nominal():
     assert by_name["payload_cog_offset_xy_u"].min_bound == 0.0
     assert by_name["payload_cog_offset_xy_u"].max_bound == 1.0
     assert by_name["payload_cog_offset_xy_u"].nominal == pytest.approx(0.0)
+    # obs-noise curriculum: starts at scale=0 (no extra noise).
+    assert by_name["obs_noise_scale"].min_bound == 0.0
+    assert by_name["obs_noise_scale"].max_bound == 1.0
+    assert by_name["obs_noise_scale"].nominal == pytest.approx(0.0)
 
 
 # ---------------------------------------------------------------------------
