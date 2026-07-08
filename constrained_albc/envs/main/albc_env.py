@@ -21,6 +21,7 @@ import isaaclab.sim as sim_utils
 from isaaclab.assets import Articulation
 from isaaclab.envs import DirectRLEnv
 from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
+from isaaclab.utils.buffers import DelayBuffer
 from isaaclab.utils.math import euler_xyz_from_quat, quat_apply, quat_apply_inverse
 
 from .config import ALBCEnvCfg
@@ -45,6 +46,35 @@ from .mdp.rewards import RewardManager
 from .utils import log_dr_metrics
 
 logger = logging.getLogger(__name__)
+
+
+def _draw_control_delay(
+    control_delay_steps: tuple[int, int],
+    num_envs: int,
+    device: str | torch.device,
+) -> tuple[torch.Tensor, DelayBuffer | None]:
+    """Allocate the action DelayBuffer and draw per-env integer lags.
+
+    Returns (lag, buf). When control_delay_steps == (0, 0) the buffer is None
+    (skip the pass entirely) and lag is all-zeros. Otherwise a DelayBuffer with
+    history_length = max_delay is created and each env's lag is drawn uniformly
+    in [min_delay, max_delay] via randint(min, max+1).
+    """
+    lo, hi = control_delay_steps
+    lag = torch.zeros(num_envs, dtype=torch.int, device=device)
+    if hi <= 0:
+        return lag, None
+    buf = DelayBuffer(history_length=hi, batch_size=num_envs, device=str(device))
+    lag = torch.randint(low=lo, high=hi + 1, size=(num_envs,), dtype=torch.int, device=device)
+    buf.set_time_lag(lag)
+    return lag, buf
+
+
+def _apply_control_delay(buf: DelayBuffer | None, actions: torch.Tensor) -> torch.Tensor:
+    """Delay the applied action by the buffer's per-env lag. None = pass-through."""
+    if buf is None:
+        return actions
+    return buf.compute(actions)
 
 
 class ALBCEnv(DirectRLEnv):
@@ -284,6 +314,15 @@ class ALBCEnv(DirectRLEnv):
         )
         self._joint_pos_targets = self._nominal_joint_pos.expand(self.num_envs, -1).clone()
         self._control_step_counter = 0
+
+        # Control-action transport delay (latency DR). Always allocate the
+        # per-env lag tensor (zeros when off) so compute_privileged_obs can read
+        # it unconditionally. Buffer is None when off -> pass-through.
+        self._control_delay_steps, self._action_delay_buf = _draw_control_delay(
+            self.cfg.randomization.control_delay_steps,
+            self.num_envs,
+            self.device,
+        )
 
     def _init_history_buffers(self) -> None:
         """Temporal history ring buffer: 21D per step (joint 4D + body 9D + action 8D)."""
@@ -557,6 +596,10 @@ class ALBCEnv(DirectRLEnv):
         """
         self._update_action_buffers(actions)
         self._update_hist()
+
+        # Latency DR: delay the APPLIED action (plant-side), after history has
+        # recorded the commanded action. Off (None) = pass-through.
+        self._actions = _apply_control_delay(self._action_delay_buf, self._actions)
 
         # Velocity command resampling (mid-episode)
         self._vel_cmd_step_counter += 1
@@ -1379,6 +1422,16 @@ class ALBCEnv(DirectRLEnv):
         # Reset mid-episode payload toggle state
         self._payload_toggle_counter[env_ids] = 0
         self._payload_toggled[env_ids] = False
+
+        # Re-draw per-env control delay lag and reset the delay buffer's history.
+        if self._action_delay_buf is not None:
+            lo, hi = self.cfg.randomization.control_delay_steps
+            new_lag = torch.randint(
+                low=lo, high=hi + 1, size=(len(env_ids),), dtype=torch.int, device=self.device
+            )
+            self._control_delay_steps[env_ids] = new_lag
+            self._action_delay_buf.set_time_lag(new_lag, env_ids)
+            self._action_delay_buf.reset(env_ids)
 
     def _reset_physics(self, env_ids: torch.Tensor) -> None:
         """Reset hydrodynamics, thrusters, payload, and apply domain randomization."""
