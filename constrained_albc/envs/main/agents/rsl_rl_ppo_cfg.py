@@ -26,14 +26,16 @@ _runner_module.ALBCConstraintTRPO = ConstraintTRPO
 
 
 # =============================================================================
-# Encoder Bounds (27D privileged obs, static min-max normalization)
+# Encoder Bounds (28D privileged obs, static min-max normalization)
 # =============================================================================
 
-# 27D privileged obs bounds: 24D from the hard DomainRandomizationCfg + 3D measured lin_vel
-# (critic-only, appended at the tail to mirror compute_privileged_obs).
+# 28D privileged obs bounds: 25D from the hard DomainRandomizationCfg (incl. the
+# normalized control-action delay) + 3D measured lin_vel (critic-only, ALWAYS the
+# final 3, mirroring compute_privileged_obs).
 # Each pair is (lower, upper) with ~10% margin beyond Hard DR range.
-# Layout: hydro(7) + dynamics(3) + payload(4) + actuator(4) + env(4) + buoy(2)
-# (union 2026-07-12: Ixx/lin_damp removed, buoy volume/mass appended before measured)
+# Layout: hydro(7) + dynamics(3) + payload(4) + actuator(4) + env(4) + buoy(2) + latency(1)
+# (union 2026-07-12: Ixx/lin_damp removed; buoy volume/mass then control delay
+#  sit at 22-24, before the measured tail at 25-27)
 #
 # DEPRECATED as the live source of truth: ConstraintEncoderRunner.__init__ now
 # OVERRIDES encoder_obs_lower/upper at build time with DR-derived bounds via
@@ -80,6 +82,8 @@ _PRIV_OBS_LOWER: list[float] = [
     # Buoy (2D): buoy_volume, buoy_body_mass (DR-backed, decorrelated from main)
     0.0018,
     0.63,
+    # Latency (1D): control-action delay (normalized [0,1])
+    0.0,
     # Measured velocity (3D): body lin_vel u, v, w -- normalization range, not a physical clamp
     -1.0,
     -1.0,
@@ -117,6 +121,8 @@ _PRIV_OBS_UPPER: list[float] = [
     # Buoy (2D): buoy_volume, buoy_body_mass (DR-backed, decorrelated from main)
     0.0037,
     1.28,
+    # Latency (1D): control-action delay (normalized [0,1])
+    1.0,
     # Measured velocity (3D): body lin_vel u, v, w -- normalization range, not a physical clamp
     1.0,
     1.0,
@@ -149,18 +155,18 @@ class _EncoderPolicyCfg(RslRlPpoActorCriticCfg):
     encoder_obs_normalization: bool = False
     # Observation dimensions
     policy_obs_dim: int = 69  # 20D current proprio + 46D temporal history + 3D integral
-    privileged_dim: int = 27
+    privileged_dim: int = 28  # 27 base DR/measured + 1 control-action delay tail
 
 
 @configclass
 class _ALBCPolicyCfg(_EncoderPolicyCfg):
     """Asymmetric encoder with cost critic for TRPO + IPO.
 
-    Architecture (27D->9D encoder, 8D action):
-        Encoder: p_t(27D) -> static_minmax -> MLP[256,128,64] -> LN -> softsign -> z(9D)
+    Architecture (28D->9D encoder, 8D action):
+        Encoder: p_t(28D) -> static_minmax -> MLP[256,128,64] -> LN -> softsign -> z(9D)
         Actor:   cat([o_t(69D), z(9D)]) = 78D -> MLP[256,128,64] -> 8D
-        Critic:  cat([o_t(69D), z(9D), p_t(27D)]) = 105D -> MLP[512,256,128] -> 1D
-        Cost:    same 105D input -> MLP[512,256,128] -> K (multi-head)
+        Critic:  cat([o_t(69D), z(9D), p_t(28D)]) = 106D -> MLP[512,256,128] -> 1D
+        Cost:    same 106D input -> MLP[512,256,128] -> K (multi-head)
     """
 
     class_name: str = "ALBCActorCriticEncoder"
@@ -263,7 +269,7 @@ class _BaseALBCRunnerCfg(RslRlOnPolicyRunnerCfg):
 class ALBCTRPORunnerCfg(_BaseALBCRunnerCfg):
     """Velocity tracking TRPO + IPO + Asymmetric Encoder runner.
 
-    8D action (2D arm + 6D wrench), 69D policy obs, 27D privileged obs.
+    8D action (2D arm + 6D wrench), 69D policy obs, 28D privileged obs.
     """
 
     class_name: str = "ALBCConstraintEncoderRunner"
@@ -304,8 +310,8 @@ class _ALBCNoEncoderPolicyCfg(RslRlPpoActorCriticCfg):
 
     Architecture (no encoder, 8D action):
         Actor:       o_t(69D) -> MLP[256,128,64] -> 8D
-        Critic:      cat([o_t(69D), p_t(27D)]) = 96D -> MLP[512,256,128] -> 1D
-        Cost Critic: cat([o_t(69D), p_t(27D)]) = 96D -> MLP[512,256,128] -> K
+        Critic:      cat([o_t(69D), p_t(28D)]) = 97D -> MLP[512,256,128] -> 1D
+        Cost Critic: cat([o_t(69D), p_t(28D)]) = 97D -> MLP[512,256,128] -> K
     """
 
     class_name: str = "ALBCActorCriticAsymConstrained"
@@ -317,7 +323,7 @@ class _ALBCNoEncoderPolicyCfg(RslRlPpoActorCriticCfg):
     activation: str = "elu"
     # Observation dimensions
     policy_obs_dim: int = 69
-    privileged_dim: int = 27
+    privileged_dim: int = 28  # 27 base DR/measured + 1 control-action delay tail
     # Cost critic for IPO
     num_constraints: int = 0  # Auto-synced from env config
     cost_critic_hidden_dims: list[int] = [512, 256, 128]
@@ -354,7 +360,7 @@ class _ALBCPPOPolicyCfg(RslRlPpoActorCriticCfg):
 
     Architecture (8D action):
         Actor:  o_t(69D)          -> MLP[256,128,64] -> 8D
-        Critic: cat(o_t, p_t)=96D -> MLP[512,256,128] -> 1D
+        Critic: cat(o_t, p_t)=97D -> MLP[512,256,128] -> 1D
 
     Asymmetric routing is done via Runner.obs_groups -- no custom policy
     class required because rsl-rl ActorCritic auto-computes num_actor_obs
@@ -407,7 +413,7 @@ class ALBCPPORunnerCfg(_BaseALBCRunnerCfg):
 
     Asymmetric actor/critic observation routing is expressed purely through
     obs_groups: actor receives "policy" (69D) only while critic receives
-    cat(["policy", "privileged"]) = 96D.
+    cat(["policy", "privileged"]) = 97D.
 
     DR, reward weights, action space, and DORAEMON hyperparameters are
     identical to Isaac-ConstrainedALBC-TRPO-v0 (all variants inherit ALBCEnvCfg).

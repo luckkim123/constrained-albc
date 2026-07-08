@@ -44,7 +44,7 @@ class FrozenTeacher(nn.Module):
     Attributes:
         latent_dim: 9
         obs_dim: 69 (policy obs)
-        privileged_dim: 27
+        privileged_dim: 28
     """
 
     def __init__(self, cfg: StudentCfg, device: torch.device) -> None:
@@ -141,7 +141,7 @@ class FrozenTeacher(nn.Module):
 
     @torch.no_grad()
     def encode_privileged(self, privileged: torch.Tensor) -> torch.Tensor:
-        """Ground-truth latent from privileged obs: (B, 27) -> (B, 9)."""
+        """Ground-truth latent from privileged obs: (B, 28) -> (B, 9)."""
         from tensordict import TensorDict
         dummy = TensorDict(
             {

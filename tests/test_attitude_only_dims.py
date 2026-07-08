@@ -13,7 +13,7 @@ HIST_ACTION_LEN = 2
 JOINT_BODY_PER_STEP = 10  # was 13: joint(4) + body(6); body dropped lin_vel_err(3)
 ACTION_PER_STEP = 8
 INTEGRAL_DIMS = 3         # was 6: [roll, pitch, yaw_rate]; dropped vx,vy,vz
-STATE_SPACE = 27          # was 24: added measured lin_vel(3) to p_t
+STATE_SPACE = 28          # was 27: appended control-action delay (1) to p_t tail
 
 
 def _expected_obs_dim():

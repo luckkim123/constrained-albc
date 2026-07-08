@@ -44,10 +44,14 @@ def _teacher_sd(obs, priv, latent, actions):
 
 
 def test_infer_teacher_dims_attitude_only():
-    """attitude-only teacher: 69 obs / 27 priv / 9 latent / 8 actions (verified)."""
-    dims = _infer_teacher_dims(_teacher_sd(69, 27, 9, 8))
+    """attitude-only teacher: 69 obs / 28 priv / 9 latent / 8 actions (verified).
+
+    priv = 28 after the control-action delay tail (p_t[27]) was appended.
+    """
+    dims = _infer_teacher_dims(_teacher_sd(69, 28, 9, 8))
     assert dims == {
-        "policy_obs_dim": 69, "privileged_dim": 27, "latent_dim": 9, "num_actions": 8,
+        "policy_obs_dim": 69, "privileged_dim": 28, "latent_dim": 9, "num_actions": 8,
+        "num_constraints": 10,
     }
 
 

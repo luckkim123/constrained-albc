@@ -6,7 +6,7 @@
 """Observation functions for the attitude-only tracking environment (no linear velocity).
 
     o_t (69D): Unified policy observation = current proprioception (20D) + temporal history (46D) + integral (3D)
-    p_t (27D): Privileged info (simulator-only DR params) + measured root_lin_vel_b (3D, critic-only)
+    p_t (28D): Privileged info (simulator-only DR params) + measured root_lin_vel_b (3D, critic-only) + control-action delay (1D, critic-only)
 
 The encoder receives p_t to compress physical unknowns into latent z.
 The actor receives o_t + z. The critic receives o_t + z + p_t (asymmetric).
@@ -88,7 +88,7 @@ def compute_policy_obs(
 def compute_privileged_obs(
     env: ALBCEnv,
 ) -> torch.Tensor:
-    """Compute privileged information p_t (27D, union layout 2026-07-12).
+    """Compute privileged information p_t (28D, union layout 2026-07-12 + latency).
 
     Non-redundant set of independent DR parameters. Each dimension corresponds
     to a single random variable -- no correlated pairs from shared DR scales.
@@ -96,12 +96,13 @@ def compute_privileged_obs(
     Union layout: Ixx and linear damping roll were REMOVED (priv-obs-slim
     Stage-1 validated removals); quadratic damping and measured lin_vel are
     RETAINED (slim marked them PENDING Stage-2 -- decide via a later A/B); the
-    2 buoy scalars were ADDED (DR-backed, decorrelated from the main body).
-    Dim count is unchanged at 27.
+    2 buoy scalars were ADDED (DR-backed, decorrelated from the main body),
+    and the control-action delay (latency DR) was ADDED as the 28th dim.
 
     Invariant: all DR-backed dims come FIRST; measured lin_vel is ALWAYS the
-    final 3. The buoy scalars (22,23) are DR-backed, so they sit at the end of
-    the DR-backed block (after the ocean block), before measured lin_vel.
+    final 3. The buoy scalars (22,23) and the latency dim (24) are DR-backed,
+    so they sit at the end of the DR-backed block (after the ocean block),
+    before measured lin_vel (25:28).
 
         Hydrodynamics (7D):
             [0]     main body volume
@@ -125,8 +126,10 @@ def compute_privileged_obs(
         Buoy (2D) -- DR-backed, decorrelated from main body:
             [22]    buoy volume
             [23]    buoy body mass
+        Latency (1D) -- DR-backed, normalized:
+            [24]    control-action delay (normalized steps, 0 when off)
         Measured Velocity (3D):
-            [24:27] body linear velocity (u, v, w)
+            [25:28] body linear velocity (u, v, w)
     """
     jid = env._albc_joint_ids[0]
 
@@ -168,6 +171,12 @@ def compute_privileged_obs(
             # "DR dims first, measured last" p_t invariant holds.
             env._buoy_hydro.volume.unsqueeze(-1),  # 22: buoy volume
             env._buoy_hydro.body_mass.unsqueeze(-1),  # 23: buoy body mass
+            # Latency (1D) -- normalized per-env control-action delay (0 when off);
+            # DR-backed, so it stays in the DR-backed block before measured lin_vel
+            (
+                env._control_delay_steps.float()
+                / max(env.cfg.randomization.control_delay_steps[1], 1)
+            ).unsqueeze(-1),  # 24: control-action delay
             # Measured velocity (3D) -- privileged: actor is blinded, critic sees it
             env._robot.data.root_lin_vel_b,  # 3D: body linear velocity (u, v, w)
         ],

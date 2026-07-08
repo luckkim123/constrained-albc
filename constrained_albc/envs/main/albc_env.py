@@ -1042,7 +1042,7 @@ class ALBCEnv(DirectRLEnv):
         return quat
 
     def _get_observations(self) -> dict:
-        """Compute unified observation o_t (69D) and privileged p_t (27D).
+        """Compute unified observation o_t (69D) and privileged p_t (28D).
 
         o_t = current proprioception (20D) + temporal history (46D) + integral (3D):
             - Joint tracking: 4D x 3 steps = 12D (all hist_len steps)

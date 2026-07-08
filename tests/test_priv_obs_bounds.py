@@ -136,16 +136,23 @@ _EXPECTED = [
     (-1.0, 1.0),  # 24 measured u
     (-1.0, 1.0),  # 25 measured v
     (-1.0, 1.0),  # 26 measured w
+    (0.0, 1.0),  # 27 control-action delay (normalized, fixed [0,1])
 ]
 
 
-def test_returns_27_dims():
+def test_priv_obs_dim_is_28_with_delay_tail():
+    # Use the file-path-loaded module (Isaac-free) like the rest of this file,
+    # not the package import, so the assertion runs without booting Isaac Sim.
+    assert priv_obs_bounds.PRIV_OBS_DIM == 28  # 27 base + control-delay tail
+
+
+def test_returns_28_dims():
     lower, upper = _derive()
-    assert len(lower) == 27
-    assert len(upper) == 27
+    assert len(lower) == 28
+    assert len(upper) == 28
 
 
-@pytest.mark.parametrize("idx", range(27))
+@pytest.mark.parametrize("idx", range(28))
 def test_each_dim_matches_spec(idx):
     lower, upper = _derive()
     exp_lo, exp_hi = _EXPECTED[idx]
@@ -215,8 +222,8 @@ def test_subset_assertion_raises_when_dr_out_of_range():
     range it claims to come from.
     """
     # A derived bound that does not match the DR range it derives from.
-    lower = [0.0] * 27
-    upper = [3.0] * 27
+    lower = [0.0] * 28
+    upper = [3.0] * 28
     lower[12] = 0.0
     upper[12] = 2.2  # claims DR [0, 3] but only spans to 2.2 -> mismatch
     with pytest.raises(AssertionError):
@@ -231,8 +238,8 @@ def test_subset_assertion_raises_when_dr_out_of_range():
         )
 
     # lower > upper must also trip.
-    bad_lo = [1.0] * 27
-    bad_hi = [0.0] * 27
+    bad_lo = [1.0] * 28
+    bad_hi = [0.0] * 28
     with pytest.raises(AssertionError):
         priv_obs_bounds._assert_bounds_match_dr(
             bad_lo,

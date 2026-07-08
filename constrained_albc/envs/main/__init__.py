@@ -9,7 +9,7 @@ Tracks roll/pitch attitude + yaw rate only (no linear velocity tracking).
 Uses 8D action space (2D arm + 6D thruster) with constrained RL.
 
 69D observation: 20D current proprio + 46D temporal history + 3D integral error.
-27D privileged obs for asymmetric encoder (static min-max normalization).
+28D privileged obs for asymmetric encoder (static min-max normalization).
 
 Registered task (this is the default ALBC task; the legacy full-DOF env lives in
 `constrained_albc.envs.full_dof` under `Isaac-ConstrainedALBC-Full-*` ids):

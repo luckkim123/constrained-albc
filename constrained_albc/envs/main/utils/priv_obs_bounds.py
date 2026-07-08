@@ -5,7 +5,7 @@
 
 """DR-derived privileged-obs normalization bounds.
 
-The encoder min-max-normalizes the 27D privileged observation before its MLP.
+The encoder min-max-normalizes the 28D privileged observation before its MLP.
 Historically those bounds lived as hardcoded literals
 (``_PRIV_OBS_LOWER`` / ``_PRIV_OBS_UPPER`` in ``agents/rsl_rl_ppo_cfg.py``).
 Those literals drifted away from the DR ranges the env actually samples, and two
@@ -19,7 +19,7 @@ dimensions drifted into outright bugs that break normalization:
   normalized input span.
 
 This module replaces the hardcoded literals: ``derive_priv_obs_bounds_from_dr``
-computes the 27D bounds from the base physical values (asset cfg, the single
+computes the 28D bounds from the base physical values (asset cfg, the single
 source of truth) combined with the DR ranges (the DR cfg instance). The derived
 bounds equal the DR sampling range EXACTLY (margin 0), so DR config and
 normalization bounds can no longer drift apart. A runtime assertion at the end
@@ -38,11 +38,12 @@ from __future__ import annotations
 #   actuator(4) = joint_Kp, joint_Kd, thrust_coeff, time_const_up
 #   env(4) = water_density, ocean_current(x,y,z)
 #   buoy(2) = buoy_volume, buoy_body_mass (DR-backed, decorrelated from main)
+#   latency(1) = control-action delay (normalized [0,1])
 #   measured(3) = body lin_vel u, v, w
 # Invariant: all DR-backed dims come FIRST; measured lin_vel is ALWAYS the final 3.
-# The buoy scalars are DR-backed, so they sit at 22,23 (after the ocean block, the
-# last other DR-backed dim) and measured lin_vel stays at 24-26.
-PRIV_OBS_DIM = 27
+# The buoy scalars sit at 22,23 and the latency dim at 24 (all DR-backed), so
+# measured lin_vel is 25-27.
+PRIV_OBS_DIM = 28
 
 
 def derive_priv_obs_bounds_from_dr(
@@ -52,7 +53,7 @@ def derive_priv_obs_bounds_from_dr(
     hydro_cfg=None,
     buoy_hydro_cfg=None,
 ) -> tuple[list[float], list[float]]:
-    """Derive the 27D privileged-obs normalization bounds from the DR config.
+    """Derive the 28D privileged-obs normalization bounds from the DR config.
 
     Bounds equal the DR sampling range exactly (margin 0). The base physical
     values are read from the asset hydrodynamics cfg and the thruster cfg (the
@@ -66,9 +67,9 @@ def derive_priv_obs_bounds_from_dr(
             through Python inheritance even though Hard does not redeclare them.
         ocean_max_velocity: Ocean current max velocity, e.g.
             ``(0.5, 0.5, 0.25, 0, 0, 0)``; only ``[:3]`` is used. This is the
-            ``base`` for the ocean-current dims (idx21-23).
+            ``base`` for the ocean-current dims (idx19-21).
         thruster_cfg: Thruster config providing ``thrust_coefficient`` (base for
-            idx18) and ``time_constant_up`` (base for idx19).
+            idx16) and ``time_constant_up`` (base for idx17).
         hydro_cfg: Hydrodynamics config providing the base physical values. If
             ``None``, the default ``ALBCHydrodynamicsCfg`` is imported and
             instantiated.
@@ -77,8 +78,8 @@ def derive_priv_obs_bounds_from_dr(
             ``ALBCBuoyHydrodynamicsCfg`` is imported and instantiated.
 
     Returns:
-        ``(lower, upper)`` -- each a 27-element list of floats, exactly matching
-        the spec section 3 derived column.
+        ``(lower, upper)`` -- each a 28-element list of floats, exactly matching
+        the spec section 3 derived column with the normalized latency dim at 24.
     """
     if hydro_cfg is None:
         # Imported lazily so the pure derivation can be unit-tested with a
@@ -174,10 +175,13 @@ def derive_priv_obs_bounds_from_dr(
         # the "DR dims first, measured last" invariant. --
         scale(buoy_volume, buoy_volume_scale),  # 22 buoy volume
         scale(buoy_body_mass, buoy_body_mass_scale),  # 23 buoy body mass
+        # -- Latency (1D): DR-backed but normalized (steps / max_steps), fixed [0,1].
+        # Sits in the DR-backed block so measured lin_vel stays the final 3. --
+        (0.0, 1.0),  # 24 control-action delay (normalized)
         # -- Measured velocity (3D): not DR-backed, fixed normalization range --
-        (-1.0, 1.0),  # 24 body lin_vel u
-        (-1.0, 1.0),  # 25 body lin_vel v
-        (-1.0, 1.0),  # 26 body lin_vel w
+        (-1.0, 1.0),  # 25 body lin_vel u
+        (-1.0, 1.0),  # 26 body lin_vel v
+        (-1.0, 1.0),  # 27 body lin_vel w
     ]
 
     assert len(pairs) == PRIV_OBS_DIM, f"expected {PRIV_OBS_DIM} dims, got {len(pairs)}"
@@ -241,8 +245,9 @@ def _assert_bounds_match_dr(
 ):
     """Assert each DR-backed dim equals the DR range it derives from (margin 0).
 
-    Measured dims (24-26) are skipped: they have no DR field. The buoy scalars
-    (22,23) ARE DR-backed and are checked via scale_pairs.
+    Measured dims (25-27) and the normalized latency dim (24) are skipped: they
+    have no DR-range field. The buoy scalars (22,23) ARE DR-backed and are
+    checked via scale_pairs.
     """
 
     def _close(a, b):

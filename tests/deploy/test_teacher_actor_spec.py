@@ -4,8 +4,8 @@ from constrained_albc.deploy.specs.teacher_actor import TeacherActorSpec
 
 FULL_SD = {
     "log_std": (8,),
-    "encoder.0.weight": (256, 27), "encoder.0.bias": (256,),
-    "critic.0.weight": (512, 105), "critic.0.bias": (512,),
+    "encoder.0.weight": (256, 28), "encoder.0.bias": (256,),
+    "critic.0.weight": (512, 106), "critic.0.bias": (512,),
     "cost_critic.6.weight": (10, 128),
     "_encoder_output_norm.weight": (9,),
     "actor_obs_normalizer._mean": (1, 69),
