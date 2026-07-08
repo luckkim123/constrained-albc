@@ -144,4 +144,4 @@ def test_obs_noise_scale_range_sweeps_with_dr_level():
     lo0, hi0 = dr_config.build_dr_config(0.0).obs_noise_scale_range
     lo1, hi1 = dr_config.build_dr_config(1.0).obs_noise_scale_range
     assert (lo0, hi0) == (0.0, 0.0)      # nominal: no extra noise
-    assert lo1 == 0.0 and hi1 > 0.9      # hard: sweeps toward full extra std
+    assert lo1 == pytest.approx(0.0) and hi1 > 0.9  # hard: sweeps toward full extra std
