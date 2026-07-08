@@ -126,6 +126,25 @@ Gaussian std + uniform additive bias. When fault injection is disabled,
 byte-identical; when enabled it scales the **same** 69D `_OBS_NOISE_STD` base, so
 zero-noise dims still receive zero extra noise.
 
+**The config numbers are noise *scales*, not the applied noise — it is not a fixed
+value.** `NoiseModelWithAdditiveBias`
+(`isaaclab/.../utils/noise/noise_model.py:146-192`) splits the noise into two
+components on **different time axes**, so the same true value gets a different
+perturbation every step and a different offset every episode:
+
+| component | config vector | resample cadence | physical meaning |
+|:---|:---|:---|:---|
+| Gaussian white | `_OBS_NOISE_STD` | **every step** (`data + std*randn_like`, `:93`) | sensor jitter |
+| additive bias | `_OBS_BIAS_MAG` (as `_OBS_BIAS_MIN/MAX`) | **once per `reset()`** (`:174`), held fixed for the episode | sensor DC bias / calibration offset |
+
+The Gaussian term re-draws from `N(0, std²)` on every `__call__`; the additive bias
+is a per-env uniform draw `U(-MAG, +MAG)` refreshed only on episode reset and constant
+within the episode (docstring `:149`). Modelling calibration offset as an
+episode-persistent constant (rather than folding it into a larger step-wise std) is
+what makes the offset *durable* — this is the same failure mode the `error_integral`
+(§2.3) is there to absorb, so the two designs are paired. See
+`main-network-architecture.md` if the encoder ever needs to estimate this offset.
+
 ---
 
 ## 3. Temporal history (46D): per-step 18D feature vs reassembled 46D slice
@@ -224,6 +243,22 @@ lin_damp[8]/quad_damp[9] take only index 3 (roll) of the 6-DOF damping vector,
 added_mass[11] takes only `[0,0]` (surge) of the 6×6 matrix. So `p_t` is a **sparse
 probe** of the physics, not the full parameter set.
 
+**Main-body-only, no buoy dims (by design, not omission)**: every hydro dim above
+reads `env._hydro` (the main body, body="base"). The vehicle also runs a *second*
+independent hydro model `env._buoy_hydro` (buoy/float, body="link3",
+`albc_env.py:213,221`), which never appears in `p_t`. This is not a gap: DR randomizes
+both models with the **same** `sampled` dict (`events.py:280-283`), so every shared
+DORAEMON scale (`volume_scale`, `added_mass_scale`, damping, CoB/CoG offset,
+`water_density`) is applied to buoy and main with one per-env scalar — `buoy_volume =
+buoy_base × sampled["volume_scale"]` is fully correlated with `body_volume[0]`. Under
+the "no shared-scale correlated pairs" invariant a buoy volume/mass dim would be
+redundant, so it is excluded. (`body_mass` is the partial exception: buoy body mass is
+set on a separate PhysX path, so its correlation with `body_mass[10]` is looser than
+volume's — but its DR span is narrow enough that the practical information loss is
+small.) Independent main/buoy decorrelation is a documented, evidence-gated (DORMANT)
+proposal — see the omx wiki card
+`buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy`.
+
 **Normalization** is static min-max from DR bounds, applied inside the encoder before
 its MLP — not a running normalizer. `derive_priv_obs_bounds_from_dr`
 (`priv_obs_bounds.py:43`) computes bounds equal to the DR sampling range exactly
@@ -285,8 +320,10 @@ alone would be wrong.
 - **Yaw is a RATE channel**: `ang_cmd[2]` is a yaw-rate command and every yaw error term (ang_err, integral) is a rate error (rad/s), whereas roll/pitch are absolute attitude (rad). The 3D integral mixes two angle-integrals and one rate-integral.
 - **`joint_pos_error` uses `q_des_{t-1}`**: `_get_hist_features` runs before `_apply_joint_pd_action`, so `_joint_pos_targets` still holds the previous step's target (`albc_env.py:457-459,474`) — a one-step-stale actuator-lag signal, by design.
 - **Noise zeroes our own quantities**: `_OBS_NOISE_STD`/`_OBS_BIAS_MAG` are 69-length vectors whose command(3), manipulability(1), action-history(16), and integral(3) entries are `0.0` (`config.py:239-278`). Only measured euler/ang_vel/joint/thruster channels (and history copies) get noise.
+- **Noise is not a fixed value — two time axes** (§2.4): the config constants are *scales*, not the applied noise. `NoiseModelWithAdditiveBias` re-draws Gaussian white noise **every step** (`std*randn_like`) and an additive uniform bias **once per episode reset** (held fixed within the episode = calibration-offset model). Same true value → different perturbation each step, different offset each episode.
 - **Two independent dim checks** make 69 trustworthy: a construction-time `ValueError` guard (`albc_env.py:157-162`, survives `python -O`) plus a per-step runtime assert (`albc_env.py:992-995`).
 - **`p_t` is non-redundant by design** (`observations.py:93-94`): one scalar per independent DR variable, so the encoder must compress rather than pass-through. Several dims are representative scalars of a multi-DOF quantity (Ixx index 0; damping index 3 = roll; added-mass `[0,0]` = surge).
+- **All hydro dims are main-body-only; the buoy has no dims** (§4): a second independent hydro model `env._buoy_hydro` exists but never enters `p_t`. DR applies the **same** `sampled` scalar to both bodies (`events.py:280-283`), so buoy volume/damping/offset are fully correlated with the main-body dims → excluded under the non-redundancy invariant, not omitted. (`body_mass` is a looser partial exception via a separate PhysX path.)
 - **Thruster fallback is a 3-way branch** (`obs:124-132`): per-env DR tensor → cfg scalar broadcast → zeros (no thruster). Dims 18–19 degrade gracefully.
 - **Encoder input normalization is static min-max and OVERRIDDEN at runtime** by DR-derived bounds; the cfg `_PRIV_OBS_LOWER/UPPER` literals are a fallback only and had drifted (payload_mass overflow 3→1.35>1, stale CoG xy radius 0.17 vs 0.08 m).
 - **Direct vs scale/offset norm forms**: payload_mass[12] `[0,3]` direct, payload_cog_z[15] `[-0.05,0]` direct, water_density[20] direct absolute, joint Kp[16]/Kd[17] direct; CoG/CoB use offset with nonzero base (CoG z base -0.05 → `[-0.09,-0.01]`).
