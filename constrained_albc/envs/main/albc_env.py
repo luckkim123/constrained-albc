@@ -434,12 +434,23 @@ class ALBCEnv(DirectRLEnv):
         else:
             self._doraemon = None
             self._doraemon_ndims = 0
+            self._dr_obs_noise_scale = None
+            self._dr_obs_base_std = None
 
         if self._doraemon is not None:
             ndims = self._doraemon_ndims
             self._episode_dr_xi = torch.zeros(self.num_envs, ndims, device=self.device)
             self._episode_dr_log_probs = torch.zeros(self.num_envs, device=self.device)
             self._episode_return_accum = torch.zeros(self.num_envs, device=self.device)
+
+            # DR-owned per-env obs-noise scale (parallel to, and independent of, the
+            # fault _sensor_noise_scale). Filled from sampled["obs_noise_scale"] each
+            # reset; consumed every step in _get_observations. base_std is the always-on
+            # 69D _OBS_NOISE_STD so the DR layer scales the SAME per-channel pattern.
+            from .config import _OBS_NOISE_STD
+
+            self._dr_obs_noise_scale = torch.zeros(self.num_envs, device=self.device)
+            self._dr_obs_base_std = torch.tensor(_OBS_NOISE_STD, device=self.device)
 
     def _setup_scene(self):
         """Setup simulation scene with robot and underwater lighting."""
@@ -1015,6 +1026,13 @@ class ALBCEnv(DirectRLEnv):
             policy_obs, self._sensor_noise_scale, base_std=self._fault_obs_base_std
         )
 
+        # DR-managed obs-noise curriculum: a second EXTRA white-noise layer, independent
+        # of the fault layer above. No-op (identity) when DORAEMON off (scale is None) ->
+        # byte-identical. Stacks additively on the fault layer (fresh randn each).
+        policy_obs = faults.apply_sensor_noise(
+            policy_obs, self._dr_obs_noise_scale, base_std=self._dr_obs_base_std
+        )
+
         observations = {"policy": policy_obs}
         assert policy_obs.shape[-1] == self.cfg.observation_space, (
             f"emitted policy obs dim {policy_obs.shape[-1]} != "
@@ -1391,6 +1409,11 @@ class ALBCEnv(DirectRLEnv):
             self._episode_dr_xi[env_ids] = xi_physical
             self._episode_dr_log_probs[env_ids] = log_probs
             self._episode_return_accum[env_ids] = 0.0
+
+            # DR obs-noise scale: DORAEMON-managed if the dim is registered, else leave
+            # the buffer at 0 (no extra noise). Guarded so a config without the dim is safe.
+            if self._dr_obs_noise_scale is not None and "obs_noise_scale" in sampled:
+                self._dr_obs_noise_scale[env_ids] = sampled["obs_noise_scale"]
 
             # Command scales fixed at 1.0 (not DORAEMON-managed).
             # DORAEMON optimizes physics DR only; command difficulty is a task knob.
