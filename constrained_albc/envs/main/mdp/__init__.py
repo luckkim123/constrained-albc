@@ -43,7 +43,6 @@ from .rewards import (
     action_smoothness,
     att_rp_tracking,
     joint_torque,
-    lin_vel_tracking,
     thruster_energy,
     yaw_vel_tracking,
 )

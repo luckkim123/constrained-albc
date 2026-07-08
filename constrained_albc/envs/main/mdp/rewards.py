@@ -3,25 +3,32 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Tracking reward: r = r_att + r_lin + r_yaw + r_tau + r_thr + r_s.
+"""Attitude-only tracking reward (7 terms), summed with dt-scaling.
 
-All tracking terms use exp kernel + quadratic + linear penalty:
-    r = k * (exp(-e^2/2s^2) - q_quad*e^2 - q_lin*|e|)
+  r = r_att + r_yaw + r_tau + r_thr + r_s + r_bias + r_jc
+
+Tracking terms (att, yaw) use an exp kernel + quadratic + saturating penalty:
+    r = k * (exp(-e^2/2s^2) - q_quad*e^2 - q_lin*|e| - saturating)
     exp kernel: positive reward in [0,1], gradient peaks at err=sigma
-    quadratic: gradient grows with error magnitude
-    linear: constant gradient at all error magnitudes (kills SS error tolerance)
+    quadratic:  gradient grows with error magnitude
+    linear:     constant gradient at all magnitudes (would remove the SS-error
+                dead zone) -- DISABLED (lin_ratio=0; see TrackingTermCfg.lin_ratio)
+    saturating: bounded tanh/arctan penalty with a nonzero gradient at err=0
 
-The linear term is the critical fix for "SS error tolerance" -- both exp and
-quadratic gradients vanish as err -> 0, so the policy has no incentive to push
-small errors below ~5% of sigma. The linear term provides a constant downward
-force on |e|, ensuring the policy keeps reducing SS error all the way to zero.
+The exp + quadratic gradients both vanish as err -> 0, leaving a "dead zone"
+where the policy has no incentive to push small errors below ~5% of sigma. A
+linear penalty was the original fix but it caused its own dead zone and was
+disabled (lin_ratio=0 everywhere shipped). The live mitigation is the saturating
+tanh term on r_yaw (config.py, tanh_coef=0.3); r_att has no saturating term, so
+its SS-error dead zone remains.
 
-r_att:  k_att * (exp(-e^2/2s^2) - q_quad*e^2 - q_lin*|e|)
-r_lin:  k_lin * (exp(-e^2/2s^2) - q_quad*e^2 - q_lin*|e|)
-r_yaw:  k_yaw * (exp(-e^2/2s^2) - q_quad*e^2 - q_lin*|e|)
-r_tau:  -k_tau * mean(tau^2)                 (joint energy efficiency)
-r_thr:  -k_thr * mean(thruster_cmd^2)       (thruster energy)
-r_s:    -k_s   * (mean(da^2) + mean(d2a^2)) (action smoothness)
+r_att:  k_att * (exp(-e^2/2s^2) - q_quad*e^2)          (roll/pitch attitude)
+r_yaw:  k_yaw * (exp(-e^2/2s^2) - q_quad*e^2 - tanh)   (yaw rate; tanh live)
+r_tau:  k_tau * mean(tau^2)                 (joint torque energy;   k_tau  < 0)
+r_thr:  k_thr * mean(thruster_cmd^2)        (thruster energy;       k_thr  < 0)
+r_s:    k_s   * (mean(da^2) + mean(d2a^2))  (action smoothness;     k_s    < 0)
+r_bias: k_bias * sum_i w_i * bias_ema_i^2   (sustained offset;   default off)
+r_jc:   k_jc  * wrap(theta1)^2              (joint1 centering;   default off)
 """
 
 from __future__ import annotations
@@ -48,7 +55,11 @@ class TrackingTermCfg:
 
     r = k * (exp(-e^2/2s^2) - quad_ratio*e^2 - lin_ratio*|e| - saturating_penalty)
 
-    Saturating penalty options (active if coef > 0, only one of tanh/arctan at a time):
+    lin_ratio is 0 in every shipped config (the linear penalty caused a dead
+    zone); the kernel keeps the term so the field can still be set for ablations.
+
+    Saturating penalty options (active if coef > 0; convention is at most one of
+    tanh/arctan, but the two `if` branches are independent, not code-enforced):
       tanh:   coef * eps * tanh(|e|/eps)    -- sech^2-decay, grad at 0 = coef
       arctan: coef * eps * (2/pi) * atan(|e|/eps) -- 1/(1+x^2)-decay
     """
@@ -65,11 +76,10 @@ class TrackingTermCfg:
 
 @configclass
 class ALBCRewardCfg:
-    """Tracking reward config. Three tracking terms + penalty terms."""
+    """Tracking reward config. Two tracking terms (att_rp, yaw_vel) + penalty terms."""
 
     att_rp: TrackingTermCfg = TrackingTermCfg(k=9.0, sigma=0.10, quad_ratio=0.833)
     att_roll_weight: float = 1.5  # roll weight in err_sq (weak TAM actuation: 0.007m vs pitch 0.145m)
-    lin_vel: TrackingTermCfg = TrackingTermCfg(k=4.0, sigma=0.10, quad_ratio=1.0)
     yaw_vel: TrackingTermCfg = TrackingTermCfg(k=3.5, sigma=0.10, quad_ratio=1.0)
     k_tau: float = -0.01  # joint torque penalty
     k_thr: float = -0.35  # thruster energy penalty
@@ -115,14 +125,6 @@ def _exp_quad_saturating(
             err_norm / term.arctan_eps
         )
     return exp_term - penalty
-
-
-# UNUSED in attitude_only (kept for cfg compatibility; not in RewardManager).
-def lin_vel_tracking(env: ALBCEnv) -> torch.Tensor:
-    """r_lin: Euclidean norm tracking for linear velocity."""
-    err_sq = env._lin_vel_err.pow(2).sum(dim=-1)
-    err_norm = err_sq.clamp(min=1e-12).sqrt()
-    return _exp_quad_saturating(err_sq, err_norm, env.cfg.reward.lin_vel)
 
 
 def att_rp_tracking(env: ALBCEnv) -> torch.Tensor:
@@ -194,7 +196,7 @@ def joint1_centering_penalty(env: ALBCEnv) -> torch.Tensor:
 
 
 class RewardManager:
-    """Computes 6-term tracking reward with dt-scaling and episode tracking."""
+    """Computes 7-term tracking reward with dt-scaling and episode tracking."""
 
     _NAMES = ["att_rp", "yaw_vel", "torque", "thruster", "smoothness", "bias", "joint1_center"]
 

@@ -110,17 +110,6 @@ def _env(*, lin_err=None, att_err=None, yaw_err=None, actions=None,
 # ---------------------------------------------------------------------------
 
 
-def test_lin_vel_tracking_peaks_at_zero_error():
-    # zero error -> exp(0)=1, penalty 0 -> reward 1.0
-    env0 = _env(lin_err=torch.zeros(1, 3))
-    r0 = R.lin_vel_tracking(env0).item()
-    assert r0 == pytest.approx(1.0)
-    # larger error -> strictly smaller reward
-    env1 = _env(lin_err=torch.tensor([[0.2, 0.0, 0.0]]))
-    env2 = _env(lin_err=torch.tensor([[0.5, 0.0, 0.0]]))
-    assert R.lin_vel_tracking(env1).item() > R.lin_vel_tracking(env2).item()
-
-
 def test_yaw_vel_tracking_peaks_at_zero():
     assert R.yaw_vel_tracking(_env(yaw_err=torch.zeros(1))).item() == pytest.approx(1.0)
     near = R.yaw_vel_tracking(_env(yaw_err=torch.tensor([0.05]))).item()
