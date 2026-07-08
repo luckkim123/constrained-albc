@@ -295,3 +295,55 @@ alone would be wrong.
 - **Only `o_t` is normalized on the actor path** (EmpiricalNorm sized 69); z is concatenated raw because softsign bounds it and normalizing a non-stationary encoder output with running stats causes KL instability. The critic path normalizer is `nn.Identity` by default.
 - **`hist_len==0` collapses history to 0D** (`albc_env.py:294-296`); `o_t` becomes proprio(+integral).
 - **Stale docstring warning**: `_init_history_buffers` still says "21D per step (joint 4D + body 9D + action 8D)" (`albc_env.py:282`), but `hist_feature_dim=18` and the actual concat is `4+6+8=18` (body is 6D here, not 9D). The 21D/9D wording is leftover from the full-DOF variant; the 18D config value governs the real buffer width.
+
+---
+
+## 7. Proposed changes (designed 2026-07-08, NOT yet in code)
+
+> This section records `p_t` / DR-space changes decided in a design session but not yet
+> implemented. The 27D layout above still describes the LIVE code; these are the pending
+> experiments (each isolated on its own `exp/*` branch off a baseline tag, training
+> user-gated). Execution specs live in the session prompts; see the session memory
+> `project-obs-space-doc-qa-260708` for provenance.
+
+### 7.1 Privileged-obs slim (`p_t` 27 → 22)
+
+Remove five `p_t` dims to reduce the encoder's compression burden and the input/output dim
+gap. Per-dim evidence (encoder z-sensitivity sweep on `trpo_baseline_260608`, `scratch/encoder_sweep/`):
+
+| p_t idx | dim | evidence for removal | status |
+|:---|:---|:---|:---|
+| `[7]` | body_Ixx | z-sweep low sensitivity (range 0.278, 2/9 latents active) | sweep-justified |
+| `[8]` | lin_damp_roll | z-sweep lowest tier (range 0.162, 4/9) | sweep-justified |
+| `[9]` | quad_damp_roll | z-sweep CONTRADICTS (range 0.641, 7/9 — encoder actively uses it) | user-directed, **baseline-verify required** |
+| `[24:27]` | measured lin_vel (u,v,w) | attitude-only task: no lin_vel command, and `lin_vel_tracking` reward is dead code (NOT in `RewardManager._NAMES`, `rewards.py:199`) → not a value-determining variable. High z-sweep (1.08–1.25) reflects hydro↔attitude coupling, not a control need. | task-purpose-justified, **baseline-verify required** |
+
+`water_density[20]` is KEPT (enters buoyancy `F_b=ρgV`; low z-sweep likely reflects overlap
+with `volume_scale`, not irrelevance). The two flagged dims (quad_damp, lin_vel) are removed on
+the user's decision beyond/against the sweep, so their removal must be confirmed by a WITH-vs-
+WITHOUT baseline comparison (critic value-loss, explained-variance, attitude tracking) — not
+assumed safe. Ripple: `priv_obs_bounds.py` (`PRIV_OBS_DIM`, `pairs`, `_assert_bounds_match_dr`
+re-index), `state_space`/`privileged_dim` literals, critic input dim, checkpoint width (fresh
+training, no resume).
+
+### 7.2 DR offset prune + buoy hydro decorrelation
+
+Two independent DORAEMON-space experiments (separate runs, rules/03 confound avoidance):
+- **Experiment A (prune, symmetry-justified):** remove body CoB/CoG **xy** offset DR (near-
+  cylindrical hull → xy≈0, the least-justified DR axis) and make the buoy CoB/CoG **z**-offset
+  main-only (single-material float → CoG=CoB=(0,0,0.059), zero self-restoring, so its z-offset
+  DR is a dead knob; the MAIN body does all righting via its deliberate CoG z=-0.05). `NDIMS`
+  18→14; `p_t` −4 (CoG/CoB xy → constant → leave p_t, `[1:3]`/`[4:6]`). No gate.
+- **Experiment B (decorrelate buoy volume+mass):** the buoy (`env._buoy_hydro`) is a physically
+  separate fabricated part from the main hull; today `randomize_hydrodynamics` (`events.py:282-283`)
+  applies the SAME per-env scale to both bodies (fully correlated), so independent buoyancy/mass
+  tolerance is not representable. Split `volume_scale` and `body_mass_scale` into buoy-specific
+  dims (`NDIMS` +2) and ADD them to `p_t` (+2, since they become independent variables). This
+  was previously reviewed DORMANT (omx wiki `buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy`,
+  2026-07-07: no eval evidence, no measured tolerance); the **user opened the gate by domain
+  judgment** (single-material float → independent tolerance, standing in for the tolerance gate).
+  water_density stays SHARED (same tank = same water).
+
+If all three land, index re-derivation must be done from the then-current layout, never by hand-
+merging stale index maps (the two prompts each independently touch `compute_privileged_obs` +
+`priv_obs_bounds.py`). Net `p_t` ≈ 27 − 5 (slim) − 4 (A xy) + 2 (B buoy) = 20; verify by code.

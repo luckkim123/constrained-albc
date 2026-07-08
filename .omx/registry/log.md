@@ -881,3 +881,35 @@
 - **Pages:** doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md
 - **Summary:** updated 'DORAEMON difficulty has 3 separable levers: kl_ub (step size), step_interval (dwell-time), max_iterations (number of expansions)'
 
+## [2026-07-08T02:26:28.224403] add
+- **Pages:** buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md
+- **Summary:** updated 'buoyancy/gravity/restoring apply SEPARATELY to main body vs buoy(link3); gravity HAS DR (body_mass_scale+payload_mass); DR is body-shared not independent'
+
+## [2026-07-08T02:28:39.004317] add
+- **Pages:** experiment_idea_feed_o_t_into_the_encoder_alongside_p_t_state_co.md
+- **Summary:** created 'experiment idea: feed o_t into the encoder alongside p_t (state-conditioned z, RMA-style) instead of p_t-only encoder input'
+
+## [2026-07-08T02:28:51.087051] query
+- **Pages:** experiment_idea_feed_o_t_into_the_encoder_alongside_p_t_state_co.md, teacher_encoder_0_dead_latent_dims_keys_on_lateral_cog_cob_offse.md, action_bounding_is_justified_raw_gaussian_external_clamp_tanh_ru.md, analysis_refactor_2026_06_05_new_sim_free_modules_and_engine_gap.md, arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md, constrained_albc_experiment_conventions.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, coverage_lint_ok_is_a_floor_not_a_quality_gate_re_analysis_uses_.md, experiment_output_directory_standard_logs_vs_experiments_index_t.md, failure_dr_join_now_covers_fault_channels_not_just_dr_per_env_fa.md, hmm_regime_count_separates_dr_harder_runs_overfit_vs_healthy.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, ocean_nominal_shift_collapses_actor_entropy_e2_dr_harder.md, report_completeness_gate_must_run_before_writing_not_after.md, state_dependent_std_difficulty_null_now_confirmed_on_real_dr_med.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, training_anomaly_thresholds_tb_tag_alert_table.md, training_diagnosis_decision_tree.md, arm_a_measured_angle_joint1_constraint_recovers_not_diverges_the.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md
+- **Summary:** query 'encoder o_t alongside p_t' -> 20 of 88
+
+## [2026-07-08T02:48:57.197967] query
+- **Pages:** actuator_hardware_identification_arm_xw540_t260_board_measured_p.md, arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md, joint_dr_params_kp_kd_effort_friction_need_no_dedicated_measurem.md, onboard_measured_2026_07_06_arm_step_response_valid_sim_zeta_0_7.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md, doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md, experiment_idea_feed_o_t_into_the_encoder_alongside_p_t_state_co.md, frontier_seeking_dr_curriculum_literature_survey_adr_currot_acce.md, policy_head_design_rationale_and_literature_standing_encoder_inp.md, report_completeness_gate_must_run_before_writing_not_after.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md, tam_columns_must_match_robot_firmware_esc_channel_order_reorder_.md, tam_vertical_single_motor_dual_esc_measured_2026_07_05.md, thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md
+- **Summary:** query 'DelayedPD delayed actuator failed' -> 16 of 16
+
+## [2026-07-08T02:50:39.246807] add
+- **Pages:** experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md
+- **Summary:** created 'experiment idea: latency/transport-delay DR (sensor-obs + control-action lag) -- infra exists (isaaclab DelayBuffer) but unused; DelayedPD failed before'
+
+## [2026-07-08T02:55:07.798975] query
+- **Pages:** experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md
+- **Summary:** query 'DelayedPD' -> 1 of 1
+
+## [2026-07-08T02:55:08.179719] query
+- **Pages:** experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md, actuator_hardware_identification_arm_xw540_t260_board_measured_p.md, arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md, joint_dr_params_kp_kd_effort_friction_need_no_dedicated_measurem.md, onboard_measured_2026_07_06_arm_step_response_valid_sim_zeta_0_7.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md, frontier_seeking_dr_curriculum_literature_survey_adr_currot_acce.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, tam_columns_must_match_robot_firmware_esc_channel_order_reorder_.md, tam_vertical_single_motor_dual_esc_measured_2026_07_05.md, thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md
+- **Summary:** query 'actuator delay' -> 11 of 11
+
+## [2026-07-08T02:55:08.559966] query
+- **Pages:** experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md, actuator_hardware_identification_arm_xw540_t260_board_measured_p.md
+- **Summary:** query 'delay latency' -> 2 of 2
+

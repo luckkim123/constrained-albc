@@ -1,6 +1,6 @@
 # Wiki Index
 
-> 87 pages | Last updated: 2026-07-07T18:59:50.923421
+> 89 pages | Last updated: 2026-07-08T02:50:39.246807
 
 ## convention
 
@@ -9,6 +9,8 @@
 - [constrained-albc experiment conventions](constrained_albc_experiment_conventions.md) - # constrained-albc experiment conventions
 - [coverage lint ok is a floor not a quality gate; re-analysis uses OLD report as base, never shrinks](coverage_lint_ok_is_a_floor_not_a_quality_gate_re_analysis_uses_.md) - # coverage lint ok is a floor not a quality gate; re-analysis uses OLD report...
 - [cross-run reference values must be RE-EXTRACTED fresh, never carried forward (E4 stale-teacher-column gate)](cross_run_reference_values_must_be_re_extracted_fresh_never_carr.md) - # cross-run reference values must be RE-EXTRACTED fresh, never carried forwar...
+- [experiment idea: feed o_t into the encoder alongside p_t (state-conditioned z, RMA-style) instead of p_t-only encoder input](experiment_idea_feed_o_t_into_the_encoder_alongside_p_t_state_co.md) - # experiment idea: feed o_t into the encoder alongside p_t (state-conditioned...
+- [experiment idea: latency/transport-delay DR (sensor-obs + control-action lag) -- infra exists (isaaclab DelayBuffer) but unused; DelayedPD failed before](experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md) - # experiment idea: latency/transport-delay DR (sensor-obs + control-action la...
 - [experiment launch checklist: run_id / wandb / latest-alias naming](experiment_launch_checklist_run_id_wandb_latest_alias_naming.md) - # experiment launch checklist: run_id / wandb / latest-alias naming
 - [experiment output directory standard (logs vs experiments index tree)](experiment_output_directory_standard_logs_vs_experiments_index_t.md) - # experiment output directory standard (logs vs experiments index tree)
 - [experiment result recording location (experiments tree is SSOT, not docs/results)](experiment_result_recording_location_experiments_tree_is_ssot_no.md) - # experiment result recording location (experiments tree is SSOT, not docs/re...

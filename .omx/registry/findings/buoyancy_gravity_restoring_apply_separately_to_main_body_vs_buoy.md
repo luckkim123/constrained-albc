@@ -2,7 +2,7 @@
 title: "buoyancy/gravity/restoring apply SEPARATELY to main body vs buoy(link3); gravity HAS DR (body_mass_scale+payload_mass); DR is body-shared not independent"
 tags: []
 created: 2026-07-07T08:11:25.359795
-updated: 2026-07-07T08:19:10.543428
+updated: 2026-07-08T02:26:28.224403
 sources: []
 links: ["hydro_dr_train_eval_sampling_mismatch_is_real_but_left_as_is_opt.md", "uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload.md", "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md"]
 category: reference
@@ -49,4 +49,14 @@ GATE VERDICT (2026-07-07, independent review): the "split main/buoy volume_scale
 - Decisive: the same hydro-decorrelation FAMILY was already resolved as option C (keep-as-is, user-approved 2026-07-07, [[hydro_dr_train_eval_sampling_mismatch_is_real_but_left_as_is_opt]]). volume_scale decorrelation is subordinate to that verdict.
 
 This is NOT a prompt failure -- it is the gate working as designed (blocking a dimension increase driven by "real gap might be large" intuition, per rules/03 No-Generic-Solutions-Without-Evidence). NOT discarded = DORMANT: if a future eval shows a genuine main/buoy buoyancy-mismatch heavy-tail (per-env), gate 1 opens and the prompt `PROMPT_main_buoy_hydro_dr_decorrelation.md` becomes the execution spec at that point (volume_scale -> _main/_buoy, NDIMS +1, water_density stays shared = same tank). Design note: the prompt's "fix hardcoded 16" invariant is unnecessary -- `NDIMS=len(_PARAM_DEFS)` is dynamic, no hardcode exists. Lesson: a conditional/gated prompt is "judge the run-condition", not "run it".
+
+---
+
+## Update (2026-07-08T02:26:28.224403)
+
+GATE OPENED BY USER DOMAIN JUDGMENT (2026-07-08): the buoy volume/mass decorrelation experiment (previously DORMANT per the 2026-07-07 review) has had its gate opened by the user. Rationale: the buoyancy float (link3/ABPC) is a near-cylindrical SINGLE-MATERIAL part fabricated separately from the main hull, so its buoyancy/mass error has independent fabrication + waterproofing tolerance from the main body. The user accepts this domain-physics argument as standing in for Gate 2 (a measured-tolerance argument). This overrides the DORMANT verdict for the DESIGN + IMPLEMENTATION of the decorrelation; TRAINING LAUNCH remains a separate user gate (opening the design gate is not authorization to start a run).
+
+Scope of the opened experiment (Experiment B in PROMPT_dr_offset_prune_buoy_split.md, RE-VERIFY dims): split volume_scale and body_mass_scale into buoy-specific DORAEMON dims (NDIMS +2) fed to the env._buoy_hydro call with a buoy-specific sampled sub-dict (events.py:282-283), and ADD buoy_volume + buoy_body_mass to p_t (compute_privileged_obs) since they become independent variables (invariant: one scalar per independent DR param). water_density stays SHARED (same tank = same water). Must be a SEPARATE run from Experiment A (body CoB/CoG xy prune) to avoid confound (rules/03).
+
+Note current tree state (2026-07-08): _PARAM_DEFS has NDIMS=18 (not 17 as the older notes said), volume_scale bounds (0.9,1.1) (not 0.75,1.25). The prior "fix hardcoded 16/17" invariant remains unnecessary (NDIMS=len(_PARAM_DEFS) is dynamic). Provenance: session project-obs-space-doc-qa-260708; doc constrained-albc/docs/reference/observation-space.md section 7.2.
 
