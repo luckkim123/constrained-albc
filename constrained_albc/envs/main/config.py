@@ -215,6 +215,14 @@ class DomainRandomizationCfg:
     thrust_coefficient_scale: tuple[float, float] = (0.7, 1.3)
     time_constant_scale: tuple[float, float] = (0.7, 1.3)
 
+    # Control-action transport delay (discrete N-step lag on the applied
+    # action) as integer control steps; 1 step = 20 ms @ 50 Hz.
+    # (0, 0) = off (byte-identical to baseline). Experiment value = (0, 3).
+    # simplified: static uniform DR (like time_constant_scale), not on the
+    # DORAEMON curriculum -- integer delay is awkward for the Beta-continuous
+    # sampler. Promote to a _PARAM_DEFS entry only if warranted.
+    control_delay_steps: tuple[int, int] = (0, 0)
+
     # -- Ocean Current (DORAEMON-managed) --
     # Scalar strength [0, 1] multiplier on ocean_current.max_velocity.
     # DORAEMON nominal=0 (no current at curriculum start) -> expands as policy
