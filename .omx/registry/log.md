@@ -912,3 +912,19 @@
 - **Pages:** priv_obs_slim_stage_2_lead_contested_p_t_dims_quad_damp_lin_vel_.md
 - **Summary:** created 'priv-obs slim Stage-2 lead: contested p_t dims (quad_damp, lin_vel) need WITH-vs-WITHOUT A/B; union kept them'
 
+## [2026-07-09T02:42:48.614095] query
+- **Pages:** analysis_refactor_2026_06_05_new_sim_free_modules_and_engine_gap.md, arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, onboard_measured_2026_07_06_arm_step_response_valid_sim_zeta_0_7.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, joint_dr_params_kp_kd_effort_friction_need_no_dedicated_measurem.md, leaky_integral_and_ema_bias_carry_over_the_mid_episode_command_r.md, thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md, engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md, sequential_overnight_campaign_wall_clock_budget_not_crashes_kill.md, engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md, engine_gap_flat_target_eval_records_joint1_trajectory_but_render.md, engine_gap_heavy_tail_json_pct_peak_gt_thresh_exceeds_100_at_ood.md, actuator_hardware_identification_arm_xw540_t260_board_measured_p.md, constraint_viol_trajectory_barrier_sign_metrics_4_10_starts_at_d.md, engine_gap_eval_npz_saves_no_raw_obs_std_privileged_blocks_exact.md, engine_gap_omx_cli_gaps_found_re_analyzing_teacher_2026_06_06_ro.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md, buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md
+- **Summary:** query 'sim to real gap vibration jitter deployment' -> 20 of 91
+
+## [2026-07-09T02:44:18.250138] add
+- **Pages:** real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md
+- **Summary:** created 'Real-robot deployment vibration: differential diagnosis by sim-to-real gap channel (which DR/noise probe to reach for)'
+
+## [2026-07-09T02:44:34.849580] query
+- **Pages:** real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md, hydro_dr_train_eval_sampling_mismatch_is_real_but_left_as_is_opt.md, leaky_integral_and_ema_bias_carry_over_the_mid_episode_command_r.md, training_diagnosis_decision_tree.md, arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md, experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, onboard_measured_2026_07_06_arm_step_response_valid_sim_zeta_0_7.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, tam_columns_must_match_robot_firmware_esc_channel_order_reorder_.md, thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md, tracking_kernel_exp_quad_tanh_dead_zone_diagnosis_correct_but_fi.md, actuator_hardware_identification_arm_xw540_t260_board_measured_p.md, exp_analyze_must_run_analyze_training_py_for_training_side_diagn.md, frontier_seeking_dr_curriculum_literature_survey_adr_currot_acce.md, joint_dr_params_kp_kd_effort_friction_need_no_dedicated_measurem.md, state_dependent_std_difficulty_null_now_confirmed_on_real_dr_med.md, student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md, buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md
+- **Summary:** query 'real robot vibration deployment shake diagnosis' -> 20 of 54
+
+## [2026-07-09T02:44:56.236446] add
+- **Pages:** next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md
+- **Summary:** updated 'Next from-scratch retrain manifest: what rides on the post-TAM baseline retrain (sim fixes + learning-dynamics experiments)'
+
