@@ -59,9 +59,16 @@ class TrackingTermCfg:
     zone); the kernel keeps the term so the field can still be set for ablations.
 
     Saturating penalty options (active if coef > 0; convention is at most one of
-    tanh/arctan, but the two `if` branches are independent, not code-enforced):
+    tanh/arctan, but the two `if` branches are independent, not code-enforced --
+    both stack additively if both coefs are > 0):
       tanh:   coef * eps * tanh(|e|/eps)    -- sech^2-decay, grad at 0 = coef
-      arctan: coef * eps * (2/pi) * atan(|e|/eps) -- 1/(1+x^2)-decay
+      arctan: coef * eps * (2/pi) * atan(|e|/eps) -- 1/(1+x^2)-decay,
+              grad at 0 = (2/pi)*coef ~= 0.637*coef (heavier/Cauchy tail: manages
+              far errors longer than tanh's lighter exp-like tail)
+    Shipped config uses ONLY tanh (on r_yaw, tanh_coef=0.3); arctan_coef is never
+    set nonzero. arctan is kept as an unused heavy-tail alternative -- a candidate
+    for future experiments that need a saturating term with a longer reach (e.g.
+    to fill the r_att dead zone), not dead code.
     """
 
     k: float = 1.0  # reward weight (dt-scaled)
