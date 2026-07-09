@@ -76,6 +76,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Control-action latency DR** — new `DomainRandomizationCfg.control_delay_steps` (int step
+  pair, 1 step = 20 ms @ 50 Hz), off by default `(0, 0)`. Applies a per-env discrete transport
+  delay to the applied 8D action via isaaclab `DelayBuffer` on `self._actions` (drawn per episode
+  as `randint(min, max+1)`), modeling real-UUV control-command comm lag. Exposed to the
+  critic/encoder as privileged dim `p_t[27]` (privileged dim 27 → 28, appended at tail; indices
+  0-26 unchanged). Off-default is byte-identical to the prior baseline (verified regression test).
+
+### Notes
+
+- DelayedPDActuator route was rejected (documented failure at `docs/how-to/sim-to-real.md` §2.2 —
+  implicit→explicit PD gain reinterpretation); the manual action-side `DelayBuffer` avoids the
+  actuator swap entirely.
+- Static uniform DR (not on the DORAEMON curriculum; integer delay is awkward for the
+  Beta-continuous sampler). Sensor-observation delay is a distinct deferred second path.
+- Verification: `pytest tests/test_latency_dr_config.py tests/test_delay_buffer_behavior.py
+  tests/test_latency_dr_env.py tests/test_attitude_only_dims.py tests/test_priv_obs_bounds.py`
+  all pass; full suite green with delay off.
+- Training launch is a separate, user-gated step. p_t 27→28 invalidates existing teacher
+  checkpoints (deploy specs assume 27) → a from-scratch retrain is required before deploy.
+
 - `--golden` pack assembly (`constrained_albc/deploy/pack.py` + CLI flag): one
   command now produces a complete self-verifying deploy pack -- golden vectors
   (CPU-forced), `npforward.py` copy, parity self-close (loud-fail), and
