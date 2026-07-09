@@ -156,14 +156,15 @@ expected magnitude가 된다.
 
 ### 3.3 실험 전용 joint1 term (미출시)
 
-joint1-anti-drift 실험 라인(Section 7)을 위한 average cost 함수 2개가 별도로
+joint1-anti-drift 실험 라인(Section 7)을 위한 average cost 함수 하나가 별도로
 존재하며, 실려 있는 10개에는 포함되지 않는다(`constraints.py:26-29`):
 
-- **`joint1_centering_cost`**(arm "A") — $\text{wrap}(\theta_1)^2$, 순간
-  wrapped joint-1 각도(`constraints.py:245`).
-- **`joint1_cumulative_cost`**(arm "B") — $\lvert q^{\text{des}}_1 - q^{\text{nom}}_1 \rvert$,
-  unwrapped된 누적 command displacement(`constraints.py:269`, 사용:
-  `env._joint_pos_targets[:, 0] - env._nominal_joint_pos[0]`).
+- **`joint1_cumulative_cost`** — $\lvert q^{\text{des}}_1 - q^{\text{nom}}_1 \rvert$,
+  unwrapped된 누적 command displacement(`constraints.py:271`, 사용:
+  `env._joint_pos_targets[:, 0] - env._nominal_joint_pos[0]`). 이제 이것이
+  유일한 joint1 anti-drift 메커니즘이다 — wrapped-instantaneous constraint
+  (구 "arm A", `joint1_centering_cost`)와 reward-side centering penalty
+  둘 다 2026-07에 제거됐다.
 
 ---
 
@@ -419,33 +420,32 @@ marinelab에 있다. 메인 env는 네 필드를 override한다(`config.py:479`)
 기본 비활성 토글이 joint-1 anti-drift를 테스트하기 위해 **11번째**
 constraint term을 추가할 수 있다. `ALBCEnvCfg`의 필드 2개:
 
-- `joint1_constraint_arm: str = "none"` — `{"none", "A", "B"}` 중 하나
-  (`config.py:532`).
-- `joint1_constraint_budget: float = 0.05` — arm A/B의 per-step average
-  budget $d_k$(`config.py:533`).
+- `joint1_constraint_arm: str = "none"` — `{"none", "B"}` 중 하나
+  (`config.py:552`).
+- `joint1_constraint_budget: float = 0.05` — joint1 term의 per-step average
+  budget $d_k$(`config.py:553`).
 
 **Materialization 경로.** `apply_joint1_constraint_arm()`
-(`constraints.py:301-323`)이 arm을 읽는다; `"none"`은 no-op; `"A"`는
-`joint1_centering_cost` term을 추가(이름 `joint1_centering`); `"B"`는
-`joint1_cumulative_cost` term을 추가(이름 `joint1_cumulative`); 그 외 값은
-`ValueError`를 던진다. `env_cfg.constraints.terms = [*env_cfg.constraints.terms, term]`을
-통해 추가한다.
+(`constraints.py:279-299`)이 arm을 읽는다; `"none"`은 no-op; `"B"`는
+`joint1_cumulative_cost` term을 추가(이름 `joint1_cumulative`); 그 외 값(이제는
+존재하지 않는 구 `"A"` 포함)은 `ValueError`를 던진다.
+`env_cfg.constraints.terms = [*env_cfg.constraints.terms, term]`을 통해 추가한다.
 
 **왜 cfg의 `__post_init__`이 아니라 `ALBCEnv.__init__`에서 호출되는가.**
 호출 지점은 `albc_env.py:128`, `ALBCEnv.__init__` 내부(payload-viz와
 DR-sampler init 이후)다. 이는 의도적이다: hydra의
 `update_class_from_dict` override는 cfg `__post_init__` *이후*,
-`ALBCEnv.__init__` 실행 *이전*에 적용된다(`constraints.py:304-307`,
+`ALBCEnv.__init__` 실행 *이전*에 적용된다(`constraints.py:279-291`,
 `albc_env.py:123-127`). 이 호출을 `__post_init__`에 넣으면 항상
-`arm="none"`을 관측하게 되어, arm A/B 대신 조용히 baseline과 중복되는
+`arm="none"`을 관측하게 되어, arm B 대신 조용히 baseline과 중복되는
 run이 생성될 것이다.
 
-**단일 메커니즘 원칙.** A/B에 대해서는 reward의 `k_joint1_center`를 `0.0`으로
-설정해서 centering 메커니즘이 정확히 하나만 활성화되게 해야 한다
-(`config.py:520-524`). 이는 문서화된 실험자 요구사항이다 — `config.py`의
-`ALBCEnvCfg.reward` 호출이 이를 자동으로 설정하지는 않는다(`ALBCRewardCfg`
-기본값은 이미 `0.0`이지만, reward를 override할 때 이를 강제하는 장치는
-없다).
+**유일한 anti-drift 메커니즘.** arm B(`joint1_cumulative_cost`)가 이제 코드베이스
+전체에서 유일한 joint1 anti-drift 메커니즘이다. reward-side centering penalty와
+wrapped-instantaneous constraint(구 "arm A") 둘 다 2026-07에 제거됐으므로,
+이전의 "double-counting을 피하려면 reward의 centering 계수를 0.0으로
+설정하라"는 요구사항은 더 이상 적용되지 않는다 — 이제 double-count될 대상
+자체가 없다.
 
 **동작 — station-keeping 하에서는 결코 binding되지 않음(실험적 발견).**
 평탄한 target station-keeping 태스크에서 joint1-cumulative constraint는
@@ -457,7 +457,7 @@ peak $\lvert\theta_{\text{cum}}\rvert$가 ~1.22 회전을 넘은 적이 없다
 `joint1_cumulative_rotation_constraint_never_binds_policy_parks_a.md`
 (run `trpo_joint1_cumul_rot_260629_183545`). *주의:* 그 wiki의 run은 이
 term을 probabilistic $\mathbb{1}[\lvert\theta_{\text{cum}}\rvert > 4\pi] \le 0.01$
-constraint로 프레이밍하는 반면, 실려 있는 코드의 arm-"B" 함수
+constraint로 프레이밍하는 반면, 실려 있는 코드의 함수
 `joint1_cumulative_cost`는 *average* $\lvert q^{\text{des}}_1 - q^{\text{nom}}_1 \rvert$
 cost다 — 동일한 실험 라인이 run에 따라 두 변형을 오간다; 실질(결코
 binding되지 않음)은 유지된다.
@@ -478,7 +478,7 @@ heavy tail을 보이는 동안에도 그렇다(roll steady-state error env-media
 
 **기본 비활성 = byte-identical.** 기본값인 `arm="none"`에서는
 `apply_joint1_constraint_arm`이 즉시 반환하고, 실려 있는 10개 term
-집합은 그대로 유지되며 K는 10을 유지한다. A/B를 활성화하면 정확히 하나의
+집합은 그대로 유지되며 K는 10을 유지한다. arm B를 활성화하면 정확히 하나의
 cost-critic head가 추가된다; MLP 레이어 수, 차원, activation은 변하지
 않는다.
 
@@ -502,7 +502,7 @@ per-step running state(`_last_violations`, `_last_barrier_margins`,
 | `Policy/entropy` | 평균 정책 entropy |
 
 `<name>` 접미사는 constraint에 설정된 이름이며
-(`ALBCConstraintCfg.constraint_names`, `constraints.py:77-78`), 없으면
+(`ALBCConstraintCfg.constraint_names`, `constraints.py:76-77`), 없으면
 숫자 인덱스로 대체된다. 네임스페이스는 viol/margin에 대해 2-레벨
 `Constraint/<type>/<name>` 계층과 flat한 `Constraint/barrier_penalty`로
 구성된다; DORAEMON curriculum 지표는 별도의 `DORAEMON/*` 네임스페이스를,
@@ -546,8 +546,9 @@ $\hat{J}_C/d_k \approx 0.869\text{-}0.870$. 나머지 9개는 slack에 있으며
 ($\hat{J}_C/d_k$가 $0.869 \to 0.944$로 상승); 나머지 9개는 slack에
 머물렀다. control-authority 채널에서의 그 추가 binding 하나가 authority
 starvation을 일으켰다: per-step reward가 54% 하락했고(Reward/total
-7.96 -> 3.68), lin_vel reward가 음수가 됐으며, 정책 entropy가
-붕괴했다(iter 2289에서 0을 통과, teacher run에서는 본 적 없는 anomaly).
+7.96 -> 3.68), lin_vel reward가 음수가 됐으며(lin_vel reward 채널은 이후
+제거됨), 정책 entropy가 붕괴했다(iter 2289에서 0을 통과, teacher run에서는
+본 적 없는 anomaly).
 **규칙:** control-authority 채널(thruster)을 조이는 것은 파괴적이다.
 출처: omx wiki
 `constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md`.
@@ -566,7 +567,7 @@ Section 6에서 `lb 68 -> 250` / `kl_ub 0.06 -> 0.12` 재보정의 정확한
 
 ## 소스 파일
 
-- `constrained_albc/envs/main/mdp/constraints.py` — 10개 cost 함수, `ConstraintTermCfg`, `ALBCConstraintCfg`, `compute_all_costs`, `apply_joint1_constraint_arm`
+- `constrained_albc/envs/main/mdp/constraints.py` — 실려 있는 10개 cost 함수 + 실험 전용 joint1 term 1개, `ConstraintTermCfg`, `ALBCConstraintCfg`, `compute_all_costs`, `apply_joint1_constraint_arm`(2-way `{none, B}`)
 - `constrained_albc/envs/main/config.py` — `ALBCEnvCfg`, `_FULL_DOF_CONSTRAINT_TERMS`(실려 있는 10개 budget), DORAEMON override, joint1 토글
 - `constrained_albc/envs/main/config_noconstraint.py` — `ALBCNoConstraintEnvCfg`(terms=[], TRPO-NoIPO / PPO-Enc ablation)
 - `constrained_albc/envs/main/algorithms/constraint_trpo.py` — ConstraintTRPO + IPO barrier, adaptive threshold, cost GAE, TRPO step, std clamp, cost critic

@@ -2,7 +2,7 @@
 
 > **Scope**: The full reward computation of the default task
 > `Isaac-ConstrainedALBC-TRPO-v0` (`constrained_albc/envs/main/`) — the shared
-> tracking kernel, the seven weighted terms that `RewardManager` sums each step,
+> tracking kernel, the six weighted terms that `RewardManager` sums each step,
 > the error buffers in `albc_env.py` that feed them, and the config override that
 > turns the shipped reward into what actually runs. This is the attitude-only
 > ALBC env (roll/pitch + yaw-rate command, no linear-velocity command); the reward
@@ -27,56 +27,56 @@
 
 ## 1. Overview
 
-The reward for one control step is a **`dt`-scaled weighted sum of seven terms**.
-`RewardManager.compute()` (`rewards.py:208-227`) builds the sum; every term is
+The reward for one control step is a **`dt`-scaled weighted sum of six terms**.
+`RewardManager.compute()` (`rewards.py:194-212`) builds the sum; every term is
 multiplied by its per-second weight and by `dt = step_dt = 0.02 s` before being
 added, so the reported `k` values are per-second and the effective per-step
 contribution is `k * 0.02` (§6, §7).
 
 ```
-_get_rewards()                                          (albc_env.py:1009)
-  1. _compute_ang_errors()          -> _att_rp_err, _yaw_rate_err   (albc_env.py:1000-1007)
-  2. leaky integral update  (OBS, not reward; gated by reward sigma) (albc_env.py:1019-1038)
-  3. bias-EMA update        (only if k_bias != 0)                    (albc_env.py:1042-1052)
-  4. reward = RewardManager.compute(robot, dt=step_dt, env)         (albc_env.py:1054-1058)
-       for name, weight, value in terms:                            (rewards.py:222)
+_get_rewards()                                          (albc_env.py:1036)
+  1. _compute_ang_errors()          -> _att_rp_err, _yaw_rate_err   (albc_env.py:1027-1035)
+  2. leaky integral update  (OBS, not reward; gated by reward sigma) (albc_env.py:1045-1065)
+  3. bias-EMA update        (only if k_bias != 0)                    (albc_env.py:1067-1079)
+  4. reward = RewardManager.compute(robot, dt=step_dt, env)         (albc_env.py:1081-1085)
+       for name, weight, value in terms:                            (rewards.py:207)
            scaled   = value * weight * dt
            reward  += scaled
            episode_sums[name] += scaled
-  5. reward += reset_terminated * termination_penalty  (if != 0; NOT dt-scaled) (albc_env.py:1061-1062)
-  6. constraint costs -> extras["costs"]   (separate channel)       (albc_env.py:1065-1066)
-  7. _episode_return_accum += reward        (DORAEMON success feed)  (albc_env.py:1074-1075)
+  5. reward += reset_terminated * termination_penalty  (if != 0; NOT dt-scaled) (albc_env.py:1088-1089)
+  6. constraint costs -> extras["costs"]   (separate channel)       (albc_env.py:1092-1093)
+  7. _episode_return_accum += reward        (DORAEMON success feed)  (albc_env.py:1101-1102)
 ```
 
-The seven terms (`RewardManager._NAMES`, `rewards.py:199`) split into three
+The six terms (`RewardManager._NAMES`, `rewards.py:185`) split into two
 **tracking rewards** (positive, built on the shared exp-kernel of §2) and four
 **penalties** (non-negative magnitudes carried into the sum by a negative weight):
 
 | Class | Terms |
 |---|---|
 | Tracking (reward) | `att_rp`, `yaw_vel` |
-| Penalty | `torque`, `thruster`, `smoothness`, `bias`, `joint1_center` |
+| Penalty | `torque`, `thruster`, `smoothness`, `bias` |
 
-`att_rp` and `yaw_vel` are the only two tracking terms actually summed. A third
-tracking function, `lin_vel_tracking`, exists in the file but is **not** wired
-into `RewardManager` (§4.3, §9) — it is dead in this attitude-only env. An eighth
-reward contribution, `termination_penalty`, is applied outside `compute()` and is
-**not** one of the seven tracked/logged terms (§5.5, §9).
+`att_rp` and `yaw_vel` are the only two tracking functions in this attitude-only
+env; there is no `lin_vel_tracking` here (that function only exists in the
+sibling `envs/full_dof/mdp/rewards.py`, §9). A seventh reward contribution,
+`termination_penalty`, is applied outside `compute()` and is **not** one of the
+six tracked/logged terms (§9).
 
 ---
 
 ## 2. The shared tracking kernel — `_exp_quad_saturating`
 
-All three tracking functions call one kernel, `_exp_quad_saturating(err_sq,
-err_norm, term)` (`rewards.py:97-117`), a pure function that combines a positive
+Both tracking functions call one kernel, `_exp_quad_saturating(err_sq,
+err_norm, term)` (`rewards.py:109-129`), a pure function that combines a positive
 Gaussian bump with up to three penalty shapes:
 
 ```
-exp_term = exp(-err_sq / (2 * sigma^2))                                    (rewards.py:109)
-penalty  = quad_ratio * err_sq + lin_ratio * err_norm                      (rewards.py:110)
-if tanh_coef  > 0:  penalty += tanh_coef  * tanh_eps  * tanh(err_norm/tanh_eps)              (rewards.py:111-112)
-if arctan_coef> 0:  penalty += arctan_coef* arctan_eps* (2/pi)*atan(err_norm/arctan_eps)     (rewards.py:113-116)
-return exp_term - penalty                                                   (rewards.py:117)
+exp_term = exp(-err_sq / (2 * sigma^2))                                    (rewards.py:121)
+penalty  = quad_ratio * err_sq + lin_ratio * err_norm                      (rewards.py:122)
+if tanh_coef  > 0:  penalty += tanh_coef  * tanh_eps  * tanh(err_norm/tanh_eps)              (rewards.py:123-124)
+if arctan_coef> 0:  penalty += arctan_coef* arctan_eps* (2/pi)*atan(err_norm/arctan_eps)     (rewards.py:125-128)
+return exp_term - penalty                                                   (rewards.py:129)
 ```
 
 $$
@@ -86,9 +86,9 @@ $$
 Here $e^2$ is `err_sq` (the argument, possibly a *weighted* sum of squares — §4.1)
 and $|e|$ is `err_norm` (a Manhattan-weighted or true-Euclidean magnitude
 depending on caller — §4). The per-term weight `k` is **not** applied inside the
-kernel (no `term.k` reference exists in `rewards.py:97-117`); it is multiplied in
+kernel (no `term.k` reference exists in `rewards.py:109-129`); it is multiplied in
 later by `compute()` (§6). The `TrackingTermCfg` docstring formula
-`r = k * (exp(...) - ...)` (`rewards.py:49`) folds in a `k` the function never
+`r = k * (exp(...) - ...)` (`rewards.py:58`) folds in a `k` the function never
 applies — that `k` is the caller's subsequent multiply.
 
 ### 2.1 Gradient intuition, per shape
@@ -102,11 +102,11 @@ applies — that `k` is the caller's subsequent multiply.
 | `arctan` penalty | `0` | `c_atan * 2/pi ≈ 0.637 c_atan` | 1/(1+x²)-decay (heavier) | smoothed near-0 force, Cauchy-like tail |
 
 The exp term is positive in $(0,1]$, maxed at $e=0$ (pinned by
-`test_*_peaks_at_zero`, `tests/test_rewards.py:113,124,139`); its slope
+`test_*_peaks_at_zero`, `tests/test_rewards.py:114,128,128` — see §10.1); its slope
 $-\tfrac{e}{\sigma^2}\exp(-e^2/2\sigma^2)$ peaks at $|e|=\sigma$ and collapses
 toward 0 near $e=0$. Both the exp and quadratic gradients therefore **vanish as
-`e -> 0`**, which the module docstring names as the "SS-error dead zone"
-(`rewards.py:14-17`): once the policy is inside roughly $\sigma$, neither term
+`e -> 0`**, which the module docstring names as the "dead zone"
+(`rewards.py:18-23`): once the policy is inside roughly $\sigma$, neither term
 still rewards pushing the error to zero. The saturating tanh/arctan penalties (and
 the disabled linear penalty) exist to restore a finite non-vanishing gradient at
 $e=0$ without the unbounded-at-infinity force of the raw linear term.
@@ -115,75 +115,76 @@ The kernel returns `exp_term - penalty` and **can go negative** if the penalties
 exceed the exp bump; the tracking terms are only tested for peak-at-1 and
 monotonic-decrease, not non-negativity (§10).
 
-### 2.2 The `lin_ratio` dead-zone gotcha and the docstring contradiction
+### 2.2 The `lin_ratio` dead-zone gotcha — resolved by design
 
-`lin_ratio` defaults to `0.0` (`rewards.py:59`, comment `# linear penalty ratio
-(disabled: caused dead zone)`) and is **never set nonzero anywhere** — none of the
-three `TrackingTermCfg` constructions (`rewards.py:70,72,73`) nor the config
-override (`config.py:423`) passes it. So the linear penalty is inert on all three
+`lin_ratio` defaults to `0.0` (`rewards.py:79`, comment `# linear penalty ratio
+(disabled: caused dead zone)`) and is **never set nonzero anywhere** — neither of
+the two `TrackingTermCfg` constructions (`rewards.py:90,92`) nor the config
+override (`config.py:439`) passes it. So the linear penalty is inert on both
 tracking terms in the shipped config.
 
-This is a genuine self-contradiction inside `rewards.py`: the module docstring
-frames the linear term as *"the critical fix for SS error tolerance … a constant
-downward force on |e|, ensuring the policy keeps reducing SS error all the way to
-zero"* (`rewards.py:14-17`), while the field-level comment (`rewards.py:59`) says
-it was disabled *because* it caused a dead zone. Both statements are in the file;
-no resolving comment exists. As shipped, the SS-error dead zone the docstring
-warns about is present — mitigated only on `yaw_vel` by its tanh penalty (§2.3),
-not on `att_rp` at all.
+This used to read as a self-contradiction in `rewards.py` (the module docstring
+once framed the linear term as the fix for SS-error, while the field comment said
+it was disabled for causing a dead zone). The docstring is now reconciled
+(`rewards.py:14-23`): the linear penalty **was** an attempted fix for the SS-error
+dead zone, but it caused its own dead zone and was disabled everywhere
+(`lin_ratio=0`); the live mitigation is the saturating tanh penalty on `yaw_vel`
+alone (`config.py:439`, `tanh_coef=0.3`). `att_rp` has no saturating term, so its
+SS-error dead zone remains — this is a documented, intentional gap, not an
+unresolved contradiction.
 
 ### 2.3 tanh vs arctan: convention, not code-enforced
 
-The two saturating blocks are **independent `if` statements** (`rewards.py:111`
-and `:113`); nothing prevents both firing if both coefficients were positive — they
+The two saturating blocks are **independent `if` statements** (`rewards.py:123`
+and `:125`); nothing prevents both firing if both coefficients were positive — they
 would stack additively. The docstring's *"only one of tanh/arctan at a time"*
-(`rewards.py:51`) is a config-authoring convention, not a code invariant. In the
+(`rewards.py:63-73`) is a config-authoring convention, not a code invariant. In the
 shipped config only `tanh_coef` is ever nonzero, and only on `yaw_vel`
-(`config.py:423`); `arctan_coef` is never set (§3, §4).
+(`config.py:439`); `arctan_coef` is never set (§3, §4). The docstring frames
+`arctan` explicitly as a **kept-but-unused** heavy-tail alternative to `tanh` — a
+candidate for future experiments needing a saturating term with a longer reach
+(e.g. to fill the `att_rp` dead zone from §2.2), not dead code.
 
 ---
 
 ## 3. Term-by-term catalog
 
 `RewardManager._NAMES = ["att_rp", "yaw_vel", "torque", "thruster",
-"smoothness", "bias", "joint1_center"]` (`rewards.py:199`) — seven terms,
-assembled 1:1 from the `terms` list in `compute()` (`rewards.py:213-221`).
+"smoothness", "bias"]` (`rewards.py:185`) — six terms,
+assembled 1:1 from the `terms` list in `compute()` (`rewards.py:199-206`).
 
 | # | Name | Function (`rewards.py`) | Formula (pre-weight, pre-dt) | Weight field | Dataclass default | Shipped value | On? |
 |---|---|---|---|---|---|---|---|
-| 1 | `att_rp` | `att_rp_tracking` (128-138) | `exp(-e_w²/2σ²) − q·e_w²` where `e_w² = 1.5·roll² + pitch²` | `att_rp.k` | `k=9.0, σ=0.10, quad=0.833` (70) | unchanged | **ON** (reward) |
-| 2 | `yaw_vel` | `yaw_vel_tracking` (141-144) | `exp(-e²/2σ²) − q·e² − tanh_coef·ε·tanh(|e|/ε)` | `yaw_vel.k` | `k=3.5, σ=0.10, quad=1.0` (73) | **override**: `+tanh_coef=0.3, tanh_eps=0.10` (config.py:423) | **ON** (reward + tanh penalty) |
-| 3 | `torque` | `joint_torque` (147-149) | `mean(applied_torque[albc_joints]²)` | `k_tau` | `-0.01` (74) | unchanged | ON |
-| 4 | `thruster` | `thruster_energy` (152-154) | `mean(actions[:, 2:]²)` (6 thruster dims) | `k_thr` | `-0.35` (75) | unchanged | ON |
-| 5 | `smoothness` | `action_smoothness` (157-161) | `mean(da²) + mean(d2a²)` over all 8 dims | `k_s` | `-0.1` (76) | unchanged | ON |
-| 6 | `bias` | `bias_ema_penalty` (164-172) | `Σᵢ wᵢ · bias_emaᵢ²` (3D roll/pitch/yaw-rate) | `k_bias` | `0.0` — disabled (88) | **override**: `-2.0` (config.py:429) | **ON** (override) |
-| 7 | `joint1_center` | `joint1_centering_penalty` (175-190) | `wrap(θ₁)²`, `wrap = atan2(sin,cos)` | `k_joint1_center` | `0.0` — disabled (83) | unchanged | **OFF** |
+| 1 | `att_rp` | `att_rp_tracking` (132-142) | `exp(-e_w²/2σ²) − q·e_w²` where `e_w² = 1.5·roll² + pitch²` | `att_rp.k` | `k=9.0, σ=0.10, quad=0.833` (90) | unchanged | **ON** (reward) |
+| 2 | `yaw_vel` | `yaw_vel_tracking` (145-148) | `exp(-e²/2σ²) − q·e² − tanh_coef·ε·tanh(|e|/ε)` | `yaw_vel.k` | `k=3.5, σ=0.10, quad=1.0` (92) | **override**: `+tanh_coef=0.3, tanh_eps=0.10` (config.py:439) | **ON** (reward + tanh penalty) |
+| 3 | `torque` | `joint_torque` (151-153) | `mean(applied_torque[albc_joints]²)` | `k_tau` | `-0.01` (93) | unchanged | ON |
+| 4 | `thruster` | `thruster_energy` (156-158) | `mean(actions[:, 2:]²)` (6 thruster dims) | `k_thr` | `-0.35` (94) | unchanged | ON |
+| 5 | `smoothness` | `action_smoothness` (161-165) | `mean(da²) + mean(d2a²)` over all 8 dims | `k_s` | `-0.1` (95) | unchanged | ON |
+| 6 | `bias` | `bias_ema_penalty` (168-176) | `Σᵢ wᵢ · bias_emaᵢ²` (3D roll/pitch/yaw-rate) | `k_bias` | `0.0` — disabled (100) | **override**: `-2.0` (config.py:445) | **ON** (override) |
 
 ### 3.1 Shipped effective-weight table (definitive)
 
-Exactly **two of twelve** `ALBCRewardCfg` fields are touched by the shipped config
-(`config.py:422-430`): `yaw_vel` (gains a tanh penalty) and `k_bias` (turned on at
+Exactly **two of ten** `ALBCRewardCfg` fields are touched by the shipped config
+(`config.py:438-446`): `yaw_vel` (gains a tanh penalty) and `k_bias` (turned on at
 `-2.0`). Everything else runs off the `rewards.py` dataclass defaults.
 
-| Field | Dataclass default (`rewards.py`) | Config override (`config.py:422-430`) | Shipped effective value | Overridden? |
+| Field | Dataclass default (`rewards.py`) | Config override (`config.py:438-446`) | Shipped effective value | Overridden? |
 |---|---|---|---|---|
-| `att_rp` | `k=9.0, σ=0.10, quad_ratio=0.833` (70) | — | `k=9.0, σ=0.10, quad=0.833, lin=0, tanh=0, arctan=0` | No |
-| `att_roll_weight` | `1.5` (71) | — | `1.5` | No |
-| `lin_vel` | `k=4.0, σ=0.10, quad=1.0` (72) | — | same, **but term unused** (§4.3) | No (moot) |
-| `yaw_vel` | `k=3.5, σ=0.10, quad=1.0` (73) | `+tanh_coef=0.3, tanh_eps=0.10` (423) | `k=3.5, σ=0.10, quad=1.0, tanh=0.3, tanh_eps=0.10` | **Yes** |
-| `k_tau` | `-0.01` (74) | — | `-0.01` | No |
-| `k_thr` | `-0.35` (75) | — | `-0.35` | No |
-| `k_s` | `-0.1` (76) | — | `-0.1` | No |
-| `k_joint1_center` | `0.0` (83) | — | `0.0` (disabled) | No |
-| `termination_penalty` | `0.0` (84) | — | `0.0` (disabled) | No |
-| `k_bias` | `0.0` (88) | `-2.0` (429) | `-2.0` (term ON) | **Yes** |
-| `bias_ema_alpha` | `0.99` (89) | — | `0.99` (~100-step / 2 s window at 50 Hz) | No |
-| `bias_weights` | `(1.5, 1.0, 1.0)` (91) | — | `(1.5, 1.0, 1.0)` | No |
+| `att_rp` | `k=9.0, σ=0.10, quad_ratio=0.833` (90) | — | `k=9.0, σ=0.10, quad=0.833, lin=0, tanh=0, arctan=0` | No |
+| `att_roll_weight` | `1.5` (91) | — | `1.5` | No |
+| `yaw_vel` | `k=3.5, σ=0.10, quad=1.0` (92) | `+tanh_coef=0.3, tanh_eps=0.10` (439) | `k=3.5, σ=0.10, quad=1.0, tanh=0.3, tanh_eps=0.10` | **Yes** |
+| `k_tau` | `-0.01` (93) | — | `-0.01` | No |
+| `k_thr` | `-0.35` (94) | — | `-0.35` | No |
+| `k_s` | `-0.1` (95) | — | `-0.1` | No |
+| `termination_penalty` | `0.0` (96) | — | `0.0` (disabled) | No |
+| `k_bias` | `0.0` (100) | `-2.0` (445) | `-2.0` (term ON) | **Yes** |
+| `bias_ema_alpha` | `0.99` (101) | — | `0.99` (~100-step / 2 s window at 50 Hz) | No |
+| `bias_weights` | `(1.5, 1.0, 1.0)` (103) | — | `(1.5, 1.0, 1.0)` | No |
 
 The `yaw_vel` override is a **full reconstruction** of the nested
 `TrackingTermCfg`, not a partial patch — `k`, `sigma`, `quad_ratio` are restated at
 their default values, so the only *substantive* change is turning on the tanh
-term. `att_rp`, `lin_vel`, `lin_ratio`, and `arctan_coef` are all untouched and
+term. `att_rp`, `lin_ratio`, and `arctan_coef` are all untouched and
 keep their dataclass defaults.
 
 ### 3.2 Effective per-step magnitude at zero error
@@ -192,17 +193,17 @@ With `dt = 0.02` (§6), at zero error the tracking kernel is `1.0`, so `att_rp`
 contributes `9.0 * 0.02 * 1 = 0.18` per step and `yaw_vel` contributes
 `3.5 * 0.02 * 1 = 0.07` per step (its tanh penalty is 0 at exactly $e=0$ since
 $\tanh(0)=0$). Over a 30 s episode at 50 Hz (`episode_length_s=30.0`,
-`config.py:334`; 1500 steps), `att_rp` alone at zero error every step would
+`config.py:350`; 1500 steps), `att_rp` alone at zero error every step would
 accumulate `0.18 * 1500 = 270` — consistent with the DORAEMON
 `performance_lb=250.0` calibration (§8).
 
 ---
 
-## 4. The three tracking terms
+## 4. The two tracking terms
 
 ### 4.1 `att_rp_tracking` — roll-weighted, Manhattan norm for saturating
 
-`att_rp_tracking` (`rewards.py:128-138`) forms two error aggregates and hands them
+`att_rp_tracking` (`rewards.py:132-142`) forms two error aggregates and hands them
 to the kernel:
 
 ```python
@@ -219,9 +220,9 @@ $$
 `err_sq` feeds the exp and quadratic terms; `err_abs_w` is a Manhattan (L1)
 weighted sum of absolute values — **not** a Euclidean `sqrt(err_sq)` — and feeds
 `err_norm`, i.e. the (disabled-here) linear/tanh/arctan penalties. Roll is
-up-weighted by `att_roll_weight = 1.5` (`rewards.py:71`) in *both* aggregates, so
+up-weighted by `att_roll_weight = 1.5` (`rewards.py:91`) in *both* aggregates, so
 roll error costs more per unit than pitch (pinned by
-`test_att_rp_roll_weighted_more_than_pitch`, `tests/test_rewards.py:131`). Since
+`test_att_rp_roll_weighted_more_than_pitch`, `tests/test_rewards.py:120`). Since
 neither saturating nor linear penalty is active on `att_rp` in the shipped config
 (§3.1), `att_rp` runs purely on `exp − quad_ratio·e_w²`.
 
@@ -233,11 +234,11 @@ vertical-pair coefficient `0.145` (`config.py:82`) — a ~20x smaller roll momen
 arm. A second corroboration is the payload-DR comment `4 x 50 N x 0.007 m = 1.4 Nm`
 of roll authority (`config.py:207-212`). The roll axis is genuinely weakly
 actuated, so its tracking error is upweighted before penalization
-(comment `rewards.py:71`: "weak TAM actuation: 0.007m vs pitch 0.145m").
+(comment `rewards.py:91`: "weak TAM actuation: 0.007m vs pitch 0.145m").
 
 ### 4.2 `yaw_vel_tracking` — scalar, the only saturating term in the shipped config
 
-`yaw_vel_tracking` (`rewards.py:141-144`) tracks a scalar yaw *rate* error (not yaw
+`yaw_vel_tracking` (`rewards.py:145-148`) tracks a scalar yaw *rate* error (not yaw
 angle):
 
 ```python
@@ -246,35 +247,21 @@ return _exp_quad_saturating(err.pow(2), err.abs(), env.cfg.reward.yaw_vel)
 ```
 
 No weighting: `err_sq = err²`, `err_norm = |err|`. The dataclass default
-(`rewards.py:73`) has no saturating term, but the shipped config
-(`config.py:423`) overrides `yaw_vel` to
+(`rewards.py:92`) has no saturating term, but the shipped config
+(`config.py:439`) overrides `yaw_vel` to
 `TrackingTermCfg(k=3.5, sigma=0.10, quad_ratio=1.0, tanh_coef=0.3, tanh_eps=0.10)`
 — identical `k`/`sigma`/`quad_ratio`, plus the tanh penalty. **`yaw_vel` is the
 only tracking term carrying an active saturating penalty**; from that penalty
 alone the gradient at zero error is $c_{\tanh}=0.3$. This partially fills the
 dead zone (§2.2) on yaw rate but not on roll/pitch.
 
-### 4.3 `lin_vel_tracking` — DEFINED but structurally DEAD
-
-`lin_vel_tracking` (`rewards.py:121-125`) is the only tracking function using a
-true Euclidean norm (`err_norm = sqrt(err_sq)`, clamped at `1e-12` to avoid a NaN
-gradient through `sqrt` at exactly zero). It is marked `# UNUSED in attitude_only
-(kept for cfg compatibility; not in RewardManager).` (`rewards.py:120`) and is
-**absent** from both `_NAMES` (`rewards.py:199`) and the `terms` list
-(`rewards.py:213-221`). The `ALBCRewardCfg.lin_vel` field (`rewards.py:72`) exists
-only for dataclass/config shape compatibility with the legacy full-DOF env.
-
-This is not merely dormant-but-safe — it would **crash** if invoked against a live
-`ALBCEnv` in main: `env._lin_vel_err` is never assigned anywhere in
-`envs/main/albc_env.py`, so a call would raise `AttributeError`. The only caller in
-the repo is the unit test `test_lin_vel_tracking_peaks_at_zero_error`
-(`tests/test_rewards.py:113`), which supplies `_lin_vel_err` on a `SimpleNamespace`
-stand-in. In the sibling `envs/full_dof/mdp/rewards.py` (a distinct hand-forked
-file) `lin_vel_tracking` **is** wired into that variant's `RewardManager` — so the
-dead-code status is specific to main.
-
-The module docstring at `rewards.py:6,20` still lists `r_lin` as a summed term; it
-is stale (§9).
+There is no `lin_vel_tracking` function in this file — the attitude-only env has
+never had a linear-velocity command, and the dead `lin_vel_tracking` function +
+`ALBCRewardCfg.lin_vel` field that once existed for legacy shape-compatibility
+were removed 2026-07 (§9). The sibling `envs/full_dof/mdp/rewards.py` (a distinct
+hand-forked file for the legacy full-DOF env) still defines and wires
+`lin_vel_tracking` into its own `RewardManager` — that is a separate module,
+untouched by this cleanup.
 
 ---
 
@@ -283,14 +270,14 @@ is stale (§9).
 All four active penalties return **non-negative magnitudes**; the negative sign
 lives entirely in the weight (`k_tau`, `k_thr`, `k_s`, `k_bias`). Every penalty is
 `dt`-scaled identically to the tracking terms (§6) — there is one scaling point for
-all seven terms.
+all six terms.
 
 ### 5.1 `joint_torque` — post-clamp applied torque
 
-`joint_torque` (`rewards.py:147-149`): `mean(applied_torque[albc_joints]²)`. It
+`joint_torque` (`rewards.py:151-153`): `mean(applied_torque[albc_joints]²)`. It
 reads `robot.data.applied_torque` — Isaac Lab's **post-actuator-model, post-clamp**
 torque actually applied, not the policy's raw commanded action (inline comment
-`rewards.py:148`: "post-clamp applied torque"). A reader assuming this penalizes
+`rewards.py:152`: "post-clamp applied torque"). A reader assuming this penalizes
 raw action magnitude would be wrong: it penalizes the physically realized torque
 after actuator dynamics, effort-limit clamping, and DR-randomized effort-limit
 scaling (`action-pipeline.md` §4.2). Joint fault injection that reduces the effort
@@ -298,41 +285,41 @@ limit can therefore *lower* this penalty even for the same commanded action.
 
 ### 5.2 `thruster_energy` — 6 thruster dims only
 
-`thruster_energy` (`rewards.py:152-154`): `mean(env._actions[:, 2:]²)`. The action
+`thruster_energy` (`rewards.py:156-158`): `mean(env._actions[:, 2:]²)`. The action
 layout is `[2D arm delta, 6D thruster]` (`action-pipeline.md` §2), so slicing
 `[:, 2:]` takes the 6 thruster dims (indices 2-7) and **excludes the 2 arm dims**.
 Pinned by `test_thruster_energy_uses_thruster_action_slice`
-(`tests/test_rewards.py:154`): an 8D action `[9,9,1,0,0,0,0,0]` yields
+(`tests/test_rewards.py:143`): an 8D action `[9,9,1,0,0,0,0,0]` yields
 `mean([1,0,0,0,0,0]²) = 1/6`, unaffected by the large arm values. Only
 `joint_torque` (§5.1, reading physical torque) captures any arm-side energy cost.
 
 ### 5.3 `action_smoothness` — first + second order over all 8 dims
 
-`action_smoothness` (`rewards.py:157-161`): `mean(da²) + mean(d2a²)` where
+`action_smoothness` (`rewards.py:161-165`): `mean(da²) + mean(d2a²)` where
 `da = a_t − a_{t-1}` (first-order, action-velocity) and
 `d2a = a_t − 2a_{t-1} + a_{t-2}` (second-order, jerk-like). Unlike `thruster_energy`
 this is computed over **all 8 action dims**. It is zero only at true steady state
 (prev == prev_prev == current), not merely at zero action
-(`test_action_smoothness_zero_when_constant`, `tests/test_rewards.py:161`). The
+(`test_action_smoothness_zero_when_constant`, `tests/test_rewards.py:150`). The
 three action buffers are rotated at the top of `_pre_physics_step`
 (`action-pipeline.md` §3.3) and zeroed together on reset, so the first post-reset
 step's `da`/`d2a` are measured against zero, not stale cross-episode history.
 
 ### 5.4 `bias_ema_penalty` — sustained-offset penalty with env-side coupling
 
-`bias_ema_penalty` (`rewards.py:164-172`): `Σᵢ wᵢ · bias_emaᵢ²` over the 3-channel
+`bias_ema_penalty` (`rewards.py:168-176`): `Σᵢ wᵢ · bias_emaᵢ²` over the 3-channel
 `env._bias_ema` (roll, pitch, yaw-rate), with per-axis weights
 `env._reward_manager._bias_w` preallocated once from `cfg.bias_weights`
-(`rewards.py:206`; default `(1.5, 1.0, 1.0)`, `rewards.py:91`). It penalizes a
+(`rewards.py:192`; default `(1.5, 1.0, 1.0)`, `rewards.py:103`). It penalizes a
 sustained per-env tracking offset that per-step tracking reward cannot see (roll
 is weighted higher, matching its weak authority). Off by dataclass default
 (`k_bias=0.0`) but **ON in the shipped config** at `k_bias=-2.0`
-(`config.py:429`).
+(`config.py:445`).
 
 **The env-side coupling (a two-file gotcha).** The EMA buffer update in
-`albc_env.py:1042-1052` is itself gated on `if self.cfg.reward.k_bias != 0.0:`, so
+`albc_env.py:1067-1079` is itself gated on `if self.cfg.reward.k_bias != 0.0:`, so
 turning `k_bias` on/off flips two coupled things in two different files: (a) the
-reward term's weight becomes nonzero (`rewards.py:219`), and (b) the EMA update
+reward term's weight becomes nonzero (`rewards.py:205`), and (b) the EMA update
 loop `bias_ema = α·bias_ema + (1−α)·err3` starts running. When `k_bias == 0`, the
 update is skipped entirely and `_bias_ema` stays frozen at its reset value `0`
 (not decaying) — so `bias_ema_penalty` would return `0` even though the function
@@ -341,25 +328,22 @@ still executes every step. In the shipped config the update runs every step
 offset, not per-step noise). Unlike the leaky integrator (§7), this EMA update is
 **ungated** — it always incorporates the current error, no magnitude threshold.
 
-### 5.5 `joint1_centering_penalty` — default-off, angle-wrapped
+### 5.5 Joint1 anti-drift is constraint-side only, not a reward term
 
-`joint1_centering_penalty` (`rewards.py:175-190`): `wrap(θ₁)²` with
-`wrap = atan2(sin θ₁, cos θ₁)`, reading only joint1 (`env._albc_joint_ids[0]`,
-`rewards.py:188`). Joint1 is a continuous-rotation motor with no PhysX position
-limit, driven by a pure delta-integrator (`action-pipeline.md` §4.1); nothing pulls
-it back to nominal, so sim-to-real micro-bias would drift it monotonically on the
-real robot. This term supplies the missing restoring gradient. The wrap ensures a
-full revolution ($\theta_1 = 2\pi$, physically identical to 0) is **not** penalized
-as a large error — only the genuine angular distance is
-(`test_joint1_centering_wraps_full_revolution`, `tests/test_rewards.py:222`).
-
-It is **OFF by default** (`k_joint1_center=0.0`, `rewards.py:83`, comment:
-"byte-identical to runs without this term") and never overridden by the shipped
-config. Note it still **executes every step** (the `atan2/sin/cos` runs) and
-contributes exactly `0.0` — so `Reward/joint1_center` always logs `0.0`, which
-reads as "disabled," not "measured zero." A constraint-side joint1 anti-drift
-mechanism (`joint1_constraint_arm`, `main-network-architecture.md` §5.1) is a
-separate, mutually-exclusive-by-convention lever from this reward-side term.
+There is no reward-side joint1 centering penalty in this file: the
+`joint1_centering_penalty` function and the `ALBCRewardCfg.k_joint1_center` field
+that once supplied a `wrap(θ₁)²` restoring gradient on joint1 (a continuous-
+rotation motor with no PhysX position limit, driven by a pure delta-integrator —
+`action-pipeline.md` §4.1) were removed 2026-07 (§9). Joint1 anti-drift is now
+handled entirely on the **constraint** side, via `joint1_constraint_arm`
+(`config.py:552`, `main-network-architecture.md` §5.1): the switch is a 2-way
+`{"none", "B"}`, where `"B"` wires in `joint1_cumulative_cost` (the unwrapped,
+integrated-command displacement) as a constraint term. The previously-existing
+wrapped-instantaneous constraint variant (`joint1_centering_cost`, "arm A") was
+also removed in the same cleanup — its wrap fold made a full revolution of drift
+cost zero, the same blindness that motivated the current mechanism. There is no
+longer a reward-side/constraint-side pair of mutually-exclusive levers; the
+constraint-side arm B is the sole remaining joint1 anti-drift mechanism.
 
 ---
 
@@ -396,8 +380,8 @@ env; the reward functions read `_att_rp_err`/`_yaw_rate_err` directly.)
 ### 6.2 Reward call site and `dt` scaling
 
 `RewardManager` is constructed once at init (`albc_env.py:255`) and called with
-`dt=self.step_dt` (`albc_env.py:1054-1058`). Inside `compute()`
-(`rewards.py:222-225`):
+`dt=self.step_dt` (`albc_env.py:1081-1085`). Inside `compute()`
+(`rewards.py:207-210`):
 
 ```python
 for name, weight, value in terms:
@@ -408,12 +392,12 @@ for name, weight, value in terms:
 
 `step_dt` is **inherited from Isaac Lab's base `DirectRLEnv` class** (framework
 level, computed as `sim.dt * decimation`); `albc_env.py` never assigns it, only
-reads it (e.g. `:101`). With `sim.dt = 0.005` (`config.py:356`) and
-`decimation = 4` (`config.py:335`), `step_dt = 0.02 s` (50 Hz). So the reported
+reads it (e.g. `:101`). With `sim.dt = 0.005` (`config.py:372`) and
+`decimation = 4` (`config.py:351`), `step_dt = 0.02 s` (50 Hz). So the reported
 `k` values are **per-second**; effective per-step is `k * 0.02` (§3.2). Every term
 — tracking and penalty alike — is scaled at this single point; the only reward
 contribution exempt is `termination_penalty`, added *after* `compute()` returns
-(`albc_env.py:1061-1062`, no `* dt`), which is why it is not one of the seven
+(`albc_env.py:1088-1089`, no `* dt`), which is why it is not one of the six
 tracked terms.
 
 ---
@@ -484,31 +468,29 @@ provenance for the shipped value, not as verified facts.
 
 Consolidated traps, each verified against disk. Several are documentation-vs-code
 mismatches that are stale docs, not functional bugs — the running code path is
-internally consistent (7 names, 7 terms, 7 episode-sum keys).
+internally consistent (6 names, 6 terms, 6 episode-sum keys).
 
 | # | Gotcha | Reality | Cite |
 |---|---|---|---|
-| 1 | `lin_vel_tracking` looks live (exported, has `k=4.0`) | Unused in main; absent from `_NAMES`/`terms`; would **crash** (`_lin_vel_err` unassigned) if invoked on a live env | `rewards.py:120-125,199,213-221` |
-| 2 | Module docstring says the linear term is "the critical fix" for SS error | `lin_ratio=0.0` by default, never overridden — the linear penalty is **inert** on all three terms; the dead zone the docstring warns about is present | `rewards.py:14-17,59` |
-| 3 | `k_joint1_center=0.0` "off" | Byte-identical to omitting the term, but it still **executes every step** and logs `Reward/joint1_center = 0.0` (reads as measured-zero) | `rewards.py:83,220` |
-| 4 | tanh and arctan look mutually exclusive | Independent `if`s — both would stack if set; exclusivity is a convention. Shipped config activates **tanh only on `yaw_vel`**; `att_rp` has no saturating term | `rewards.py:51,111-116; config.py:423` |
-| 5 | Reading `rewards.py` alone, `k_bias=0` reads as "bias off" | Shipped config **overrides `k_bias=-2.0`** (term ON), and the override flips a coupled EMA-buffer update in a *second file* (`albc_env.py`) under the identical `k_bias != 0` guard | `rewards.py:88; config.py:429; albc_env.py:1042` |
-| 6 | `k` values look like per-step magnitudes | They are **per-second**; effective per-step is `k * dt` (`* 0.02`), scaled at one point for all 7 terms; `step_dt` is framework-inherited, not defined in `albc_env.py` | `rewards.py:223; config.py:335,356` |
-| 7 | Docstrings say "6-term" / list `r = r_att + r_lin + ...` | Actual `terms` list has **7** entries; the docstring's 6 even counts the dead `r_lin`. Stale docs, not a code bug | `rewards.py:6,197,199,213-221` |
-| 8 | `joint_torque` penalizes commanded action | It reads **`applied_torque`** — post-actuator, post-clamp physical torque; fault/effort-limit scaling changes it independently of the raw action | `rewards.py:148-149` |
-| 9 | `termination_penalty` is a reward term | Applied **outside** `compute()`, **not** `dt`-scaled, and **not** in `_NAMES` — never appears under any `Reward/<name>` key. Off by default, never overridden | `rewards.py:84; albc_env.py:1061-1062` |
-| 10 | Retuning `reward.*.sigma` only affects the reward | It **also** retunes the integral-observation gate threshold, which borrows the reward sigma | `albc_env.py:164-173,1029-1038` |
-| 11 | `att_roll_weight=1.5` is an unexplained constant | Grounded in the shipped TAM: roll moment arm `0.007 m` vs pitch `0.145 m` (`config.py:81-82`), corroborated by the payload-DR authority comment | `rewards.py:71; config.py:81-82,207-212` |
-| 12 | `envs/main/mdp/rewards.py` and `envs/full_dof/...` are one shared module | **Distinct hand-forked files**; `full_dof` wires `lin_vel` in and omits `joint1_center`. A fix in one does not propagate | `rewards.py:199` vs `full_dof/mdp/rewards.py:173,188` |
+| 1 | `lin_vel_tracking` / `joint1_centering_penalty` might still be in this file | Both were **removed 2026-07** along with `ALBCRewardCfg.lin_vel`/`k_joint1_center`; `lin_vel_tracking` still exists in the separate `envs/full_dof/mdp/rewards.py` module, `joint1_centering_penalty` is gone entirely (constraint-side `joint1_cumulative_cost` is the anti-drift mechanism now, §5.5) | `rewards.py:185,199-206` |
+| 2 | Module docstring used to contradict the `lin_ratio` field comment on whether the linear term was "the fix" | **Resolved**: the docstring now states the linear penalty was an attempted SS-error fix that caused its own dead zone and was disabled (`lin_ratio=0` everywhere); the live mitigation is the tanh penalty on `yaw_vel` only, `att_rp` has no saturating term | `rewards.py:14-23,79` |
+| 3 | tanh and arctan look mutually exclusive | Independent `if`s — both would stack if set; exclusivity is a convention. Shipped config activates **tanh only on `yaw_vel`**; `arctan` is a kept-but-unused heavy-tail alternative, never set nonzero | `rewards.py:63-73,123-128; config.py:439` |
+| 4 | Reading `rewards.py` alone, `k_bias=0` reads as "bias off" | Shipped config **overrides `k_bias=-2.0`** (term ON), and the override flips a coupled EMA-buffer update in a *second file* (`albc_env.py`) under the identical `k_bias != 0` guard | `rewards.py:100; config.py:445; albc_env.py:1069` |
+| 5 | `k` values look like per-step magnitudes | They are **per-second**; effective per-step is `k * dt` (`* 0.02`), scaled at one point for all 6 terms; `step_dt` is framework-inherited, not defined in `albc_env.py` | `rewards.py:208; config.py:351,372` |
+| 6 | `joint_torque` penalizes commanded action | It reads **`applied_torque`** — post-actuator, post-clamp physical torque; fault/effort-limit scaling changes it independently of the raw action | `rewards.py:151-153` |
+| 7 | `termination_penalty` is a reward term | Applied **outside** `compute()`, **not** `dt`-scaled, and **not** in `_NAMES` — never appears under any `Reward/<name>` key. Off by default, never overridden | `rewards.py:96; albc_env.py:1088-1089` |
+| 8 | Retuning `reward.*.sigma` only affects the reward | It **also** retunes the integral-observation gate threshold, which borrows the reward sigma | `albc_env.py:164-173,1056-1065` |
+| 9 | `att_roll_weight=1.5` is an unexplained constant | Grounded in the shipped TAM: roll moment arm `0.007 m` vs pitch `0.145 m` (`config.py:81-82`), corroborated by the payload-DR authority comment | `rewards.py:91; config.py:81-82,207-212` |
+| 10 | `envs/main/mdp/rewards.py` and `envs/full_dof/...` are one shared module | **Distinct hand-forked files**; `full_dof` still wires `lin_vel_tracking` into its own 7-term `RewardManager` (it never had a joint1 term). A fix in one does not propagate | `rewards.py:185` vs `full_dof/mdp/rewards.py:173` |
 
 ---
 
 ## 10. Testing and logging
 
-### 10.1 Test invariants — `tests/test_rewards.py` (17 tests)
+### 10.1 Test invariants — `tests/test_rewards.py` (9 tests)
 
 The suite is at repo-root `tests/test_rewards.py` (**not** under the
-`constrained_albc/` package), 257 lines. It imports `rewards.py` directly via
+`constrained_albc/` package). It imports `rewards.py` directly via
 `importlib` (bypassing `constrained_albc.__init__`, which would pull in
 `isaaclab.sim`) and uses `SimpleNamespace` env stand-ins — it is a **whitebox unit
 pin of sign conventions and roll-weighting**, so a refactor cannot silently invert
@@ -516,41 +498,34 @@ a reward. It does **not** exercise `RewardManager.compute()` end-to-end.
 
 | Test (`tests/test_rewards.py:line`) | Invariant | Mechanism protected |
 |---|---|---|
-| `test_lin_vel_tracking_peaks_at_zero_error` (113) | `err=0 -> 1.0`; larger `|err|` -> smaller | exp-kernel monotonicity (dead code, pinned anyway) |
-| `test_yaw_vel_tracking_peaks_at_zero` (124) | `err=0 -> 1.0` | `yaw_vel` exp kernel |
-| `test_att_rp_roll_weighted_more_than_pitch` (131) | roll-only 0.2 < pitch-only 0.2 reward | `att_roll_weight=1.5` up-weighting |
-| `test_att_rp_peaks_at_zero` (139) | zero attitude error -> 1.0 | `att_rp` exp base case |
-| `test_joint_torque_nonneg_mean_square` (148) | `[3,4] -> mean(9,16)=12.5` | `mean(tau²)` numeric pin |
-| `test_thruster_energy_uses_thruster_action_slice` (154) | `[9,9,1,0..] -> 1/6` (arm excluded) | `[:, 2:]` slice |
-| `test_action_smoothness_zero_when_constant` (161) | constant -> 0; jump -> >0 | first+second-order difference |
-| `test_bias_ema_uses_preallocated_weights` (175) | `w=[1.5,..], ema=[2,0,..] -> 6.0` | per-axis weighting via `_bias_w` |
-| `test_bias_ema_zero_when_no_offset` (183) | all-zero ema -> 0.0 | base case |
-| `test_reward_manager_preallocates_bias_w` (188) | `__init__` builds `_bias_w` == `cfg.bias_weights` | perf regression net (no per-step rebuild) |
-| `test_joint1_centering_zero_at_nominal` (207) | `θ₁=0 -> 0.0` | centering base case |
-| `test_joint1_centering_grows_with_abs_theta1` (212) | `θ₁=0.3 -> 0.09`; `1.0 -> 1.0` | `wrap(θ)²` exactly, monotone |
-| `test_joint1_centering_wraps_full_revolution` (222) | `θ₁=2π -> ≈0`; `π+0.1 == −(π−0.1)` | `atan2(sin,cos)` wrap |
-| `test_joint1_centering_symmetric_sign` (233) | `+0.5 == −0.5` | sign symmetry |
-| `test_joint1_centering_only_reads_joint1` (240) | differing joint2 -> identical | reads `_albc_joint_ids[0]` only |
-| `test_joint1_center_disabled_by_default` (249) | `ALBCRewardCfg().k_joint1_center == 0.0` | dataclass default off |
-| `test_joint1_center_registered_in_names` (255) | `"joint1_center" in _NAMES` | wired for logging even while disabled |
+| `test_yaw_vel_tracking_peaks_at_zero` (113) | `err=0 -> 1.0` | `yaw_vel` exp kernel |
+| `test_att_rp_roll_weighted_more_than_pitch` (120) | roll-only 0.2 < pitch-only 0.2 reward | `att_roll_weight=1.5` up-weighting |
+| `test_att_rp_peaks_at_zero` (128) | zero attitude error -> 1.0 | `att_rp` exp base case |
+| `test_joint_torque_nonneg_mean_square` (137) | `[3,4] -> mean(9,16)=12.5` | `mean(tau²)` numeric pin |
+| `test_thruster_energy_uses_thruster_action_slice` (143) | `[9,9,1,0..] -> 1/6` (arm excluded) | `[:, 2:]` slice |
+| `test_action_smoothness_zero_when_constant` (150) | constant -> 0; jump -> >0 | first+second-order difference |
+| `test_bias_ema_uses_preallocated_weights` (164) | `w=[1.5,..], ema=[2,0,..] -> 6.0` | per-axis weighting via `_bias_w` |
+| `test_bias_ema_zero_when_no_offset` (172) | all-zero ema -> 0.0 | base case |
+| `test_reward_manager_preallocates_bias_w` (177) | `__init__` builds `_bias_w` == `cfg.bias_weights` | perf regression net (no per-step rebuild) |
 
 **Coverage gaps** (whitebox-only): no test drives `RewardManager.compute()`
-dt-scaling or the 7-term sum, `RewardManager.reset()`, the tanh/arctan branches
+dt-scaling or the 6-term sum, `RewardManager.reset()`, the tanh/arctan branches
 (the shipped `yaw_vel` tanh override is untested at unit level), `lin_ratio > 0`,
 or the env-level `k_bias != 0` gating. The `bias_w`/`bias_ema` fixtures use a 6-D
-vector (`tests/test_rewards.py:176-177`) — a test-only shape choice, **not**
+vector (`tests/test_rewards.py:165-166`) — a test-only shape choice, **not**
 evidence of a 6-D buffer; the real `_bias_ema` is 3-D (`albc_env.py:316`), matching
-the 3-tuple `bias_weights`.
+the 3-tuple `bias_weights`. (The removed `lin_vel_tracking`/`joint1_centering_*`
+tests are gone with their functions, §9.)
 
 ### 10.2 Episode logging — per-term means to wandb/TB
 
 `RewardManager.compute()` accumulates each term's already-`dt`-scaled, already-
-signed contribution into `_episode_sums[name]` (`rewards.py:224-225`). On reset,
-`RewardManager.reset(env_ids)` (`rewards.py:229-234`) returns
+signed contribution into `_episode_sums[name]` (`rewards.py:209-210`). On reset,
+`RewardManager.reset(env_ids)` (`rewards.py:214-219`) returns
 `{name: episode_sums[name][env_ids].mean().item()}` (the **mean across the
 resetting envs** of each term's episode-summed reward) and zeroes those envs' sums.
 
-`_collect_episode_metrics` (`albc_env.py:1079-1098`) turns each into a log key:
+`_collect_episode_metrics` (`albc_env.py:1106-1125`) turns each into a log key:
 
 ```python
 for name, value in reward_sums.items():
@@ -561,7 +536,7 @@ log["Reward/total"] = total
 ```
 
 The emitted keys are exactly `Reward/att_rp`, `Reward/yaw_vel`, `Reward/torque`,
-`Reward/thruster`, `Reward/smoothness`, `Reward/bias`, `Reward/joint1_center`
+`Reward/thruster`, `Reward/smoothness`, `Reward/bias`
 (matching `_NAMES`), plus a derived `Reward/total`. A reader mapping a wandb curve
 back to a term should look for the exact tag `Reward/<name>`.
 
@@ -573,7 +548,7 @@ Two normalization nuances worth flagging:
   purely from accumulating over fewer steps, even at identical per-step density —
   this is fixed-denominator normalization for cross-run comparability, not a true
   per-episode-length average. `_num_resets` is logged alongside
-  (`albc_env.py:1090`) so a single-env extreme trajectory can be weighted.
+  (`albc_env.py:1117`) so a single-env extreme trajectory can be weighted.
 - **`/`-prefix passthrough + a stale-`extras` nuance.** rsl_rl (external
   `rsl_rl_lib-3.1.2`) logs any key containing `/` verbatim and prefixes bare keys
   with `Episode/`; since every key here already has a `/`, all pass through
@@ -588,8 +563,9 @@ Two normalization nuances worth flagging:
 
 ## Source files
 
-- `constrained_albc/envs/main/mdp/rewards.py` — `TrackingTermCfg`, `ALBCRewardCfg`, `_exp_quad_saturating`, the 7 term functions, `RewardManager` (`compute`/`reset`)
-- `constrained_albc/envs/main/config.py` — `reward` override (`:422-430`), TAM (`:77-84`), command ranges (`:410-417`), `integral_gated` (`:347`), sim/decimation/episode length (`:334-356`), `doraemon`/`performance_lb` (`:466-479`)
-- `constrained_albc/envs/main/albc_env.py` — `_compute_ang_errors` (`:1000-1007`), integral gate (`:1019-1038`), bias-EMA update (`:1042-1052`), reward call + termination penalty (`:1054-1062`), `_get_rewards` (`:1009-1077`), `_collect_episode_metrics` (`:1079`), DORAEMON success + reset (`:1276-1290`), buffer init (`:298-316`)
-- `tests/test_rewards.py` — 17 whitebox sign/roll-weight/wrap pins (repo-root `tests/`, not under the package)
+- `constrained_albc/envs/main/mdp/rewards.py` — `TrackingTermCfg`, `ALBCRewardCfg`, `_exp_quad_saturating`, the 6 term functions, `RewardManager` (`compute`/`reset`)
+- `constrained_albc/envs/main/config.py` — `reward` override (`:438-446`), TAM (`:77-84`), command ranges (`:426-433`), `integral_gated` (`:363`), sim/decimation/episode length (`:350-372`), `doraemon`/`performance_lb` (`:499`), `joint1_constraint_arm` (`:552`)
+- `constrained_albc/envs/main/albc_env.py` — `_compute_ang_errors` (`:1027-1035`), integral gate (`:1045-1065`), bias-EMA update (`:1067-1079`), reward call + termination penalty (`:1081-1089`), `_get_rewards` (`:1036-1104`), `_collect_episode_metrics` (`:1106`), DORAEMON success + reset (`:1295-1310`), buffer init (`:298-316`)
+- `tests/test_rewards.py` — 10 whitebox sign/roll-weight pins (repo-root `tests/`, not under the package)
+- `constrained_albc/envs/main/mdp/constraints.py` — `joint1_cumulative_cost` (constraint-side joint1 anti-drift, `apply_joint1_constraint_arm`), see `main-network-architecture.md` §5.1
 - `marinelab/marinelab/algorithms/doraemon.py` — `DoraemonCfg` defaults (re-exported via `envs/main/doraemon.py` shim)

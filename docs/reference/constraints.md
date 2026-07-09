@@ -150,16 +150,17 @@ expected magnitude.
 - **`manipulability`** — hinged below a manipulability floor `w_threshold=0.3`;
   cost accrues when the arm's manipulability measure drops below the floor.
 
-### 3.3 Experiment-only joint1 terms (not shipped)
+### 3.3 Experiment-only joint1 term (not shipped)
 
-Two extra average cost functions exist for the joint1-anti-drift experiment line
-(Section 7); neither is in the shipped 10 (`constraints.py:26-29`):
+One extra average cost function exists for the joint1-anti-drift experiment line
+(Section 7); it is not in the shipped 10 (`constraints.py:26-29`):
 
-- **`joint1_centering_cost`** (arm "A") — $\text{wrap}(\theta_1)^2$, instantaneous
-  wrapped joint-1 angle (`constraints.py:245`).
-- **`joint1_cumulative_cost`** (arm "B") — $\lvert q^{\text{des}}_1 - q^{\text{nom}}_1 \rvert$,
-  the unwrapped running command displacement (`constraints.py:269`, using
-  `env._joint_pos_targets[:, 0] - env._nominal_joint_pos[0]`).
+- **`joint1_cumulative_cost`** — $\lvert q^{\text{des}}_1 - q^{\text{nom}}_1 \rvert$,
+  the unwrapped running command displacement (`constraints.py:271`, using
+  `env._joint_pos_targets[:, 0] - env._nominal_joint_pos[0]`). It is now the sole
+  joint1 anti-drift mechanism: the wrapped-instantaneous constraint (formerly
+  "arm A", `joint1_centering_cost`) and the reward-side centering penalty were
+  both removed 2026-07.
 
 ---
 
@@ -410,29 +411,30 @@ marinelab. The main env overrides four fields
 An off-by-default toggle can append an **11th** constraint term to test joint-1
 anti-drift. Two fields on `ALBCEnvCfg`:
 
-- `joint1_constraint_arm: str = "none"` — one of `{"none", "A", "B"}` (`config.py:532`).
-- `joint1_constraint_budget: float = 0.05` — per-step average budget $d_k$ for arm
-  A/B (`config.py:533`).
+- `joint1_constraint_arm: str = "none"` — one of `{"none", "B"}` (`config.py:552`).
+- `joint1_constraint_budget: float = 0.05` — per-step average budget $d_k$ for the
+  joint1 term (`config.py:553`).
 
-**Materialization path.** `apply_joint1_constraint_arm()` (`constraints.py:301-323`)
-reads the arm; `"none"` is a no-op; `"A"` appends a `joint1_centering_cost` term
-(name `joint1_centering`); `"B"` appends a `joint1_cumulative_cost` term (name
-`joint1_cumulative`); anything else raises `ValueError`. It appends via
+**Materialization path.** `apply_joint1_constraint_arm()` (`constraints.py:279-299`)
+reads the arm; `"none"` is a no-op; `"B"` appends a `joint1_cumulative_cost` term
+(name `joint1_cumulative`); anything else raises `ValueError` (including the
+former `"A"`, which no longer exists). It appends via
 `env_cfg.constraints.terms = [*env_cfg.constraints.terms, term]`.
 
 **Why it is called from `ALBCEnv.__init__`, not a cfg `__post_init__`.** The call
 site is `albc_env.py:128`, inside `ALBCEnv.__init__` (after payload-viz and
 DR-sampler init). This is deliberate: hydra's `update_class_from_dict` override lands
 *after* the cfg `__post_init__` but *before* `ALBCEnv.__init__` runs
-(`constraints.py:304-307`, `albc_env.py:123-127`). Putting the call in
+(`constraints.py:279-291`, `albc_env.py:123-127`). Putting the call in
 `__post_init__` would always observe `arm="none"` and silently produce a
-baseline-duplicate run instead of arm A/B.
+baseline-duplicate run instead of arm B.
 
-**Single-mechanism discipline.** For A/B the reward's `k_joint1_center` must be set
-to `0.0` so exactly one centering mechanism is active (`config.py:520-524`). This is
-a documented experimenter requirement — `config.py`'s `ALBCEnvCfg.reward` call does
-not set it automatically (the `ALBCRewardCfg` default is already `0.0`, but nothing
-enforces it when overriding reward).
+**Sole anti-drift mechanism.** Arm B (`joint1_cumulative_cost`) is now the only
+joint1 anti-drift mechanism in the codebase. Both the reward-side centering
+penalty and the wrapped-instantaneous constraint (formerly "arm A") were removed
+2026-07, so the earlier "set the reward's centering coefficient to 0.0 to avoid
+double-counting" requirement no longer applies — there is nothing left to
+double-count against.
 
 **Behavior — never binds under station-keeping (experimental finding).** In a
 flat-target station-keeping task the joint1-cumulative constraint essentially never
@@ -443,7 +445,7 @@ headroom) every iteration and peak $\lvert\theta_{\text{cum}}\rvert$ never excee
 `joint1_cumulative_rotation_constraint_never_binds_policy_parks_a.md` (run
 `trpo_joint1_cumul_rot_260629_183545`). *Caveat:* the wiki run there frames the term
 as a probabilistic $\mathbb{1}[\lvert\theta_{\text{cum}}\rvert > 4\pi] \le 0.01$
-constraint, whereas the shipped-code arm-"B" function `joint1_cumulative_cost` is an
+constraint, whereas the shipped-code function `joint1_cumulative_cost` is an
 *average* $\lvert q^{\text{des}}_1 - q^{\text{nom}}_1 \rvert$ cost — the same
 experiment line spans two variants across runs; the substance (never binds) holds.
 
@@ -461,8 +463,8 @@ to mean "active/present"), flagged rather than reconciled here.
 
 **Off by default = byte-identical.** With `arm="none"` (the default),
 `apply_joint1_constraint_arm` returns immediately, the shipped 10-term set is
-untouched, and K stays at 10. Enabling A/B adds exactly one cost-critic head; the MLP
-layer counts, dims, and activations are unchanged.
+untouched, and K stays at 10. Enabling arm B adds exactly one cost-critic head; the
+MLP layer counts, dims, and activations are unchanged.
 
 ---
 
@@ -483,7 +485,7 @@ algorithm keeps per-step running state (`_last_violations`, `_last_barrier_margi
 | `Policy/entropy` | mean policy entropy |
 
 The `<name>` suffix is the constraint's configured name
-(`ALBCConstraintCfg.constraint_names`, `constraints.py:77-78`), falling back to the
+(`ALBCConstraintCfg.constraint_names`, `constraints.py:76-77`), falling back to the
 numeric index. The namespace is a 2-level `Constraint/<type>/<name>` hierarchy for
 viol/margin plus the flat `Constraint/barrier_penalty`; DORAEMON curriculum metrics
 use a separate `DORAEMON/*` namespace and policy diagnostics a `Policy/*` namespace.
@@ -523,8 +525,9 @@ value — the 0.944 figure below is the E6 budget-halving run, not the teacher.)
 `thruster_util` responded, pushing *further* into binding ($\hat{J}_C/d_k$ rose
 $0.869 \to 0.944$); the other 9 stayed slack. That single additional bind on the
 control-authority channel caused authority starvation: per-step reward fell 54%
-(Reward/total 7.96 -> 3.68), lin_vel reward went negative, and policy entropy
-collapsed (crossing 0 at iter 2289, an anomaly never seen in the teacher run).
+(Reward/total 7.96 -> 3.68), lin_vel reward went negative (the lin_vel reward
+channel has since been removed), and policy entropy collapsed (crossing 0 at
+iter 2289, an anomaly never seen in the teacher run).
 **Rule:** tightening a control-authority channel (thruster) is destructive. Source:
 omx wiki `constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md`. This
 binding conclusion is computed in the slack regime ($\hat{J}_C = d_k - \text{margin}$),
@@ -540,7 +543,7 @@ without self-pacing feedback — the exact motivation for the `lb 68 -> 250` /
 
 ## Source files
 
-- `constrained_albc/envs/main/mdp/constraints.py` — 10 cost functions, `ConstraintTermCfg`, `ALBCConstraintCfg`, `compute_all_costs`, `apply_joint1_constraint_arm`
+- `constrained_albc/envs/main/mdp/constraints.py` — 10 shipped cost functions + 1 experiment-only joint1 term, `ConstraintTermCfg`, `ALBCConstraintCfg`, `compute_all_costs`, `apply_joint1_constraint_arm` (2-way `{none, B}`)
 - `constrained_albc/envs/main/config.py` — `ALBCEnvCfg`, `_FULL_DOF_CONSTRAINT_TERMS` (the shipped 10 budgets), DORAEMON overrides, joint1 toggles
 - `constrained_albc/envs/main/config_noconstraint.py` — `ALBCNoConstraintEnvCfg` (terms=[], TRPO-NoIPO / PPO-Enc ablations)
 - `constrained_albc/envs/main/algorithms/constraint_trpo.py` — ConstraintTRPO + IPO barrier, adaptive threshold, cost GAE, TRPO step, std clamp, cost critic
