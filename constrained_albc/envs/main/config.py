@@ -537,11 +537,11 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     constraints: ALBCConstraintCfg = ALBCConstraintCfg(terms=_FULL_DOF_CONSTRAINT_TERMS)
 
     # --- joint1-constraint-redesign experiment (off by default = byte-identical) ---
-    # Selects which continuous joint1 anti-drift constraint to append (vs the shipped
-    # reward centering). 'none' = no extra term (shipped behavior). 'A' = average cost
-    # on the instantaneous wrapped angle. 'B' = average cost on the integrated-command
-    # displacement (drift-correct). For A/B, also set reward k_joint1_center=0.0 so
-    # exactly one centering mechanism is active (single-variable discipline).
+    # Selects which continuous joint1 anti-drift constraint to append. The reward-side
+    # centering penalty was removed 2026-07, so the constraint side is now the only
+    # joint1 anti-drift mechanism. 'none' = no extra term (shipped behavior). 'A' =
+    # average cost on the instantaneous wrapped angle. 'B' = average cost on the
+    # integrated-command displacement (drift-correct).
     #
     # NOTE: the extra term is materialized by apply_joint1_constraint_arm() called from
     # ALBCEnv.__init__, NOT from a cfg __post_init__. A constraint term bundles a function

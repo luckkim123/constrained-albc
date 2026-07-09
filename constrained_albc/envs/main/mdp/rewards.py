@@ -3,9 +3,9 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Attitude-only tracking reward (7 terms), summed with dt-scaling.
+"""Attitude-only tracking reward (6 terms), summed with dt-scaling.
 
-  r = r_att + r_yaw + r_tau + r_thr + r_s + r_bias + r_jc
+  r = r_att + r_yaw + r_tau + r_thr + r_s + r_bias
 
 Tracking terms (att, yaw) use an exp kernel + quadratic + saturating penalty:
     r = k * (exp(-e^2/2s^2) - q_quad*e^2 - q_lin*|e| - saturating)
@@ -28,7 +28,9 @@ r_tau:  k_tau * mean(tau^2)                 (joint torque energy;   k_tau  < 0)
 r_thr:  k_thr * mean(thruster_cmd^2)        (thruster energy;       k_thr  < 0)
 r_s:    k_s   * (mean(da^2) + mean(d2a^2))  (action smoothness;     k_s    < 0)
 r_bias: k_bias * sum_i w_i * bias_ema_i^2   (sustained offset;   default off)
-r_jc:   k_jc  * wrap(theta1)^2              (joint1 centering;   default off)
+
+joint1 anti-drift is handled constraint-side (joint1_constraint_arm in config.py),
+not by a reward term -- the reward-side centering penalty was removed 2026-07.
 """
 
 from __future__ import annotations
@@ -91,13 +93,6 @@ class ALBCRewardCfg:
     k_tau: float = -0.01  # joint torque penalty
     k_thr: float = -0.35  # thruster energy penalty
     k_s: float = -0.1  # action smoothness penalty
-    # Joint1 (arm rotation) centering penalty. Joint1 is a free DOF under a pure
-    # delta-integrator with no restoring signal, so sim-to-real micro-bias drifts
-    # it monotonically on the real robot. This penalizes the *wrapped* angular
-    # distance from nominal (0 rad), so a continuous-rotation motor is not falsely
-    # penalized for a full turn back to the same pose. Default 0.0 = disabled
-    # (byte-identical to runs without this term).
-    k_joint1_center: float = 0.0
     termination_penalty: float = 0.0
     # EMA bias penalty (r11_emabias): penalize sustained per-env tracking offset that
     # per-step reward cannot see. bias_ema = a * bias_ema + (1-a) * err per axis.
@@ -181,31 +176,13 @@ def bias_ema_penalty(env: ALBCEnv) -> torch.Tensor:
     return (env._bias_ema.pow(2) * w).sum(dim=-1)
 
 
-def joint1_centering_penalty(env: ALBCEnv) -> torch.Tensor:
-    """r_jc = wrap(theta1)^2. Centering penalty on joint1 (arm rotation).
-
-    Joint1 is a continuous-rotation motor with no PhysX position limit, driven by a
-    pure delta-integrator (q_des += delta_scale * a). Nothing pulls it back to
-    nominal (0 rad), so sim-to-real bias accumulates into monotonic drift on the
-    real robot. This term supplies the missing restoring gradient.
-
-    The angle is wrapped to (-pi, pi] before squaring so that theta1 = 2*pi (one
-    full revolution, physically identical to 0) is NOT penalized as if it were far
-    from nominal -- only the genuine angular distance from nominal is penalized.
-    Returns non-negative magnitude; the negative sign lives in cfg.k_joint1_center.
-    """
-    theta1 = env._robot.data.joint_pos[:, env._albc_joint_ids[0]]
-    wrapped = torch.atan2(torch.sin(theta1), torch.cos(theta1))
-    return wrapped.pow(2)
-
-
 # --- Reward Manager ---
 
 
 class RewardManager:
-    """Computes 7-term tracking reward with dt-scaling and episode tracking."""
+    """Computes 6-term tracking reward with dt-scaling and episode tracking."""
 
-    _NAMES = ["att_rp", "yaw_vel", "torque", "thruster", "smoothness", "bias", "joint1_center"]
+    _NAMES = ["att_rp", "yaw_vel", "torque", "thruster", "smoothness", "bias"]
 
     def __init__(self, cfg: ALBCRewardCfg, num_envs: int, device: str) -> None:
         self._cfg = cfg
@@ -226,7 +203,6 @@ class RewardManager:
             ("thruster", cfg.k_thr, thruster_energy(env)),
             ("smoothness", cfg.k_s, action_smoothness(env)),
             ("bias", cfg.k_bias, bias_ema_penalty(env)),
-            ("joint1_center", cfg.k_joint1_center, joint1_centering_penalty(env)),
         ]
         for name, weight, value in terms:
             scaled = value * weight * dt

@@ -251,9 +251,11 @@ def joint1_centering_cost(
     Type: Average
     Formula: wrap(theta1)^2, wrap = atan2(sin, cos) folded to (-pi, pi]
 
-    Continuous restoring cost toward nominal (0 rad), the average-constraint
-    counterpart of the joint1_centering_penalty reward term -- it supplies the
-    shaping gradient the binary joint1_pos indicator (flat inside +-4pi) does not.
+    Continuous restoring cost toward nominal (0 rad). The reward-side centering
+    penalty was removed 2026-07, so the constraint side (arm A here, or arm B via
+    joint1_cumulative_cost) is now the sole joint1 anti-drift mechanism -- it
+    supplies the shaping gradient the binary joint1_pos indicator (flat inside
+    +-4pi) does not.
     Reads MEASURED joint_pos (in steady tracking ~= the integrated command).
 
     Caveat (the reason arm B exists): the wrap fold makes theta1 = 2*pi cost ZERO
