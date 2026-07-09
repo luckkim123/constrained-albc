@@ -303,6 +303,12 @@ class ALBCEnv(DirectRLEnv):
         self._actions = torch.zeros(self.num_envs, self.cfg.action_space, device=self.device)
         self._prev_actions = torch.zeros(self.num_envs, self.cfg.action_space, device=self.device)
         self._prev_prev_actions = torch.zeros(self.num_envs, self.cfg.action_space, device=self.device)
+        # Commanded-action triple (parallel to the triple above, which carries the
+        # delayed/applied value once latency DR overwrites _actions at :586). Read
+        # only by action_smoothness -- see _update_action_buffers().
+        self._cmd_actions = torch.zeros(self.num_envs, self.cfg.action_space, device=self.device)
+        self._prev_cmd_actions = torch.zeros(self.num_envs, self.cfg.action_space, device=self.device)
+        self._prev_prev_cmd_actions = torch.zeros(self.num_envs, self.cfg.action_space, device=self.device)
         self._nominal_joint_pos = torch.tensor(self.cfg.nominal_joint_pos, device=self.device)
         self._delta_scale = self.cfg.delta_scale
         # Joint delta actuation-noise std (3rd channel). None when disabled ->
@@ -520,9 +526,18 @@ class ALBCEnv(DirectRLEnv):
         Args:
             actions: Raw actions from RL. Shape: (num_envs, action_space).
         """
+        cmd = actions.clone().clamp(-1.0, 1.0)
+
         self._prev_prev_actions = self._prev_actions.clone()
         self._prev_actions = self._actions.clone()
-        self._actions = actions.clone().clamp(-1.0, 1.0)
+        self._actions = cmd  # delay overwrite (if any) applies to this at :586
+
+        # Commanded triple: shifted from the same clamped commanded value, never
+        # from the delayed/applied one -- action_smoothness reads this triple.
+        self._prev_prev_cmd_actions = self._prev_cmd_actions.clone()
+        self._prev_cmd_actions = self._cmd_actions.clone()
+        self._cmd_actions = cmd
+
         self._control_step_counter += 1
 
     def _get_hist_features(self) -> torch.Tensor:
@@ -597,8 +612,14 @@ class ALBCEnv(DirectRLEnv):
         self._update_action_buffers(actions)
         self._update_hist()
 
-        # Latency DR: delay the APPLIED action (plant-side), after history has
-        # recorded the commanded action. Off (None) = pass-through.
+        # Latency DR: delay the APPLIED action (plant-side). History (_get_hist_features)
+        # and thruster_energy read _actions/_prev_actions AFTER this overwrite, so they
+        # observe the delayed/applied stream by design (sim-to-real faithful -- a real
+        # robot measures the applied side). action_smoothness instead reads the parallel
+        # commanded triple (_cmd_actions/_prev_cmd_actions/_prev_prev_cmd_actions, shifted
+        # in _update_action_buffers above), so it measures policy-produced jerk and is not
+        # rewarded for buffer-induced smoothness during reset-transient warmup. Off (None)
+        # = pass-through, so both triples are identical every step.
         self._actions = _apply_control_delay(self._action_delay_buf, self._actions)
 
         # Velocity command resampling (mid-episode)
@@ -1403,7 +1424,14 @@ class ALBCEnv(DirectRLEnv):
 
     def _reset_action_buffers(self, env_ids: torch.Tensor) -> None:
         """Reset action buffers, temporal history, and cumulative yaw."""
-        for buf in (self._actions, self._prev_actions, self._prev_prev_actions):
+        for buf in (
+            self._actions,
+            self._prev_actions,
+            self._prev_prev_actions,
+            self._cmd_actions,
+            self._prev_cmd_actions,
+            self._prev_prev_cmd_actions,
+        ):
             buf[env_ids] = 0.0
         self._joint_pos_targets[env_ids] = self._robot.data.joint_pos[env_ids][:, self._albc_joint_ids]
         if self._hist_buf is not None:

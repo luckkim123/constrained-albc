@@ -89,16 +89,22 @@ def _reward_cfg(**kw):
 
 
 def _env(*, lin_err=None, att_err=None, yaw_err=None, actions=None,
-         prev=None, prev_prev=None, bias_ema=None, bias_w=None, reward_cfg=None,
-         joint_pos=None):
+         prev=None, prev_prev=None, cmd_actions=None, prev_cmd=None, prev_prev_cmd=None,
+         bias_ema=None, bias_w=None, reward_cfg=None, joint_pos=None):
     rm = SimpleNamespace(_bias_w=bias_w) if bias_w is not None else None
     robot = (
         SimpleNamespace(data=SimpleNamespace(joint_pos=joint_pos))
         if joint_pos is not None else None
     )
+    # action_smoothness reads the commanded triple (Task 7); default it to mirror
+    # the delayed triple (byte-identical-when-off) unless a test overrides it to
+    # exercise the on-delay divergence explicitly.
     return SimpleNamespace(
         _lin_vel_err=lin_err, _att_rp_err=att_err, _yaw_rate_err=yaw_err,
         _actions=actions, _prev_actions=prev, _prev_prev_actions=prev_prev,
+        _cmd_actions=cmd_actions if cmd_actions is not None else actions,
+        _prev_cmd_actions=prev_cmd if prev_cmd is not None else prev,
+        _prev_prev_cmd_actions=prev_prev_cmd if prev_prev_cmd is not None else prev_prev,
         _bias_ema=bias_ema, _reward_manager=rm, _albc_joint_ids=JOINT_IDS,
         _robot=robot,
         cfg=SimpleNamespace(reward=reward_cfg or _reward_cfg()),
@@ -154,6 +160,22 @@ def test_action_smoothness_zero_when_constant():
     # a moving action -> positive
     env2 = _env(actions=a, prev=torch.zeros_like(a), prev_prev=torch.zeros_like(a))
     assert R.action_smoothness(env2).item() > 0.0
+
+
+def test_action_smoothness_reads_commanded_not_delayed_triple():
+    """Task 7 (M-A fix): action_smoothness must read _cmd_actions/_prev_cmd_actions/
+    _prev_prev_cmd_actions, not _actions/_prev_actions/_prev_prev_actions. Give the
+    delayed triple a jerky pattern and the commanded triple a constant pattern (the
+    inverse of the real ON-delay scenario, but isolates which triple the function
+    actually reads): if it read the delayed triple this would be nonzero.
+    """
+    constant_cmd = torch.tensor([[0.3, -0.2, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0]])
+    jerky_delayed = torch.tensor([[0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9]])
+    env = _env(
+        actions=jerky_delayed, prev=torch.zeros_like(jerky_delayed), prev_prev=torch.zeros_like(jerky_delayed),
+        cmd_actions=constant_cmd, prev_cmd=constant_cmd.clone(), prev_prev_cmd=constant_cmd.clone(),
+    )
+    assert R.action_smoothness(env).item() == pytest.approx(0.0)
 
 
 # ---------------------------------------------------------------------------
