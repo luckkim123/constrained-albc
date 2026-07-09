@@ -121,7 +121,7 @@ class ALBCEnv(DirectRLEnv):
         self._current_dr_sampler: DRSampler | None = None
 
         # Materialize the joint1-constraint-redesign experiment arm (no-op unless
-        # cfg.joint1_constraint_arm is 'A'/'B'). MUST happen here, after hydra has applied
+        # cfg.joint1_constraint_arm is 'B'). MUST happen here, after hydra has applied
         # its overrides to self.cfg, NOT in a cfg __post_init__ (which runs pre-override and
         # would silently leave the shipped 10-term set -> a baseline-dup). See
         # constraints.apply_joint1_constraint_arm.

@@ -23,10 +23,9 @@ Constraint layout (5 Probabilistic + 5 Average = 10 total in the shipped config)
     [8]  rp_vel_settling (avg)   (|p| + |q|) / 2
     [9]  manipulability  (avg)   max(0, threshold - w)
 
-Experiment-only Average costs (joint1-constraint-redesign; NOT in the shipped
-config -- wired in per-arm by the experiment, reward centering off):
-    joint1_centering   (avg)   wrap(theta1)^2            (arm A, instantaneous angle)
-    joint1_cumulative  (avg)   |q_des_1 - nominal|       (arm B, integrated command)
+Experiment-only Average cost (joint1-constraint-redesign; NOT in the shipped
+config -- wired in by the experiment, reward centering removed 2026-07):
+    joint1_cumulative  (avg)   |q_des_1 - nominal|       (integrated command)
 """
 
 from __future__ import annotations
@@ -242,51 +241,28 @@ def manipulability_cost(
     return (w_threshold - env._manipulability).clamp(min=0.0)
 
 
-def joint1_centering_cost(
-    _robot: Articulation,
-    env: ALBCEnv,
-) -> torch.Tensor:
-    """wrap(theta1)^2 on the MEASURED instantaneous joint1 angle (experiment arm A).
-
-    Type: Average
-    Formula: wrap(theta1)^2, wrap = atan2(sin, cos) folded to (-pi, pi]
-
-    Continuous restoring cost toward nominal (0 rad). The reward-side centering
-    penalty was removed 2026-07, so the constraint side (arm A here, or arm B via
-    joint1_cumulative_cost) is now the sole joint1 anti-drift mechanism -- it
-    supplies the shaping gradient the binary joint1_pos indicator (flat inside
-    +-4pi) does not.
-    Reads MEASURED joint_pos (in steady tracking ~= the integrated command).
-
-    Caveat (the reason arm B exists): the wrap fold makes theta1 = 2*pi cost ZERO
-    (a continuous motor: one full turn is the same pose), so this form is blind to
-    a full revolution of drift and can convert drift to a static offset rather than
-    eliminate it. joint1_cumulative_cost (arm B) targets the accumulation directly.
-    """
-    theta1 = _robot.data.joint_pos[:, env._albc_joint_ids[0]]
-    wrapped = torch.atan2(torch.sin(theta1), torch.cos(theta1))
-    return wrapped.pow(2)
-
-
 def joint1_cumulative_cost(
     _robot: Articulation,
     env: ALBCEnv,
 ) -> torch.Tensor:
-    """|integrated joint1 command - nominal| (experiment arm B).
+    """|integrated joint1 command - nominal| (joint1 anti-drift constraint).
 
     Type: Average
     Formula: |_joint_pos_targets[:, 0] - nominal_joint1|
 
     The drift-correct form: it reads the COMMANDED integrator (_joint_pos_targets,
     where q_des += delta_scale * a accumulates -- the exact variable drift lives in,
-    albc_env._apply_joint_pd_action) rather than the measured angle that arms A / the
-    reward read. _joint_pos_targets is already an UNWRAPPED running sum (never folded
-    to (-pi, pi]), so a full revolution of drift is a real accumulated displacement,
-    not folded to zero -- which is precisely what the wrapped instantaneous form
-    (arm A) cannot see. Displacement from nominal in either direction counts (drift
-    is one-directional, but either sign). No extra env accumulator is needed: the
-    integrator already holds the unwrapped sum, and it is reset to the measured pose
-    on episode reset (albc_env._reset_action_buffers).
+    albc_env._apply_joint_pd_action) rather than a measured wrapped angle.
+    _joint_pos_targets is already an UNWRAPPED running sum (never folded to
+    (-pi, pi]), so a full revolution of drift is a real accumulated displacement,
+    not folded to zero -- which a wrapped instantaneous form (the removed arm A /
+    reward centering) could not see. Displacement from nominal in either direction
+    counts (drift is one-directional, but either sign). No extra env accumulator is
+    needed: the integrator already holds the unwrapped sum, and it is reset to the
+    measured pose on episode reset (albc_env._reset_action_buffers).
+
+    This is the sole joint1 anti-drift mechanism: the reward-side centering penalty
+    and the wrapped-instantaneous constraint (arm A) were both removed 2026-07.
     """
     # joint1 is LOCAL index 0 in both _nominal_joint_pos (built from cfg.nominal_joint_pos
     # = (joint1, joint2)) and _joint_pos_targets[:, 0]. Use the local index, NOT the global
@@ -306,22 +282,20 @@ def apply_joint1_constraint_arm(env_cfg) -> None:
     MUST be called from ALBCEnv.__init__ (after hydra has applied its overrides), NOT from a
     cfg __post_init__: __post_init__ runs at cfg construction, BEFORE hydra's
     update_class_from_dict sets joint1_constraint_arm, so it would always see 'none' and
-    silently leave the shipped 10-term set untouched (a baseline-dup masquerading as arm A/B).
+    silently leave the shipped 10-term set untouched (a baseline-dup masquerading as arm B).
 
-    arm='none' is a no-op (byte-identical to the shipped config). 'A'/'B' append exactly one
-    continuous Average term whose IPO budget governs its strength. The shared module-level
-    _FULL_DOF_CONSTRAINT_TERMS (also used by full_dof) is never mutated: a new list is built.
+    arm='none' is a no-op (byte-identical to the shipped config). 'B' appends exactly one
+    continuous Average term (joint1_cumulative) whose IPO budget governs its strength. The
+    shared module-level _FULL_DOF_CONSTRAINT_TERMS (also used by full_dof) is never mutated:
+    a new list is built. (The wrapped-instantaneous arm A was removed 2026-07.)
     """
     arm = getattr(env_cfg, "joint1_constraint_arm", "none")
     if arm == "none":
         return
+    if arm != "B":
+        raise ValueError(f"joint1_constraint_arm must be one of 'none'/'B', got {arm!r}")
     budget = env_cfg.joint1_constraint_budget
-    if arm == "A":
-        term = ConstraintTermCfg(func=joint1_centering_cost, budget=budget, name="joint1_centering")
-    elif arm == "B":
-        term = ConstraintTermCfg(func=joint1_cumulative_cost, budget=budget, name="joint1_cumulative")
-    else:
-        raise ValueError(f"joint1_constraint_arm must be one of 'none'/'A'/'B', got {arm!r}")
+    term = ConstraintTermCfg(func=joint1_cumulative_cost, budget=budget, name="joint1_cumulative")
     env_cfg.constraints.terms = [*env_cfg.constraints.terms, term]
 
 

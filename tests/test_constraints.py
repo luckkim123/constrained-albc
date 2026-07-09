@@ -214,44 +214,10 @@ def test_manipulability_inverse_direction():
 
 
 # ---------------------------------------------------------------------------
-# joint1 centering / cumulative drift constraints (the redesign experiment)
-# A = joint1_centering_cost: wrap(theta1)^2 on the MEASURED instantaneous angle.
-# B = joint1_cumulative_cost: |unwrapped cumulative joint1| on the env accumulator.
+# joint1 cumulative drift constraint (the redesign experiment).
+# joint1_cumulative_cost: |unwrapped cumulative joint1| on the env accumulator.
+# (The wrapped-instantaneous form, arm A / joint1_centering_cost, was removed 2026-07.)
 # ---------------------------------------------------------------------------
-
-
-def test_joint1_centering_cost_zero_at_nominal():
-    """A: wrap(0)^2 == 0 -- no cost when the arm is centered."""
-    robot = _robot(joint_pos=torch.tensor([[0.0, 99.0]]))
-    assert C.joint1_centering_cost(robot, _env()).item() == pytest.approx(0.0)
-
-
-def test_joint1_centering_cost_grows_with_abs_theta1():
-    """A: monotone increasing in |theta1| inside one revolution; symmetric in sign."""
-    small = C.joint1_centering_cost(_robot(joint_pos=torch.tensor([[0.3, 0.0]])), _env()).item()
-    large = C.joint1_centering_cost(_robot(joint_pos=torch.tensor([[1.0, 0.0]])), _env()).item()
-    neg = C.joint1_centering_cost(_robot(joint_pos=torch.tensor([[-1.0, 0.0]])), _env()).item()
-    assert large > small > 0.0
-    assert large == pytest.approx(neg)  # even-symmetric
-
-
-def test_joint1_centering_cost_wraps_full_revolution():
-    """A: theta1 = 2*pi folds to 0 (continuous motor) -- cost ~0, NOT (2*pi)^2.
-
-    This fold is correct for the instantaneous-angle form (A); it is exactly the
-    property that makes A blind to a full-turn of drift, motivating cumulative B.
-    """
-    import math
-
-    pen_2pi = C.joint1_centering_cost(_robot(joint_pos=torch.tensor([[2.0 * math.pi, 0.0]])), _env()).item()
-    assert pen_2pi == pytest.approx(0.0, abs=1e-6)
-
-
-def test_joint1_centering_cost_only_reads_joint1():
-    """A: joint2 (index 1) must not affect the cost."""
-    a = C.joint1_centering_cost(_robot(joint_pos=torch.tensor([[0.5, 0.0]])), _env()).item()
-    b = C.joint1_centering_cost(_robot(joint_pos=torch.tensor([[0.5, 5.0]])), _env()).item()
-    assert a == pytest.approx(b)
 
 
 def test_joint1_cumulative_cost_abs_displacement_from_nominal():
@@ -295,16 +261,15 @@ def test_joint1_cumulative_cost_uses_local_nominal_index_not_global_dof_id():
     assert cost.item() == pytest.approx(1.0)  # |1.5 - 0.5(local joint1 nominal)|, NOT a [3] read
 
 
-def test_joint1_cumulative_cost_distinguishes_full_turn_from_nominal():
-    """B vs A contrast: at a full turn, A (measured, wrapped) folds to ~0 but B
-    (integrated command, unwrapped) reports ~2*pi -- the point of the cumulative form.
+def test_joint1_cumulative_cost_full_turn_is_not_free():
+    """A full turn of drift is a real cost: the unwrapped integrated command reports
+    ~2*pi, NOT folded to ~0. This is the whole point of the cumulative form -- a
+    wrapped-instantaneous cost (the removed arm A) would have folded it to zero.
     """
     import math
 
-    a = C.joint1_centering_cost(_robot(joint_pos=torch.tensor([[2.0 * math.pi, 0.0]])), _env()).item()
     targets = torch.tensor([[2.0 * math.pi, 0.0]])
     b = C.joint1_cumulative_cost(None, _env(joint_pos_targets=targets, nominal_joint_pos=torch.zeros(2))).item()
-    assert a == pytest.approx(0.0, abs=1e-6)
     assert b == pytest.approx(2.0 * math.pi, abs=1e-6)
 
 
@@ -341,14 +306,14 @@ def test_compute_all_costs_stacks_K():
 
 # ---------------------------------------------------------------------------
 # joint1-constraint-redesign wiring: apply_joint1_constraint_arm(env_cfg) appends
-# exactly one Average term for arm A/B and leaves arm 'none' byte-identical, WITHOUT
+# exactly one Average term for arm 'B' and leaves arm 'none' byte-identical, WITHOUT
 # mutating the shared module-level _FULL_DOF_CONSTRAINT_TERMS (also used by full_dof).
 #
 # These call the REAL helper (not a reproduction). The helper is invoked from
 # ALBCEnv.__init__ (AFTER hydra applies overrides), NOT a cfg __post_init__ -- because
 # __post_init__ runs pre-override and would always see arm='none', silently leaving the
-# shipped 10-term set: a baseline-dup masquerading as arm A/B. A real run with
-# joint1_constraint_arm=A that still showed only 10 constraints proved that failure;
+# shipped 10-term set: a baseline-dup masquerading as arm B. A real run with
+# joint1_constraint_arm=B that still showed only 10 constraints would be that failure;
 # test_apply_arm_appends_real_term is the regression guard.
 # ---------------------------------------------------------------------------
 
@@ -373,22 +338,18 @@ def test_apply_arm_none_is_noop():
 
 
 def test_apply_arm_appends_real_term():
-    """arm A/B append exactly one continuous Average term with the given budget.
+    """arm 'B' appends exactly one continuous Average term with the given budget.
 
     Calls the real helper, so it would FAIL if the helper stopped materializing the term
-    (the silent-baseline-dup failure that a live arm=A run actually exhibited).
+    (the silent-baseline-dup failure a live arm=B run would exhibit).
     """
-    for arm, fname, cost_fn in (
-        ("A", "joint1_centering", C.joint1_centering_cost),
-        ("B", "joint1_cumulative", C.joint1_cumulative_cost),
-    ):
-        cfg, _ = _cfg_with_terms(arm, 0.07)
-        C.apply_joint1_constraint_arm(cfg)
-        terms = cfg.constraints.terms
-        assert len(terms) == 11, f"arm {arm} did not append the 11th term"
-        assert terms[-1].name == fname
-        assert terms[-1].budget == 0.07
-        assert terms[-1].func is cost_fn  # binary-indicator regression guard: continuous func
+    cfg, _ = _cfg_with_terms("B", 0.07)
+    C.apply_joint1_constraint_arm(cfg)
+    terms = cfg.constraints.terms
+    assert len(terms) == 11, "arm B did not append the 11th term"
+    assert terms[-1].name == "joint1_cumulative"
+    assert terms[-1].budget == 0.07
+    assert terms[-1].func is C.joint1_cumulative_cost  # binary-indicator regression guard: continuous func
 
 
 def test_apply_arm_rejects_unknown():
@@ -400,6 +361,6 @@ def test_apply_arm_rejects_unknown():
 
 def test_apply_arm_does_not_mutate_shared_list():
     """Appending must NOT mutate the shared _FULL_DOF_CONSTRAINT_TERMS (full_dof reuses it)."""
-    cfg, shared = _cfg_with_terms("A", 0.05)
+    cfg, shared = _cfg_with_terms("B", 0.05)
     C.apply_joint1_constraint_arm(cfg)
     assert len(shared) == 10  # the original shared list object is untouched (new list built)

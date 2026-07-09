@@ -537,11 +537,11 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     constraints: ALBCConstraintCfg = ALBCConstraintCfg(terms=_FULL_DOF_CONSTRAINT_TERMS)
 
     # --- joint1-constraint-redesign experiment (off by default = byte-identical) ---
-    # Selects which continuous joint1 anti-drift constraint to append. The reward-side
-    # centering penalty was removed 2026-07, so the constraint side is now the only
-    # joint1 anti-drift mechanism. 'none' = no extra term (shipped behavior). 'A' =
-    # average cost on the instantaneous wrapped angle. 'B' = average cost on the
-    # integrated-command displacement (drift-correct).
+    # Toggles the continuous joint1 anti-drift constraint. The reward-side centering
+    # penalty and the wrapped-instantaneous constraint (arm A) were both removed
+    # 2026-07, so this is now the only joint1 anti-drift mechanism. 'none' = no extra
+    # term (shipped behavior). 'B' = average cost on the integrated-command
+    # displacement (joint1_cumulative, drift-correct).
     #
     # NOTE: the extra term is materialized by apply_joint1_constraint_arm() called from
     # ALBCEnv.__init__, NOT from a cfg __post_init__. A constraint term bundles a function
@@ -549,5 +549,5 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # construction BEFORE hydra applies the override (update_class_from_dict), so toggling
     # there would always see arm='none' and silently produce a baseline-dup. The env reads
     # cfg AFTER hydra, so that is the correct materialization point.
-    joint1_constraint_arm: str = "none"  # one of {"none", "A", "B"}
-    joint1_constraint_budget: float = 0.05  # per-step average budget d_k for arm A/B
+    joint1_constraint_arm: str = "none"  # one of {"none", "B"}
+    joint1_constraint_budget: float = 0.05  # per-step average budget d_k for the joint1 term
