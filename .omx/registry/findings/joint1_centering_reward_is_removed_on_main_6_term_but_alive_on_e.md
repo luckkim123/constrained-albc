@@ -2,14 +2,14 @@
 title: "joint1_centering reward is REMOVED on main (6-term) but ALIVE on exp/latency-dr (7-term); reward.md doc is main-stale"
 tags: ["joint1", "reward", "branch-divergence", "reward-md-stale", "line-cite-drift", "latency-dr", "envs-main"]
 created: 2026-07-11T06:40:33.149894
-updated: 2026-07-11T06:40:33.149894
+updated: 2026-07-11T07:14:56.822390
 sources: []
-links: ["joint1_anti_drift_constrain_the_command_cumulative_arm_b_not_the.md"]
+links: ["joint1_anti_drift_constrain_the_command_cumulative_arm_b_not_the.md", "reward_md_deep_dive_session_2026_07_11_4_review_fix_prompts_queu.md"]
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 ---
 
 # joint1_centering reward is REMOVED on main (6-term) but ALIVE on exp/latency-dr (7-term); reward.md doc is main-stale
@@ -64,4 +64,31 @@ Removed on main because joint1 anti-drift was consolidated onto the constraint-s
 If work on `exp/latency-dr` (latency DR investigation) is later merged to main, expect a joint1-related merge
 conflict or regression: this branch still carries the 7-term reward + `k_joint1_center` field that main deleted.
 Rebase/merge carefully so the term is not silently re-introduced.
+
+---
+
+## Update (2026-07-11T07:14:56.822390)
+
+## CORRECTION 2026-07-11 (later same day): on MAIN the reward.md is NOT stale — it is already 6-term canonical + cites now fixed
+
+The "reward.md is main-stale" claim above is true **only for the `exp/latency-dr` checkout**, which this
+card was written from. It is NOT true for `main`. A follow-up §9-gotchas-triage session (branch gate =
+main) verified and corrected the main-side doc:
+
+- **main's reward.md is already 6-term.** Its §3/§5.5 document joint1 anti-drift as constraint-side only,
+  and its §9 is a 10-row table that explicitly records `joint1_centering_penalty` / `lin_vel_tracking` as
+  **removed 2026-07**. So on main there is nothing to "mentally drop" — the doc matches the 6-term code.
+- **The line-cite drift above is `exp/latency-dr`-specific and does NOT match main.** The values in the
+  "line-cite drift" section (`config.py:429->:453`, `albc_env.py:1042-1052->:1133-1143`, `_get_rewards :1009->:1100`,
+  gate build `:164-173->:196-203`, apply `:1029-1038->:1120-1129`, termination `:1061->:1152`) are the
+  exp/latency-dr layout. On **main**, the same anchors and their now-CORRECTED values are:
+  k_bias override `config.py:445`; bias-EMA update `albc_env.py:1067-1079`; `_get_rewards` `:1036`;
+  integral-gate build `:166-175`, apply `:1056-1061`; termination `:1088-1089`; doraemon cfg `config.py:499`.
+  All main reward.md/reward.ko.md cites were re-grepped and fixed in commit `390c3e3` (unpushed).
+
+**So the correct statement is branch-conditional**: reward.md on `exp/latency-dr` = 7-term + stale cites;
+reward.md on `main` = 6-term + cites correct (as of `390c3e3`). The "practical warning" below still holds —
+merging exp/latency-dr to main risks re-introducing the deleted `joint1_center` term + `k_joint1_center`
+field; rebase carefully. See the triage record in
+[[reward_md_deep_dive_session_2026_07_11_4_review_fix_prompts_queu]].
 
