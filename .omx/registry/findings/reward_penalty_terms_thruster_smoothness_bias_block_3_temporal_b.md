@@ -1,13 +1,15 @@
 ---
 title: "Reward penalty terms thruster/smoothness/bias block 3 temporal bands (magnitude/jerk/DC-offset); bias EMA makes a Markov reward see non-Markov drift"
-tags: ["reward", "penalty", "bias-ema", "smoothness", "thruster", "jerk", "markov", "heavy-tail"]
+tags: ["reward", "penalty", "bias-ema", "smoothness", "thruster", "jerk", "markov", "heavy-tail", "reward-md-doc", "line-cite-drift"]
 created: 2026-06-14T07:38:12.435122
-updated: 2026-06-14T07:38:12.435122
+updated: 2026-07-11T06:41:27.409930
 sources: []
-links: []
+links: ["joint1_centering_reward_is_removed_on_main_6_term_but_alive_on_e.md"]
 category: reference
 confidence: high
 schemaVersion: 1
+qualityScore: 100
+qualityReasons: []
 ---
 
 # Reward penalty terms thruster/smoothness/bias block 3 temporal bands (magnitude/jerk/DC-offset); bias EMA makes a Markov reward see non-Markov drift
@@ -24,3 +26,27 @@ NON-OBVIOUS CONTRACTS:
 - bias_ema RESET to 0 per episode (albc_env.py:1441) -> a within-episode quantity, not cross-episode.
 - roll-heavier weight (1.5,1,1) mirrors att_roll_weight=1.5: both compensate weak roll TAM authority (0.007 m moment arm vs pitch 0.145 m).
 TUNING HISTORY (config.py:391-396): k_bias=-2.0 is the r11_emabias setting, verified STRONGEST single intervention across 24 runs. r12 halved it to -1.0 -> hard roll regressed 0.62 -> 1.26 (rank #1 -> #7). r13 restored full -2.0.
+
+---
+
+## Update (2026-07-11T06:41:27.409930)
+
+## reward.md doc reference + line-cite drift (added 2026-07-11)
+
+There is now a prose reference doc for this whole reward system: `constrained-albc/docs/reference/reward.md`
+(§5.4 covers this bias term specifically, §2.2 the dead-zone, §7 the sigma/integral-gate coupling). Its
+MECHANISM descriptions are accurate and code-verified, BUT its line-number citations have DRIFTED (the code
+shifted after the doc was written). Verified-wrong anchors as of 2026-07-11:
+- bias `k_bias=-2.0` override: doc says `config.py:429`, ACTUAL `config.py:453`.
+- bias-EMA update block: doc says `albc_env.py:1042-1052`, ACTUAL `albc_env.py:1133-1143`.
+- `_get_rewards`: doc's flow cites `albc_env.py:1009`, ACTUAL `def _get_rewards` at `albc_env.py:1100`.
+Use reward.md for the WHY/mechanism, but re-grep any line cite before trusting it.
+
+Also note reward.md is written for the 7-term reward (includes `joint1_center`), which matches branch
+exp/latency-dr but is STALE vs main (6-term, joint1_center removed) — see
+[[joint1_centering_reward_is_removed_on_main_6_term_but_alive_on_e]].
+
+The EMA-update line this card originally cited as `albc_env.py:1046` (and reset as `:1441`) are likewise
+branch/version-shifted; on exp/latency-dr the update is `albc_env.py:1133-1143` and reset `:1555`. The
+mechanism (ungated EMA, alpha=0.99 ~2s, per-episode reset, k_bias!=0 gate) is unchanged.
+

@@ -1,15 +1,15 @@
 ---
 title: "Next from-scratch retrain manifest: what rides on the post-TAM baseline retrain (sim fixes + learning-dynamics experiments)"
-tags: ["albc", "envs-main", "retrain-campaign", "sim-to-real-audit", "baseline-retrain", "manifest", "index", "experiment-roster", "from-scratch", "constraint-trpo", "velocity-limit"]
+tags: ["albc", "envs-main", "retrain-campaign", "sim-to-real-audit", "baseline-retrain", "manifest", "index", "experiment-roster", "from-scratch", "constraint-trpo", "velocity-limit", "reward-weight-tuning", "two-phase"]
 created: 2026-07-05T08:06:16.009224
-updated: 2026-07-09T02:44:56.236446
+updated: 2026-07-11T06:41:42.683852
 sources: []
-links: ["experiment_result_recording_location_experiments_tree_is_ssot_no.md", "tam_columns_must_match_robot_firmware_esc_channel_order_reorder_.md", "encoder_priv_obs_normalization_bounds_must_be_dr_derived_not_har.md", "thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md", "leaky_integral_and_ema_bias_carry_over_the_mid_episode_command_r.md", "encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md", "action_bounding_is_justified_raw_gaussian_external_clamp_tanh_ru.md", "arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md", "real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md"]
+links: ["experiment_result_recording_location_experiments_tree_is_ssot_no.md", "tam_columns_must_match_robot_firmware_esc_channel_order_reorder_.md", "encoder_priv_obs_normalization_bounds_must_be_dr_derived_not_har.md", "thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md", "leaky_integral_and_ema_bias_carry_over_the_mid_episode_command_r.md", "encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md", "action_bounding_is_justified_raw_gaussian_external_clamp_tanh_ru.md", "arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md", "real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md", "next_experiment_workflow_pick_a_baseline_train_once_then_re_tune.md"]
 category: convention
 confidence: high
 schemaVersion: 1
-qualityScore: 70
-qualityReasons: ["no-source-marker", "generic-only-tags"]
+qualityScore: 80
+qualityReasons: ["no-source-marker"]
 ---
 
 # Next from-scratch retrain manifest: what rides on the post-TAM baseline retrain (sim fixes + learning-dynamics experiments)
@@ -96,4 +96,18 @@ Why it is a PAIR not one line: lowering only velocity_limit_sim inverts 4.189 (s
 the sim-to-real channels (obs-noise OOD / latency / clamp-saturation blind spot / control-rate) and back to the
 interventions in THIS roster. Enter from that card when a batch experiment plan starts from a real-robot symptom rather
 than from a code audit item. See [[real_robot_deployment_vibration_differential_diagnosis_by_sim_to]].
+
+---
+
+## Update (2026-07-11T06:41:42.683852)
+
+## Two-phase reward-weight retune (added 2026-07-11, user-directed)
+
+Added to the learning-dynamics roster: the next campaign runs a deliberate TWO-PHASE reward-weight schedule —
+(1) pick a baseline, (2) train ONCE on the shipped weights, (3) re-tune per-term reward weights from that
+run's evidence (per-term Reward/* decomposition, per-axis SS error, heavy-tail vs DC-bias), (4) retrain and
+compare. Weight tuning is evidence-driven POST-run, not a priori. Phase-1 baseline must be the POST-fix
+from-scratch retrained baseline (pre-TAM-reorder checkpoints are physically invalid). Full plan + coupling
+gotchas (ratio-only invariance, k_bias two-file toggle, sigma/integral-gate coupling, performance_lb
+recalibration): [[next_experiment_workflow_pick_a_baseline_train_once_then_re_tune]].
 
