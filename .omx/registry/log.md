@@ -1080,3 +1080,11 @@
 - **Pages:** reward_cost_parallel_structure_mostly_mirroring_two_real_couplin.md
 - **Summary:** updated 'reward/cost parallel structure: mostly mirroring, two real couplings (value grad-clip over the union throttles reward critic; feasibility J_C uses GAE-return so constraint level inherits lambda_c + cost-critic bias)'
 
+## [2026-07-12T09:12:46.475948] query
+- **Pages:** constraint_viol_trajectory_barrier_sign_metrics_4_10_starts_at_d.md, action_bounding_is_justified_raw_gaussian_external_clamp_tanh_ru.md, reward_cost_parallel_structure_mostly_mirroring_two_real_couplin.md, barrier_alpha_runtime_0_05_agent_cfg_injects_over_ctor_default_0.md, arm_a_measured_angle_joint1_constraint_recovers_not_diverges_the.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, constraint_threshold_budget_tuning_thresholds_split_into_hard_ph.md, reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md, session_state_2026_07_12_constraint_deep_dive_q_a_covered_struct.md, constrainttrpo_health_thresholds.md, joint1_anti_drift_constrain_the_command_cumulative_arm_b_not_the.md, joint1_cumulative_ipo_constraint_generalizes_drift_bounded_at_oo.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md, joint1_cumulative_rotation_constraint_never_binds_policy_parks_a.md, policy_head_design_rationale_and_literature_standing_encoder_inp.md, arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md, engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md, leaky_integral_and_ema_bias_carry_over_the_mid_episode_command_r.md, training_anomaly_thresholds_tb_tag_alert_table.md
+- **Summary:** query 'NORBC IPO constraint trpo optimization barrier' -> 20 of 64
+
+## [2026-07-12T09:14:05.788615] add
+- **Pages:** constrainttrpo_faithful_norbc_modified_ipo_kim_2024_arxiv_2308_1.md
+- **Summary:** created 'ConstraintTRPO = faithful NORBC Modified-IPO (Kim 2024, arXiv:2308.12517); standardized-vs-raw barrier + soft feasibility are NORBC design not bugs; only the 1e-8 barrier clamp is code-level (no functional fix)'
+

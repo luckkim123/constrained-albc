@@ -217,6 +217,21 @@ Algorithm body: `algorithms/constraint_trpo.py`. `ConstraintTRPO` is a standalon
 algorithm (aliased `ALBCConstraintTRPO`, `rsl_rl_ppo_cfg.py:25`), not an `rsl_rl.PPO`
 subclass.
 
+**Provenance — this is NORBC's "Modified IPO", implemented faithfully (not a bespoke
+hybrid).** The whole optimizer follows Kim et al., "Not Only Rewards But Also
+Constraints: Applications on Legged Robot Locomotion", arXiv:2308.12517v4, 2024 (KAIST
+Hwangbo lab), named in the module docstring (`constraint_trpo.py:16-18`). The mapping is
+one-to-one: discounted budget $d_k = D_k/(1-\gamma_c)$ = NORBC Eq. (8); the trust-region
+barrier objective with a **raw** $\hat{J}_{C_k}$ level plus a **standardized** cost
+surrogate (§4.1, §4.3) = NORBC Eq. (10); the adaptive threshold
+$d_k^i = \max(d_k, \hat{J}_{C_k} + \alpha d_k)$ = NORBC Eq. (11); the multi-head cost
+critic = NORBC's shared-backbone cost value. NORBC swaps IPO's original PPO step for a
+TRPO step (its stated choice — stable improvement + feasibility *checking*, not
+enforcement). So the two theoretical "soft spots" documented below (the barrier
+saturation cap in §4.1 and the raw-vs-standardized margin in §4.3) are NORBC's
+**deliberate design, not implementation defects**. Detail + the independent-review
+resolution: wiki `constrainttrpo_faithful_norbc_modified_ipo_kim_2024_arxiv_2308_1.md`.
+
 ### 4.1 IPO log-barrier
 
 The interior-point objective (module docstring form):
@@ -247,9 +262,16 @@ carries no explicit $1/(1-\gamma_c)$, while `cost_surr` is scaled by
 `inv_one_minus_gamma` at `constraint_trpo.py:462` (both `mean_cost_returns` and
 `adaptive_d_k` already live on the discounted-return scale via the budget rescale
 $d_k = D_k/(1-\gamma_c)$). The `clamp(min=1e-8)` caps the barrier so it can never
-literally reach $-\infty$/$+\infty$ even at/past infeasibility — this silently
-softens the interior-point guarantee near the boundary rather than enforcing it
-hard.
+literally reach $-\infty$/$+\infty$ even at/past infeasibility — concretely it
+**saturates at $-\log(10^{-8})/t \approx 18.42/100 \approx 0.184$ per constraint**, so a
+step whose reward-surrogate gain exceeds ~0.184 walks straight through the boundary.
+This clamp is a numerical guard **not present in NORBC's Eq. (9)/(10)**; it silently
+softens the interior-point "cannot cross" property near the boundary rather than
+enforcing it hard. That is consistent with NORBC's soft, near-satisfaction design (no
+hard per-step bound is claimed) and is self-correcting because the adaptive threshold
+re-anchors on the raw cost return every iteration. (An earlier verbal claim in this
+campaign that the barrier "diverges to $+\infty$ and auto-rejects the step" was wrong —
+the clamp caps it.)
 
 **barrier_t / barrier_alpha — the true runtime values (doc-drift warning).**
 `barrier_t = 100.0` in both the class constructor default (`constraint_trpo.py:64`)
@@ -307,6 +329,20 @@ The reported `violations` monitoring metric compares $\hat{J}_{C_k}$ against the
   inline comment (`:436`) reads `# clamp(min=1.0): binary constraints can have
   near-zero std, causing 1e8 amplification.` Reward advantages are standardized
   separately with the ordinary `1e-8` guard (`:424-426`).
+  - **The barrier margin therefore mixes a raw level with a standardized delta — and
+    this is NORBC Eq. (10) verbatim, not a code bug.** `barrier_base` uses the
+    unstandardized `mean_cost_returns`, while `cost_surr` uses the standardized advantage
+    (`:454` vs `:462`). NORBC relies on the *zero-mean* half to keep the problem always
+    feasible at `ratio=1`: then $\mathbb{E}[\hat{A}^C_k]\approx 0$, so
+    $\text{margin}_k \approx d_k^i - \hat{J}_{C_k} \ge \alpha d_k > 0$ and the $\log$ is
+    always defined at the start of each update. The *std* half is NORBC's
+    gradient-conditioning trick for stacking 10+ constraints stably. The practical
+    consequence — a constraint whose runtime cost-advantage std exceeds 1 gets a slightly
+    **more permissive** effective boundary (the barrier responds in standardized units
+    while the budget is raw) — is therefore **dormant unless some constraint's cost-adv
+    std actually exceeds 1**, an empirical run-data question, not a bug to patch. Whether
+    standardization strictly voids NORBC's near-satisfaction guarantee is a critique of
+    NORBC itself, out of scope for this codebase.
 
 ### 4.4 TRPO trust-region step
 
