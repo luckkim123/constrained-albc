@@ -1,9 +1,8 @@
 # constrained-albc Documentation
 
 Documentation for the constrained ALBC (arm-equipped underwater vehicle) RL stack.
-Organized [Diátaxis](https://diataxis.fr/)-style by reader intent. English-only;
-Korean translations of `reference/` pages exist as sibling `*.ko.md` files (not
-indexed here) and PDF renders as sibling `*.pdf` files.
+Organized [Diátaxis](https://diataxis.fr/)-style by reader intent. English-only
+(the former `*.ko.md` translations and `*.pdf` renders were removed 2026-07-12).
 
 | Section | Intent | Start here when... |
 |---|---|---|

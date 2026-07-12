@@ -308,7 +308,7 @@ target is natural — there is a physically-defined zero (level). Yaw about the
 vertical axis is energetically neutral (symmetric buoyancy placement ⇒ **no restoring
 torque**), so there is no privileged heading zero. This asymmetry is real, matches
 the project's own dynamics notes (`references/iros_2026/notes/02_problem.md` lists
-roll/pitch restoring eqs and "Yaw: 없음"), and *justifies treating yaw differently
+roll/pitch restoring eqs and marks yaw as having none), and *justifies treating yaw differently
 from roll/pitch*. It does **not**, by itself, justify "command the rate" — absence of
 a restoring force is the classic argument *for* an active absolute-heading loop, and
 the policy already observes absolute yaw (`euler[3:6]` in obs, `observations.py:54`).

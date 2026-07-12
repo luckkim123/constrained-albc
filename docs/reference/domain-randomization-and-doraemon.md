@@ -16,10 +16,6 @@
 > `doraemon.enable = True`). The legacy full-DOF variant (`envs/full_dof/`) has
 > its own, non-identical DORAEMON surface (18 params as of this writing — no
 > buoy volume/mass decorrelation) and is out of scope here.
->
-> **Korean version**: [`domain-randomization-and-doraemon.ko.md`](domain-randomization-and-doraemon.ko.md).
-> If you edit one, sync the other. This English file is the SSOT. (Not synced by
-> this pass — the ko file still describes the pre-merge two-class structure.)
 
 ---
 

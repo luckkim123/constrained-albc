@@ -12,8 +12,12 @@
 
 ## 1. Problem — The Same Run Is Scattered Across 4 Places
 
-Currently the outputs of a single policy are scattered across different trees. To trace "from which training config
-this eval PNG's policy came", one must visually cross-reference timestamps.
+> Historical (pre-2026-05 state): the paths, the `eval_dr.py` file, and the `sudden` eval mode in
+> this table no longer exist — eval is now `eval.py` with static/periodic/segmented modes only.
+> Kept as the motivation record for the redesign below.
+
+At the time, the outputs of a single policy were scattered across different trees. To trace "from which training
+config this eval PNG's policy came", one had to visually cross-reference timestamps.
 
 | Output | Current path | Generation location (verified) |
 |:---|:---|:---|
