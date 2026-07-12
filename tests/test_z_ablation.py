@@ -70,13 +70,6 @@ _CORE_ENCODER_DIR = (
     / "_core"
     / "encoder"
 )
-_ENCODER_DIR = (
-    Path(__file__).resolve().parent.parent
-    / "constrained_albc"
-    / "envs"
-    / "main"
-    / "encoder"
-)
 
 _MODULE_PATH = _CORE_ENCODER_DIR / "_z_ablation.py"
 _spec = importlib.util.spec_from_file_location("_z_ablation", _MODULE_PATH)
@@ -112,7 +105,7 @@ sys.modules[f"{_ENC_PKG}._z_ablation"] = _mod
 
 # Load actor_critic_encoder.py with correct package context.
 _ace_spec = importlib.util.spec_from_file_location(
-    f"{_ENC_PKG}.actor_critic_encoder", _ENCODER_DIR / "actor_critic_encoder.py"
+    f"{_ENC_PKG}.actor_critic_encoder", _CORE_ENCODER_DIR / "actor_critic_encoder.py"
 )
 assert _ace_spec is not None and _ace_spec.loader is not None
 _ace_mod = importlib.util.module_from_spec(_ace_spec)
