@@ -6,7 +6,7 @@
 """Configuration for attitude-only ALBC environment.
 
 8D action (2D arm + 6D thruster). Roll/pitch: attitude command, yaw: rate command.
-No linear velocity tracking. 69D observation, 27D privileged.
+No linear velocity tracking. 69D observation, 28D privileged.
 Single registered task: Isaac-ConstrainedALBC-TRPO-v0
 """
 
@@ -215,6 +215,14 @@ class DomainRandomizationCfg:
     thrust_coefficient_scale: tuple[float, float] = (0.7, 1.3)
     time_constant_scale: tuple[float, float] = (0.7, 1.3)
 
+    # Control-action transport delay (discrete N-step lag on the applied
+    # action) as integer control steps; 1 step = 20 ms @ 50 Hz.
+    # (0, 0) = off (byte-identical to baseline). Experiment value = (0, 3).
+    # simplified: static uniform DR (like time_constant_scale), not on the
+    # DORAEMON curriculum -- integer delay is awkward for the Beta-continuous
+    # sampler. Promote to a _PARAM_DEFS entry only if warranted.
+    control_delay_steps: tuple[int, int] = (0, 0)
+
     # -- Ocean Current (DORAEMON-managed) --
     # Scalar strength [0, 1] multiplier on ocean_current.max_velocity.
     # DORAEMON nominal=0 (no current at curriculum start) -> expands as policy
@@ -350,7 +358,7 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     """Attitude-only ALBC environment configuration.
 
     8D action (2D arm delta + 6D thruster), 69D observation (20D current + 46D history
-    + 3D integral), 27D privileged (incl. measured lin_vel). Attitude-only: roll/pitch
+    + 3D integral), 28D privileged (incl. measured lin_vel + control-action delay). Attitude-only: roll/pitch
     attitude + yaw rate, no linear velocity tracking. TRPO + IPO + Asymmetric Encoder
     with 10 constraints (5 prob + 5 avg).
 
@@ -368,7 +376,7 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # Breakdown: cmd(3) + body(6) + arm(5) + thruster(6) = 20D current
     #            + joint_hist(12) + body_hist(18) + action_hist(16) = 46D history
     #            + integral(3) [roll, pitch, yaw_rate]
-    state_space: int = 27  # Privileged info (see observations.py compute_privileged_obs)
+    state_space: int = 28  # Privileged info (see observations.py compute_privileged_obs)
     # Integral error observation (Hwangbo 2017 pattern, validated in R7/R8 experiments)
     use_integral_obs: bool = True
     integral_dims: int = 3  # [roll, pitch, yaw_rate]

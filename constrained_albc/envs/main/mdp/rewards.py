@@ -159,9 +159,18 @@ def thruster_energy(env: ALBCEnv) -> torch.Tensor:
 
 
 def action_smoothness(env: ALBCEnv) -> torch.Tensor:
-    """r_s = mean(da^2) + mean(d2a^2). First + second order action difference."""
-    da = env._actions - env._prev_actions
-    d2a = env._actions - 2.0 * env._prev_actions + env._prev_prev_actions
+    """r_s = mean(da^2) + mean(d2a^2). First + second order action difference.
+
+    Reads the COMMANDED action triple (_cmd_actions/_prev_cmd_actions/
+    _prev_prev_cmd_actions), not the delayed/applied triple (_actions/...):
+    the actor cannot observe control-action latency, so its smoothness penalty
+    must be computed on what it actually output, not on what DelayBuffer
+    clamps/repeats during reset-transient warmup. Off (control_delay_steps=(0,0))
+    -> both triples are identical every step, so this is byte-identical to the
+    pre-latency-DR reward.
+    """
+    da = env._cmd_actions - env._prev_cmd_actions
+    d2a = env._cmd_actions - 2.0 * env._prev_cmd_actions + env._prev_prev_cmd_actions
     return da.pow(2).mean(dim=-1) + d2a.pow(2).mean(dim=-1)
 
 

@@ -106,8 +106,9 @@ def _derive():
     return derive(_hard_dr(), _OCEAN_MAX, _thruster(), hydro_cfg=_hydro(), buoy_hydro_cfg=_buoy_hydro())
 
 
-# Derived column for all 27 dims (union layout 2026-07-12: Ixx/lin_damp removed,
-# buoy volume/mass appended after the ocean block, measured lin_vel stays last).
+# Derived column for all 28 dims (union layout 2026-07-12: Ixx/lin_damp removed,
+# buoy volume/mass + normalized control delay after the ocean block, measured
+# lin_vel stays the final 3).
 _EXPECTED = [
     (0.00675, 0.01125),  # 0 volume
     (-0.02, 0.02),  # 1 CoG x
@@ -133,19 +134,26 @@ _EXPECTED = [
     (-0.25, 0.25),  # 21 ocean z
     (0.00201, 0.00335),  # 22 buoy volume (0.00268 * [0.75, 1.25])
     (0.6975, 1.1625),  # 23 buoy body mass (0.93 * [0.75, 1.25])
-    (-1.0, 1.0),  # 24 measured u
-    (-1.0, 1.0),  # 25 measured v
-    (-1.0, 1.0),  # 26 measured w
+    (0.0, 1.0),  # 24 control-action delay (normalized, fixed [0,1])
+    (-1.0, 1.0),  # 25 measured u
+    (-1.0, 1.0),  # 26 measured v
+    (-1.0, 1.0),  # 27 measured w
 ]
 
 
-def test_returns_27_dims():
+def test_priv_obs_dim_is_28_with_delay_tail():
+    # Use the file-path-loaded module (Isaac-free) like the rest of this file,
+    # not the package import, so the assertion runs without booting Isaac Sim.
+    assert priv_obs_bounds.PRIV_OBS_DIM == 28  # 27 base + control-delay tail
+
+
+def test_returns_28_dims():
     lower, upper = _derive()
-    assert len(lower) == 27
-    assert len(upper) == 27
+    assert len(lower) == 28
+    assert len(upper) == 28
 
 
-@pytest.mark.parametrize("idx", range(27))
+@pytest.mark.parametrize("idx", range(28))
 def test_each_dim_matches_spec(idx):
     lower, upper = _derive()
     exp_lo, exp_hi = _EXPECTED[idx]
@@ -187,9 +195,9 @@ def test_water_density_direct_not_scaled():
 def test_buoy_dims_scale_from_buoy_base():
     """idx22/23: buoy volume/mass scale from the BUOY base cfg, not the main body's.
 
-    Also the union-27D dispatch fingerprint (analysis/common.py): idx22 lower
-    must be strictly positive, unlike the pre-union layout where idx22 was
-    ocean-current y (symmetric, negative lower).
+    Also the union-28D dispatch fingerprint guard (analysis/common.py): idx22
+    lower must be strictly positive, unlike the pre-union layout where idx22
+    was ocean-current y (symmetric, negative lower).
     """
     lower, upper = _derive()
     assert lower[22] == pytest.approx(0.00268 * 0.75)
@@ -200,10 +208,12 @@ def test_buoy_dims_scale_from_buoy_base():
 
 
 def test_measured_dims_fixed_pm1():
-    """idx24-26: not DR-backed, fixed [-1, 1]."""
+    """idx25-27: not DR-backed, fixed [-1, 1]; latency (idx24) is fixed [0, 1]."""
     lower, upper = _derive()
-    assert lower[24:27] == [-1.0, -1.0, -1.0]
-    assert upper[24:27] == [1.0, 1.0, 1.0]
+    assert lower[24] == pytest.approx(0.0)
+    assert upper[24] == pytest.approx(1.0)
+    assert lower[25:28] == [-1.0, -1.0, -1.0]
+    assert upper[25:28] == [1.0, 1.0, 1.0]
 
 
 def test_subset_assertion_raises_when_dr_out_of_range():
@@ -215,8 +225,8 @@ def test_subset_assertion_raises_when_dr_out_of_range():
     range it claims to come from.
     """
     # A derived bound that does not match the DR range it derives from.
-    lower = [0.0] * 27
-    upper = [3.0] * 27
+    lower = [0.0] * 28
+    upper = [3.0] * 28
     lower[12] = 0.0
     upper[12] = 2.2  # claims DR [0, 3] but only spans to 2.2 -> mismatch
     with pytest.raises(AssertionError):
@@ -231,8 +241,8 @@ def test_subset_assertion_raises_when_dr_out_of_range():
         )
 
     # lower > upper must also trip.
-    bad_lo = [1.0] * 27
-    bad_hi = [0.0] * 27
+    bad_lo = [1.0] * 28
+    bad_hi = [0.0] * 28
     with pytest.raises(AssertionError):
         priv_obs_bounds._assert_bounds_match_dr(
             bad_lo,

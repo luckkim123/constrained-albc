@@ -150,6 +150,17 @@ expected magnitude.
 - **`manipulability`** — hinged below a manipulability floor `w_threshold=0.3`;
   cost accrues when the arm's manipulability measure drops below the floor.
 
+The two multi-component average costs (`thruster_util`, `rp_rate`) reduce with a spatial
+`max` ($\max_i \lvert s_i\rvert$, $\max(\lvert p\rvert,\lvert q\rvert)$) *inside* the
+per-step cost — this is theoretically consistent, not a category error. The "average" of an
+average constraint is the temporal/stochastic expectation $\mathbb{E}[\sum_t \gamma_c^t c_k]$;
+the `max` only shapes the per-step signal $c_k$. So `max`-inside-average bounds a
+**time-averaged peak** — a *soft* peak that tolerates brief spikes because the discounted
+average smooths them. It is $\mathbb{E}[\max_i]$, **not** $\max_i \mathbb{E}$ and **not** a
+hard "never exceed at any step" bound (that would need a probabilistic indicator).
+`rp_vel_settling` uses a `mean` and `yaw_rate`/`manipulability` are single-quantity, so `max`
+appears only where a multi-component reduction is needed.
+
 ### 3.3 Experiment-only joint1 term (not shipped)
 
 One extra average cost function exists for the joint1-anti-drift experiment line
@@ -162,6 +173,42 @@ One extra average cost function exists for the joint1-anti-drift experiment line
   "arm A", `joint1_centering_cost`) and the reward-side centering penalty were
   both removed 2026-07.
 
+### 3.4 Threshold provenance and the actuator hard-cap layering
+
+Constraint thresholds are **not one uniform kind of hyperparameter** — they split into two
+groups with opposite tuning rules.
+
+- **Hard safety rails (physically grounded).** `attitude` (80° tilt safety), `arm_torque`
+  (`limit_nm=9.5` = the arm motor **stall torque**), `arm_joint_vel` (`4.189` rad/s), `joint1_pos`
+  ($4\pi$ cable-wrap rail), `cumul_yaw` ($8\pi$ tether-wrap rail). The two arm rails sit **inside**
+  the asset's PhysX hard caps — `effort_limit_sim=13.0` Nm and `velocity_limit_sim=6.28` rad/s
+  ($2\pi$) (`marinelab/.../albc/albc.py:200-201`). So `9.5 < 13.0` and `4.189 < 6.28`: the **soft
+  IPO constraint bites before the hard clamp** (intended layering), and the constraint stays alive
+  because there is a live band above the threshold where the indicator can fire (matches §9:
+  `arm_torque` $\hat J_C/d_k = 0.407$ fires; `arm_joint_vel` $0.031$ deep slack). **Invariant:
+  the soft threshold must stay inside the hard cap.** Inverting it silently kills the constraint —
+  the planned `velocity_limit_sim` $6.28 \to 3.1$ retrain (to match the real XW540 arm) would make
+  $3.1 < 4.189$, so PhysX clips at 3.1 and `velocity_limit_cost` can never fire (a **dead
+  constraint** still occupying a budget and a cost head). Fix documented in omx wiki
+  `arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md`: lower `limit_rad_per_s`
+  inside the new cap together. Tune a rail only toward its **true physical value**
+  (measurement/sysid-driven), never toward reward.
+- **Soft shaping thresholds (judgment-chosen).** `rp_rate` (`0.5`), `yaw_rate` (`0.55`),
+  `rp_vel_settling` (`0.087`), `manipulability` (`0.3`). These set where a graded hinge penalty
+  begins — behavior/comfort envelopes, not safety limits — and **are** legitimate experimental
+  tuning targets. Because the threshold sets *where* cost starts and the budget $D_k$ sets *how
+  much* is tolerated, the two are coupled: co-tune (threshold, budget) per constraint rather than
+  budget alone. Tuning the budget of a constraint whose threshold sits far from the operating
+  point is a no-op — §9 shows 9/10 constraints slack, so most such tuning changes nothing until
+  the change actually pushes the constraint toward binding. On a 1-GPU sequential rig this argues
+  for **one-constraint-at-a-time** co-tuning measured against a baseline, not a joint grid sweep
+  over a mostly-flat response surface (one cliff at `thruster_util`).
+
+**`cumul_yaw` headroom (recorded, low priority).** $8\pi$ (4 rev) is $\approx 3.3\times$ the
+observed operating peak ($\sim 1.22$ rev, §9 fully inert). A cosmetic trim to $6\pi$ (3 rev) stays
+inert — a behavioral no-op safe to ride any future config touch; a *bind-intended* value would need
+$\lesssim 2.5\pi$ and should weigh whether it fights normal yaw maneuvering.
+
 ---
 
 ## 4. ConstraintTRPO optimization
@@ -169,6 +216,21 @@ One extra average cost function exists for the joint1-anti-drift experiment line
 Algorithm body: `algorithms/constraint_trpo.py`. `ConstraintTRPO` is a standalone
 algorithm (aliased `ALBCConstraintTRPO`, `rsl_rl_ppo_cfg.py:25`), not an `rsl_rl.PPO`
 subclass.
+
+**Provenance — this is NORBC's "Modified IPO", implemented faithfully (not a bespoke
+hybrid).** The whole optimizer follows Kim et al., "Not Only Rewards But Also
+Constraints: Applications on Legged Robot Locomotion", arXiv:2308.12517v4, 2024 (KAIST
+Hwangbo lab), named in the module docstring (`constraint_trpo.py:16-18`). The mapping is
+one-to-one: discounted budget $d_k = D_k/(1-\gamma_c)$ = NORBC Eq. (8); the trust-region
+barrier objective with a **raw** $\hat{J}_{C_k}$ level plus a **standardized** cost
+surrogate (§4.1, §4.3) = NORBC Eq. (10); the adaptive threshold
+$d_k^i = \max(d_k, \hat{J}_{C_k} + \alpha d_k)$ = NORBC Eq. (11); the multi-head cost
+critic = NORBC's shared-backbone cost value. NORBC swaps IPO's original PPO step for a
+TRPO step (its stated choice — stable improvement + feasibility *checking*, not
+enforcement). So the two theoretical "soft spots" documented below (the barrier
+saturation cap in §4.1 and the raw-vs-standardized margin in §4.3) are NORBC's
+**deliberate design, not implementation defects**. Detail + the independent-review
+resolution: wiki `constrainttrpo_faithful_norbc_modified_ipo_kim_2024_arxiv_2308_1.md`.
 
 ### 4.1 IPO log-barrier
 
@@ -200,9 +262,16 @@ carries no explicit $1/(1-\gamma_c)$, while `cost_surr` is scaled by
 `inv_one_minus_gamma` at `constraint_trpo.py:462` (both `mean_cost_returns` and
 `adaptive_d_k` already live on the discounted-return scale via the budget rescale
 $d_k = D_k/(1-\gamma_c)$). The `clamp(min=1e-8)` caps the barrier so it can never
-literally reach $-\infty$/$+\infty$ even at/past infeasibility — this silently
-softens the interior-point guarantee near the boundary rather than enforcing it
-hard.
+literally reach $-\infty$/$+\infty$ even at/past infeasibility — concretely it
+**saturates at $-\log(10^{-8})/t \approx 18.42/100 \approx 0.184$ per constraint**, so a
+step whose reward-surrogate gain exceeds ~0.184 walks straight through the boundary.
+This clamp is a numerical guard **not present in NORBC's Eq. (9)/(10)**; it silently
+softens the interior-point "cannot cross" property near the boundary rather than
+enforcing it hard. That is consistent with NORBC's soft, near-satisfaction design (no
+hard per-step bound is claimed) and is self-correcting because the adaptive threshold
+re-anchors on the raw cost return every iteration. (An earlier verbal claim in this
+campaign that the barrier "diverges to $+\infty$ and auto-rejects the step" was wrong —
+the clamp caps it.)
 
 **barrier_t / barrier_alpha — the true runtime values (doc-drift warning).**
 `barrier_t = 100.0` in both the class constructor default (`constraint_trpo.py:64`)
@@ -239,6 +308,16 @@ The reported `violations` monitoring metric compares $\hat{J}_{C_k}$ against the
   a non-finite sanitize that zeros any constraint column containing NaN/Inf across
   the rollout (`constraint_trpo.py:285-300`). `cost_gamma` must be strictly $< 1$
   or the constructor raises `ValueError` (`:143-144`).
+- **Feasibility level is an estimator, not the true return (coupling to the cost critic).**
+  The cost return that drives every feasibility judgment — `mean_cost_returns`, which feeds
+  `barrier_base`, `violations`, and the adaptive threshold (`constraint_trpo.py:443,447,454`) —
+  is the **GAE($\lambda_c$) return** `cost_returns = cost_advantage + cost_value` (`:291`),
+  *not* a raw Monte-Carlo discounted cost sum. So the constraint-satisfaction check inherits
+  both the `cost_lam=0.95` bias and the cost critic's estimation error. This mirrors the reward
+  side, but the consequence differs: a biased reward value only costs policy-gradient efficiency,
+  whereas an *under-estimating* cost critic makes the barrier read **feasible** when the true
+  cost return already exceeds the budget — an estimator-driven constraint-violation risk inherent
+  to this design (shared by all critic-based constrained RL), not a code defect.
 - **Time-out bootstrapping.** On time-out (not termination) the per-constraint
   cost is bootstrapped with `cost_gamma` and the per-constraint value vector,
   mirroring the reward-side bootstrap but on the cost channel
@@ -250,6 +329,20 @@ The reported `violations` monitoring metric compares $\hat{J}_{C_k}$ against the
   inline comment (`:436`) reads `# clamp(min=1.0): binary constraints can have
   near-zero std, causing 1e8 amplification.` Reward advantages are standardized
   separately with the ordinary `1e-8` guard (`:424-426`).
+  - **The barrier margin therefore mixes a raw level with a standardized delta — and
+    this is NORBC Eq. (10) verbatim, not a code bug.** `barrier_base` uses the
+    unstandardized `mean_cost_returns`, while `cost_surr` uses the standardized advantage
+    (`:454` vs `:462`). NORBC relies on the *zero-mean* half to keep the problem always
+    feasible at `ratio=1`: then $\mathbb{E}[\hat{A}^C_k]\approx 0$, so
+    $\text{margin}_k \approx d_k^i - \hat{J}_{C_k} \ge \alpha d_k > 0$ and the $\log$ is
+    always defined at the start of each update. The *std* half is NORBC's
+    gradient-conditioning trick for stacking 10+ constraints stably. The practical
+    consequence — a constraint whose runtime cost-advantage std exceeds 1 gets a slightly
+    **more permissive** effective boundary (the barrier responds in standardized units
+    while the budget is raw) — is therefore **dormant unless some constraint's cost-adv
+    std actually exceeds 1**, an empirical run-data question, not a bug to patch. Whether
+    standardization strictly voids NORBC's near-satisfaction guarantee is a critique of
+    NORBC itself, out of scope for this codebase.
 
 ### 4.4 TRPO trust-region step
 
@@ -322,6 +415,20 @@ the scalar `entropy_coef=0.003` (`:223`), which is therefore also dead at runtim
   to a scalar (`:596-597`). Any activation detail of the critic heads lives in the
   policy class `ALBCActorCriticEncoder`, not in this file — see the network-architecture
   reference.
+- **Separate networks, one shared gradient clip (the reward/cost coupling).** `self.critic`
+  (scalar reward value) and `self.cost_critic` (K-dim) are two **independent** MLPs with
+  disjoint parameters — no shared backbone (`encoder/_policy_base.py:86,91`); the
+  `value_backbone.` entry in `value_prefixes` is a classification catch, not an actual shared
+  trunk in `ALBCActorCriticEncoder`. Because the parameters are disjoint, the joint
+  `total.backward()` does not cross-couple their gradients ($\partial L_{V_C}/\partial\,\theta_{\text{reward critic}} = 0$).
+  **One thing does couple them:** the value update applies a *single*
+  `clip_grad_norm_(self._value_params, max_grad_norm=1.0)` over the **union** of both critics'
+  parameters (`constraint_trpo.py:601-605`). The cost critic has $K=10$ heads regressing
+  rare-event returns, so its gradient can dominate the combined norm; when the union norm
+  exceeds `1.0` the clip scales *both* critics down by the same factor, letting a noisy cost
+  critic throttle the reward critic's effective step. A real coupling between two otherwise-
+  independent networks — flagged, not proven harmful (needs a runtime value-group grad-norm
+  check to confirm it bites).
 
 ---
 
@@ -357,9 +464,15 @@ breaking that identity.
 because their absolute margins looked numerically small — when in fact
 $\hat{J}_C/d_k = 0.003$ and $0.000$ respectively (the *deepest* slack), while the
 genuinely binding `thruster_util` ($\hat{J}_C/d_k \approx 0.87$) has a *large*
-absolute margin simply because its budget is large. The analysis engine still has
-this gap: `analyze_training.py:_constraint_margin()` (`:370-379`) returns the
-absolute margin with no $d_k$ normalization. Source: omx wiki
+absolute margin simply because its budget is large. The engine normalizes since commit `4ff9ea1`
+(2026-06-07): `.omx/profile/analyze_training.py` computes `_constraint_binding_ratio`
+(`:416-430`, $1 - \text{margin}/d_k$) and prints a `JC/dk=` column that flags the
+binding channel by max ratio (`:809`, `:820`), pinned by
+`test_constraint_margin_norm.py`. The low-level `_constraint_margin()` helper
+(`:370-379`) still returns the raw absolute margin, which its consumer (`:803`)
+normalizes. Like the manual formula, the engine ratio is exact only in the slack
+regime and saturates at $1-\alpha = 0.95$ for a genuinely-binding channel (it
+consumes the frozen margin). Source: omx wiki
 `constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md`.
 
 ---

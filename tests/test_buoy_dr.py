@@ -44,9 +44,16 @@ def _skip_if_no_marinelab():
     test execution order.
     """
     for name in list(sys.modules):
-        if name == "marinelab" or name.startswith("marinelab."):
+        if name.split(".")[0] in ("marinelab", "isaaclab", "omni", "pxr", "carb", "warp"):
             mod = sys.modules[name]
-            if not getattr(mod, "__file__", None):
+            # isinstance-str: _MockModule.__getattr__ auto-creates a truthy
+            # mock for __file__, so a plain truthiness check misses it.
+            # The whole sim stack must be evicted, not just marinelab:
+            # importing real marinelab on TOP of a mocked isaaclab/omni raises
+            # TypeError mid-import (PathFinder iterates the mock parent's
+            # __path__), which importorskip does NOT catch (ImportError only)
+            # -> false failure instead of a skip.
+            if not isinstance(getattr(mod, "__file__", None), str):
                 del sys.modules[name]
     pytest.importorskip("marinelab.core", reason="marinelab requires Isaac Sim to import")
 

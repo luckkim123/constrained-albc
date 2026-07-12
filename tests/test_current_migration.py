@@ -22,6 +22,22 @@ import torch
 
 def test_marinelab_oceancurrent_api_surface():
     """The new API that albc Task 1 depends on must exist on the real classes."""
+    import sys
+
+    for name in list(sys.modules):
+        if name.split(".")[0] in ("marinelab", "isaaclab", "omni", "pxr", "carb", "warp"):
+            mod = sys.modules[name]
+            # Sibling test modules install _MockModule stand-ins at import
+            # (collection) time; their __getattr__ auto-creates a truthy
+            # __file__, so require a real str path when deciding to keep.
+            # The whole sim stack must be evicted, not just marinelab:
+            # importing real marinelab on TOP of a mocked isaaclab/omni raises
+            # TypeError mid-import (PathFinder iterates the mock parent's
+            # __path__), which importorskip does NOT catch (ImportError only)
+            # -> false failure instead of a skip. With the mocks gone the
+            # import fails as a plain ImportError (no pxr) and skips cleanly.
+            if not isinstance(getattr(mod, "__file__", None), str):
+                del sys.modules[name]
     pytest.importorskip("marinelab.core", reason="marinelab requires Isaac Sim to import")
     import inspect
 

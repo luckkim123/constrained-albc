@@ -461,6 +461,12 @@ class ConstraintTRPO:
             reward_surr = -(adv * ratio).mean()
             cost_surrs = inv_one_minus_gamma * (ratio.unsqueeze(-1) * cost_advantages_flat).mean(dim=0)
             margin = barrier_base - cost_surrs
+            # clamp(min=1e-8): numerical guard against log(<=0)=NaN when a line-search
+            # candidate (ratio != 1) momentarily drives margin<=0. Side effect: the barrier
+            # saturates at -log(1e-8)/barrier_t ~= 0.184 (barrier_t=100), NOT +inf, so a
+            # reward gain above that cap can cross the constraint boundary. Acceptable:
+            # NORBC is soft/near-satisfaction by design and the adaptive threshold re-anchors
+            # on the raw cost return each iteration. This clamp is not in NORBC Eq. (9)/(10).
             barrier = -torch.log(margin.clamp(min=1e-8)).sum() / self._barrier_t
             self._last_barrier_penalty = barrier.item()
             mean_entropy = self.policy.entropy.mean()

@@ -21,6 +21,7 @@ import isaaclab.sim as sim_utils
 from isaaclab.assets import Articulation
 from isaaclab.envs import DirectRLEnv
 from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
+from isaaclab.utils.buffers import DelayBuffer
 from isaaclab.utils.math import euler_xyz_from_quat, quat_apply, quat_apply_inverse
 
 from .config import ALBCEnvCfg
@@ -45,6 +46,35 @@ from .mdp.rewards import RewardManager
 from .utils import log_dr_metrics
 
 logger = logging.getLogger(__name__)
+
+
+def _draw_control_delay(
+    control_delay_steps: tuple[int, int],
+    num_envs: int,
+    device: str | torch.device,
+) -> tuple[torch.Tensor, DelayBuffer | None]:
+    """Allocate the action DelayBuffer and draw per-env integer lags.
+
+    Returns (lag, buf). When control_delay_steps == (0, 0) the buffer is None
+    (skip the pass entirely) and lag is all-zeros. Otherwise a DelayBuffer with
+    history_length = max_delay is created and each env's lag is drawn uniformly
+    in [min_delay, max_delay] via randint(min, max+1).
+    """
+    lo, hi = control_delay_steps
+    lag = torch.zeros(num_envs, dtype=torch.int, device=device)
+    if hi <= 0:
+        return lag, None
+    buf = DelayBuffer(history_length=hi, batch_size=num_envs, device=str(device))
+    lag = torch.randint(low=lo, high=hi + 1, size=(num_envs,), dtype=torch.int, device=device)
+    buf.set_time_lag(lag)
+    return lag, buf
+
+
+def _apply_control_delay(buf: DelayBuffer | None, actions: torch.Tensor) -> torch.Tensor:
+    """Delay the applied action by the buffer's per-env lag. None = pass-through."""
+    if buf is None:
+        return actions
+    return buf.compute(actions)
 
 
 class ALBCEnv(DirectRLEnv):
@@ -273,6 +303,12 @@ class ALBCEnv(DirectRLEnv):
         self._actions = torch.zeros(self.num_envs, self.cfg.action_space, device=self.device)
         self._prev_actions = torch.zeros(self.num_envs, self.cfg.action_space, device=self.device)
         self._prev_prev_actions = torch.zeros(self.num_envs, self.cfg.action_space, device=self.device)
+        # Commanded-action triple (parallel to the triple above, which carries the
+        # delayed/applied value once latency DR overwrites _actions at :586). Read
+        # only by action_smoothness -- see _update_action_buffers().
+        self._cmd_actions = torch.zeros(self.num_envs, self.cfg.action_space, device=self.device)
+        self._prev_cmd_actions = torch.zeros(self.num_envs, self.cfg.action_space, device=self.device)
+        self._prev_prev_cmd_actions = torch.zeros(self.num_envs, self.cfg.action_space, device=self.device)
         self._nominal_joint_pos = torch.tensor(self.cfg.nominal_joint_pos, device=self.device)
         self._delta_scale = self.cfg.delta_scale
         # Joint delta actuation-noise std (3rd channel). None when disabled ->
@@ -284,6 +320,15 @@ class ALBCEnv(DirectRLEnv):
         )
         self._joint_pos_targets = self._nominal_joint_pos.expand(self.num_envs, -1).clone()
         self._control_step_counter = 0
+
+        # Control-action transport delay (latency DR). Always allocate the
+        # per-env lag tensor (zeros when off) so compute_privileged_obs can read
+        # it unconditionally. Buffer is None when off -> pass-through.
+        self._control_delay_steps, self._action_delay_buf = _draw_control_delay(
+            self.cfg.randomization.control_delay_steps,
+            self.num_envs,
+            self.device,
+        )
 
     def _init_history_buffers(self) -> None:
         """Temporal history ring buffer: 21D per step (joint 4D + body 9D + action 8D)."""
@@ -481,9 +526,18 @@ class ALBCEnv(DirectRLEnv):
         Args:
             actions: Raw actions from RL. Shape: (num_envs, action_space).
         """
+        cmd = actions.clone().clamp(-1.0, 1.0)
+
         self._prev_prev_actions = self._prev_actions.clone()
         self._prev_actions = self._actions.clone()
-        self._actions = actions.clone().clamp(-1.0, 1.0)
+        self._actions = cmd  # delay overwrite (if any) applies to this at :586
+
+        # Commanded triple: shifted from the same clamped commanded value, never
+        # from the delayed/applied one -- action_smoothness reads this triple.
+        self._prev_prev_cmd_actions = self._prev_cmd_actions.clone()
+        self._prev_cmd_actions = self._cmd_actions.clone()
+        self._cmd_actions = cmd
+
         self._control_step_counter += 1
 
     def _get_hist_features(self) -> torch.Tensor:
@@ -557,6 +611,16 @@ class ALBCEnv(DirectRLEnv):
         """
         self._update_action_buffers(actions)
         self._update_hist()
+
+        # Latency DR: delay the APPLIED action (plant-side). History (_get_hist_features)
+        # and thruster_energy read _actions/_prev_actions AFTER this overwrite, so they
+        # observe the delayed/applied stream by design (sim-to-real faithful -- a real
+        # robot measures the applied side). action_smoothness instead reads the parallel
+        # commanded triple (_cmd_actions/_prev_cmd_actions/_prev_prev_cmd_actions, shifted
+        # in _update_action_buffers above), so it measures policy-produced jerk and is not
+        # rewarded for buffer-induced smoothness during reset-transient warmup. Off (None)
+        # = pass-through, so both triples are identical every step.
+        self._actions = _apply_control_delay(self._action_delay_buf, self._actions)
 
         # Velocity command resampling (mid-episode)
         self._vel_cmd_step_counter += 1
@@ -999,7 +1063,7 @@ class ALBCEnv(DirectRLEnv):
         return quat
 
     def _get_observations(self) -> dict:
-        """Compute unified observation o_t (69D) and privileged p_t (27D).
+        """Compute unified observation o_t (69D) and privileged p_t (28D).
 
         o_t = current proprioception (20D) + temporal history (46D) + integral (3D):
             - Joint tracking: 4D x 3 steps = 12D (all hist_len steps)
@@ -1360,7 +1424,14 @@ class ALBCEnv(DirectRLEnv):
 
     def _reset_action_buffers(self, env_ids: torch.Tensor) -> None:
         """Reset action buffers, temporal history, and cumulative yaw."""
-        for buf in (self._actions, self._prev_actions, self._prev_prev_actions):
+        for buf in (
+            self._actions,
+            self._prev_actions,
+            self._prev_prev_actions,
+            self._cmd_actions,
+            self._prev_cmd_actions,
+            self._prev_prev_cmd_actions,
+        ):
             buf[env_ids] = 0.0
         self._joint_pos_targets[env_ids] = self._robot.data.joint_pos[env_ids][:, self._albc_joint_ids]
         if self._hist_buf is not None:
@@ -1379,6 +1450,16 @@ class ALBCEnv(DirectRLEnv):
         # Reset mid-episode payload toggle state
         self._payload_toggle_counter[env_ids] = 0
         self._payload_toggled[env_ids] = False
+
+        # Re-draw per-env control delay lag and reset the delay buffer's history.
+        if self._action_delay_buf is not None:
+            lo, hi = self.cfg.randomization.control_delay_steps
+            new_lag = torch.randint(
+                low=lo, high=hi + 1, size=(len(env_ids),), dtype=torch.int, device=self.device
+            )
+            self._control_delay_steps[env_ids] = new_lag
+            self._action_delay_buf.set_time_lag(new_lag, env_ids)
+            self._action_delay_buf.reset(env_ids)
 
     def _reset_physics(self, env_ids: torch.Tensor) -> None:
         """Reset hydrodynamics, thrusters, payload, and apply domain randomization."""

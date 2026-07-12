@@ -281,15 +281,77 @@ command → error → reward.
 
 ---
 
+## 8.5. Why yaw is a *rate* command (roll/pitch are *attitude*)
+
+The mixed scheme — roll/pitch as absolute-attitude targets, yaw as a rate target —
+is asserted throughout the code and docs but **its engineering rationale is never
+stated in-code**. This section records what a multi-source review (control-design
+adversarial check + marine-control literature + git-history audit, 2026-07-09)
+established, separating what is verified from what is not.
+
+**History: yaw-as-rate is inherited, not a deliberate decision.** Before
+`git 11dcad6` (2026-04-01, "attitude command conversion") *all three axes were
+angular-velocity (rate) commands* (the task paradigm was velocity-tracking). That
+commit promoted **only roll/pitch** from rate to absolute attitude and left yaw as a
+rate (renaming its semantics from generic "angular velocity" to "yaw rate"). Yaw was
+**never** an absolute-angle command in the repo's history (`git log --all` shows no
+yaw-angle/heading command ever). So "yaw is a rate" is the *residue of not touching
+yaw* when roll/pitch were converted — not a documented "yaw must be a rate" choice.
+`full_dof` handles yaw identically (only adds a linear-velocity command); it gives no
+differential clue.
+
+**The one physically-grounded asymmetry (verified).** Roll and pitch have a
+metacentric restoring torque (CoB above CoG ⇒ `M ≈ Wh·θ`), so an absolute-attitude
+target is natural — there is a physically-defined zero (level). Yaw about the
+vertical axis is energetically neutral (symmetric buoyancy placement ⇒ **no restoring
+torque**), so there is no privileged heading zero. This asymmetry is real, matches
+the project's own dynamics notes (`references/iros_2026/notes/02_problem.md` lists
+roll/pitch restoring eqs and "Yaw: 없음"), and *justifies treating yaw differently
+from roll/pitch*. It does **not**, by itself, justify "command the rate" — absence of
+a restoring force is the classic argument *for* an active absolute-heading loop, and
+the policy already observes absolute yaw (`euler[3:6]` in obs, `observations.py:54`).
+
+**Why it is nonetheless defensible for THIS task.** The task objective contains no
+heading requirement (reward is roll/pitch attitude + yaw-*rate*; no yaw-angle term).
+When heading is genuinely don't-care, commanding an absolute yaw datum would force the
+policy to fight ocean-current yaw torque to hold an *arbitrary* heading, burning
+thruster authority (bounded by the `thruster_util` budget) and injecting base motion
+into the arm task, for no reward benefit. Letting heading float (rate command) avoids
+that. This — not "no restoring force" or "strong TAM authority" — is the sound reason;
+`cumulative_yaw_cost` (limit `8π` ≈ 4 revolutions, `config.py:61`) then acts purely as
+a *tether-wrapping safety envelope*, not a heading objective. (Its docstring says
+exactly "Prevents tether wrapping"; it is a non-binding/inert constraint in practice.)
+
+**Where the standard-practice caveat bites.** Standard marine station-keeping / DP
+(Fossen-style cascaded autopilots; ArduSub/BlueROV2 "hold current heading") closes an
+outer loop on absolute **heading angle**, using rate only as an inner-loop term — it
+does *not* let heading free-drift at rate=0. So the intuition "yaw-as-angle would be
+cleaner" aligns with the *station-keeping* convention; the quadrotor precedent for
+yaw-as-rate (yaw is the only free rotational DOF because translation consumes
+roll/pitch) does **not** transfer to an independent-thruster UUV. The current design is
+right *only if* heading truly is a free DOF for the downstream task.
+
+**Unverified / open (do not treat as settled):** (a) whether switching to a yaw-angle
+command would *regress* the tuned baseline is untested — it needs a one-variable A/B,
+not an assertion; (b) the marine-autopilot convention above rests on secondary sources
+(Fossen *Handbook* Ch. 7 primary text was not read); (c) whether the arm/manipulation
+objective *implicitly* needs a stable heading (directional sensor, world-frame reach)
+was not audited — if it does, the balance tips toward a yaw-angle command. See the omx
+wiki card `yaw_command_is_rate_not_angle_inherited_design_defensible_only_i` for the
+experiment idea and the differential-diagnosis provenance.
+
+---
+
 ## 9. Notes and limitations
 
 - **Eval is hover, not command-following.** `play_mode=True` zeroes all commands, so
   eval measures station-keeping under DR/disturbance, not tracking of a moving
   set-point. Read eval plots with that in mind.
-- **Mixed command semantics.** roll/pitch are attitude (position) targets; yaw is a
-  rate target. There is no yaw-attitude command and no linear-velocity command. The
-  privileged critic still sees measured linear velocity (`main-network-architecture.md`
-  §2.2), but the actor gets no linear command.
+- **Mixed command semantics (rationale in §8.5).** roll/pitch are attitude (position)
+  targets; yaw is a rate target. There is no yaw-attitude command and no
+  linear-velocity command. The privileged critic still sees measured linear velocity
+  (`main-network-architecture.md` §2.2), but the actor gets no linear command. Why yaw
+  specifically is a rate — and the case for/against a yaw-angle command — is §8.5.
 - **Command curriculum is not implemented (§6).** The `cmd_*_scale` scaffolding is
   inert; command difficulty is fixed by the config ranges. Do not report it as
   adaptive/curriculum-scaled.

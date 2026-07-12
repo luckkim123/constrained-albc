@@ -9,12 +9,12 @@ This is a baseline for Isaac-ConstrainedALBC-TRPO-v0 that removes only the encod
 keeping the TRPO + IPO algorithm, DR, reward, and constraint configuration
 identical. The actor receives only the 69D policy observation (current proprio
 + temporal history + integral), while the critic and cost critic receive the full
-asymmetric observation cat([o_t(69D), p_t(27D)]) = 96D.
+asymmetric observation cat([o_t(69D), p_t(28D)]) = 97D.
 
 Architecture:
     Actor:       o_t(69D) -> MLP[256,128,64] -> 8D (Gaussian mean)
-    Critic:      cat(o_t(69D), p_t(27D)) = 96D -> MLP[512,256,128] -> 1D
-    Cost Critic: cat(o_t(69D), p_t(27D)) = 96D -> MLP[512,256,128] -> K (multi-head)
+    Critic:      cat(o_t(69D), p_t(28D)) = 97D -> MLP[512,256,128] -> 1D
+    Cost Critic: cat(o_t(69D), p_t(28D)) = 97D -> MLP[512,256,128] -> K (multi-head)
     log_std:     nn.Parameter(num_actions)
 
 Parameter naming matches ActorCriticEncoder's value_prefixes contract for
@@ -55,7 +55,7 @@ class ActorCriticAsymConstrained(PolicyBase):
         num_actions: int,
         # Observation dimensions
         policy_obs_dim: int = 81,
-        privileged_dim: int = 24,
+        privileged_dim: int = 28,
         # Actor-Critic
         actor_obs_normalization: bool = False,
         critic_obs_normalization: bool = False,
