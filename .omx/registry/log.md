@@ -1092,3 +1092,7 @@
 - **Pages:** session_state_2026_07_12_constraint_deep_dive_q_a_covered_struct.md
 - **Summary:** updated 'Session state 2026-07-12: constraint deep-dive (Q&A) -- covered structure/prob-avg/reward-cost-parallel/classification/thresholds; 2 wiki pages + constraints.md 3.2/3.4/4.3/4.6 + 1 PROMPT; pending 5/9'
 
+## [2026-07-12T09:44:01.646060] add
+- **Pages:** constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md
+- **Summary:** updated 'constraint margin must be normalized (J_C/d_k) -- absolute margin flips binding/slack'
+

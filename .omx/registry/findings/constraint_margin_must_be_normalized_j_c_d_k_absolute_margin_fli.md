@@ -2,12 +2,14 @@
 title: "constraint margin must be normalized (J_C/d_k) -- absolute margin flips binding/slack"
 tags: ["constraint", "margin", "binding", "J_C_d_k", "normalization", "ConstraintTRPO", "analysis-pitfall"]
 created: 2026-06-07T08:12:41.839480
-updated: 2026-06-07T08:12:41.839480
+updated: 2026-07-12T09:44:01.646060
 sources: ["diagnose-20260606-194621"]
 links: []
 category: reference
 confidence: high
 schemaVersion: 1
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 ---
 
 # constraint margin must be normalized (J_C/d_k) -- absolute margin flips binding/slack
@@ -36,4 +38,22 @@ CONSISTENCY: matches E6 (constraint_budget_x0_5_binds_only_thruster_util_authori
 IMPLICATION for "is the constraint inert?" questions: "all margins satisfied" (true: 10/10 viol<0) does NOT mean "all have headroom to spare". 9 do; thruster_util does not. The correct claim is "9 deep-slack inert + 1 binding-adjacent that holds 0-violation", NOT "all satisfied with room". This distinction governs constraint-rebalance experiment design: tightening a deep-slack channel (attitude) to shape attitude is the lever; tightening thruster (authority) is destructive (E6 proven).
 
 ENGINE GAP: analyze_training.py `_constraint_margin()` (lines 370-379) returns absolute margin with NO d_k normalization. Fix delegated -- engine should emit J_C/d_k alongside margin. Until fixed, every report+wiki note hand-reads absolute margin and risks re-committing this flip.
+
+---
+
+## Update (2026-07-12T09:44:01.646060)
+
+## UPDATE (2026-07-12): ENGINE GAP closed -- engine now normalizes
+
+The "ENGINE GAP" recorded above ("analyze_training.py `_constraint_margin()` returns absolute margin with NO d_k normalization; fix delegated") is CLOSED. The delegated fix landed the same afternoon this page was created: commit `4ff9ea1` ("feat(engine): normalize constraint margin to J_C/d_k in TIER2 this-repo branch", 2026-06-07 17:27:21 +0900, ancestor of current HEAD).
+
+Verified in the working tree (`.omx/profile/analyze_training.py`):
+- `_constraint_binding_ratio` (`:416-430`) returns `1.0 - margin / d_k`.
+- TIER2 output prints a `JC/dk=` column (`:809`) and flags the binding channel by max ratio (`:820-824`: "binding (max JC/dk): <name>; deepest slack: <name>").
+- The low-level `_constraint_margin()` helper (`:370-379`) still returns the RAW absolute margin, but its consumer (`:803`) normalizes it before display -- so the engine output is normalized, only the helper is raw.
+- Pinned by regression test `.omx/profile/test_constraint_margin_norm.py` (teacher ground truth thruster_util margin=5.208, attitude margin=0.997 -- matches the VERIFIED table above).
+
+SHARED CAVEAT (manual formula AND engine `JC/dk` column): both consume the logged margin, which in the BINDING regime is frozen at alpha*d_k (adaptive floor engaged, alpha=0.05). So J_C/d_k is exact only in the slack regime and saturates at 1-alpha=0.95 for a genuinely-violating channel: a channel with true J_C/d_k>1 displays 0.95, not its real ratio. thruster_util at 0.870 < 0.95 is unaffected; the whole slack tail is exact. This limit was implicit before and is now stated.
+
+DO NOT tell readers the engine lacks normalization -- it has since 4ff9ea1 (2026-06-07). The mirror doc `constrained-albc/docs/reference/constraints.md` §5 carried the same stale claim; its correction is delegated 2026-07-12.
 
