@@ -87,11 +87,24 @@ def _load_by_path(name: str, path: str):
 
 
 def _load_cfg_modules():
+    # Snapshot/restore sys.modules around the stubbed loads: the loaded cfg
+    # modules keep their own references to the stubs, but a non-package
+    # "rsl_rl"/"isaaclab" stub LEFT in sys.modules breaks any later-collected
+    # test module that imports the real packages (e.g. `import rsl_rl.networks`
+    # -> "'rsl_rl' is not a package").
+    saved = sys.modules.copy()
     _install_stubs()
-    pkg = "constrained_albc.envs.main"
-    base = "constrained_albc/envs/main/agents"
-    main = _load_by_path(f"{pkg}.agents.rsl_rl_ppo_cfg", f"{base}/rsl_rl_ppo_cfg.py")
-    ablation = _load_by_path(f"{pkg}.agents.ablation_cfgs", f"{base}/ablation_cfgs.py")
+    try:
+        pkg = "constrained_albc.envs.main"
+        base = "constrained_albc/envs/main/agents"
+        main = _load_by_path(f"{pkg}.agents.rsl_rl_ppo_cfg", f"{base}/rsl_rl_ppo_cfg.py")
+        ablation = _load_by_path(f"{pkg}.agents.ablation_cfgs", f"{base}/ablation_cfgs.py")
+    finally:
+        for name in list(sys.modules):
+            if name not in saved:
+                del sys.modules[name]
+            elif sys.modules[name] is not saved[name]:
+                sys.modules[name] = saved[name]
     return main, ablation
 
 
