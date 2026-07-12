@@ -1,5 +1,7 @@
 # Exploration and Action Noise (`envs/main`)
 
+> Verified against commit c5a8a08.
+
 > **Scope**: The exploration mechanism of the default task
 > `Isaac-ConstrainedALBC-TRPO-v0` (`constrained_albc/envs/main/`) — the policy's
 > action-noise parameterization (`log_std`), how it becomes the sampling
@@ -60,7 +62,7 @@ A single `nn.Parameter` of shape `(num_actions,) = (8,)`, initialized in
 self.log_std = nn.Parameter(torch.log(init_noise_std * torch.ones(num_actions)))
 ```
 
-With `init_noise_std = 0.7` (`rsl_rl_ppo_cfg.py:132`), every dim starts at
+With `init_noise_std = 0.7` (`rsl_rl_ppo_cfg.py:142`), every dim starts at
 `log(0.7) ≈ -0.357`, i.e. std 0.7. It is **global / state-independent** — the same
 8-vector for every observation in the batch. The sampling distribution is built in
 `_update_distribution` (`_policy_base.py:128–130`):
@@ -112,7 +114,7 @@ Three things worth noting, each a common misread:
 
 ### 3.1 The bounds (per-dim floor)
 
-From `RslRlConstraintTRPOAlgorithmCfg` (`rsl_rl_ppo_cfg.py:232–236`):
+From `RslRlConstraintTRPOAlgorithmCfg` (`rsl_rl_ppo_cfg.py:242–246`):
 
 | Bound | Value | Note |
 |---|---|---|
@@ -155,8 +157,8 @@ action dim gets its own coefficient.
 
 | cfg | Value | Location |
 |---|---|---|
-| `entropy_coef` (scalar) | 0.003 | `rsl_rl_ppo_cfg.py:223` (fallback when per-dim empty) |
-| `entropy_coef_per_dim` | (0.01, 0.01, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001) | `rsl_rl_ppo_cfg.py:229` — **arm = 0.01, thruster = 0.001** |
+| `entropy_coef` (scalar) | 0.003 | `rsl_rl_ppo_cfg.py:233` (fallback when per-dim empty) |
+| `entropy_coef_per_dim` | (0.01, 0.01, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001) | `rsl_rl_ppo_cfg.py:239` — **arm = 0.01, thruster = 0.001** |
 
 Arm dims get a **10× stronger entropy push** than thruster dims, mirroring the
 higher arm std floor (§3.1) — both target the same measured problem (arm noise
@@ -245,7 +247,7 @@ different roles:
 | | Action noise | Observation noise |
 |---|---|---|
 | What | policy exploration std | sensor-simulation corruption |
-| Object | `log_std` (`_policy_base.py:96`) | `_OBS_NOISE_STD` (`config.py:206`) |
+| Object | `log_std` (`_policy_base.py:96`) | `_OBS_NOISE_STD` (`config.py:259`) |
 | Learned? | **yes** — trained parameter, clamped each update | **no** — fixed cfg constant |
 | Applied to | the action *before* env | the observation `o_t` *before* the policy |
 | Purpose | drive exploration | sim-to-real robustness |
@@ -282,11 +284,11 @@ All in `constrained_albc/envs/main/agents/rsl_rl_ppo_cfg.py` unless noted.
 
 | Knob | Value | Location |
 |---|---|---|
-| `init_noise_std` | 0.7 | `:132` |
-| `entropy_coef` (scalar fallback) | 0.003 | `:223` |
-| `entropy_coef_per_dim` | (0.01, 0.01, 0.001×6) | `:229` |
-| `min_std` / `max_std` (scalar) | 0.05 / 2.0 | `:232` / `:233` |
-| `min_std_per_dim` | (0.10, 0.10, 0.05×6) | `:236` |
+| `init_noise_std` | 0.7 | `:142` |
+| `entropy_coef` (scalar fallback) | 0.003 | `:233` |
+| `entropy_coef_per_dim` | (0.01, 0.01, 0.001×6) | `:239` |
+| `min_std` / `max_std` (scalar) | 0.05 / 2.0 | `:242` / `:243` |
+| `min_std_per_dim` | (0.10, 0.10, 0.05×6) | `:246` |
 | std clamp application (log space) | — | `constraint_trpo.py:484–491` |
 | entropy bonus in surrogate | — | `constraint_trpo.py:466–480` |
 | param-group split (log_std → TRPO) | — | `constraint_trpo.py:153–174` |

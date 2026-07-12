@@ -1,5 +1,7 @@
 # Observation Space (`envs/main`): obs / privileged / proprioception history
 
+> Verified against commit c5a8a08.
+
 > **Scope**: The observation (input) side of the default task
 > `Isaac-ConstrainedALBC-TRPO-v0` (`constrained_albc/envs/main/`) — the full 69D
 > policy observation `o_t`, the 28D privileged observation `p_t`, the strided
@@ -24,7 +26,7 @@
 The env emits a two-key observation dict per step:
 `{"policy": o_t (69D), "privileged": p_t (28D)}`
 (`albc_env.py:969-998`; `privileged` present only when `state_space > 0`,
-`albc_env.py:996-997`, `state_space=28` in `config.py:341`).
+`albc_env.py:996-997`, `state_space=28` in `config.py:382`).
 
 `o_t` is everything the real robot can measure — assembled once per step in
 `_get_observations` (`albc_env.py:969-982`) as three concatenated sub-blocks:
@@ -55,11 +57,11 @@ COST CRITIC same 106D input -> K heads (K=num_constraints=10)  # _policy_base.py
 
 **Headline arithmetic** (each traceable to `file:line`):
 
-- `o_t`: `20 + 46 + 3 = 69` — `PROPRIO_DIM(20) + (10*hist_len + 8*hist_action_len) + integral_dims(3)`, with `hist_len=3`, `hist_action_len=2` (`config.py:398,404`), so `20 + (30 + 16) + 3 = 69` (`config.py:337`; guard `albc_env.py:151-162`).
+- `o_t`: `20 + 46 + 3 = 69` — `PROPRIO_DIM(20) + (10*hist_len + 8*hist_action_len) + integral_dims(3)`, with `hist_len=3`, `hist_action_len=2` (`config.py:442,448`), so `20 + (30 + 16) + 3 = 69` (`config.py:378`; guard `albc_env.py:151-162`).
 - history: `10*hist_len + 8*hist_action_len = 10*3 + 8*2 = 30 + 16 = 46` (`albc_env.py:973-975`).
-- `p_t`: `25 DR-backed + 3 measured lin_vel = 28` — hydro 7 + dynamics 3 + payload 4 + actuator 4 + env 4 + buoy 2 + latency 1 = 25, plus body lin_vel 3 = 28 (`config.py:341`; `rsl_rl_ppo_cfg.py:32-35,148`).
+- `p_t`: `25 DR-backed + 3 measured lin_vel = 28` — hydro 7 + dynamics 3 + payload 4 + actuator 4 + env 4 + buoy 2 + latency 1 = 25, plus body lin_vel 3 = 28 (`config.py:382`; `rsl_rl_ppo_cfg.py:32-38,158`).
 - actor input: `policy_obs_dim(69) + encoder_latent_dim(9) = 78` (`actor_critic_encoder.py:175`).
-- critic input: `policy_obs_dim(69) + privileged_dim(28) += encoder_latent_dim(9) = 106` because `critic_uses_z=True` (`actor_critic_encoder.py:102-104`; `rsl_rl_ppo_cfg.py:163`).
+- critic input: `policy_obs_dim(69) + privileged_dim(28) += encoder_latent_dim(9) = 106` because `critic_uses_z=True` (`actor_critic_encoder.py:102-104`; `rsl_rl_ppo_cfg.py:173`).
 
 ---
 
@@ -83,13 +85,13 @@ Built by `compute_policy_obs` (`observations.py:70-85`).
 
 | index | name | dim | meaning | source | note |
 |:---|:---|:--:|:---|:---|:---|
-| 0:3 | ang_cmd (command) | 3 | Attitude command `[roll_att, pitch_att, yaw_rate_cmd]`. roll/pitch are absolute attitude setpoints (rad, ±30°); the 3rd is a yaw-**rate** command (rad/s). No lin-vel command. | `env._ang_cmd` (`observations.py:73`); buffer `albc_env.py:304`, sampled `albc_env.py:635-636` | Noise-free: `_OBS_NOISE_STD[0:3]=0.0`, `_OBS_BIAS_MAG[0:3]=0` (`config.py:241,261`) — our own commanded quantity. |
-| 3:6 | euler angles | 3 | Measured roll, pitch, yaw of body (rad), from cached euler of `root_quat_w`. | `stack([roll,pitch,yaw])` from `env._euler_cache` (`observations.py:65,75`) | Noisy: std 0.02 + bias 0.02 (`config.py:242,262`). |
-| 6:9 | root_ang_vel_b | 3 | Measured body-frame angular velocity `(p,q,r)` rad/s. IMU-measurable; the **only** measured velocity the actor sees (no DVL). | `robot.data.root_ang_vel_b` (`observations.py:76`) | Noisy: std 0.04 + bias 0.03 (`config.py:243,263`). Lin-vel deliberately excluded (only in `p_t`, `observations.py:158`). |
-| 9:11 | joint_pos | 2 | Raw cumulative arm joint angles (2 continuous-rotation motors, no wrap). | `robot.data.joint_pos[:, _albc_joint_ids]` (`observations.py:66,78`) | Noisy: std 0.02 + bias 0.02 (`config.py:244,264`). |
-| 11:13 | joint_vel | 2 | Arm joint velocities (rad/s) for the 2 ALBC joints. | `robot.data.joint_vel[:, _albc_joint_ids]` (`observations.py:67,79`) | Noisy: std 0.04 + bias 0.03 (`config.py:245,265`). |
-| 13:14 | manipulability | 1 | Yoshikawa index `w` normalized to [0,1] (1=max dexterity, 0=singularity). `w=sqrt(|l1*l2*sin(theta2)|)/sqrt(l1*l2)`. | `env._manipulability` (`observations.py:80`); computed `albc_env.py:592-594` | Noise-free: std 0.0, bias 0 (`config.py:246,266`) — computed kinematic quantity. |
-| 14:20 | thruster_state | 6 | Filtered thruster output for 6 ESC channels m0–m5 (first-order-lag actuator state). | `env._thruster.state` (`observations.py:68,82`); zeros fallback if None | Noisy: std 0.02 + bias 0.01 (`config.py:247,267`). Channel order is firmware-ESC, not raw sim order (`config.py:86-91`). |
+| 0:3 | ang_cmd (command) | 3 | Attitude command `[roll_att, pitch_att, yaw_rate_cmd]`. roll/pitch are absolute attitude setpoints (rad, ±30°); the 3rd is a yaw-**rate** command (rad/s). No lin-vel command. | `env._ang_cmd` (`observations.py:73`); buffer `albc_env.py:304`, sampled `albc_env.py:635-636` | Noise-free: `_OBS_NOISE_STD[0:3]=0.0`, `_OBS_BIAS_MAG[0:3]=0` (`config.py:261,281`) — our own commanded quantity. |
+| 3:6 | euler angles | 3 | Measured roll, pitch, yaw of body (rad), from cached euler of `root_quat_w`. | `stack([roll,pitch,yaw])` from `env._euler_cache` (`observations.py:65,75`) | Noisy: std 0.02 + bias 0.02 (`config.py:262,282`). |
+| 6:9 | root_ang_vel_b | 3 | Measured body-frame angular velocity `(p,q,r)` rad/s. IMU-measurable; the **only** measured velocity the actor sees (no DVL). | `robot.data.root_ang_vel_b` (`observations.py:76`) | Noisy: std 0.04 + bias 0.03 (`config.py:263,283`). Lin-vel deliberately excluded (only in `p_t`, `observations.py:158`). |
+| 9:11 | joint_pos | 2 | Raw cumulative arm joint angles (2 continuous-rotation motors, no wrap). | `robot.data.joint_pos[:, _albc_joint_ids]` (`observations.py:66,78`) | Noisy: std 0.02 + bias 0.02 (`config.py:264,284`). |
+| 11:13 | joint_vel | 2 | Arm joint velocities (rad/s) for the 2 ALBC joints. | `robot.data.joint_vel[:, _albc_joint_ids]` (`observations.py:67,79`) | Noisy: std 0.04 + bias 0.03 (`config.py:265,285`). |
+| 13:14 | manipulability | 1 | Yoshikawa index `w` normalized to [0,1] (1=max dexterity, 0=singularity). `w=sqrt(|l1*l2*sin(theta2)|)/sqrt(l1*l2)`. | `env._manipulability` (`observations.py:80`); computed `albc_env.py:592-594` | Noise-free: std 0.0, bias 0 (`config.py:266,286`) — computed kinematic quantity. |
+| 14:20 | thruster_state | 6 | Filtered thruster output for 6 ESC channels m0–m5 (first-order-lag actuator state). | `env._thruster.state` (`observations.py:68,82`); zeros fallback if None | Noisy: std 0.02 + bias 0.01 (`config.py:267,287`). Channel order is firmware-ESC, not raw sim order (`config.py:89-94`). |
 
 ### 2.2 Temporal history (46D, indices 20:66)
 
@@ -97,14 +99,14 @@ See §3 for the full per-step feature and the asymmetric slice. Summary:
 
 | index | name | dim | meaning | source | note |
 |:---|:---|:--:|:---|:---|:---|
-| 20:50 | jb_hist (joint+body, all 3 steps) | 30 | Per-step `[joint_pos_err(2), joint_vel(2), ang_err(3), euler(3)]` = 10D, kept for all `hist_len=3` strided steps, oldest-first. | `_hist_buf[:, :, :10].reshape` (`albc_env.py:973`) | `= 10*hist_len = 30`. Per-dim noise repeats `([0.02]*2+[0.04]*2 + [0.04]*3+[0.02]*3)` per step (`config.py:249,251`). |
-| 50:66 | act_hist (action, newest 2 steps) | 16 | Full 8D action `[2D arm delta, 6D thruster]` kept for only the newest `hist_action_len=2` steps. Oldest step's action is dropped. | `_hist_buf[:, -hist_action_len:, 10:].reshape` (`albc_env.py:975`) | `= 8*hist_action_len = 16`. Noise-free (`[0.0]*16`, `config.py:253,273`) — our own command. |
+| 20:50 | jb_hist (joint+body, all 3 steps) | 30 | Per-step `[joint_pos_err(2), joint_vel(2), ang_err(3), euler(3)]` = 10D, kept for all `hist_len=3` strided steps, oldest-first. | `_hist_buf[:, :, :10].reshape` (`albc_env.py:973`) | `= 10*hist_len = 30`. Per-dim noise repeats `([0.02]*2+[0.04]*2 + [0.04]*3+[0.02]*3)` per step (`config.py:269,271`). |
+| 50:66 | act_hist (action, newest 2 steps) | 16 | Full 8D action `[2D arm delta, 6D thruster]` kept for only the newest `hist_action_len=2` steps. Oldest step's action is dropped. | `_hist_buf[:, -hist_action_len:, 10:].reshape` (`albc_env.py:975`) | `= 8*hist_action_len = 16`. Noise-free (`[0.0]*16`, `config.py:273,293`) — our own command. |
 
 ### 2.3 Error integral (3D, indices 66:69)
 
 | index | name | dim | meaning | source | note |
 |:---|:---|:--:|:---|:---|:---|
-| 66:69 | error_integral | 3 | Leaky error-gated integral of `[roll_err, pitch_err, yaw_rate_err]` (Hwangbo-2017 integral-feedback pattern). `I = leak*I + gate*err*step_dt`, `gate = (|err| < reward sigma)`, clamped `|I| <= 2.0`. | `env._error_integral` (`albc_env.py:981-982`); updated in `_get_rewards` (`albc_env.py:1020,1033-1038`); buffer `albc_env.py:312` | Noise-free: `[0.0]*3` (`config.py:255,275`) — computed. Present only because `use_integral_obs=True` (`config.py:343`); `integral_dims=3, leak=0.99, clamp=2.0, gated=True` (`config.py:344-347`). If the flag were False, `o_t` would be 66D. |
+| 66:69 | error_integral | 3 | Leaky error-gated integral of `[roll_err, pitch_err, yaw_rate_err]` (Hwangbo-2017 integral-feedback pattern). `I = leak*I + gate*err*step_dt`, `gate = (|err| < reward sigma)`, clamped `|I| <= 2.0`. | `env._error_integral` (`albc_env.py:981-982`); updated in `_get_rewards` (`albc_env.py:1020,1033-1038`); buffer `albc_env.py:312` | Noise-free: `[0.0]*3` (`config.py:275,295`) — computed. Present only because `use_integral_obs=True` (`config.py:384`); `integral_dims=3, leak=0.99, clamp=2.0, gated=True` (`config.py:385-388`). If the flag were False, `o_t` would be 66D. |
 
 The integral is error-gated: it accumulates `err*dt` only when `|err|` is below the
 reward tracking sigma (gate tensor pre-built in `__init__` from
@@ -115,9 +117,9 @@ mixes two angle-integrals (roll, pitch) and one **rate**-integral (yaw rate).
 ### 2.4 Observation noise
 
 Noise is applied once to the whole 69D vector at emit via the always-on
-`NoiseModelWithAdditiveBias` (`config.py:509-512`) plus the fault-injection path
+`NoiseModelWithAdditiveBias` (`config.py:557-560`) plus the fault-injection path
 `faults.apply_sensor_noise` (`albc_env.py:987-989`). `_OBS_NOISE_STD` and
-`_OBS_BIAS_MAG` are 69-length vectors (`config.py:239-278`) whose command(3),
+`_OBS_BIAS_MAG` are 69-length vectors (`config.py:259-296`) whose command(3),
 manipulability(1), all action-history(16), and all integral(3) entries are `0.0` —
 these are computed/commanded, not sensed, so noise adds nothing there. Only measured
 euler / ang_vel / joint / thruster channels (and their history copies) receive
@@ -181,7 +183,7 @@ totals, not the row-major flatten order.
 ## 4. Privileged observation `p_t` (28D)
 
 `p_t` is emitted by `compute_privileged_obs` (`observations.py:88-161`) whenever
-`state_space > 0` (`config.py:341` = 28). It is a deliberately **non-redundant**
+`state_space > 0` (`config.py:382` = 28). It is a deliberately **non-redundant**
 catalogue: dims 0–24 are exactly one scalar per independent DR parameter (the
 docstring states this explicitly, `observations.py:93-94`), and dims 25–27 are a
 fourth-class channel — the true body-frame linear velocity `(u,v,w)`, which is **not**
@@ -216,8 +218,8 @@ control-action delay were added.
 body_mass 1 + added_mass_surge 1) + 4 (payload: mass 1 + CoG 3) + 4 (actuator: Kp 1
 + Kd 1 + thrust_coeff 1 + time_const_up 1) + 4 (env: water_density 1 + ocean_current
 3) + 2 (buoy: volume 1 + body_mass 1) + 1 (latency: control_action_delay) + 3
-(measured lin_vel) = 28` = `cfg.state_space` (`config.py:341`) = `policy.privileged_dim`
-(`rsl_rl_ppo_cfg.py:148`) = `PRIV_OBS_DIM` (`priv_obs_bounds.py:46`). The DR-backed
+(measured lin_vel) = 28` = `cfg.state_space` (`config.py:382`) = `policy.privileged_dim`
+(`rsl_rl_ppo_cfg.py:158`) = `PRIV_OBS_DIM` (`priv_obs_bounds.py:46`). The DR-backed
 prefix is 25; the measured-velocity tail is 3; `25 + 3 = 28`. Ixx and linear damping
 roll were removed vs the old 27D layout; the buoy pair (22,23) and the latency dim
 (24) were added, so the DR-backed prefix went `24 → 25` net (two removed, three
@@ -245,35 +247,35 @@ The main env uses an asymmetric actor-critic with a privileged encoder (class
 `main-network-architecture.md` §2.1; here we cover only the data flow and dims.
 
 A crucial code-level subtlety: `obs_groups["policy"]=["policy","privileged"]` and
-`obs_groups["critic"]=["policy","privileged"]` (`rsl_rl_ppo_cfg.py:281-284`) do **not**
+`obs_groups["critic"]=["policy","privileged"]` (`rsl_rl_ppo_cfg.py:291-294`) do **not**
 mean rsl-rl auto-sums the two group dims. Because the policy class is a custom
 `PolicyBase` subclass, `_init_base` (`_policy_base.py:65-72`) parses the "policy"
 group positionally as an ordered `[policy_obs_key, privileged_key]` pair and stores
 the keys; the network then splits and routes the two tensors itself. Only the plain
 PPO baseline (`class_name="ActorCritic"`) relies on obs_groups auto-summing, and it
 uses `policy=["policy"]` (69D actor) / `critic=["policy","privileged"]` (97D)
-(`rsl_rl_ppo_cfg.py:416-419`).
+(`rsl_rl_ppo_cfg.py:426-429`).
 
 | tensor | name | dim | meaning | source | note |
 |:---|:---|:--:|:---|:---|:---|
 | encoder in | p_t (privileged) | 28 | Full privileged vector — the physical unknowns. | `obs[_privileged_key]`, `_encode` (`actor_critic_encoder.py:208`) | Static min-max → [-1,1] via `(2*p_t - midpoint)/range` (`:213`); bounds DR-derived at build time (`constraint_encoder_runner.py:86-94`), NOT cfg literals. `encoder_obs_indices=None` → all 28 dims used. |
-| encoder out | z (latent) | 9 | Compressed proxy for the physical unknowns. | `z = softsign(LayerNorm(encoder(p_t)))` (`actor_critic_encoder.py:216`); `encoder_latent_dim=9` (`rsl_rl_ppo_cfg.py:143`) | MLP[256,128,64] elu → LayerNorm (pre-softsign, `rsl_rl_ppo_cfg.py:164`) → softsign. Bounded to (-1,1) so it needs no running-stat norm. |
-| actor [0:69] | normalized o_t | 69 | Measurable obs (20 proprio + 46 history + 3 integral). | `obs_normed = actor_obs_normalizer(o_t)` (`actor_critic_encoder.py:253,255`); `policy_obs_dim=69` (`rsl_rl_ppo_cfg.py:147`) | Only `o_t` is EmpiricalNormalization-normalized (normalizer sized 69, `:176`); z is excluded. |
+| encoder out | z (latent) | 9 | Compressed proxy for the physical unknowns. | `z = softsign(LayerNorm(encoder(p_t)))` (`actor_critic_encoder.py:216`); `encoder_latent_dim=9` (`rsl_rl_ppo_cfg.py:153`) | MLP[256,128,64] elu → LayerNorm (pre-softsign, `rsl_rl_ppo_cfg.py:174`) → softsign. Bounded to (-1,1) so it needs no running-stat norm. |
+| actor [0:69] | normalized o_t | 69 | Measurable obs (20 proprio + 46 history + 3 integral). | `obs_normed = actor_obs_normalizer(o_t)` (`actor_critic_encoder.py:253,255`); `policy_obs_dim=69` (`rsl_rl_ppo_cfg.py:157`) | Only `o_t` is EmpiricalNormalization-normalized (normalizer sized 69, `:176`); z is excluded. |
 | actor [69:78] | z (raw) | 9 | Encoder latent concatenated onto o_t; the actor's only window into the privileged physics. | `cat([obs_normed, z])` (`actor_critic_encoder.py:256`); `num_actor_obs = 69+9 = 78` (`:175`) | Actor **never** receives raw p_t. z passed raw (softsign already bounds it). |
 | actor out | action mean | 8 | 8D action (2D arm + 6D thruster); Gaussian policy, no clamp in the net. | `actor = MLP(78, 8, [256,128,64], elu)` (`actor_critic_encoder.py:182`) | `log_std` separate `nn.Parameter` (`_policy_base.py:96`); std clamp applied in the TRPO step, not here (see `action-pipeline.md`). |
 | critic [0:69] | o_t | 69 | Same measurable obs as actor (raw; `critic_obs_normalization=False`). | `parts=[obs[_policy_obs_key]]` (`actor_critic_encoder.py:264`) | `critic_obs_normalizer` is `nn.Identity` (`_policy_base.py:83-85`). |
-| critic [69:78] | z | 9 | Encoder latent injected into critic so value-loss gradient flows back through z into the encoder. | `if _critic_uses_z: parts.append(_encode(obs))` (`actor_critic_encoder.py:265-266`); `critic_uses_z=True` (`rsl_rl_ppo_cfg.py:163`) | This is why `num_critic_obs += encoder_latent_dim` (`:103-104`). If False, critic = 97D and encoder gets gradient only from actor surrogate. |
+| critic [69:78] | z | 9 | Encoder latent injected into critic so value-loss gradient flows back through z into the encoder. | `if _critic_uses_z: parts.append(_encode(obs))` (`actor_critic_encoder.py:265-266`); `critic_uses_z=True` (`rsl_rl_ppo_cfg.py:173`) | This is why `num_critic_obs += encoder_latent_dim` (`:103-104`). If False, critic = 97D and encoder gets gradient only from actor surrogate. |
 | critic [78:106] | p_t | 28 | Raw privileged vector — the train-only critic sees ground-truth physics directly. | `parts.append(obs[_privileged_key])` (`actor_critic_encoder.py:267`); `num_critic_obs=69+28+9=106` (`:102-104`) | Critic sees BOTH z and raw p_t; z is present for the gradient path, not because the critic needs compression. |
-| critic out | value | 1 | Scalar `V(s)` for GAE/TRPO advantage. | `critic = MLP(106, 1, [512,256,128], elu)` (`_policy_base.py:86`) | `normalize_value=False` for default TRPO runner (`rsl_rl_ppo_cfg.py:286`). |
+| critic out | value | 1 | Scalar `V(s)` for GAE/TRPO advantage. | `critic = MLP(106, 1, [512,256,128], elu)` (`_policy_base.py:86`) | `normalize_value=False` for default TRPO runner (`rsl_rl_ppo_cfg.py:296`). |
 | cost_critic out | per-constraint cost values | 10 | Multi-head cost value, one head per IPO constraint (`K=num_constraints`, auto-synced from env; main env = 10). | `cost_critic = MLP(106, num_constraints, [512,256,128], elu)` (`_policy_base.py:91`) | Shares the identical 106D input. K starts 0 in cfg, auto-synced by `ConstraintEncoderRunner.__init__` (`constraint_encoder_runner.py:42-63`). K=10 (5 prob + 5 avg). |
 
 **Consumption arithmetic**: encoder `28 → 9`; actor `69 + 9 = 78 → 8`; critic
 `69 + 28 = 97, += 9 = 106 → 1`; cost critic `106 → K=10`. NoEncoder ablation critic =
-`69 + 28 = 97` (no z, `rsl_rl_ppo_cfg.py:301-304`); PPO baseline actor = 69 (via
+`69 + 28 = 97` (no z, `rsl_rl_ppo_cfg.py:312-314`); PPO baseline actor = 69 (via
 `obs_groups=["policy"]`), critic = 97.
 
 The `ConstraintEncoderRunner` overrides the hardcoded `_PRIV_OBS_LOWER/UPPER` cfg
-literals (`rsl_rl_ppo_cfg.py:50-120`) at build time with the DR-derived bounds
+literals (`rsl_rl_ppo_cfg.py:54-130`) at build time with the DR-derived bounds
 (`constraint_encoder_runner.py:76-94`); the literals are only a standalone-build
 fallback (still imported by `student/teacher.py`) and had drifted from DR (payload
 overflow, stale CoG radius). Reasoning about normalization from the cfg literals
@@ -288,7 +290,7 @@ alone would be wrong.
 - **No measured linear velocity in `o_t`** — deliberate DVL-free design. Measured `root_lin_vel_b` appears only in `p_t[25:28]` (`observations.py:182`), so the critic/encoder see velocity the actor cannot.
 - **Yaw is a RATE channel**: `ang_cmd[2]` is a yaw-rate command and every yaw error term (ang_err, integral) is a rate error (rad/s), whereas roll/pitch are absolute attitude (rad). The 3D integral mixes two angle-integrals and one rate-integral.
 - **`joint_pos_error` uses `q_des_{t-1}`**: `_get_hist_features` runs before `_apply_joint_pd_action`, so `_joint_pos_targets` still holds the previous step's target (`albc_env.py:457-459,474`) — a one-step-stale actuator-lag signal, by design.
-- **Noise zeroes our own quantities**: `_OBS_NOISE_STD`/`_OBS_BIAS_MAG` are 69-length vectors whose command(3), manipulability(1), action-history(16), and integral(3) entries are `0.0` (`config.py:239-278`). Only measured euler/ang_vel/joint/thruster channels (and history copies) get noise.
+- **Noise zeroes our own quantities**: `_OBS_NOISE_STD`/`_OBS_BIAS_MAG` are 69-length vectors whose command(3), manipulability(1), action-history(16), and integral(3) entries are `0.0` (`config.py:259-296`). Only measured euler/ang_vel/joint/thruster channels (and history copies) get noise.
 - **Two independent dim checks** make 69 trustworthy: a construction-time `ValueError` guard (`albc_env.py:157-162`, survives `python -O`) plus a per-step runtime assert (`albc_env.py:992-995`).
 - **`p_t` is non-redundant by design** (`observations.py:93-94`): one scalar per independent DR variable, so the encoder must compress rather than pass-through. Several dims are representative scalars of a multi-DOF quantity (damping index 3 = roll; added-mass `[0,0]` = surge).
 - **Thruster fallback is a 3-way branch** (`obs:124-132`): per-env DR tensor → cfg scalar broadcast → zeros (no thruster). Dims 18–19 degrade gracefully.

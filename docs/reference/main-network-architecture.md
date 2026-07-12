@@ -1,5 +1,7 @@
 # Main Network Architecture (`envs/main`)
 
+> Verified against commit c5a8a08.
+
 > **Scope**: Neural-network architecture of the default task
 > `Isaac-ConstrainedALBC-TRPO-v0` (`constrained_albc/envs/main/`). This is the
 > attitude-only ALBC policy (roll/pitch + yaw-rate, no linear-velocity command),
@@ -252,14 +254,14 @@ A separate cost critic network **exists**, and it is a **single multi-head MLP**
 - **Architecture**: identical 106D asymmetric input (`cat[o_t, z, p_t]`), hidden
   `[512, 256, 128]`, activation `elu` — same shape as the reward critic but with K
   scalar outputs. Built only when `num_constraints > 0`, else `None`
-  (`_policy_base.py`). cfg `cost_critic_hidden_dims` at `:160`.
+  (`_policy_base.py`). cfg `cost_critic_hidden_dims` at `rsl_rl_ppo_cfg.py:181`.
 - **Heads**: K scalar outputs, one head per constraint (`evaluate_costs()` returns
   K values from the same critic_obs). Cost returns/advantages are shaped `(T,N,K)`.
 - **Naming convention**: the `cost_critic.*` prefix is what routes it to the Adam
   value optimizer instead of the TRPO natural-gradient group.
 
 **`num_constraints` (K) is runtime-resolved.** The static cfg default is `0`
-placeholder (`:159`); `constraint_encoder_runner.py` overwrites it from
+placeholder (`rsl_rl_ppo_cfg.py:180`); `constraint_encoder_runner.py` overwrites it from
 `len(cfg.constraints.terms)` before `super().__init__()`, so `cost_critic` is sized
 correctly at build time.
 
@@ -290,26 +292,28 @@ Unless noted, all in `constrained_albc/envs/main/agents/rsl_rl_ppo_cfg.py`.
 
 | Architecture knob | Value | Location (file:line) |
 |---|---|---|
-| actor hidden | [256, 128, 64] | `:126` |
-| critic hidden | [512, 256, 128] | `:127` |
-| cost_critic hidden | [512, 256, 128] | `:160` |
-| actor/critic activation | elu | `:128` |
-| encoder hidden | [256, 128, 64] | `:130` |
-| encoder activation | elu | `:135` |
-| encoder_latent_dim (z) | 9 | `:134` |
-| encoder_output_norm (pre-softsign LayerNorm) | True | `:155` |
+| actor hidden | [256, 128, 64] | `:145` |
+| critic hidden | [512, 256, 128] | `:146` |
+| cost_critic hidden | [512, 256, 128] | `:181` |
+| actor/critic activation | elu | `:147` |
+| encoder hidden | [256, 128, 64] | `:149` |
+| encoder activation | elu | `:154` |
+| encoder_latent_dim (z) | 9 | `:153` |
+| encoder_output_norm (pre-softsign LayerNorm) | True | `:174` |
 | encoder static min-max bounds | DR-derived (`derive_priv_obs_bounds_from_dr`), fallback `_PRIV_OBS_LOWER/UPPER` | `utils/priv_obs_bounds.py` |
-| encoder_obs_normalization | False | `:136` |
-| critic_uses_z (106D vs 97D) | True | `:154` |
-| init_noise_std | 0.7 | `:123` |
-| min_std / max_std (algo clamp) | 0.05 / 2.0 | `:221` / `:222` |
-| min_std_per_dim | (0.10, 0.10, 0.05 x6) | `:225` |
-| entropy_coef / per_dim | 0.003 / (0.01 x2, 0.001 x6) | `:212` / `:218` |
-| max_kl / cg_iters / cg_damping | 0.005 / 10 / 0.1 | `:180-182` |
-| barrier_t / barrier_alpha (IPO) | 100.0 / 0.05 | `:206` / `:207` |
-| num_constraints (auto-sync K) | 0 -> runtime 10 (11 with joint1 arm) | `:159` (real K = `config.py` constraint terms) |
-| policy_obs_dim / privileged_dim | 69 / 28 | `:138` / `:139` |
+| encoder_obs_normalization | False | `:155` |
+| critic_uses_z (106D vs 97D) | True | `:173` |
+| init_noise_std | 0.7 | `:142` |
+| min_std / max_std (algo clamp) | 0.05 / 2.0 | `:242` / `:243` |
+| min_std_per_dim | (0.10, 0.10, 0.05 x6) | `:246` |
+| entropy_coef / per_dim | 0.003 / (0.01 x2, 0.001 x6) | `:233` / `:239` |
+| max_kl / cg_iters / cg_damping | 0.005 / 10 / 0.1 | `:201-203` |
+| barrier_t / barrier_alpha (IPO) | 100.0 / 0.05 | `:227` / `:228` |
+| num_constraints (auto-sync K) | 0 -> runtime 10 (11 with joint1 arm) | `:180` (real K = `config.py` constraint terms) |
+| policy_obs_dim / privileged_dim | 69 / 28 | `:157` / `:158` |
 | joint1 constraint arm / budget (`exp/joint1-constraint-redesign` branch) | "none" / 0.05 | `envs/main/config.py` |
+
+All line numbers above are in `agents/rsl_rl_ppo_cfg.py` unless noted otherwise.
 
 ---
 

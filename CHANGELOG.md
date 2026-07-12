@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Docs (P5 overhaul, 2026-07-12): `docs/tutorials/getting-started.md` (install -> 100-iter
+  smoke train -> eval -> read the plots), `docs/reference/glossary.md`,
+  `docs/reference/task-reference.md` (the single task-ID enumeration); `docs/README.md`
+  regenerated as a real index of all 34 pages.
+- `.omx/profile/evaluator.sh` wired to the real `eval.py static` invocation (was a stub):
+  OMX pass/fail contract, fail-loud guards for both rule-03 eval gotchas.
+
+### Changed
+
+- Docs overhauled to Diátaxis EN-only against `envs/main` (P5, 2026-07-12):
+  system-overview rewritten (was pre-refactor full_dof); reward-design reduced 513 -> 79
+  lines (rationale only, values live in `reference/reward.md`); how-to sweep (deploy.md
+  reduced to point at deploy-pack-export.md, domain-randomization.md rewritten from
+  scratch, physics-tuning moved to explanation/); reference sweep (28D/69D verified,
+  stale TAM pre-reorder table in action-pipeline.md rebuilt against the live
+  ESC-channel-permuted matrix, drifted file:line citations re-verified, "Verified against
+  commit" currency lines added); history pages banner-marked as archives.
+- README restructured to standard OSS layout (hero/badges/features/quick start);
+  stale `sudden` eval mode dropped; pyproject description says attitude-only (not
+  full-DOF).
+
+### Removed
+
+- All 8 `docs/reference/*.ko.md` + all 16 PDF exports (EN-only docs policy; the one
+  KO-unique subsection ported to `action-pipeline.md` first).
+- `DIAGNOSIS.md` (2026-05-25 audit snapshot) retired: re-audit found 11 items done,
+  3 obsolete; the 14 still-open items carried to the omx wiki page
+  `diagnosis_md_2026_05_25_retirement_open_item_ledger`.
+
 ### Fixed
 
 - Thruster first-order lag advanced at 1/4 speed (P4 sim-fix, 2026-07-12): `albc_env.py`

@@ -1,5 +1,9 @@
 # Debug & Tuning History
 
+> ARCHIVE — historical narrative, not maintained as reference. Current experiment results
+> live in the experiments/ tree (exp-analyze reports); durable findings live in the omx
+> wiki (`omx wiki query`).
+
 Backup lookup of resolved bugs, gain-tuning results, and cleanup records. Source logs
 used deprecated `hero_agent` / `HeroAgent*` / `AdaptRunner` naming, but the substantive
 TDC controller fixes apply to the **current** `controllers/tdc.py` / `kinematics.py`

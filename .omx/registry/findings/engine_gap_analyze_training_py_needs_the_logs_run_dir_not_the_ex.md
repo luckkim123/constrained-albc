@@ -1,6 +1,6 @@
 ---
 title: "engine-gap: analyze_training.py needs the logs/ run dir, not the experiments/ run dir (events under train symlink)"
-tags: ["engine-gap", "analyze_training", "omx"]
+tags: ["engine-gap", "analyze_training", "omx", "debugging"]
 created: 2026-06-08T21:56:40.651093
 updated: 2026-06-08T21:56:40.651093
 sources: ["diagnose-20260609-064938"]

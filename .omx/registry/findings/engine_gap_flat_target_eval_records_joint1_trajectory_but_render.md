@@ -1,6 +1,6 @@
 ---
 title: "engine-gap: flat-target eval records joint1 trajectory but renders no drift plot"
-tags: ["engine-gap", "eval", "flat-target", "joint1"]
+tags: ["engine-gap", "eval", "flat-target", "joint1", "debugging"]
 created: 2026-06-30T06:56:43.444102
 updated: 2026-06-30T06:56:43.444102
 sources: ["diagnose-20260627-192853", "diagnose-20260629-234023"]

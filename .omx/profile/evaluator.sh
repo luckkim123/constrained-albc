@@ -1,28 +1,48 @@
 #!/usr/bin/env bash
-# OMX Isaac Lab REFERENCE evaluator (committed; ships keep_policy=pass_only).
+# OMX evaluator for constrained-albc: wraps `eval.py static` (rule 03 SSOT eval tool).
 #
-# CONTRACT (re-impl of OMC contracts.ts:178-201): the LAST non-empty stdout line
-# MUST be a JSON object {"pass": <bool>} with an OPTIONAL numeric "score". Under
-# pass_only (this reference's default) score is omitted; exp-init (#3) fills the
-# D5 score formula later when a profile opts into score_improvement.
+# CONTRACT (OMC contracts.ts:178-201): the LAST non-empty stdout line MUST be a
+# JSON object {"pass": <bool>}. Invoked as `bash .omx/profile/evaluator.sh` with
+# cwd set by the caller (`omx eval --cwd <project_dir>`); this script also cd's
+# explicitly so it works when run standalone too.
 #
-# This is an HONEST DOCUMENTED STUB. A live run is NOT invoked here (eval_dr needs
-# Isaac Sim + a checkpoint, unavailable in unit tests). The block below shows
-# EXACTLY where the live eval slots in; the stub emits a deterministic verdict so
-# the contract is testable end-to-end without a GPU.
+# Required env:
+#   OMX_CHECKPOINT  path to the checkpoint to grade. MUST go through the
+#                   experiments/<run_id>/train/<model>.pt symlink (eval.py's
+#                   eval_dir_for_checkpoint needs a "train" path segment to route
+#                   output to experiments/<run_id>/eval/; a bare logs/ path
+#                   silently falls back to a legacy dir -- rule 03 eval gotcha 2).
+# Optional env:
+#   OMX_TASK        task id (default: Isaac-ConstrainedALBC-TRPO-v0)
+#   OMX_NUM_ENVS    eval env count (default: 64)
 #
-# To make this a REAL evaluator, exp-init replaces the STUB block with the
-# project's own eval command, e.g. (paths are illustrative — substitute your
-# repo/eval entrypoint; nothing here is machine-specific):
-#   cd "$OMX_PROJECT_DIR" && python <your_eval_entrypoint> static \
-#       --task "$OMX_TASK" --num_envs 64 --headless >/dev/null 2>&1
-#   # then parse the run's summary.json into a pass/score verdict and echo it.
+# simplified: pass = eval.py exited 0 (a full static DR sweep completed). No
+# numeric score -- metrics.yaml ships keep_policy=pass_only/score_formula=null
+# (rules.md is still the unfilled interview template), so there is no approved
+# success threshold to grade against yet. Add "score" once rules.md/metrics.yaml
+# define one and keep_policy flips to score_improvement.
 set -euo pipefail
 
-# --- STUB verdict (replace with live eval_dr in exp-init) -------------------
-# Honors OMX_REF_PASS for deterministic tests: 1/unset -> pass, 0 -> fail.
-if [[ "${OMX_REF_PASS:-1}" == "0" ]]; then
-  echo '{"pass": false}'
-else
+: "${OMX_CHECKPOINT:?OMX_CHECKPOINT is required: path to experiments/<run_id>/train/<model>.pt}"
+
+cd /workspace/constrained-albc
+
+case "$OMX_CHECKPOINT" in
+  */train/*) ;;
+  *) echo "OMX_CHECKPOINT must go through the experiments/<run_id>/train/ symlink (got: $OMX_CHECKPOINT); see rule 03 eval gotcha 2" >&2; exit 1 ;;
+esac
+[[ -f "$OMX_CHECKPOINT" ]] || { echo "OMX_CHECKPOINT does not exist: $OMX_CHECKPOINT" >&2; exit 1; }
+
+OMX_TASK="${OMX_TASK:-Isaac-ConstrainedALBC-TRPO-v0}"
+OMX_NUM_ENVS="${OMX_NUM_ENVS:-64}"
+
+# NEVER pass --output_dir here: the train/ symlink segment checked above is what
+# lets eval.py auto-route output to experiments/<run_id>/eval/static_<ts>/
+# (rule 03 eval gotcha 1).
+if python constrained_albc/analysis/eval.py static \
+    --task "$OMX_TASK" --checkpoint "$OMX_CHECKPOINT" \
+    --num_envs "$OMX_NUM_ENVS" --headless; then
   echo '{"pass": true}'
+else
+  echo '{"pass": false}'
 fi

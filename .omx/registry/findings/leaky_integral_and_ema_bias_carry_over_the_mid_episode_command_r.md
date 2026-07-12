@@ -55,5 +55,5 @@ Design doc: `docs/plans/2026-07-05-carry-over-reset-ab-experiment-design.md`. Si
 - **Hard precondition**: requires a post-TAM-reorder (`238932c`) from-scratch checkpoint. Fold into the sim-to-real
   audit retrain batch (run that retrain twice: toggle off = audit baseline, toggle on = this probe). See
   [[tam_columns_must_match_robot_firmware_esc_channel_order_reorder_]] for why pre-TAM checkpoints are invalid.
-  Roster: [[next_from_scratch_retrain_manifest]].
+  Roster: [[next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba]].
 

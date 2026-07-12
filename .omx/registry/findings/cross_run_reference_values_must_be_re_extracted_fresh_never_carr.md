@@ -48,7 +48,6 @@ cited, derived from summary_path's parent dir) AND value (matches summary.json a
 `field` within rounding tolerance). A stale value or uncited source loud-fails
 (exit 2). Verified on the real E4 report: correct teacher value -> pass; injected
 stale 1.06 -> STALE fail; E1 report (teacher column, eval id uncited) -> UNCITED
-fail. Distinct from [[coverage lint ok is a floor not a quality gate; re-analysis
-uses OLD report as base, never shrinks]] (that gate guards DEPTH/shrink; this one
+fail. Distinct from [[coverage_lint_ok_is_a_floor_not_a_quality_gate_re_analysis_uses_]] (that gate guards DEPTH/shrink; this one
 guards cross-run VALUE freshness — a report can pass one and fail the other).
 

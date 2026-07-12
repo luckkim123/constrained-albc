@@ -1,5 +1,9 @@
 # Design History
 
+> ARCHIVE — historical narrative, not maintained as reference. Current experiment results
+> live in the experiments/ tree (exp-analyze reports); durable findings live in the omx
+> wiki (`omx wiki query`).
+
 Timeline of design/plan documents (2026-02 ~ 03) that shaped the current
 `constrained_full_albc` env. Raw plan files were compressed into this lookup table.
 

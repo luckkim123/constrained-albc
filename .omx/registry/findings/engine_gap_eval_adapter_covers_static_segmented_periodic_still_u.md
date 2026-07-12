@@ -1,6 +1,6 @@
 ---
 title: "engine-gap: eval adapter covers static + segmented; periodic still unsupported"
-tags: ["engine-gap", "eval-adapter", "periodic", "segmented", "coverage"]
+tags: ["engine-gap", "eval-adapter", "periodic", "segmented", "coverage", "debugging"]
 created: 2026-06-05T10:43:00.649099
 updated: 2026-06-05T10:43:00.649099
 sources: ["20260605-190606-diagnose", "exp-output-naming"]

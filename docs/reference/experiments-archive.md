@@ -1,5 +1,9 @@
 # Experiments Archive
 
+> ARCHIVE — historical narrative, not maintained as reference. Current experiment results
+> live in the experiments/ tree (exp-analyze reports); durable findings live in the omx
+> wiki (`omx wiki query`).
+
 Consolidated record of the full ALBC experiment campaign (2026-04-04 ~ 04-18) plus
 the two root-cause investigations that preceded it. Raw per-round files were compressed
 into this single lookup table; the machine-readable run index lives in

@@ -29,3 +29,9 @@ tests/fixtures/*
 /deploy/
 scratch/
 .trash/
+
+# session/tool state dirs — never commit
+.claude/
+.ruff_cache/
+.superpowers/
+.omx/state/

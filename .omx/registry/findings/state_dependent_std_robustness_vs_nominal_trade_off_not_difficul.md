@@ -1,8 +1,8 @@
 ---
 title: "state_dependent_std: robustness-vs-nominal trade-off, NOT difficulty-adaptive (Phase-2 falsification)"
-tags: ["state_dependent_std", "action_std", "falsification", "ood", "exploration", "retry-candidate", "fault-tolerant"]
+tags: ["state_dependent_std", "action_std", "falsification", "ood", "exploration", "retry-candidate", "fault-tolerant", "adaptivity", "heavy-tail", "roll", "attitude_only"]
 created: 2026-06-08T21:56:24.254183
-updated: 2026-06-14T07:38:30.793420
+updated: 2026-07-12T14:11:29.031769
 sources: ["diagnose-20260609-064938", "diagnose-20260609-125556"]
 links: ["engine_gap_eval_npz_saves_no_raw_obs_std_privileged_blocks_exact.md"]
 category: decision
@@ -30,3 +30,11 @@ WHAT TO CHANGE on the retry (so the next attempt is not a re-run of the same dis
 - If the GOAL is genuinely difficulty-adaptive exploration (the original hypothesis), the head must be fed a difficulty-correlated signal — the current head's std is dominated by policy obs (cross-state CV ~32%) and decorrelated from DR (cross-env-DR CV ~9%). Consider conditioning std on the encoder latent z (which DOES carry DR) rather than raw policy obs, so the adaptive signal can actually form.
 DATA CEILING to fix before re-judging the mechanism: eval npz saves no raw per-step obs / privileged vector, so the policy-obs leg of the std could not be reconstructed (difficulty-null is HIGH on the real DR cluster, but the absolute std magnitude per env is MED). See [[engine_gap_eval_npz_saves_no_raw_obs_std_privileged_blocks_exact]]. A retry should log raw obs so the adaptivity probe is exact.
 STATUS: parked / retry-candidate. Full analysis = trpo_state_std_260609_011906/analysis/diagnose-20260609-125556 (report.md). Prior falsification facts in this page stand; only the adopt/discard framing is softened to retry-candidate. The concrete next-experiment config is exp-design's job, not this note.
+
+---
+
+## Merged from state_dependent_std_difficulty_null_now_confirmed_on_real_dr_med.md (2026-07-12T14:11:29.031769)
+
+# state_dependent_std: difficulty-null now confirmed on REAL DR (MED->HIGH), OOD win is a TAIL effect
+
+Deepening of diagnose-20260609-064938 (analysis diagnose-20260609-125556). (1) ADAPTIVITY NULL PROMOTED MED->HIGH: re-ran the std head (model_4999.pt, 16D=mean+log_std split, clamp[0.05,2.0]) over the 128 REAL hard+ood eval-DR envs (encoder fed real dr_* params from data_hard/ood.npz; policy obs held at actor_obs_normalizer mean). corr(per-state std-norm, composite physical-difficulty proxy) = -0.03 (was +0.04 on synthetic obs) -> the difficulty-decorrelation now holds on the REALIZED DR axis, not just synthetic obs. The std variation is dominated by POLICY OBS (cross-state CV ~32%) over DR (cross-env-DR CV 8.7%), and is localized to action dims 0,1 (arm; CV 30%/20%) while thruster dims 2-7 are near-flat (<13%). DATA LIMIT: eval npz saves no raw 69D obs / no privileged vector, so the policy-obs leg can't be the realized one — the null is HIGH, absolute std magnitudes MED. (2) THE OOD -34.5% WIN IS A TAIL EFFECT, not a median shift: per-env roll ss median nearly identical (state_std 0.31 vs baseline 0.26 deg) but worst-env roll collapses 19.7->5.6 deg at OOD (3.5x), worst-5 mean 5.63->2.65. So a simpler global-std schedule / lower late min_std could likely reproduce the tail effect without the per-state head's +348% nominal cost. Re-visit: report diagnose-20260609-125556 secs trpo(deepening-1)/generalization(deepening-3).
