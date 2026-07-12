@@ -10,9 +10,9 @@ isaaclab stays a pristine upstream fork: its ``rsl_rl/play.py`` only knows
 ``OnPolicyRunner`` / ``DistillationRunner``. This overlay entry owns the two
 overlay concerns that must NOT live in isaaclab (same as train.py):
 
-  1. Registration: a one-shot ``builtins.__import__`` hook imports
-     ``constrained_albc`` when ``isaaclab_tasks`` is imported (AFTER AppLauncher
-     boots SimulationApp so the USD ``pxr`` runtime exists).
+  1. Registration: a one-shot ``builtins.__import__`` hook (``_common.install_overlay_import_hook``,
+     shared with ``train.py``) imports ``constrained_albc`` when ``isaaclab_tasks`` is imported
+     (AFTER AppLauncher boots SimulationApp so the USD ``pxr`` runtime exists).
   2. Runner dispatch: a ``_RUNNER_MAP`` for the custom runner
      (ConstraintEncoderRunner) that upstream play.py does not know.
 
@@ -33,37 +33,11 @@ Usage (run via isaaclab's runtime):
 """Launch Isaac Sim Simulator first."""
 
 import argparse
-import builtins
 import os
-import sys
 
-from isaaclab.app import AppLauncher
+from _common import install_overlay_import_hook, launch_app  # isort: skip
 
-# Make upstream cli_args importable (it lives next to upstream play.py and uses
-# `import cli_args`, relying on sys.path).
-ISAACLAB_PATH = os.environ.get("ISAACLAB_PATH", "/workspace/isaaclab")
-UPSTREAM_RL_DIR = os.path.join(ISAACLAB_PATH, "scripts", "reinforcement_learning", "rsl_rl")
-if UPSTREAM_RL_DIR not in sys.path:
-    sys.path.insert(0, UPSTREAM_RL_DIR)
-
-import cli_args  # isort: skip
-
-# One-shot post-import hook: import constrained_albc the moment isaaclab_tasks is
-# imported below (after AppLauncher has booted, so pxr exists), to register overlay envs.
-_real_import = builtins.__import__
-_overlay_loaded = False
-
-
-def _import_with_overlay(name, *args, **kwargs):
-    module = _real_import(name, *args, **kwargs)
-    global _overlay_loaded
-    if not _overlay_loaded and name == "isaaclab_tasks":
-        _overlay_loaded = True
-        import constrained_albc  # noqa: F401  triggers gym.register()
-    return module
-
-
-builtins.__import__ = _import_with_overlay
+cli_args = install_overlay_import_hook()
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Play a trained RL agent with RSL-RL.")
@@ -76,33 +50,36 @@ parser.add_argument(
 )
 parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
 parser.add_argument("--real-time", action="store_true", default=False, help="Run in real-time, if possible.")
+parser.add_argument(
+    "--sat-probe",
+    action="store_true",
+    default=False,
+    help="Instead of the normal rollout, run a fixed-length thruster saturation probe "
+    "(min/mean/max/std/sat%% per channel for raw policy output, clamped env action, "
+    "and thruster filter state) and exit.",
+)
 # append RSL-RL cli arguments (provides --checkpoint, --load_run, --load_checkpoint, --device, ...)
 cli_args.add_rsl_rl_args(parser)
-# append AppLauncher cli args
-AppLauncher.add_app_launcher_args(parser)
-# parse the arguments
-args_cli, hydra_args = parser.parse_known_args()
-# enable cameras to record video
-if args_cli.video:
-    args_cli.enable_cameras = True
-
-# clear out sys.argv for Hydra
-sys.argv = [sys.argv[0]] + hydra_args
-
-# launch omniverse app
-app_launcher = AppLauncher(args_cli)
-simulation_app = app_launcher.app
+# append AppLauncher cli args, parse, and launch omniverse app
+args_cli, hydra_args, app_launcher, simulation_app = launch_app(parser)
 
 """Rest everything follows."""
 
 import time
 
 import gymnasium as gym
-import torch
+import numpy as np
 import rsl_rl.runners.on_policy_runner as _runner_module
+import torch
 from rsl_rl.runners import OnPolicyRunner
 
-from isaaclab.envs import DirectMARLEnv, DirectMARLEnvCfg, DirectRLEnvCfg, ManagerBasedRLEnvCfg, multi_agent_to_single_agent
+from isaaclab.envs import (
+    DirectMARLEnv,
+    DirectMARLEnvCfg,
+    DirectRLEnvCfg,
+    ManagerBasedRLEnvCfg,
+    multi_agent_to_single_agent,
+)
 from isaaclab.utils.assets import retrieve_file_path
 from isaaclab.utils.dict import print_dict
 
@@ -123,6 +100,52 @@ _RUNNER_MAP = {"ALBCConstraintEncoderRunner": ConstraintEncoderRunner}
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
+
+
+def _run_sat_probe(env, simulation_app, policy, policy_nn, num_steps: int = 300):
+    """Roll out ``num_steps`` steps and report per-channel thruster saturation stats.
+
+    Distinguishes a real sim saturation (RAW action and thruster FILTER state agree)
+    from an observation bug (RAW/CLAMPED saturate but FILTER state stays near-zero,
+    low-std -- i.e. the raw-echo in obs is OOD).
+    """
+    core = env.unwrapped
+    raw, clamped, state = [], [], []
+    obs = env.get_observations()
+    for _ in range(num_steps):
+        if not simulation_app.is_running():
+            break
+        with torch.inference_mode():
+            actions = policy(obs)
+            raw.append(actions[:, 2:].detach().cpu().numpy().copy())
+            obs, _, dones, _ = env.step(actions)
+            clamped.append(core._actions[:, 2:].detach().cpu().numpy().copy())
+            if getattr(core, "_thruster", None) is not None:
+                state.append(core._thruster.state.detach().cpu().numpy().copy())
+            if hasattr(policy_nn, "reset"):
+                policy_nn.reset(dones)
+
+    raw = np.concatenate(raw, 0)
+    clamped = np.concatenate(clamped, 0)
+    state = np.concatenate(state, 0) if state else None
+
+    def _report(name, arr):
+        print(f"\n===== {name} (n={len(arr)}) =====", flush=True)
+        print("  ch |    min    mean     max     std | sat|.|>=0.99")
+        for i in range(arr.shape[1]):
+            v = arr[:, i]
+            sat = (np.abs(v) >= 0.99).mean() * 100
+            print(f"  m{i} | {v.min():+.3f} {v.mean():+.3f} {v.max():+.3f}  {v.std():.3f} | {sat:5.1f}%", flush=True)
+
+    print("\n" + "=" * 60, flush=True)
+    print(f"SIM ROLLOUT THRUSTER SATURATION PROBE  steps={num_steps} envs={core.num_envs}", flush=True)
+    print("=" * 60, flush=True)
+    _report("RAW policy output action[2:8] (clamp before, det mean)", raw)
+    _report("CLAMPED env._actions[2:8] (physics input)", clamped)
+    if state is not None:
+        _report("FILTER _thruster.state (= obs[14:20] echo)", state)
+        print("\n>>> RAW/CLAMPED sat high + state near0 low-std => real raw-echo is OOD (obs bug)", flush=True)
+        print(">>> RAW and state similar => sim also saturates, normal behavior (no obs bug)", flush=True)
 
 
 @hydra_task_config(args_cli.task, args_cli.agent)
@@ -181,6 +204,11 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     policy_nn = runner.alg.policy if hasattr(runner.alg, "policy") else runner.alg.actor_critic
 
     dt = env.unwrapped.step_dt
+
+    if args_cli.sat_probe:
+        _run_sat_probe(env, simulation_app, policy, policy_nn)
+        env.close()
+        return
 
     # reset and roll out
     obs = env.get_observations()
