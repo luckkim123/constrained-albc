@@ -1100,3 +1100,7 @@
 - **Pages:** constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md
 - **Summary:** updated 'constraint margin must be normalized (J_C/d_k) -- absolute margin flips binding/slack'
 
+## [2026-07-12T10:04:32.803449] add
+- **Pages:** constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md
+- **Summary:** created 'ConstraintTRPO slack tail: 9 of 10 constraints deep-slack is plausibly healthy complementary slackness (UNVERIFIED) -- confirm via training-time trajectory + loosening ablation before tuning budgets'
+
