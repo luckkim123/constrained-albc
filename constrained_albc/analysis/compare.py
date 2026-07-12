@@ -8,7 +8,7 @@ Subcommands:
     dr      --dirs --labels --output   multi-policy eval_dr .npz comparison plot
 
 Usage:
-    python3 scripts/analysis/compare.py dr --dirs A/ts B/ts --labels A B --output cmp.png
+    python3 constrained_albc/analysis/compare.py dr --dirs A/ts B/ts --labels A B --output cmp.png
 """
 
 from __future__ import annotations
@@ -44,6 +44,10 @@ def compute_level_metrics(d: dict) -> dict:
     """Compute summary metrics for one DR level.
 
     Steady-state error uses per-segment last-50% averaging (matching eval.py).
+
+    See TODO(metric-drift) in _analyze/recompute_metrics.py: this is one of three
+    drifted, non-byte-equivalent duplicates of this metric logic -- do not merge
+    without a before/after numeric-equivalence check.
     """
     error_roll = d["error_roll"]
     error_pitch = d["error_pitch"]

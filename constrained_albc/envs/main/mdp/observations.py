@@ -6,7 +6,8 @@
 """Observation functions for the attitude-only tracking environment (no linear velocity).
 
     o_t (69D): Unified policy observation = current proprioception (20D) + temporal history (46D) + integral (3D)
-    p_t (28D): Privileged info (simulator-only DR params) + measured root_lin_vel_b (3D, critic-only) + control-action delay (1D, critic-only)
+    p_t (28D): Privileged info (simulator-only DR params) + measured root_lin_vel_b (3D, critic-only)
+        + control-action delay (1D, critic-only)
 
 The encoder receives p_t to compress physical unknowns into latent z.
 The actor receives o_t + z. The critic receives o_t + z + p_t (asymmetric).

@@ -5,6 +5,7 @@
 
 """MDP functions for Full 6-DOF ALBC environment."""
 
+from . import faults
 from .constraints import (
     ALBCConstraintCfg,
     ConstraintTermCfg,
@@ -18,7 +19,6 @@ from .constraints import (
     velocity_limit_cost,
     yaw_rate_cost,
 )
-from . import faults
 from .events import (
     DRSampler,
     apply_joint_fault,

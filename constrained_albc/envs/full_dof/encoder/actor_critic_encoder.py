@@ -217,7 +217,7 @@ class ActorCriticEncoder(PolicyBase):
         return apply_z_ablation(z, self._z_ablation, self._z_ablation_value)
 
     def set_z_ablation(
-        self, mode: "str | None", nominal_obs: "TensorDict | None" = None
+        self, mode: str | None, nominal_obs: TensorDict | None = None
     ) -> None:
         """Enable/disable inference-time z-ablation (encoder gap-#1 diagnostic).
 

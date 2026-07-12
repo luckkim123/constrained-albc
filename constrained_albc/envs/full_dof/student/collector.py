@@ -172,9 +172,11 @@ class RolloutBuffer:
                     obs_window=None,
                     obs_seq=self.obs_flat[:T, idx].transpose(0, 1),      # (envs, T, D)
                     dones_seq=self.done_flat[:T, idx].transpose(0, 1),   # (envs, T)
-                    obs_t=self.obs_flat[:T, idx].reshape(-1, self.D),
-                    l_t=self.l_gt_flat[:T, idx].reshape(-1, self.cfg.latent_dim),
-                    a_t=self.a_gt_flat[:T, idx].reshape(-1, 8),
+                    # (envs, T) flatten order to match l_hat_seq (batch_first GRU
+                    # output, envs-major) -- see StudentEncoderGRU.forward in models.py.
+                    obs_t=self.obs_flat[:T, idx].transpose(0, 1).reshape(-1, self.D),
+                    l_t=self.l_gt_flat[:T, idx].transpose(0, 1).reshape(-1, self.cfg.latent_dim),
+                    a_t=self.a_gt_flat[:T, idx].transpose(0, 1).reshape(-1, 8),
                     env_idx=idx,
                 )
             )

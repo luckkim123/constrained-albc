@@ -14,11 +14,10 @@ from isaaclab.utils import configclass
 
 from .rsl_rl_ppo_cfg import (
     ALBCTRPORunnerCfg,
-    _BaseALBCRunnerCfg,
     _ALBCPolicyCfg,
     _ALBCPPOAlgorithmCfg,
+    _BaseALBCRunnerCfg,
 )
-
 
 # =============================================================================
 # Variant #3: TRPO-NoIPO (encoder + TRPO, no IPO)

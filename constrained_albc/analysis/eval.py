@@ -13,10 +13,10 @@ OOD (out-of-distribution) generalization is evaluated within `static` via
 --extreme-ood / --ood-preset / --ood-scale / --ood-range-scale (no separate mode).
 
 Usage:
-    ./isaaclab.sh -p scripts/analysis/eval.py static --task Isaac-ConstrainedALBC-TRPO-v0 --num_envs 64 --headless
-    ./isaaclab.sh -p scripts/analysis/eval.py static --extreme-ood --ood-preset v2 --headless
-    ./isaaclab.sh -p scripts/analysis/eval.py periodic --num_steps 4 --headless
-    ./isaaclab.sh -p scripts/analysis/eval.py segmented --segment_duration 5 --headless
+    ./isaaclab.sh -p constrained_albc/analysis/eval.py static --task Isaac-ConstrainedALBC-TRPO-v0 --num_envs 64 --headless
+    ./isaaclab.sh -p constrained_albc/analysis/eval.py static --extreme-ood --ood-preset v2 --headless
+    ./isaaclab.sh -p constrained_albc/analysis/eval.py periodic --num_steps 4 --headless
+    ./isaaclab.sh -p constrained_albc/analysis/eval.py segmented --segment_duration 5 --headless
 """
 
 import argparse
@@ -29,16 +29,16 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 # Pure (Isaac-Sim-free) trajectory + metric helpers, extracted to _eval_dr/.
 # Safe to import before the AppLauncher boot below (numpy only).
+from _eval_dr.dr_snapshot import (  # type: ignore[import-not-found]  # noqa: E402
+    per_env_dr_from_tensors,
+    per_env_fault_from_tensors,
+)
 from _eval_dr.metrics import (  # type: ignore[import-not-found]  # noqa: E402
     _get_block_step_range,
     _periodic_compute_metrics,
     _pick_sample_env,
     compute_metrics,
     compute_seg_metrics,
-)
-from _eval_dr.dr_snapshot import (  # type: ignore[import-not-found]  # noqa: E402
-    per_env_dr_from_tensors,
-    per_env_fault_from_tensors,
 )
 from _eval_dr.trajectory import (  # type: ignore[import-not-found]  # noqa: E402
     ATT_AMP_DEG,
@@ -248,13 +248,14 @@ import gymnasium as gym
 import matplotlib
 
 try:
-    import plotly.graph_objects as go
-    from plotly.subplots import make_subplots
+    import plotly.graph_objects as go  # noqa: F401
+    from plotly.subplots import make_subplots  # noqa: F401
     _HAS_PLOTLY = True
 except ImportError:
     _HAS_PLOTLY = False
 
 matplotlib.use("Agg")
+import dr_config as _dr_config_module  # type: ignore[import-not-found]  # noqa: E402
 import matplotlib.pyplot as plt
 import numpy as np
 import rsl_rl.runners.on_policy_runner as _runner_module
@@ -262,6 +263,15 @@ import torch
 from common import DR_COLORS
 from common import DR_LEVELS as _DEFAULT_DR_LEVELS
 from common import DR_SCALE as _DEFAULT_DR_SCALE
+from dr_config import (  # type: ignore[import-not-found]  # noqa: E402
+    _DR_TUPLE_FIELDS,
+    _apply_extreme_ood_physics,
+    _collapse_dr_to_midpoint,
+    build_dr_config,
+    build_ood_dr_config,
+    get_hard_dr_config,
+    load_doraemon_dr,
+)
 from eval_plots import (  # type: ignore[import-not-found]  # noqa: E402
     _bar_subplot,
     _periodic_generate_plots,
@@ -273,16 +283,6 @@ from eval_plots import (  # type: ignore[import-not-found]  # noqa: E402
     generate_plots,
 )
 from eval_serialize import _build_mat_meta, write_eval_npz  # type: ignore[import-not-found]  # noqa: E402
-import dr_config as _dr_config_module  # type: ignore[import-not-found]  # noqa: E402
-from dr_config import (  # type: ignore[import-not-found]  # noqa: E402
-    _DR_TUPLE_FIELDS,
-    _apply_extreme_ood_physics,
-    _collapse_dr_to_midpoint,
-    build_dr_config,
-    build_ood_dr_config,
-    get_hard_dr_config,
-    load_doraemon_dr,
-)
 from matplotlib.ticker import MultipleLocator
 from paths import eval_dir_for_checkpoint  # type: ignore[import-not-found]  # noqa: E402  run_id-tree eval output (#2)
 from rsl_rl.runners import OnPolicyRunner
@@ -294,6 +294,9 @@ from isaaclab.utils.math import euler_xyz_from_quat, quat_rotate_inverse
 from isaaclab_rl.rsl_rl import RslRlBaseRunnerCfg, RslRlVecEnvWrapper
 
 import isaaclab_tasks  # noqa: F401
+from isaaclab_tasks.utils import get_checkpoint_path
+from isaaclab_tasks.utils.hydra import hydra_task_config
+
 from constrained_albc.envs.main.algorithms import ConstraintTRPO
 from constrained_albc.envs.main.config import (
     DomainRandomizationCfg,
@@ -308,8 +311,6 @@ from constrained_albc.envs.main.mdp import (
 )
 from constrained_albc.envs.main.runners import ConstraintEncoderRunner
 from constrained_albc.envs.main.utils import update_latest_symlink
-from isaaclab_tasks.utils import get_checkpoint_path
-from isaaclab_tasks.utils.hydra import hydra_task_config
 
 # Runtime-mutable copies (overridden by --ood-scale in static mode)
 DR_LEVELS: list[str] = list(_DEFAULT_DR_LEVELS)
@@ -876,9 +877,17 @@ def _resolve_eval_output_dir(resume_path, mode: str):
     """
     if args_cli.output_dir:
         return args_cli.output_dir, True
-    if resume_path and (run_eval_dir := eval_dir_for_checkpoint(resume_path, mode)) is not None:
-        # Checkpoint lives in a run_id tree -> write eval under experiments/<run_id>/eval/ (#2).
-        return str(run_eval_dir), True
+    if resume_path:
+        run_eval_dir = eval_dir_for_checkpoint(resume_path, mode)
+        if run_eval_dir is not None:
+            # Checkpoint lives in a run_id tree -> write eval under experiments/<run_id>/eval/ (#2).
+            return str(run_eval_dir), True
+        print(
+            f"[WARN] Checkpoint path has no 'train' path segment ({resume_path}), so it is not "
+            "recognized as an experiments/<run_id>/train/ tree -- falling back to a legacy eval "
+            "dir instead of experiments/<run_id>/eval/. Canonical form: "
+            "experiments/<...>/<run_id>/train/<model>.pt."
+        )
     return None, False
 
 

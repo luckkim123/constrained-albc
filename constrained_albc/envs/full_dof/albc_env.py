@@ -22,7 +22,7 @@ from isaaclab.envs import DirectRLEnv
 from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
 from isaaclab.utils.math import euler_xyz_from_quat, quat_apply, quat_apply_inverse
 
-from marinelab.physics import HydrodynamicsModel
+from marinelab.core import HydrodynamicsModel
 
 from .config import ALBCEnvCfg
 from .mdp import faults
@@ -335,7 +335,7 @@ class ALBCEnv(DirectRLEnv):
         if self.cfg.thrusters is None:
             self._thruster = None
             return
-        from marinelab.physics import ThrusterModel
+        from marinelab.core import ThrusterModel
 
         self._thruster = ThrusterModel(
             cfg=self.cfg.thrusters,

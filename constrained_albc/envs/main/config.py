@@ -14,6 +14,14 @@ from __future__ import annotations
 
 import math
 
+import isaaclab.sim as sim_utils
+from isaaclab.envs import DirectRLEnvCfg, ViewerCfg
+from isaaclab.scene import InteractiveSceneCfg
+from isaaclab.sim import PhysxCfg, SimulationCfg
+from isaaclab.terrains import TerrainImporterCfg
+from isaaclab.utils import configclass
+from isaaclab.utils.noise import GaussianNoiseCfg, NoiseModelWithAdditiveBiasCfg, UniformNoiseCfg
+
 from marinelab.assets import (
     ALBC_CFG,
     ALBC_JOINT_NAMES,
@@ -23,14 +31,6 @@ from marinelab.assets import (
     OceanCurrentCfg,
     ThrusterCfg,
 )
-
-import isaaclab.sim as sim_utils
-from isaaclab.envs import DirectRLEnvCfg, ViewerCfg
-from isaaclab.scene import InteractiveSceneCfg
-from isaaclab.sim import PhysxCfg, SimulationCfg
-from isaaclab.terrains import TerrainImporterCfg
-from isaaclab.utils import configclass
-from isaaclab.utils.noise import GaussianNoiseCfg, NoiseModelWithAdditiveBiasCfg, UniformNoiseCfg
 
 from .doraemon import DoraemonCfg
 from .mdp.constraints import (

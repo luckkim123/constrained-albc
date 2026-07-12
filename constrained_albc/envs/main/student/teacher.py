@@ -55,18 +55,18 @@ class FrozenTeacher(nn.Module):
         # Build a teacher policy with the same arch as r13_A. We use the registry
         # class rather than instantiating ActorCriticEncoder directly to ensure
         # the exact arch (e.g. ALBCActorCriticEncoder overrides).
-        from constrained_albc.envs.main.encoder import (
-            ActorCriticEncoder,
-        )
-        from constrained_albc.envs.main.agents.rsl_rl_ppo_cfg import (
-            _PRIV_OBS_LOWER,
-            _PRIV_OBS_UPPER,
-        )
-
         # We don't have the real TensorDict here; instead we build bypassing obs_groups
         # by calling nn.Module construction of the components directly.
         # Easiest path: reuse ActorCriticEncoder via a minimal dummy obs dict.
         from tensordict import TensorDict
+
+        from constrained_albc.envs.main.agents.rsl_rl_ppo_cfg import (
+            _PRIV_OBS_LOWER,
+            _PRIV_OBS_UPPER,
+        )
+        from constrained_albc.envs.main.encoder import (
+            ActorCriticEncoder,
+        )
 
         # The teacher's cost_critic has one output head per constraint. The count is
         # not fixed across teachers: the joint1-constraint campaign added an 11th

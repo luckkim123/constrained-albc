@@ -6,9 +6,10 @@ isaaclab stays a pristine upstream fork: its train.py only knows OnPolicyRunner 
 DistillationRunner and only imports isaaclab_tasks. This overlay entry owns two
 overlay concerns that must NOT live in isaaclab:
 
-  1. Registration: a one-shot ``builtins.__import__`` hook imports ``constrained_albc``
-     when ``isaaclab_tasks`` is imported (which is AFTER AppLauncher boots SimulationApp,
-     so the USD ``pxr`` runtime exists), triggering the overlay's gym.register() calls.
+  1. Registration: a one-shot ``builtins.__import__`` hook (``_common.install_overlay_import_hook``,
+     shared with ``play.py``) imports ``constrained_albc`` when ``isaaclab_tasks`` is imported
+     (which is AFTER AppLauncher boots SimulationApp, so the USD ``pxr`` runtime exists),
+     triggering the overlay's gym.register() calls.
   2. Runner dispatch: a ``_RUNNER_MAP`` for the two custom runners
      (ConstraintEncoderRunner, OnPolicyDoraemonRunner) that upstream train.py does not know.
 
@@ -26,37 +27,12 @@ Usage (run via isaaclab's runtime):
 """Launch Isaac Sim Simulator first."""
 
 import argparse
-import builtins
 import os
 import sys
 
-from isaaclab.app import AppLauncher
+from _common import install_overlay_import_hook, launch_app  # isort: skip
 
-# Make upstream cli_args importable (it lives next to upstream train.py and uses
-# `import cli_args  # isort: skip`, relying on sys.path).
-ISAACLAB_PATH = os.environ.get("ISAACLAB_PATH", "/workspace/isaaclab")
-UPSTREAM_RL_DIR = os.path.join(ISAACLAB_PATH, "scripts", "reinforcement_learning", "rsl_rl")
-if UPSTREAM_RL_DIR not in sys.path:
-    sys.path.insert(0, UPSTREAM_RL_DIR)
-
-import cli_args  # isort: skip
-
-# One-shot post-import hook: import constrained_albc the moment isaaclab_tasks is
-# imported below (after AppLauncher has booted, so pxr exists), to register overlay envs.
-_real_import = builtins.__import__
-_overlay_loaded = False
-
-
-def _import_with_overlay(name, *args, **kwargs):
-    module = _real_import(name, *args, **kwargs)
-    global _overlay_loaded
-    if not _overlay_loaded and name == "isaaclab_tasks":
-        _overlay_loaded = True
-        import constrained_albc  # noqa: F401  triggers gym.register()
-    return module
-
-
-builtins.__import__ = _import_with_overlay
+cli_args = install_overlay_import_hook()
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Train an RL agent with RSL-RL.")
@@ -94,20 +70,8 @@ parser.add_argument(
 )
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
-# append AppLauncher cli args
-AppLauncher.add_app_launcher_args(parser)
-args_cli, hydra_args = parser.parse_known_args()
-
-# always enable cameras to record video
-if args_cli.video:
-    args_cli.enable_cameras = True
-
-# clear out sys.argv for Hydra
-sys.argv = [sys.argv[0]] + hydra_args
-
-# launch omniverse app
-app_launcher = AppLauncher(args_cli)
-simulation_app = app_launcher.app
+# append AppLauncher cli args, parse, and launch omniverse app
+args_cli, hydra_args, app_launcher, simulation_app = launch_app(parser)
 
 """Check for minimum supported RSL-RL version."""
 

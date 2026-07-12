@@ -15,7 +15,6 @@ import logging
 import math
 
 import torch
-from marinelab.physics import HydrodynamicsModel
 
 import isaaclab.sim as sim_utils
 from isaaclab.assets import Articulation
@@ -23,6 +22,8 @@ from isaaclab.envs import DirectRLEnv
 from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
 from isaaclab.utils.buffers import DelayBuffer
 from isaaclab.utils.math import euler_xyz_from_quat, quat_apply, quat_apply_inverse
+
+from marinelab.core import HydrodynamicsModel
 
 from .config import ALBCEnvCfg
 from .mdp import faults
@@ -402,7 +403,7 @@ class ALBCEnv(DirectRLEnv):
         if self.cfg.thrusters is None:
             self._thruster = None
             return
-        from marinelab.physics import ThrusterModel
+        from marinelab.core import ThrusterModel
 
         # Bridge the actuation-noise thruster std into the ThrusterCfg so the model
         # reads it via getattr. Only when the channel is enabled (else leave the cfg
