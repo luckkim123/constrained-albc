@@ -1088,3 +1088,7 @@
 - **Pages:** constrainttrpo_faithful_norbc_modified_ipo_kim_2024_arxiv_2308_1.md
 - **Summary:** created 'ConstraintTRPO = faithful NORBC Modified-IPO (Kim 2024, arXiv:2308.12517); standardized-vs-raw barrier + soft feasibility are NORBC design not bugs; only the 1e-8 barrier clamp is code-level (no functional fix)'
 
+## [2026-07-12T09:25:32.086868] add
+- **Pages:** session_state_2026_07_12_constraint_deep_dive_q_a_covered_struct.md
+- **Summary:** updated 'Session state 2026-07-12: constraint deep-dive (Q&A) -- covered structure/prob-avg/reward-cost-parallel/classification/thresholds; 2 wiki pages + constraints.md 3.2/3.4/4.3/4.6 + 1 PROMPT; pending 5/9'
+
