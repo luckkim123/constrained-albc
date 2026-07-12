@@ -24,12 +24,14 @@ import os
 
 import numpy as np
 
-from ._shared import _load_npz
-
 # DR constants sourced from common (single definition); aliases kept for callers
 # that imported _RC_DR_LEVELS/_RC_DR_SCALE directly from this module.
 from common import DR_LEVELS as _RC_DR_LEVELS  # type: ignore[import-not-found]  # noqa: E402
-from common import DR_SCALE as _RC_DR_SCALE    # type: ignore[import-not-found]  # noqa: E402
+from common import (
+    DR_SCALE as _RC_DR_SCALE,  # type: ignore[import-not-found]  # noqa: E402,F401  (re-exported for callers)
+)
+
+from ._shared import _load_npz
 
 _AX_LIN = [("lin_vel_x", "target_vx", "vx"),
            ("lin_vel_y", "target_vy", "vy"),

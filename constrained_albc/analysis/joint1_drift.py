@@ -31,8 +31,7 @@ import json
 from pathlib import Path
 
 import numpy as np
-
-DR_LEVELS = ["none", "soft", "medium", "hard"]
+from common import DR_LEVELS
 
 
 def _wrap(x: np.ndarray) -> np.ndarray:

@@ -14,9 +14,9 @@ Subcommands:
 Pure Python (no Isaac Sim). Run with plain python3.
 
 Usage:
-    python3 scripts/analysis/analyze.py recompute logs/.../run_dir
-    python3 scripts/analysis/analyze.py eval_dr 0 1 --labels A B
-    python3 scripts/analysis/analyze.py student_latent logs/.../latent_diagnostic
+    python3 constrained_albc/analysis/analyze.py recompute logs/.../run_dir
+    python3 constrained_albc/analysis/analyze.py eval_dr 0 1 --labels A B
+    python3 constrained_albc/analysis/analyze.py student_latent logs/.../latent_diagnostic
 """
 from __future__ import annotations
 

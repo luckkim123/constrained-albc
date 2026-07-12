@@ -10,9 +10,9 @@ Subcommands:
     train   --data --output     offline encoder training (value-prediction bottleneck)
 
 Usage:
-    python3 scripts/analysis/encoder_tools.py debug --run 0
-    python3 scripts/analysis/encoder_tools.py sweep --checkpoint logs/.../model_4999.pt
-    python3 scripts/analysis/encoder_tools.py train --data rollouts.pt --output enc.pt
+    python3 constrained_albc/analysis/encoder_tools.py debug --run 0
+    python3 constrained_albc/analysis/encoder_tools.py sweep --checkpoint logs/.../model_4999.pt
+    python3 constrained_albc/analysis/encoder_tools.py train --data rollouts.pt --output enc.pt
 
 The CLI is invoked through the encoder_tools.py shim, which puts the analysis
 directory on sys.path (so `from common import ...` resolves) before calling main().

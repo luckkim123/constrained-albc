@@ -24,6 +24,11 @@ from __future__ import annotations
 import copy
 import os
 
+from ood_logic import (  # type: ignore[import-not-found]  # sim-free OOD bound math
+    _HELD_OUT_AXES,
+    compute_ood_bounds,
+)
+
 from constrained_albc.envs.main.config import (  # type: ignore[import-not-found]
     DomainRandomizationCfg,
 )
@@ -31,10 +36,6 @@ from constrained_albc.envs.main.doraemon import (  # type: ignore[import-not-fou
     _NOMINAL_OVERRIDES,
     _PARAM_DEFS,
     build_param_specs,
-)
-from ood_logic import (  # type: ignore[import-not-found]  # sim-free OOD bound math
-    _HELD_OUT_AXES,
-    compute_ood_bounds,
 )
 
 # ---- Module-level mutable state (mutated by eval.py at CLI parse time) ----

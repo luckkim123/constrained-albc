@@ -18,10 +18,9 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402,F401
 import numpy as np  # noqa: E402,F401
-from matplotlib.ticker import MultipleLocator  # noqa: E402,F401
-
-from common import DR_COLORS, DR_RENDER_ORDER, DR_SCALE  # type: ignore[import-not-found]  # noqa: E402
 from _eval_dr.metrics import _get_block_step_range, _pick_sample_env  # type: ignore[import-not-found]  # noqa: E402
+from common import DR_COLORS, DR_RENDER_ORDER, DR_SCALE  # type: ignore[import-not-found]  # noqa: E402
+from matplotlib.ticker import MultipleLocator  # noqa: E402,F401
 
 try:
     import plotly.graph_objects as go

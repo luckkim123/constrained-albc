@@ -10,9 +10,9 @@ Subcommands:
     wandb    --entity --project     create WandB training report
 
 Usage:
-    python3 scripts/analysis/monitor.py plot 0
-    python3 scripts/analysis/monitor.py compare --runs 0 1 --metrics "Train/mean_reward"
-    python3 scripts/analysis/monitor.py wandb --dry-run
+    python3 constrained_albc/analysis/monitor.py plot 0
+    python3 constrained_albc/analysis/monitor.py compare --runs 0 1 --metrics "Train/mean_reward"
+    python3 constrained_albc/analysis/monitor.py wandb --dry-run
 """
 
 from __future__ import annotations

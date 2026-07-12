@@ -14,7 +14,6 @@ Pure Python (no Isaac Sim). Run with plain python3.
 Usage:
     python3 constrained_albc/analysis/analyze.py recompute logs/.../run_dir
     python3 constrained_albc/analysis/analyze.py eval_dr 0 1 --labels A B
-    python3 constrained_albc/analysis/analyze.py table 0
     python3 constrained_albc/analysis/analyze.py student_latent logs/.../latent_diagnostic
 """
 
