@@ -1,4 +1,4 @@
-# constrained_albc/envs/main/student/models.py
+# constrained_albc/envs/_core/student/models.py
 """Student encoder architectures: window-based TCN and streaming GRU.
 
 Both output 9D latent in (-1, 1) via softsign, matching r13_A teacher's
