@@ -1076,3 +1076,7 @@
 - **Pages:** session_state_2026_07_12_constraint_deep_dive_q_a_covered_struct.md
 - **Summary:** created 'Session state 2026-07-12: constraint deep-dive (Q&A) -- covered structure/prob-avg/reward-cost-parallel/classification/thresholds; 2 wiki pages + constraints.md 3.2/3.4/4.3/4.6 + 1 PROMPT; pending 5/9'
 
+## [2026-07-12T08:32:10.674326] add
+- **Pages:** reward_cost_parallel_structure_mostly_mirroring_two_real_couplin.md
+- **Summary:** updated 'reward/cost parallel structure: mostly mirroring, two real couplings (value grad-clip over the union throttles reward critic; feasibility J_C uses GAE-return so constraint level inherits lambda_c + cost-critic bias)'
+

@@ -150,9 +150,6 @@ expected magnitude.
 - **`manipulability`** — hinged below a manipulability floor `w_threshold=0.3`;
   cost accrues when the arm's manipulability measure drops below the floor.
 
-<<<<<<< HEAD
-### 3.3 Experiment-only joint1 term (not shipped)
-=======
 The two multi-component average costs (`thruster_util`, `rp_rate`) reduce with a spatial
 `max` ($\max_i \lvert s_i\rvert$, $\max(\lvert p\rvert,\lvert q\rvert)$) *inside* the
 per-step cost — this is theoretically consistent, not a category error. The "average" of an
@@ -164,8 +161,7 @@ hard "never exceed at any step" bound (that would need a probabilistic indicator
 `rp_vel_settling` uses a `mean` and `yaw_rate`/`manipulability` are single-quantity, so `max`
 appears only where a multi-component reduction is needed.
 
-### 3.3 Experiment-only joint1 terms (not shipped)
->>>>>>> 8437ad3 (docs(constraints): record constraint deep-dive findings (reward/cost couplings, threshold provenance, actuator layering))
+### 3.3 Experiment-only joint1 term (not shipped)
 
 One extra average cost function exists for the joint1-anti-drift experiment line
 (Section 7); it is not in the shipped 10 (`constraints.py:26-29`):
