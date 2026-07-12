@@ -70,7 +70,7 @@ def _build(critic_uses_z: bool):
 
 @pytest.mark.parametrize("critic_uses_z", [False, True])
 def test_encoder_in_value_optimizer_iff_critic_uses_z(critic_uses_z):
-    obs, policy, alg = _build(critic_uses_z)
+    _, policy, alg = _build(critic_uses_z)
     enc_params = [p for n, p in policy.named_parameters() if n.startswith("encoder")]
     assert enc_params
 
