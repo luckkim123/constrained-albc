@@ -1,15 +1,15 @@
 ---
 title: "constraint margin must be normalized (J_C/d_k) -- absolute margin flips binding/slack"
-tags: ["constraint", "margin", "binding", "J_C_d_k", "normalization", "ConstraintTRPO", "analysis-pitfall"]
+tags: ["constraint", "margin", "binding", "J_C_d_k", "normalization", "ConstraintTRPO", "analysis-pitfall", "doc-sync"]
 created: 2026-06-07T08:12:41.839480
-updated: 2026-07-12T09:44:01.646060
+updated: 2026-07-12T09:55:15.010878
 sources: ["diagnose-20260606-194621"]
 links: []
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
+qualityScore: 100
+qualityReasons: []
 ---
 
 # constraint margin must be normalized (J_C/d_k) -- absolute margin flips binding/slack
@@ -56,4 +56,12 @@ Verified in the working tree (`.omx/profile/analyze_training.py`):
 SHARED CAVEAT (manual formula AND engine `JC/dk` column): both consume the logged margin, which in the BINDING regime is frozen at alpha*d_k (adaptive floor engaged, alpha=0.05). So J_C/d_k is exact only in the slack regime and saturates at 1-alpha=0.95 for a genuinely-violating channel: a channel with true J_C/d_k>1 displays 0.95, not its real ratio. thruster_util at 0.870 < 0.95 is unaffected; the whole slack tail is exact. This limit was implicit before and is now stated.
 
 DO NOT tell readers the engine lacks normalization -- it has since 4ff9ea1 (2026-06-07). The mirror doc `constrained-albc/docs/reference/constraints.md` §5 carried the same stale claim; its correction is delegated 2026-07-12.
+
+---
+
+## Update (2026-07-12T09:55:15.010878)
+
+## UPDATE (2026-07-12, doc fix LANDED)
+
+The mirror-doc correction that the prior update logged as "its correction is delegated 2026-07-12" is now DONE, not pending. `constrained-albc/docs/reference/constraints.md` §5 and its Korean mirror `constraints.ko.md` had the stale "the analysis engine still has this gap" sentence replaced with the normalized-engine description (commit `3a8a9bb`, branch `exp/latency-dr`). The new paragraph cites `_constraint_binding_ratio` (`:416-430`), the `JC/dk=` column (`:809`), the max-ratio binding flag (`:820`), the regression test, and the `1-alpha=0.95` saturation caveat -- consistent with this page. No pending delegation remains; doc and wiki now agree.
 

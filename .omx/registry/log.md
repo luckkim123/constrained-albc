@@ -1096,3 +1096,7 @@
 - **Pages:** constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md
 - **Summary:** updated 'constraint margin must be normalized (J_C/d_k) -- absolute margin flips binding/slack'
 
+## [2026-07-12T09:55:15.010878] add
+- **Pages:** constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md
+- **Summary:** updated 'constraint margin must be normalized (J_C/d_k) -- absolute margin flips binding/slack'
+
