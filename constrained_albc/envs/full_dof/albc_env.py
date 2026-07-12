@@ -25,6 +25,7 @@ from isaaclab.utils.math import euler_xyz_from_quat, quat_apply, quat_apply_inve
 from marinelab.physics import HydrodynamicsModel
 
 from .config import ALBCEnvCfg
+from .mdp import faults
 from .mdp.constraints import compute_all_costs
 from .mdp.events import (
     DRSampler,
@@ -387,6 +388,22 @@ class ALBCEnv(DirectRLEnv):
             self._episode_dr_xi = torch.zeros(self.num_envs, ndims, device=self.device)
             self._episode_dr_log_probs = torch.zeros(self.num_envs, device=self.device)
             self._episode_return_accum = torch.zeros(self.num_envs, device=self.device)
+
+        # DR-owned per-env obs-noise scale (parallel to, and independent of, the fault
+        # _sensor_noise_scale). Allocated whenever DR is enabled -- NOT only when DORAEMON
+        # is on -- so it still fills at eval (DORAEMON disabled). Filled each reset in
+        # _reset_physics from sampled["obs_noise_scale"] (training) or a uniform draw over
+        # obs_noise_scale_range (eval fallback, mirroring the fault/events path). base_std
+        # is the always-on 87D _OBS_NOISE_STD so the DR layer scales the SAME per-channel
+        # pattern. DR disabled entirely -> None (no extra obs noise, byte-identical).
+        if self.cfg.randomization.enable:
+            from .config import _OBS_NOISE_STD
+
+            self._dr_obs_noise_scale = torch.zeros(self.num_envs, device=self.device)
+            self._dr_obs_base_std = torch.tensor(_OBS_NOISE_STD, device=self.device)
+        else:
+            self._dr_obs_noise_scale = None
+            self._dr_obs_base_std = None
 
     def _setup_scene(self):
         """Setup simulation scene with robot and underwater lighting."""
@@ -954,6 +971,13 @@ class ALBCEnv(DirectRLEnv):
         if self.cfg.use_integral_obs:
             policy_obs = torch.cat([policy_obs, self._error_integral], dim=-1)
 
+        # DR-managed obs-noise curriculum: an EXTRA white-noise layer on top of the
+        # always-on noise model. No-op (identity) when DORAEMON off (scale is None) ->
+        # byte-identical.
+        policy_obs = faults.apply_sensor_noise(
+            policy_obs, self._dr_obs_noise_scale, base_std=self._dr_obs_base_std
+        )
+
         observations = {"policy": policy_obs}
         assert policy_obs.shape[-1] == self.cfg.observation_space, (
             f"emitted policy obs dim {policy_obs.shape[-1]} != "
@@ -1357,6 +1381,20 @@ class ALBCEnv(DirectRLEnv):
 
             # Command scales fixed at 1.0 (not DORAEMON-managed).
             # DORAEMON optimizes physics DR only; command difficulty is a task knob.
+
+        # DR obs-noise scale fill (buffer exists whenever DR is enabled):
+        #   - DORAEMON on + dim registered -> use the sampled per-env value (training).
+        #   - else (DORAEMON off = eval, or dim not registered) -> uniform draw over
+        #     obs_noise_scale_range, mirroring the fault/events fallback so the eval
+        #     none/soft/medium/hard sweep is live. At nominal (0.0, 0.0) the draw is all
+        #     zeros -> apply_sensor_noise is a no-op -> byte-identical.
+        if self._dr_obs_noise_scale is not None:
+            if sampled is not None and "obs_noise_scale" in sampled:
+                self._dr_obs_noise_scale[env_ids] = sampled["obs_noise_scale"]
+            else:
+                self._dr_obs_noise_scale[env_ids] = faults.sample_uniform_per_env(
+                    len(env_ids), rand_cfg.obs_noise_scale_range, self.device
+                )
 
         randomize_hydrodynamics(env=self, env_ids=env_ids, dr=dr, sampled=sampled)
         randomize_body_mass(env=self, env_ids=env_ids, dr=dr, sampled=sampled)

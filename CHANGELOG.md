@@ -19,6 +19,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `deploy_pack_5000iter_260611/` -> `deploy/attitude_only_campaign/pack_5000iter_260611_183252/`,
   `deploy_export_5000/` -> `deploy/attitude_only_campaign/export_5000_260611_175116/`.
 
+### Added
+
+- DORAEMON obs-noise curriculum: `obs_noise_scale` DR dimension (NDIMS 17 -> 18), a global
+  [0,1] scale on the per-tree observation-noise std (69D main / 87D full_dof), applied as an
+  extra white-noise layer in `_get_observations`. nominal=0 (byte-identical to today), widening
+  to +1x std. std only; per-episode bias unchanged. Not in privileged obs (pure robustness;
+  state_space unchanged: 27 main / 24 full_dof). Off by default (byte-identical when DORAEMON disabled). Both env trees
+  (main + full_dof); full_dof gained a byte-identical port of `mdp/faults.py`
+  (`apply_sensor_noise`) from main, since full_dof previously had no fault layer.
+
+### Verification
+
+- `test_faults` (stacked layer composition), `test_doraemon` (NDIMS 18, `obs_noise_scale`
+  nominal 0), `test_dr_config` (eval sweep 0 -> 1). NDIMS ripple audit clean. 18-dim scheduler
+  smoke.
+
+### Notes
+
+- Plan A continuity: scale=1 is sqrt(2)x today's std (curriculum expands BEYOND today, not
+  around it). The original plan's "scale=1 == today" clause was dropped -- it contradicts
+  off-byte-identical + nominal-0-clean given the two-stage noise pipeline. Robustness benefit
+  is a HYPOTHESIS to verify via the comparison run, not a given. NDIMS 17 -> 18 dilutes the
+  DORAEMON entropy/KL budget across one more dimension. TRAINING LAUNCH is a separate,
+  user-gated step after a fault-free baseline is established.
+
 ### Fixed
 
 - `npforward.py` was not Python 2.7-loadable: three `@` matmul sites (PEP 465,
