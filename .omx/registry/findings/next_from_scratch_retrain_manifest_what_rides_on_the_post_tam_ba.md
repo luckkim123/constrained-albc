@@ -2,14 +2,14 @@
 title: "Next from-scratch retrain manifest: what rides on the post-TAM baseline retrain (sim fixes + learning-dynamics experiments)"
 tags: ["albc", "envs-main", "retrain-campaign", "sim-to-real-audit", "baseline-retrain", "manifest", "index", "experiment-roster", "from-scratch", "constraint-trpo", "velocity-limit", "reward-weight-tuning", "two-phase"]
 created: 2026-07-05T08:06:16.009224
-updated: 2026-07-11T06:41:42.683852
+updated: 2026-07-12T13:45:17.487104
 sources: []
 links: ["experiment_result_recording_location_experiments_tree_is_ssot_no.md", "tam_columns_must_match_robot_firmware_esc_channel_order_reorder_.md", "encoder_priv_obs_normalization_bounds_must_be_dr_derived_not_har.md", "thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md", "leaky_integral_and_ema_bias_carry_over_the_mid_episode_command_r.md", "encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md", "action_bounding_is_justified_raw_gaussian_external_clamp_tanh_ru.md", "arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md", "real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md", "next_experiment_workflow_pick_a_baseline_train_once_then_re_tune.md"]
 category: convention
 confidence: high
 schemaVersion: 1
-qualityScore: 80
-qualityReasons: ["no-source-marker"]
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 ---
 
 # Next from-scratch retrain manifest: what rides on the post-TAM baseline retrain (sim fixes + learning-dynamics experiments)
@@ -111,3 +111,20 @@ from-scratch retrained baseline (pre-TAM-reorder checkpoints are physically inva
 gotchas (ratio-only invariance, k_bias two-file toggle, sigma/integral-gate coupling, performance_lb
 recalibration): [[next_experiment_workflow_pick_a_baseline_train_once_then_re_tune]].
 
+---
+
+## Update (2026-07-12T13:45:17.487104)
+
+## P4 sim-fix batch APPLIED on consolidated main (2026-07-12)
+
+Landed via merge "P4 sim-fix batch" (constrained-albc cd192b7, marinelab 02c1007), pre-baseline. Roster status changes:
+
+| Item | New status |
+|:---|:---|
+| Thruster first-order lag dt bug (NEW item, found by 2026-07-12 audit): apply_dynamics received physics_dt from _pre_physics_step (once per env step) -> lag advanced at 1/4 speed (ALBC, decimation=4) / 1/2 (BlueROV); effective T200 taus were 4x/2x configured | FIXED (step_dt at all 3 sites: main, full_dof, bluerov) |
+| arm velocity_limit_sim 6.28 -> 3.1 + soft velocity_limit_cost pair | APPLIED (3.1 hard / 2.8 soft; ripple card checklist items 1-2 done; delta_scale review still OPEN) |
+| action clip_fraction logging (Lead 1) | IMPLEMENTED (`Policy/clip_fraction` = |a|>=1 rate of the raw pre-clamp rollout sample, ConstraintTRPO.update(); Lead 2 now gated only on data) |
+| M1 (NEW, 2026-07-12 audit): critic_uses_z=True gave the encoder NO critic learning signal -- value MSE backprops through z but TRPO reads grads via autograd.grad, so no optimizer applied the critic-side encoder grads | FIXED (encoder params now also owned by the value Adam optimizer; regression test tests/test_value_optimizer_groups.py) |
+| Thruster nonlinear curve (deadband + signed-square) | merged to main OFF-by-default (P2); STAYS OFF for the baseline per the curve card's 2026-07-02 keep-off addendum (unmeasured plant model). The consolidation plan's "recommend ON" missed that addendum -- addendum wins. |
+
+All of these change nominal dynamics or learning dynamics -> the from-scratch retrain requirement is unchanged. Record the full delta list in the campaign DESIGN.md at group creation per the migration note.

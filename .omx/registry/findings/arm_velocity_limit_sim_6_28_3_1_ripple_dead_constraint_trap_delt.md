@@ -2,14 +2,14 @@
 title: "Arm velocity_limit_sim 6.28->3.1 ripple: dead-constraint trap + delta_scale runaway (retrain item, not one-line)"
 tags: ["albc", "envs-main", "arm", "actuator", "velocity-limit", "sim-to-real", "retrain-campaign", "constraint-trap", "delta-scale"]
 created: 2026-07-06T07:33:23.049208
-updated: 2026-07-06T07:33:23.049208
+updated: 2026-07-12T13:45:34.764506
 sources: []
 links: ["onboard_measured_2026_07_06_arm_step_response_valid_sim_zeta_0_7.md", "next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md", "encoder_priv_obs_normalization_bounds_must_be_dr_derived_not_har.md"]
 category: convention
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
 ---
 
 # Arm velocity_limit_sim 6.28->3.1 ripple: dead-constraint trap + delta_scale runaway (retrain item, not one-line)
@@ -44,3 +44,16 @@ joint_vel enters the 69D obs (arm 5D block includes joint_vel 2D). Lowering the 
 - [ ] obs norm bound reflects lower joint_vel support [verify]
 - [ ] keep Kp/Kd (zeta~0.7 matches) -- do NOT retune small-signal gains
 
+---
+
+## Update (2026-07-12T13:45:34.764506)
+
+## APPLIED 2026-07-12 (P4 sim-fix batch) -- checklist resolution
+
+- [x] velocity_limit_sim 6.28 -> 3.1 (albc.py, marinelab 02c1007)
+- [x] velocity_limit_cost.limit_rad_per_s 4.189 -> 2.8 (main + full_dof config.py, constrained-albc merge cd192b7). 2.8 chosen from this card's 2.5-2.8 range: ~10% headroom inside the cap, least-restrictive change that keeps the constraint alive; recorded as tunable in the cfg comment.
+- [ ] delta_scale (0.10) vs 3.1 reachability -- STILL OPEN pending the delta-command sysid (arm_delta_sysid.py, unbuilt). The target-runaway ceiling is now documented as a comment at the delta_scale cfg field so it cannot ship silently.
+- [x] obs norm bound check resolved as N/A: p_t (28D union) contains no joint_vel dim, and o_t feeds raw joint_vel with no hardcoded normalization constant -- nothing referenced the old 6.28.
+- [x] Kp/Kd untouched.
+
+Docs synced in the same batch: constraints / action-pipeline / physics-tuning (EN+KO) now state 3.1 / 2.8 and the dead-constraint warning is past tense.

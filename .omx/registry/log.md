@@ -1160,3 +1160,11 @@
 - **Pages:** action_bounding_is_justified_raw_gaussian_external_clamp_tanh_ru.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, priv_obs_slim_stage_2_lead_contested_p_t_dims_quad_damp_lin_vel_.md, reward_cost_parallel_structure_mostly_mirroring_two_real_couplin.md, reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md, constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md, real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md, actuator_hardware_identification_arm_xw540_t260_board_measured_p.md, arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md, bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md, leaky_integral_and_ema_bias_carry_over_the_mid_episode_command_r.md, onboard_measured_2026_07_06_arm_step_response_valid_sim_zeta_0_7.md, reward_md_6_error_buffers_reward_call_site_dt_scaling_theory_rev.md, uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload_.md, added_mass_scale_upper_half_is_inert_post_dr_0_95_i_clamp_caps_i.md, constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, constraint_threshold_budget_tuning_thresholds_split_into_hard_ph.md, constrainttrpo_health_thresholds.md
 - **Summary:** query 'clip_fraction saturation logging lead' -> 20 of 33
 
+## [2026-07-12T13:45:17.487104] add
+- **Pages:** next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md
+- **Summary:** updated 'Next from-scratch retrain manifest: what rides on the post-TAM baseline retrain (sim fixes + learning-dynamics experiments)'
+
+## [2026-07-12T13:45:34.764506] add
+- **Pages:** arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md
+- **Summary:** updated 'Arm velocity_limit_sim 6.28->3.1 ripple: dead-constraint trap + delta_scale runaway (retrain item, not one-line)'
+
