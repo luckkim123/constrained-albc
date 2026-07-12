@@ -323,6 +323,7 @@ class ConstraintEncoderRunner(OnPolicyRunner):
         # Policy diagnostics
         metrics["Policy/line_search_success"] = alg._last_line_search_success
         metrics["Policy/entropy"] = alg._last_mean_entropy
+        metrics["Policy/clip_fraction"] = alg._last_clip_fraction
         metrics["Policy/encoder_grad_norm"] = alg._last_encoder_grad_norm
         metrics["Policy/surrogate_loss"] = alg._last_surrogate_loss
 

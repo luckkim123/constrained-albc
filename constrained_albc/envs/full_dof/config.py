@@ -55,7 +55,10 @@ _FULL_DOF_CONSTRAINT_TERMS: list[ConstraintTermCfg] = [
     # --- Probabilistic (5): binary indicator, budget = violation probability ---
     ConstraintTermCfg(func=attitude_limit_cost, params={"limit": 1.396}, budget=0.01, name="attitude"),
     ConstraintTermCfg(func=torque_limit_cost, params={"limit_nm": 9.5}, budget=0.08, name="arm_torque"),
-    ConstraintTermCfg(func=velocity_limit_cost, params={"limit_rad_per_s": 4.189}, budget=0.02, name="arm_joint_vel"),
+    # 2.8 = inside the 3.1 rad/s PhysX cap (albc.py velocity_limit_sim): soft must
+    # bite before hard, else PhysX clamps first and this cost can never fire (dead
+    # constraint). Tunable within 2.5-2.8 per the wiki ripple card.
+    ConstraintTermCfg(func=velocity_limit_cost, params={"limit_rad_per_s": 2.8}, budget=0.02, name="arm_joint_vel"),
     ConstraintTermCfg(func=joint1_position_cost, params={"limit_rad": 4 * math.pi}, budget=0.01, name="joint1_pos"),
     ConstraintTermCfg(func=cumulative_yaw_cost, params={"limit_rad": 8 * math.pi}, budget=0.01, name="cumul_yaw"),
     # --- Average (5): continuous cost, soft threshold for attitude/velocity tracking ---

@@ -31,7 +31,7 @@ sequence.
 
 | Task ID | Env dir | Description |
 |---|---|---|
-| `Isaac-ConstrainedALBC-TRPO-v0` | `envs/main` | **Main** — attitude-only ALBC, ConstraintTRPO + IPO + asymmetric encoder, DORAEMON DR. 69D obs / 27D privileged / 8D action |
+| `Isaac-ConstrainedALBC-TRPO-v0` | `envs/main` | **Main** — attitude-only ALBC, ConstraintTRPO + IPO + asymmetric encoder, DORAEMON DR. 69D obs / 28D privileged / 8D action |
 | `Isaac-ConstrainedALBC-Full-TRPO-v0` | `envs/full_dof` | Legacy full-DOF (velocity + attitude, 87D obs); kept for future full-DOF experiments |
 | `Isaac-ConstrainedALBC-Full-NoEncoder-v0` | `envs/full_dof` | Full-DOF TRPO + IPO, no encoder (ablation) |
 | `Isaac-ConstrainedALBC-Full-PPO-v0` | `envs/full_dof` | Full-DOF unconstrained PPO baseline |

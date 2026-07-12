@@ -26,10 +26,11 @@ The behavior may have changed in Isaac Sim 5.x. Verification methods:
 
 ### Applied Fix
 ```python
-ImplicitActuatorCfg(velocity_limit_sim=6.28)  # 2*pi rad/s
+ImplicitActuatorCfg(velocity_limit_sim=3.1)  # measured XW540-T260 no-load plateau, 2026-07-06
 ```
 URDF `velocity="30"` rad/s is unrealistic (Dynamixel XW540: ~4.19 rad/s no-load).
-MarineGym is also set identically to 6.28 rad/s.
+MarineGym uses 6.28 rad/s (2*pi); this repo now uses the measured 3.1 rad/s
+(XW540-T260, 2026-07-06).
 
 ## Rigid Body Max Angular Velocity
 

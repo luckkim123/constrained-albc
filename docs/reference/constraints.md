@@ -103,7 +103,7 @@ with $\gamma_c = 0.99$, so $d_k = 100 \cdot D_k$.
 |---|---|---|---|---:|---|---|
 | 0 | `attitude` | `attitude_limit_cost` | `limit=1.396` rad (80°) | 0.01 | prob | roll/pitch magnitude |
 | 1 | `arm_torque` | `torque_limit_cost` | `limit_nm=9.5` | 0.08 | prob | arm joint torque |
-| 2 | `arm_joint_vel` | `velocity_limit_cost` | `limit_rad_per_s=4.189` | 0.02 | prob | arm joint speed |
+| 2 | `arm_joint_vel` | `velocity_limit_cost` | `limit_rad_per_s=2.8` | 0.02 | prob | arm joint speed |
 | 3 | `joint1_pos` | `joint1_position_cost` | `limit_rad=4*pi` (12.566) | 0.01 | prob | joint-1 absolute angle |
 | 4 | `cumul_yaw` | `cumulative_yaw_cost` | `limit_rad=8*pi` (25.133) | 0.01 | prob | accumulated yaw rotation |
 | 5 | `thruster_util` | `thruster_utilization_cost` | (no params) | 0.40 | avg | thruster authority use |
@@ -124,7 +124,7 @@ probability.
 
 - **`attitude`** — $\mathbb{1}[\lvert\text{roll}\rvert > \text{limit} \ \lor\ \lvert\text{pitch}\rvert > \text{limit}]$, $\text{limit}=1.396$ rad.
 - **`arm_torque`** — $\mathbb{1}[\max_j \lvert\tau_j\rvert > 9.5\,\text{Nm}]$.
-- **`arm_joint_vel`** — $\mathbb{1}[\max_j \lvert\dot q_j\rvert > 4.189\,\text{rad/s}]$.
+- **`arm_joint_vel`** — $\mathbb{1}[\max_j \lvert\dot q_j\rvert > 2.8\,\text{rad/s}]$.
 - **`joint1_pos`** — $\mathbb{1}[\lvert\theta_1\rvert > 4\pi]$, i.e. joint-1 absolute angle past the $\pm 4\pi$ rail.
 - **`cumul_yaw`** — $\mathbb{1}[\lvert\theta_{\text{yaw,cum}}\rvert > 8\pi]$, accumulated (unwrapped) yaw.
 
@@ -179,20 +179,20 @@ Constraint thresholds are **not one uniform kind of hyperparameter** — they sp
 groups with opposite tuning rules.
 
 - **Hard safety rails (physically grounded).** `attitude` (80° tilt safety), `arm_torque`
-  (`limit_nm=9.5` = the arm motor **stall torque**), `arm_joint_vel` (`4.189` rad/s), `joint1_pos`
+  (`limit_nm=9.5` = the arm motor **stall torque**), `arm_joint_vel` (`2.8` rad/s), `joint1_pos`
   ($4\pi$ cable-wrap rail), `cumul_yaw` ($8\pi$ tether-wrap rail). The two arm rails sit **inside**
-  the asset's PhysX hard caps — `effort_limit_sim=13.0` Nm and `velocity_limit_sim=6.28` rad/s
-  ($2\pi$) (`marinelab/.../albc/albc.py:200-201`). So `9.5 < 13.0` and `4.189 < 6.28`: the **soft
-  IPO constraint bites before the hard clamp** (intended layering), and the constraint stays alive
-  because there is a live band above the threshold where the indicator can fire (matches §9:
-  `arm_torque` $\hat J_C/d_k = 0.407$ fires; `arm_joint_vel` $0.031$ deep slack). **Invariant:
-  the soft threshold must stay inside the hard cap.** Inverting it silently kills the constraint —
-  the planned `velocity_limit_sim` $6.28 \to 3.1$ retrain (to match the real XW540 arm) would make
-  $3.1 < 4.189$, so PhysX clips at 3.1 and `velocity_limit_cost` can never fire (a **dead
-  constraint** still occupying a budget and a cost head). Fix documented in omx wiki
-  `arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md`: lower `limit_rad_per_s`
-  inside the new cap together. Tune a rail only toward its **true physical value**
-  (measurement/sysid-driven), never toward reward.
+  the asset's PhysX hard caps — `effort_limit_sim=13.0` Nm and `velocity_limit_sim=3.1` rad/s
+  (measured XW540-T260 no-load plateau, 2026-07-06) (`marinelab/.../albc/albc.py:200-201`). So
+  `9.5 < 13.0` and `2.8 < 3.1`: the **soft IPO constraint bites before the hard clamp** (intended
+  layering), and the constraint stays alive because there is a live band above the threshold where
+  the indicator can fire (matches §9: `arm_torque` $\hat J_C/d_k = 0.407$ fires; `arm_joint_vel`
+  $0.031$ deep slack). **Invariant: the soft threshold must stay inside the hard cap.** Inverting
+  it silently kills the constraint — the `velocity_limit_sim` $6.28 \to 3.1$ retrain (to match the
+  real XW540 arm) was applied together with lowering `limit_rad_per_s` $4.189 \to 2.8$
+  (2026-07-12), so `2.8 < 3.1` keeps the soft-inside-hard layering and avoids the dead-constraint
+  trap. Fix documented in omx wiki
+  `arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md`. Tune a rail only toward
+  its **true physical value** (measurement/sysid-driven), never toward reward.
 - **Soft shaping thresholds (judgment-chosen).** `rp_rate` (`0.5`), `yaw_rate` (`0.55`),
   `rp_vel_settling` (`0.087`), `manipulability` (`0.3`). These set where a graded hinge penalty
   begins — behavior/comfort envelopes, not safety limits — and **are** legitimate experimental

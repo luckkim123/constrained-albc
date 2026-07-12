@@ -104,7 +104,7 @@ $d_k = D_k / (1 - \gamma_c)$이며 $\gamma_c = 0.99$이므로 $d_k = 100 \cdot D
 |---|---|---|---|---:|---|---|
 | 0 | `attitude` | `attitude_limit_cost` | `limit=1.396` rad (80°) | 0.01 | prob | roll/pitch 크기 |
 | 1 | `arm_torque` | `torque_limit_cost` | `limit_nm=9.5` | 0.08 | prob | arm joint 토크 |
-| 2 | `arm_joint_vel` | `velocity_limit_cost` | `limit_rad_per_s=4.189` | 0.02 | prob | arm joint 속도 |
+| 2 | `arm_joint_vel` | `velocity_limit_cost` | `limit_rad_per_s=2.8` | 0.02 | prob | arm joint 속도 |
 | 3 | `joint1_pos` | `joint1_position_cost` | `limit_rad=4*pi` (12.566) | 0.01 | prob | joint-1 절대 각도 |
 | 4 | `cumul_yaw` | `cumulative_yaw_cost` | `limit_rad=8*pi` (25.133) | 0.01 | prob | 누적 yaw 회전 |
 | 5 | `thruster_util` | `thruster_utilization_cost` | (파라미터 없음) | 0.40 | avg | thruster 사용권한(authority) |
@@ -125,7 +125,7 @@ $d_k = D_k / (1 - \gamma_c)$이며 $\gamma_c = 0.99$이므로 $d_k = 100 \cdot D
 
 - **`attitude`** — $\mathbb{1}[\lvert\text{roll}\rvert > \text{limit} \ \lor\ \lvert\text{pitch}\rvert > \text{limit}]$, $\text{limit}=1.396$ rad.
 - **`arm_torque`** — $\mathbb{1}[\max_j \lvert\tau_j\rvert > 9.5\,\text{Nm}]$.
-- **`arm_joint_vel`** — $\mathbb{1}[\max_j \lvert\dot q_j\rvert > 4.189\,\text{rad/s}]$.
+- **`arm_joint_vel`** — $\mathbb{1}[\max_j \lvert\dot q_j\rvert > 2.8\,\text{rad/s}]$.
 - **`joint1_pos`** — $\mathbb{1}[\lvert\theta_1\rvert > 4\pi]$, 즉 joint-1 절대
   각도가 $\pm 4\pi$ 레일을 넘김.
 - **`cumul_yaw`** — $\mathbb{1}[\lvert\theta_{\text{yaw,cum}}\rvert > 8\pi]$,
@@ -182,18 +182,18 @@ Constraint threshold는 **한 종류의 hyperparameter가 아니다** — 튜닝
 갈린다.
 
 - **Hard safety rail (물리 근거).** `attitude`(80° tilt 안전), `arm_torque`(`limit_nm=9.5` = arm
-  모터 **stall torque**), `arm_joint_vel`(`4.189` rad/s), `joint1_pos`($4\pi$ 케이블 감김 레일),
+  모터 **stall torque**), `arm_joint_vel`(`2.8` rad/s), `joint1_pos`($4\pi$ 케이블 감김 레일),
   `cumul_yaw`($8\pi$ 테더 감김 레일). arm 레일 2개는 asset의 PhysX 하드캡 **안쪽**에 있다 —
-  `effort_limit_sim=13.0` Nm, `velocity_limit_sim=6.28` rad/s($2\pi$)(`marinelab/.../albc/albc.py:200-201`).
-  즉 `9.5 < 13.0`, `4.189 < 6.28`: **soft IPO 제약이 hard clamp보다 먼저 문다**(의도된 layering),
-  그리고 threshold 위에 indicator가 fire할 수 있는 live band가 있어 제약이 살아있다(§9 일치:
-  `arm_torque` $\hat J_C/d_k = 0.407$ fire, `arm_joint_vel` $0.031$ deep slack). **불변식: soft
-  threshold는 hard cap 안쪽에 있어야 한다.** 뒤집으면 제약이 조용히 죽는다 — 계획된
-  `velocity_limit_sim` $6.28 \to 3.1$ retrain(실제 XW540 팔에 맞춤)은 $3.1 < 4.189$가 되어 PhysX가
-  3.1에서 자르니 `velocity_limit_cost`가 영영 fire 못함(**dead constraint**, budget·cost head는
-  차지). Fix는 omx wiki `arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md`에
-  문서화 — 하드캡 내릴 때 `limit_rad_per_s`도 새 캡 안쪽으로 함께 내림. 레일은 reward가 아니라
-  **실제 물리값**(측정/sysid 기반)으로만 튜닝한다.
+  `effort_limit_sim=13.0` Nm, `velocity_limit_sim=3.1` rad/s(측정된 XW540-T260 no-load plateau,
+  2026-07-06)(`marinelab/.../albc/albc.py:200-201`). 즉 `9.5 < 13.0`, `2.8 < 3.1`: **soft IPO
+  제약이 hard clamp보다 먼저 문다**(의도된 layering), 그리고 threshold 위에 indicator가 fire할 수
+  있는 live band가 있어 제약이 살아있다(§9 일치: `arm_torque` $\hat J_C/d_k = 0.407$ fire,
+  `arm_joint_vel` $0.031$ deep slack). **불변식: soft threshold는 hard cap 안쪽에 있어야 한다.**
+  뒤집으면 제약이 조용히 죽는다 — `velocity_limit_sim` $6.28 \to 3.1$ retrain(실제 XW540 팔에
+  맞춤)은 `limit_rad_per_s` $4.189 \to 2.8$ 인하와 함께(2026-07-12) 적용됐다. `2.8 < 3.1`이므로
+  soft-inside-hard layering이 유지되고 dead-constraint trap을 피한다. Fix는 omx wiki
+  `arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md`에 문서화. 레일은 reward가
+  아니라 **실제 물리값**(측정/sysid 기반)으로만 튜닝한다.
 - **Soft shaping threshold (판단으로 선택).** `rp_rate`(`0.5`), `yaw_rate`(`0.55`),
   `rp_vel_settling`(`0.087`), `manipulability`(`0.3`). graded hinge 벌점이 시작되는 지점을 정하는
   behavior/comfort 엔벨로프이지 안전 한계가 아니며, **정당한 실험 튜닝 대상이다**. threshold는

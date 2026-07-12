@@ -139,6 +139,7 @@ class ConstraintTRPO:
         self._last_sigma_step_mean = 0.0  # signed mean: positive = noise increase
         self._last_enc_step_norm = 0.0
         self._last_actor_step_norm = 0.0
+        self._last_clip_fraction = 0.0
 
         if cost_gamma >= 1.0:
             raise ValueError(f"cost_gamma must be < 1.0, got {cost_gamma}")
@@ -156,7 +157,7 @@ class ConstraintTRPO:
         #      Encoder decoupling was tested (run 2026-03-30_12-27-19) and failed:
         #      enc_grad dropped 85% because actor->z gradient path is too weak.
         #      log_std included in TRPO so KL trust region protects against entropy collapse.
-        #   2. Value (critic + cost_critic): Adam
+        #   2. Value (critic + cost_critic [+ encoder when critic_uses_z]): Adam
         value_prefixes = ("critic.", "cost_critic.", "value_backbone.", "reward_head.", "cost_head.")
         value_params = []
         self._policy_params = []
@@ -181,6 +182,14 @@ class ConstraintTRPO:
                     self._encoder_param_count += param.numel()
                 offset += param.numel()
         self._encoder_param_offset = enc_start if enc_start is not None else 0
+
+        # critic_uses_z: the value MSE backprops through z into the encoder, but the
+        # encoder sits in the TRPO group whose grads are read functionally via
+        # autograd.grad -- without Adam owning these params the critic-side encoder
+        # gradient was computed and then applied by NO optimizer. Encoder params stay
+        # in the TRPO vector too, so they receive both actor and critic signal.
+        if getattr(self.policy, "_critic_uses_z", False):
+            value_params += [p for n, p in self.policy.named_parameters() if n.startswith("encoder")]
 
         self._value_params = value_params
         self.value_optimizer = optim.Adam(value_params, lr=value_lr)
@@ -422,6 +431,9 @@ class ConstraintTRPO:
         """One iteration: TRPO step (actor+encoder+sigma) -> values."""
         obs_flat = self.storage.observations.flatten(0, 1).clone()
         actions_flat = self.storage.actions.flatten(0, 1).clone()
+        # Saturation rate of the raw (pre-clamp) Gaussian sample: |a|>=1 is exactly
+        # where the env-side [-1,1] clamp bites; clip log-prob bias grows with it.
+        self._last_clip_fraction = (actions_flat.abs() >= 1.0).float().mean().item()
         returns_flat = self.storage.returns.flatten(0, 1).clone()
         # Already standardized by storage.compute_returns() (normalize_advantage=True
         # default, called earlier this iteration) -- re-standardizing here was a no-op.

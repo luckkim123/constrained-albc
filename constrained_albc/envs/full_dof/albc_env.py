@@ -545,7 +545,9 @@ class ALBCEnv(DirectRLEnv):
             self._apply_joint_pd_action(arm_actions)
 
         if self._thruster is not None:
-            self._thruster.apply_dynamics(self._actions[:, 2:], self.physics_dt)
+            # _pre_physics_step runs once per env step -> elapsed time between calls
+            # is step_dt (= physics_dt * decimation), not physics_dt.
+            self._thruster.apply_dynamics(self._actions[:, 2:], self.step_dt)
 
         self._update_payload_viz()
 
@@ -772,7 +774,7 @@ class ALBCEnv(DirectRLEnv):
         # Update PhysX acceleration cache for added mass force
         if self._hydro.apply_added_mass:
             self._hydro.update_physx_state(
-                body_com_acc_w=self._robot.data.body_com_acc_w,
+                body_com_acc_w=self._robot.data.body_com_acc_w[:, self._body_id[0], :],
                 root_quat_w=self._robot.data.root_quat_w,
             )
         if self._buoy_hydro.apply_added_mass:
