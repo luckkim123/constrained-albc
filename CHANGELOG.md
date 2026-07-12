@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Thruster first-order lag advanced at 1/4 speed (P4 sim-fix, 2026-07-12): `albc_env.py`
+  called `ThrusterModel.apply_dynamics(cmds, self.physics_dt)` from `_pre_physics_step`,
+  which runs once per env step -- elapsed time between calls is `step_dt = physics_dt *
+  decimation` (0.02s, not 0.005s), so effective T200 time constants were 4x the configured
+  values (up 0.1s -> 0.4s, down 0.05s -> 0.2s). Now passes `step_dt` (main + full_dof; same
+  root cause fixed in marinelab `bluerov_env.py`, 2x there). Changes nominal dynamics ->
+  rides the next from-scratch retrain, never mid-campaign.
+- Encoder received no critic learning signal despite `critic_uses_z=True` (P4, 2026-07-12):
+  the value MSE backprops through z into the encoder, but the encoder sits in the TRPO group
+  whose grads are read functionally via `autograd.grad` -- the critic-side encoder gradient
+  was computed and then applied by NO optimizer, defeating the documented "signal from both
+  actor and critic" motivation. Encoder params are now also owned by the value Adam optimizer
+  when `critic_uses_z` (they stay in the TRPO vector). main + full_dof. Training-dynamics
+  change -> rides the retrain batch. Regression test: `tests/test_value_optimizer_groups.py`.
+- `update_physx_state` main-hydro callers passed the full body tensor, silently relying on
+  Isaac Lab's "root == body index 0" convention inside the `(num_envs, num_bodies, 6)`
+  branch; they now pass `body_com_acc_w[:, self._body_id[0], :]` explicitly (the pattern the
+  buoy caller already used). Byte-identical while the hydro body is index 0.
+- `albc_env.py` module docstring claimed a +-45 deg roll/pitch command range; the config is
+  +-30 deg (`att_cmd_rp_range = (-pi/6, pi/6)`).
 - GRU distillation BC-target pairing (P3 hygiene, 2026-07-12): `student/collector.py`
   flattened `obs_t`/`l_t`/`a_t` time-major while `l_hat_seq` (batch_first GRU output)
   flattens env-major -- mismatched sample pairing in the GRU path. Added the missing
@@ -20,6 +40,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Arm velocity limit pair (P4 sim-fix, 2026-07-12): marinelab ALBC asset
+  `velocity_limit_sim` 6.28 -> 3.1 rad/s (measured XW540-T260 no-load plateau, 2026-07-06)
+  WITH `arm_joint_vel` soft threshold `limit_rad_per_s` 4.189 -> 2.8 in the same change --
+  lowering only the hard cap would invert the soft-inside-hard order (4.189 > 3.1) and
+  silently kill the constraint (wiki ripple card). 2.8 keeps ~10% headroom inside the cap;
+  tunable within the card's 2.5-2.8 range. `delta_scale=0.10` deliberately left as-is
+  pending the delta-command sysid (sustained |a|=1 demands 5.0 rad/s > 3.1 -> target-runaway
+  risk, documented at the cfg field).
+- Added `Policy/clip_fraction` TB/wandb logging: |a| >= 1 rate of the raw pre-clamp Gaussian
+  sample, computed in `ConstraintTRPO.update()` from the rollout batch (zero training cost).
+  Measures how often the env-side clamp bites; gates the init_noise_std/max_std revisit
+  (wiki action-bounding card, Leads 1-2).
+- T200 thrust curve (`enable_thrust_curve`) stays OFF for the next baseline, overriding the
+  consolidation plan's "recommend ON": the wiki card's 2026-07-02 addendum records the
+  deploy-analysis decision -- the curve is a plant model, and an unmeasured shape can
+  manufacture a new sim-to-real gap; re-enable only after bench measurement.
+- Docs refreshed for the P2 union p_t layout: 27D -> 28D (+ critic input 105 -> 106) across
+  architecture/observation-space/main-network-architecture (EN+KO), and velocity-limit
+  values updated in constraints/action-pipeline/physics-tuning (EN+KO).
 - Removed the redundant advantage re-standardization in `ConstraintTRPO.update()` (main +
   full_dof): rsl_rl `RolloutStorage.compute_returns(normalize_advantage=True)` already
   standardizes in place, so the second pass was a near-no-op. Added a dormant-bug guard
