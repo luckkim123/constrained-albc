@@ -4,9 +4,11 @@ Results of analyzing the theoretical consistency of the ALBC codebase against th
 Analysis date: 2026-03-05.
 
 > File paths in this doc predate the repo split — current code lives in
-> `constrained_albc/envs/constrained_full_albc/` (`algorithms/constraint_trpo.py`,
-> `mdp/constraints.py`). The theory analysis itself (ConstraintTRPO, IPO, cost-GAE,
-> barrier) remains valid for the current implementation.
+> `constrained_albc/envs/{main,full_dof}/` (`algorithms/constraint_trpo.py`,
+> `mdp/constraints.py`; both env packages carry an equivalent pair — `main` is the
+> default attitude-only task, `full_dof` is the legacy variant). The theory analysis
+> itself (ConstraintTRPO, IPO, cost-GAE, barrier) remains valid for the current
+> implementation.
 
 ---
 

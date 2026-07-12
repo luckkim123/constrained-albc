@@ -1200,3 +1200,7 @@
 - **Pages:** constrained_albc_experiment_conventions.md
 - **Summary:** updated 'constrained-albc experiment conventions'
 
+## [2026-07-12T14:35:29.998767] add
+- **Pages:** diagnosis_md_2026_05_25_retirement_open_item_ledger.md
+- **Summary:** created 'DIAGNOSIS.md 2026-05-25 retirement: open-item ledger'
+

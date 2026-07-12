@@ -1,5 +1,7 @@
 # Constraints (`envs/main`)
 
+> Verified against commit c5a8a08.
+
 > **Scope**: The constraint system of the default task
 > `Isaac-ConstrainedALBC-TRPO-v0` (`constrained_albc/envs/main/`), the attitude-only
 > ALBC policy. Ten IPO constraints ship on this task — **5 probabilistic** (binary
@@ -66,7 +68,7 @@ how the optimizer consumes it.
 The 10 shipped constraints split 5 + 5. The split is expressed only by list order
 and inline comments in `config.py` — `# --- Probabilistic (5) ---` above entries
 `[0:5]` and `# --- Average (5) ---` above entries `[5:10]`
-(`config.py:56`, `config.py:62`). There is **no** `is_probabilistic`/`kind`/`type`
+(`config.py:56`, `config.py:65`). There is **no** `is_probabilistic`/`kind`/`type`
 field on `ConstraintTermCfg`; its only fields are `func`, `params`, `budget`, `name`
 (`constraints.py:50-57`).
 
@@ -96,7 +98,7 @@ binary channels from blowing up (see Section 4).
 
 ## 3. The 10 constraint terms
 
-All values verbatim from `config.py:57-69`. Discounted budget $d_k = D_k / (1 - \gamma_c)$
+All values verbatim from `config.py:57-72`. Discounted budget $d_k = D_k / (1 - \gamma_c)$
 with $\gamma_c = 0.99$, so $d_k = 100 \cdot D_k$.
 
 | # | Name | Function | Key param / threshold | Budget $D_k$ | Type | Physically limits |
@@ -482,10 +484,10 @@ consumes the frozen margin). Source: omx wiki
 DORAEMON is the domain-randomization curriculum. Its interaction with the
 constraint/feasibility machinery is the point here; the DR mechanics live in
 marinelab. The main env overrides four fields
-(`config.py:479`): `DoraemonCfg(enable=True, kl_ub=0.12, performance_lb=250.0, step_interval=250)`.
+(`config.py:527`): `DoraemonCfg(enable=True, kl_ub=0.12, performance_lb=250.0, step_interval=250)`.
 
 - **`alpha` is a feasibility floor, not a DR lever.** DORAEMON's `alpha`
-  (cited as `0.5` in the config reasoning comment, `config.py:473-474`; the literal
+  (cited as `0.5` in the config reasoning comment, `config.py:521`; the literal
   field default comes from marinelab's `DoraemonCfg`, unverified in the read files)
   gates whether a curriculum-difficulty step is *accepted* — it does not directly
   widen randomization. **Experimental finding:** raising `alpha` `0.50 -> 0.75` (E5,
@@ -497,7 +499,7 @@ marinelab. The main env overrides four fields
   wiki `doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md`.
 
 - **`performance_lb` and `kl_ub` were raised together by design**
-  (`config.py:466-478`). `performance_lb` went `68.0 -> 250.0` and `kl_ub` went
+  (`config.py:514-526`). `performance_lb` went `68.0 -> 250.0` and `kl_ub` went
   `0.06 -> 0.12`. The calibration used a recon run (`trpo_baseline_260608_160453`,
   1146 iter): its DORAEMON episode-return distribution was
   min=81.9 / p5=227 / p25=250 / median=264 / p95=291. With `lb=68` sitting *below*
@@ -513,7 +515,7 @@ marinelab. The main env overrides four fields
 
 - **`success` definition.** `success = accumulated_episode_return >= performance_lb`,
   computed in `albc_env.py` (`_episode_return_accum += reward`; `success = return >= performance_lb`;
-  `config.py:467` comment).
+  `config.py:515` comment).
 
 `step_interval = 250` sets how often the curriculum updates.
 
@@ -524,9 +526,9 @@ marinelab. The main env overrides four fields
 An off-by-default toggle can append an **11th** constraint term to test joint-1
 anti-drift. Two fields on `ALBCEnvCfg`:
 
-- `joint1_constraint_arm: str = "none"` — one of `{"none", "B"}` (`config.py:552`).
+- `joint1_constraint_arm: str = "none"` — one of `{"none", "B"}` (`config.py:580`).
 - `joint1_constraint_budget: float = 0.05` — per-step average budget $d_k$ for the
-  joint1 term (`config.py:553`).
+  joint1 term (`config.py:581`).
 
 **Materialization path.** `apply_joint1_constraint_arm()` (`constraints.py:279-299`)
 reads the arm; `"none"` is a no-op; `"B"` appends a `joint1_cumulative_cost` term

@@ -41,7 +41,7 @@ run_id = <YYMMDD_HHMMSS>_<task_short>[_<tag>]
   2026-05-26** from the original `%Y-%m-%d_%H-%M-%S` (19→13 chars) because the full run_id was too
   long; `task_short` is kept. `_timestamp_from_log_dir` parses BOTH the short and the legacy long
   format, so older training folders still resolve.
-- `task_short`: extracted from the task ID. `Isaac-FullDOF-TRPO-v0`→`trpo`, `-PPO-Enc-`→`ppo-enc`,
+- `task_short`: extracted from the task ID. `Isaac-ConstrainedALBC-TRPO-v0`→`trpo`, `-PPO-Enc-`→`ppo-enc`,
   `-NoEncoder-`→`noenc`, `-TRPO-NoIPO-`→`trpo-noipo`, `-PPO-`→`ppo`, `-TDC-`→`tdc`.
   → task_short resolves the problem where the current 4 ablations are mixed into one folder under
      `experiment_name="full_dof_ablation"` (rsl_rl_ppo_cfg.py:298/381 + ablation_cfgs.py:40/79).
@@ -79,7 +79,7 @@ experiments/                              # .gitignore'd (large outputs)
     │   ├── checkpoints/                  # model_*.pt (numeric sort — feedback_model_trim_disaster)
     │   └── doraemon_state.pt
     └── eval/
-        └── <mode>_<eval_ts>/             # static / periodic / segmented / sudden
+        └── <mode>_<eval_ts>/             # static / periodic / segmented (only 3 modes exist)
             ├── raw/                      # data_<level>.npz (+ .mat option, INFRA §2-D)
             ├── figures/                  # diagnostic PNG (traj_*/summary_*)
             └── summary.json              # output of analyze.py recompute
@@ -102,7 +102,7 @@ The student is a child of the teacher. Instead of a separate top-level (`logs/rs
   "run_id": "2026-05-25_16-02-48_trpo",
   "kind": "teacher | student",
   "parent_run_id": "<teacher run_id>",        // only when student
-  "task": "Isaac-FullDOF-TRPO-v0",
+  "task": "Isaac-ConstrainedALBC-TRPO-v0",
   "created": "2026-05-25T16:02:48",
   "git": {"sha": "...", "branch": "...", "dirty": false},
   "config": {"num_envs": 4096, "max_iterations": 2500, "seed": 30,

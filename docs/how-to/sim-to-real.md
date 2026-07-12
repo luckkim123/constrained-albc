@@ -15,7 +15,7 @@
 | PD Control | PhysX implicit PD (continuous) | Internal PID (~1kHz) |
 | Command Rate | Every physics step (200Hz) | 10Hz (USB bulk read/write) |
 | Response Delay | 0 | 50-100ms settling |
-| Gain Uncertainty | DR: abs range [40,120] Nm/rad | Register-dependent |
+| Gain Uncertainty | DR: abs range [30,150] Nm/rad | Register-dependent |
 | Actuator Model | `ImplicitActuatorCfg` | Dynamixel XW540-T260 |
 
 ### 1.2 Sensor Gap
@@ -71,8 +71,8 @@ have no DR band — a silent systematic-bias risk).
 actuators={
     "arm": ImplicitActuatorCfg(
         joint_names_expr=["joint.*"],
-        stiffness=100.0,   # Asset default (DR: abs range [40,120], hard [30,150])
-        damping=3.0,       # Asset default (DR: abs range [0.5,5.0], hard [0.3,7.0])
+        stiffness=100.0,   # Asset default (DR: abs range [30,150] -- merged 2026-07-07, no separate hard tier)
+        damping=3.0,       # Asset default (DR: abs range [0.3,7.0] -- merged 2026-07-07, no separate hard tier)
     ),
 },
 ```
@@ -81,17 +81,26 @@ PhysX computes continuous PD internally. Commands are applied immediately with n
 
 | Environment | Kp (DR-off) | Kd (DR-off) | DR Range |
 |:---|:---|:---|:---|
-| Base RL (v0, Base-v0) | 100.0 | 3.0 | Kp [40,120] (hard [30,150]), Kd [0.5,5.0] (hard [0.3,7.0]) |
-| TDC (TDC-v0) | 200.0 | 10.0 | +-20% ([160,240], [8,12]) |
+| `Isaac-ConstrainedALBC-TRPO-v0` (main) / `Isaac-ConstrainedALBC-Full-TRPO-v0` (legacy full-DOF) | 100.0 | 3.0 | Kp [30,150], Kd [0.3,7.0] |
+| `Isaac-ConstrainedALBC-TDC-v0` | 100.0 | 3.0 | Kp [30,150], Kd [0.3,7.0] (inherited from `full_dof`, unchanged) |
 
 Note: DR samples Kp/Kd by **uniform sampling of a fixed absolute range** and overwrites the joint gain
-(`randomize_joint_gains`, `mdp/events.py:457-469`, `dr.get(cfg.joint_stiffness_range)`) -- it is not a
+(`randomize_joint_gains` in each env's `mdp/events.py`, `dr.get(cfg.joint_stiffness_range)`) -- it is not a
 +-percentage scaled around the nominal 100.0/3.0. Those nominal values are only what is used when DR is
-disabled, not a preserved center. (This applies to the Base RL row above; the TDC row's ranges are
-unverified this pass and left as previously documented.)
+disabled, not a preserved center.
 
-Reason Kp/Kd are high in the TDC environment: the TDC controller requires fast position tracking.
-High stiffness is needed to accurately track the small delta position commands of DLS IK.
+The former default/hard two-tier DR split was merged into one range on 2026-07-07
+(`config.py` `DomainRandomizationCfg` docstring: "formerly HardDomainRandomizationCfg ...
+collapsed into this single class. It now holds the Hard (training) values directly"); `[30,150]`
+/ `[0.3,7.0]` is the only range in the current codebase, for both `main` and `full_dof`.
+
+**TDC row correction (verified 2026-07-12)**: `TDCControllerCfg.joint_stiffness=200.0` /
+`joint_damping=10.0` (`envs/tdc/controllers/tdc.py:78-79`) are declared but never applied to the
+PhysX actuator -- no code path calls `write_joint_stiffness_to_sim`/`write_joint_damping_to_sim`
+with these fields (confirmed by grep across `envs/tdc/`). TDC's arm actuator is the inherited
+`full_dof` `ImplicitActuatorCfg` above, unchanged. Do not treat 200/10 as the real TDC gain --
+it is dead config. A previous pass of this doc had already flagged the TDC row as unverified;
+this is that verification.
 
 ### 2.2 DelayedPDActuator -- Failure record (2026-02-10)
 
@@ -129,8 +138,8 @@ Current status: reverted to `ImplicitActuatorCfg`. DelayedPDActuator is left as 
 
 | Environment | Kp | Kd | Delay | Gain DR |
 |:---|:---|:---|:---|:---|
-| `Isaac-FullDOF-TRPO-v0` (train) | 100 | 3 | 0 | abs range [40,120]/[0.5,5.0] (hard [30,150]/[0.3,7.0]) |
-| `Isaac-FullDOF-TDC-v0` | 200 | 10 | 0 | +-20% |
+| `Isaac-ConstrainedALBC-TRPO-v0` (main, train) | 100 | 3 | 0 | Kp [30,150], Kd [0.3,7.0] (see §2.1) |
+| `Isaac-ConstrainedALBC-TDC-v0` | 100 | 3 | 0 | Kp [30,150], Kd [0.3,7.0] (inherited from `full_dof`; see §2.1 TDC row correction) |
 
 ---
 
@@ -350,4 +359,4 @@ on the real robot, Dynamixel generates the trajectory internally, so the positio
 ---
 
 **Created**: 2026-02-11
-**Updated**: 2026-07-03
+**Updated**: 2026-07-12

@@ -47,12 +47,15 @@ cd /workspace/isaaclab && ./isaaclab.sh -p -m pip install -e /workspace/marinela
 cd /workspace/isaaclab && ./isaaclab.sh -p -m pip install -e /workspace/constrained-albc
 ```
 
-Verify the six task IDs registered:
+Verify the seven task IDs registered. `constrained_albc` must be imported first — its
+`__init__.py` is what triggers `gym.register()` for every task; pip-installing the
+package alone does not register anything:
 
 ```bash
 cd /workspace/isaaclab && ./isaaclab.sh -p -c "
+import constrained_albc  # noqa: F401  triggers gym.register() for all task IDs
 import gymnasium as gym
-tasks = [k for k in gym.envs.registry if 'FullDOF' in k]
+tasks = [k for k in gym.envs.registry if 'ConstrainedALBC' in k]
 print('\n'.join(sorted(tasks)))
 "
 ```
@@ -60,13 +63,17 @@ print('\n'.join(sorted(tasks)))
 Expected output:
 
 ```
-Isaac-FullDOF-NoEncoder-v0
-Isaac-FullDOF-PPO-Enc-v0
-Isaac-FullDOF-PPO-v0
-Isaac-FullDOF-TDC-v0
-Isaac-FullDOF-TRPO-NoIPO-v0
-Isaac-FullDOF-TRPO-v0
+Isaac-ConstrainedALBC-Full-NoEncoder-v0
+Isaac-ConstrainedALBC-Full-PPO-Enc-v0
+Isaac-ConstrainedALBC-Full-PPO-v0
+Isaac-ConstrainedALBC-Full-TRPO-NoIPO-v0
+Isaac-ConstrainedALBC-Full-TRPO-v0
+Isaac-ConstrainedALBC-TDC-v0
+Isaac-ConstrainedALBC-TRPO-v0
 ```
+
+See [`reference/task-reference.md`](reference/task-reference.md) for what each task ID
+is, its observation dims, and its typical launch command.
 
 ## RSL-RL dependency (stock)
 

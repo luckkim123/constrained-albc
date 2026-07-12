@@ -1,382 +1,229 @@
-# Domain Randomization
+# How To: Configure Domain Randomization
 
-> **Status**: 2026-02-14 (4th extreme strengthening: exceeds TDE stability boundary) | **Source**: `config.py`, `base_env.py`, `mdp/events.py`
+> **Scope**: task-oriented steps for enabling/disabling DR, working with the DORAEMON
+> curriculum, and adding a new DR parameter on the default task
+> (`Isaac-ConstrainedALBC-TRPO-v0`, `constrained_albc/envs/main/`).
 >
-> Full review of the Domain Randomization (DR) implementation for the Hero Agent ALBC environment.
-> 12 categories, 35+ parameters, physical randomization based on the Fossen model.
-> Reflects analysis from the BIR Survey (Zhu et al. 2023) and Sim-to-Real Locomotion (Tan et al. 2018).
-> **2026-02-14 4th extreme strengthening**: inertia [0.4,2.5], added_mass [0.3,2.0], volume/body_mass +-30%, payload 5kg. Intentionally exceeds the TDE stability boundary M_true/M_hat > 2 to induce learning of an adaptive M_hat.
+> **Numbers (ranges, dim counts, field names) are not repeated here** — the SSOT is
+> [`reference/domain-randomization-and-doraemon.md`](../reference/domain-randomization-and-doraemon.md).
+> This page only shows *how* to change things.
 
 ---
 
-## Overview
+## Where the pieces live
 
-DR is applied at two time scales:
-
-1. **Reset-time DR**: parameter sampling at episode start (hydrodynamics, mass, joint gains, sensor bias, etc.). Represents "different robot instances".
-2. **Per-step DR**: dynamic variation during the episode (random perturbation, action latency). Represents "environment variation and hardware uncertainty".
-
----
-
-## DR Items
-
-### A. Initial Pose (6 parameters)
-
-| Item | Range | Distribution | Physical Meaning |
-|:---|:---|:---|:---|
-| position_x | [-0.5, 0.5] m | Uniform | Horizontal offset |
-| position_y | [-0.5, 0.5] m | Uniform | Horizontal offset |
-| position_z | [4.0, 5.0] m | Uniform | Initial depth |
-| roll | [-0.785, 0.785] rad (+-45deg) | Uniform | Initial roll tilt |
-| pitch | [-0.785, 0.785] rad (+-45deg) | Uniform | Initial pitch tilt |
-| yaw | [-pi, pi] rad | Uniform | Initial heading |
-
-Quaternion-based rotation (prevents gimbal lock). Position is an additive offset relative to the default value.
-
-The +-45deg range is intentionally aggressive. Since DLS IK naturally handles regions near singularities, learning a robust policy from a wide range of initial attitudes is feasible.
-
-### B. Hydrodynamic Parameters (7 categories, applied to main body + buoy separately)
-
-| Item | Range | Method | DOF | Physical Meaning |
-|:---|:---|:---|:---|:---|
-| added_mass_scale | **[0.3, 2.0]** | Multiplicative | 6 (independent) | Added mass uncertainty (+-70/+100%) |
-| linear_damping_scale | [0.7, 1.3] | Multiplicative | 6 (independent) | Friction damping uncertainty (+-30%) |
-| quadratic_damping_scale | [0.6, 1.4] | Multiplicative | 6 (independent) | Form drag uncertainty (+-40%) |
-| volume_scale | **[0.7, 1.3]** | Multiplicative | scalar | Buoyancy uncertainty (+-30%) |
-| cob_offset | +-1cm (xy), +-4cm (z) | Additive | 3 | Center of buoyancy error |
-| cog_offset | +-1cm (xy), **+-6cm (z)** | Additive | 3 | Center of gravity error |
-| inertia_scale | **[0.4, 2.5]** | Multiplicative | 3 (independent) | Moment of inertia uncertainty (-60/+150%, intentionally exceeds TDE stability boundary) |
-
-**Rationale for inertia range**: Tan et al. (2018) "estimated inertia under a uniform-density assumption" and used a wide range of [50%, 150%]. The Hero Agent also estimates inertia from URDF under uniform density, so it is expanded to +-40%. Since TDE compensates for inertia variation, it is stable even over a wide range.
-
-**Rationale for added mass range (2026-02-14 strengthening)**: +-30% -> +-50%. Near walls/floors, ground effect causes added mass to vary greatly, and shape changes due to attachments/fouling are also large. Added mass is the hydrodynamic parameter with the greatest uncertainty.
-
-**Rationale for volume/body mass range (2026-02-14 strengthening)**: +-10% -> +-15%. Models water absorption, biofouling, changes in the air volume inside the housing, and minute deformation due to water pressure.
-
-**Rationale for CoG offset z range (2026-02-14 strengthening)**: +-4cm -> +-6cm. Center-of-gravity shift due to payload attachment, cable routing changes, and internal component rearrangement. It directly affects static stability (restoring torque), so it is important for robustness.
-
-Implementation: `_randomize_hydro_model()` in `mdp/events.py`. The base tensor is cached via `_HydroBaseCache` to ensure performance with 4096 parallel environments.
-
-### C. Ocean Current (3 active + 3 disabled)
-
-| Item | Range | Distribution |
-|:---|:---|:---|
-| linear_x/y | **[-0.75, 0.75] m/s** + N(0, 0.15) | Uniform + Gaussian |
-| linear_z | **[-0.375, 0.375] m/s** + N(0, 0.075) | Uniform + Gaussian |
-| angular_x/y/z | 0 (disabled) | - |
-
-The same ocean current is applied to the main body and buoy (same body of water). Constant during the episode (reset-time only). Since the episode length (~15s) is shorter than the time scale of current variation, time-varying modeling is unnecessary. **0.75 m/s is about 1.5 knots, a medium-to-strong current speed in coastal/harbor operating environments.**
-
-### D. Joint Initial State (2 parameters)
-
-| Item | Range | Note |
-|:---|:---|:---|
-| joint1_pos | [-pi, pi] rad | Clamped within joint limits, full range |
-| joint2_pos | [-pi, pi] rad | Target buffer is also synchronized |
-
-### E. Payload (4 parameters, only when `enable_payload=True`)
-
-The payload is applied to the **gripper body** (connected to the base by a fixed joint, offset (0, 0.0881, -0.185)). PhysX automatically propagates forces through the fixed joint.
-
-| Item | Range | Note |
-|:---|:---|:---|
-| mass | **[0.0, 5.0] kg** | Weight model only (no drag), 0 = no payload (50% of body weight) |
-| cog_offset_x | **[-0.30, 0.30] m** | CoG offset relative to the attachment point |
-| cog_offset_y | **[-0.30, 0.30] m** | CoG offset relative to the attachment point |
-| cog_offset_z | [-0.20, 0.0] m | Downward offset below the attachment point |
-
-**Rationale for CoG offset range (2026-02-14 change)**: +-50cm relative to the 33cm body is physically extreme (meaning a 50cm-long rod-shaped tool). Reduced to +-30cm to improve the robustness-optimality trade-off (cf. Tan et al.: an overly wide range causes the policy to sacrifice optimality in the mid-range while preparing for extreme cases).
-
-Implementation: `randomize_payload()` in `mdp/events.py`.
-- Payload force: $F = mg$, transformed into the gripper body frame
-- Payload torque: $\tau = (\mathbf{r}_{attach} + \mathbf{r}_{cog}) \times F$
-- The CoG offset models the payload's mass distribution uncertainty (asymmetric tools, long rods, etc.)
-
-### F. Joint Actuator Gains (2 parameters)
-
-| Item | Range (Base RL) | Range (TDC) | Note |
-|:---|:---|:---|:---|
-| stiffness (Kp) | [80.0, 120.0] | [160.0, 240.0] | Asset default: 100.0 / TDC optimal: 200.0 |
-| damping (Kd) | [2.4, 3.6] | [8.0, 12.0] | Asset default: 3.0 / TDC optimal: 10.0 |
-
-The same value is applied to both ALBC joints within an environment. The TDC environment uses a separate gain range.
-
-### G. Body Mass (1 parameter, multiplicative scale)
-
-| Item | Range | Note |
-|:---|:---|:---|
-| body_mass_scale | **[0.7, 1.3]** | Same scale applied to all rigid bodies (+-30%) |
-
-Uses the PhysX `set_masses()` API. Models manufacturing tolerance. Inertia is randomized separately via the hydro DR `inertia_scale`.
-
-### H. Water Density (1 parameter)
-
-| Item | Range | Note |
-|:---|:---|:---|
-| water_density | [995.0, 1025.0] kg/m^3 | Full range from fresh water to sea water |
-
-Per-env tensor. Affects both buoyancy ($F_b = \rho V g$) and drag ($F_d = 0.5 \rho C_d A v^2$).
-
-### I. Sensor Noise (IMU bias + white noise)
-
-| Item | Range | Note |
-|:---|:---|:---|
-| euler noise (3D) | **N(0, 0.02 rad)** | White noise per step |
-| euler bias (3D) | **U(-0.02, 0.02 rad)** | Per-episode sampling |
-| ang_vel noise (3D) | **N(0, 0.04 rad/s)** | White noise per step |
-| ang_vel bias (3D) | **U(-0.03, 0.03 rad/s)** | Per-episode sampling |
-| other dims (7D) | 0 | No noise on att_error, joint_pos, prev_actions |
-
-**Rationale for IMU noise range (2026-02-14 change)**: expanded to a general MEMS IMU level (previously: assumed a high-precision IMU). Tan et al. (2018) used euler bias +-0.05 rad, noise std 0.05 rad. The current value is an intermediate level, conservatively modeling a general commercial MEMS.
-
-Uses `NoiseModelWithAdditiveBiasCfg`. Bias is sampled at reset (per-episode gyro drift model), and white noise is added every step. Applied only to obs dims 0-5 (IMU); dims 6-12 are exact.
-
-### J. Joint Friction (2 parameters)
-
-| Item | Range | Note |
-|:---|:---|:---|
-| static_friction | [0.0, 0.05] | Coulomb friction coefficient |
-| viscous_friction | [0.0, 0.3] | Velocity-proportional resistance |
-
-The same value is applied to both ALBC joints.
-
-### K. Random Perturbation (per-step, Tan et al. 2018)
-
-**Per-step DR**: periodic external disturbance applied during the episode. Unlike reset-time DR, it updates every physics step.
-
-| Item | Value | Note |
-|:---|:---|:---|
-| enable_perturbation | True | Applied automatically when DR is enabled |
-| force_range | **[0.0, 30.0] N** | Up to 3.0 m/s^2 acceleration on a ~10kg body |
-| torque_range | **[0.0, 4.5] Nm** | 30N x 0.15m (half-body moment arm) |
-| interval | **100 physics steps (~0.5s)** | Cooldown between events (turbulent environment) |
-| duration | **20 physics steps (~0.1s)** | Impulse duration |
-
-**Rationale**: Tan et al. (2018) applied a random external force of 130-220N every 200 steps to train balance recovery (25kg robot, 5.2-8.8 m/s^2). The Hero Agent is a ~10kg underwater vehicle, and the maximum 15N (1.5 m/s^2) models the irregular disturbances that occur in underwater environments:
-- Sudden current changes (the current is set as a constant at reset-time, but in reality it varies)
-- Tether tension variation
-- Reaction force at the moment of grasping an object
-- Reaction from structure contact
-
-**Implementation**: `base_env._update_perturbation()` (called per-step).
-- Asynchronous perturbation triggering via per-env timers (phase randomization across environments)
-- Random direction (unit sphere) x uniform magnitude -> 3D wrench generation
-- Applied additively to the main body's hydro forces
-- Timer phase re-randomized at reset (prevents environment synchronization)
-
-### L. Action Latency (per-step, Tan et al. 2018)
-
-**Per-step DR**: adds delay to RL action application. Models the communication/computation latency of real hardware.
-
-| Item | Value | Note |
-|:---|:---|:---|
-| action_latency_range | **[0, 4] physics steps** | 0-20ms at 200Hz |
-
-**Rationale**: Tan et al. (2018) Table I explicitly randomizes control latency over [0, 40ms]. For the Hero Agent:
-- Communication latency: 0-10ms over the ROV hardware's RS-485/Ethernet communication
-- Computation latency: policy inference + preprocessing ~2-10ms (embedded system)
-- TDC impact: since the upper bound of the TDE estimation error is proportional to the sampling period, the effective delay directly affects TDE accuracy
-
-**Implementation**: `base_env._get_delayed_actions()`.
-- Ring buffer `_action_history`: (num_envs, max_latency+1, action_dim)
-- Per-env latency `_action_latency`: uniformly sampled at reset, fixed during the episode
-- `self._actions` retains the raw (undelayed) value -> no effect on observation/reward
-- Delayed actions are used only for control -> models a situation where the agent is unaware of the delay
-- The TDC env overrides the entire `_pre_physics_step()`, so it is unaffected
-
----
-
-## Per-Environment DR Activation
-
-| Environment | Task ID | DR | Current | Payload | Noise | Perturb | Latency |
-|:---|:---|:---:|:---:|:---:|:---:|:---:|:---:|
-| `ALBCEnvCfg` (debug) | — (no DR) | OFF | OFF | OFF | OFF | OFF | OFF |
-| `ALBCTrainEnvCfg` | `Isaac-FullDOF-TRPO-v0` | ON | ON | ON | ON | ON | ON |
-| TDC cfg | `Isaac-FullDOF-TDC-v0` | ON | ON | ON | ON | ON | N/A |
-
-Note: Latency "N/A" = TDC env overrides `_pre_physics_step()` entirely, so RL action latency does not apply. Perturbation applies to all envs via `_apply_action()`.
-
----
-
-## DR Application Sequence
-
-Two time scales of DR:
-
-### Reset-time DR (per episode)
-
-```
-_reset_idx() execution order:
-  1. Logging (episode metrics)
-  2. Component reset (robot, action buffers)
-  3. Episode length decorrelation (full batch: full range, individual: 10% jitter)
-  3b. Perturbation timer reset (random phase) + action latency sampling
-  4. Hydrodynamics reset + DR
-     - hydro.reset() + buoy_hydro.reset() (density also reset)
-     - payload reset to defaults
-     - randomize_hydrodynamics() [if enabled] (includes water density)
-     - randomize_body_mass() [if enabled]
-     - randomize_payload() [if enabled]
-     - randomize_ocean_current() [if has current]
-  5. Attitude task reset
-  6. Robot state reset
-     - randomize_joint_positions() [if DR]
-     - randomize_robot_pose() [if DR]
-  7. Joint actuator DR (always applied -- resets to defaults when DR disabled)
-     - randomize_joint_gains()
-     - randomize_joint_friction()
-  8. Potential initialization
-```
-
-### Per-step DR (every physics step)
-
-```
-_apply_action() per-step events:
-  1. _update_perturbation()
-     - Advance per-env timer
-     - At phase 0: generate random wrench (force + torque)
-     - At phase duration: clear wrench
-     - Add to main body hydro forces
-
-_pre_physics_step() per-step events:
-  2. _get_delayed_actions()
-     - Shift action history buffer
-     - Return delayed action based on per-env latency
-     - Used for control integration only (obs uses raw actions)
-```
-
----
-
-## Privileged Observations (Encoder)
-
-24D privileged information for encoder training:
-
-```
-Hydrodynamics (7D):    CoG(3), CoB(3), + 1
-Dynamic response (5D)
-Payload (4D):          cog_offset_xyz(3), + 1
-Actuator (4D)
-Environment (4D)
-```
-
-> Verified against `mdp/observations.py::compute_privileged_obs` (current 24D layout).
-> The older `hero_agent` HORA encoder used a 28D privileged vector — that layout is
-> deprecated.
-
-| Category | Included | Excluded | Rationale |
-|:---|:---|:---|:---|
-| Hydrostatic | Volume, CoB, CoG, inertia, body_mass | - | Core parameters for attitude control |
-| Hydrodynamic | Surge added mass | Sway/heave added mass, damping | Surge M_a dominates effective inertia |
-| External | Payload (mass + CoG) | Ocean current | The payload directly changes the restoring torque |
-| Sensor | - | Noise/bias | Observation noise is handled by policy robustness |
-| Perturbation | - | Force/torque | Unpredictable disturbance contributes to a robust policy |
-
----
-
-## Implementation Quality
-
-### Strengths
-
-1. **Grounded in physical principles**: precisely separates the mass, damping, Coriolis, and buoyancy of the Fossen model
-2. **Dual hydrodynamic DR**: randomizes the main body and buoy independently (buoy buoyancy = control authority)
-3. **CoG correction torque**: precisely compensates for the difference between the PhysX nominal CoG and the DR CoG
-4. **Caching**: `_HydroBaseCache` prevents tensor regeneration (4096 parallel environment performance)
-5. **Dual time-scale DR**: Reset-time (instance variation) + Per-step (environment variation)
-6. **Episode decorrelation**: initial dispersion + jitter + perturbation phase randomization
-
-### Parameter Range Justification (Tan et al. 2018 comparison)
-
-| Parameter | Hero Agent | Tan et al. | Rationale |
-|:---|:---|:---|:---|
-| Body mass | **+-30%** | +-20% | Water absorption, fouling, cable variation |
-| Added mass | **-70/+100%** | N/A | Most uncertain parameter, ground effect, intentionally exceeds the TDE boundary |
-| Volume | **+-30%** | N/A | Housing air, water-pressure deformation, strengthened buoyancy uncertainty |
-| Inertia | **-60/+150%** | +-50% | Intentionally exceeds the TDE stability boundary (M_true/M_hat > 2) |
-| IMU noise std | **0.02 rad** | 0.05 rad | General MEMS (better than consumer grade) |
-| IMU bias | **+-0.02 rad** | +-0.05 rad | General MEMS gyro drift |
-| Control latency | **0-20ms** | 0-40ms | Embedded system Ethernet/serial |
-| Perturbation force | **0-30N** | 130-220N | Proportional to body weight (10kg: 3.0 m/s^2 vs 25kg: 5.2-8.8 m/s^2) |
-| Ocean current | **0.75 m/s (~1.5kt)** | N/A | Medium-to-strong coastal/harbor current |
-| Payload mass | **0-5.0 kg (50%)** | N/A | Underwater samples, sensor equipment, medium-sized tools |
-| Payload CoG | **+-0.3m** | N/A | Realistic range relative to the 33cm body |
-
-### Resolved Issues
-
-| Issue | Description | Resolution |
-|:---|:---|:---|
-| Body mass not randomized | Asymmetric net buoyancy uncertainty | Section G: PhysX `set_masses()` (+-10%) |
-| Water density fixed | No transfer between fresh/sea water | Section H: Per-env tensor (995-1025) |
-| No sensor noise | Major cause of the sim-to-real gap | Section I: IMU bias + white noise |
-| No joint friction | Joint resistance not modeled | Section J: Static + viscous friction |
-| No random perturbation | Irregular disturbance not modeled | Section K: Per-step wrench (2026-02-14) |
-| No control latency | Hardware delay not modeled | Section L: Action delay buffer (2026-02-14) |
-| Conservative inertia range | Underestimated URDF estimation uncertainty | Section B: +-20% -> +-40% (2026-02-14) |
-| Excessive payload CoG | +-50cm unrealistic relative to the 33cm body | Section E: +-50cm -> +-30cm (2026-02-14) |
-| Underestimated IMU noise | Assumed high-precision | Section I: expanded to MEMS level (2026-02-14) |
-
-### Remaining Minor Issues
-
-| Issue | Description | Verdict |
-|:---|:---|:---|
-| Same DR range for main/buoy | Since the scale factor is multiplicative, the base value difference is automatically reflected | Minor, split into `BuoyDRCfg` if needed |
-| Time-invariant ocean current | Episode ~15s < current variation time | Acceptable |
-| Damping not included (privileged obs) | Hydrostatic dominates for attitude control | Design choice |
-
----
-
-## Base Parameter Reference
-
-### Main Body (HeroAgentHydrodynamicsCfg)
-
-| Parameter | Value |
+| Piece | File |
 |:---|:---|
-| Geometry | Cylinder R=0.09m, L=0.325m, m=9.18kg |
-| Water density | 998 kg/m^3 (default) |
-| Volume | 0.00827 m^3 |
-| Buoyancy / Weight | 80.9N / 90.1N (net: -9.2N, negatively buoyant) |
-| Added mass | (0.6, 5.76, 5.76, 0.04, 0.05, 0.05) |
-| Linear damping | (2.0, 4.0, 4.0, 0.1, 0.1, 0.1) |
-| Quadratic damping | (26.0, 26.0, 10.7, 1.5, 1.5, 0.01) |
-| CoB | (0.0, 0.0, 0.0) |
-| CoG | (0.0, 0.0, -0.10) |
-| Inertia | (0.0994, 0.0994, 0.0372) |
+| DR parameter ranges (`DomainRandomizationCfg`) | `constrained_albc/envs/main/config.py` |
+| DORAEMON scheduler config (`DoraemonCfg`) | `constrained_albc/envs/main/config.py` (`ALBCEnvCfg.doraemon`) |
+| ALBC's curriculum-parameter list (`_PARAM_DEFS`) | `constrained_albc/envs/main/doraemon.py` |
+| DORAEMON engine (robot-agnostic) | `marinelab/marinelab/algorithms/doraemon.py` |
+| Reset-time application of sampled values to physics | `constrained_albc/envs/main/mdp/events.py` |
 
-### Buoy Body (HeroAgentBuoyHydrodynamicsCfg)
-
-| Parameter | Value |
-|:---|:---|
-| Geometry | Cylinder R=0.085m, H=0.118m, m=0.93kg |
-| Volume | 0.00268 m^3 |
-| Buoyancy / Weight | 26.2N / 9.1N (net: +17.1N, positively buoyant) |
-| Added mass | (0.15, 1.5, 1.5, 0.01, 0.01, 0.01) |
-| Linear damping | (0.5, 0.5, 0.5, 0.01, 0.01, 0.01) |
-| Quadratic damping | (4.6, 4.6, 4.6, 0.1, 0.1, 0.1) |
-| CoB / CoG | (0.0, 0.0, 0.0) / (0.0, 0.0, 0.0) |
-| Inertia | (0.00278, 0.00278, 0.00336) |
-
-### System Total
-
-| Parameter | Value |
-|:---|:---|
-| Total buoyancy | 80.9 + 26.2 = 107.1 N |
-| Total weight | ~104.1 N (approximate) |
-| Net | ~+3.0 N (slightly positively buoyant) |
+There is no CLI flag for individual DR parameters — DR is configured in Python, either by
+editing `config.py` directly (durable change) or by mutating the env cfg object in a script
+before `gym.make()` (one-off change, see [Working examples](#working-examples)).
 
 ---
 
-## References
+## 1. Toggle DR entirely on or off
 
-- Tan, J., et al. (2018). "Sim-to-Real: Learning Agile Locomotion For Quadruped Robots." RSS.
-  - Table I: DR parameter ranges (mass, inertia, latency, perturbation)
-  - Key insight: perturbation forces + control latency are essential for sim-to-real transfer
-- Zhu, Y., et al. (2023). "A Survey on Sim-to-Real Transfer for Robotics." (BIR Survey)
-  - Taxonomy of DR categories and theoretical analysis
+`DomainRandomizationCfg.enable` is the single global switch. When `False`, every
+`randomize_*` function in `mdp/events.py` early-returns (no-op) and the env falls back to
+its nominal physics.
 
-## Related Documents
+```python
+# constrained_albc/envs/main/config.py, class ALBCEnvCfg
+randomization: DomainRandomizationCfg = DomainRandomizationCfg()  # enable=True by default
+```
 
-- [system-overview.md](../explanation/system-overview.md): Environment structure + encoder's use of privileged obs
-- [sim-to-real.md](sim-to-real.md): Sim-to-real gap analysis and deployment
+To disable for a one-off run, mutate the field before environment construction (see
+[Working examples](#working-examples)):
+
+```python
+env_cfg.randomization.enable = False
+```
+
+Note `doraemon.enable` (`ALBCEnvCfg.doraemon`) is a **separate** switch — see §3.
 
 ---
 
-**Created**: 2026-02-11
-**Updated**: 2026-02-14 (4th extreme strengthening: inertia [0.4,2.5], added_mass [0.3,2.0], volume/body_mass +-30%, payload 5kg -- intentionally exceeds the TDE stability boundary. 3rd: perturbation 30N/4.5Nm, ocean current 0.75m/s, target +-0.5rad. 2nd: perturbation 20N/3Nm, payload 3kg. 1st: perturbation 15N/2Nm, ocean current 0.5m/s)
+## 2. Enable/disable a single DR dimension
+
+Every DR parameter is a `(lo, hi)` tuple field on `DomainRandomizationCfg`. There are two
+places you can narrow or fix a dimension, and they do different things:
+
+| Where | Effect |
+|:---|:---|
+| `DomainRandomizationCfg.<field>` in `config.py` | The **SSOT range**. Feeds both the uniform-sampling fallback (`mdp/events.py`) *and* the DORAEMON Beta bounds (via `build_param_specs`, which reads this field with `getattr`) *and* the eval-side hard-anchor fallback. |
+| `ALBCEnvCfg.doraemon.param_overrides` (a `dict[str, tuple[float, float]]`) | Overrides **only** the DORAEMON curriculum's Beta bounds for that dimension, at scheduler-init time. Leaves the SSOT `config.py` range (and eval anchor) untouched — use this for a quick curriculum-only ablation. |
+
+To fully disable one dimension (freeze it at its nominal value), collapse its range to a
+single point:
+
+```python
+# durable: edit config.py
+ocean_current_strength_range: tuple[float, float] = (0.0, 0.0)   # was (0.0, 1.0)
+```
+
+```python
+# one-off: curriculum-only, script-level
+env_cfg.doraemon.param_overrides = {"ocean_current_strength": (0.0, 0.0)}
+```
+
+`control_delay_steps` (§4) is a special case: its own default `(0, 0)` already means "off"
+and skips allocating the delay buffer entirely — no separate toggle needed.
+
+---
+
+## 3. The DORAEMON curriculum (one paragraph)
+
+Every parameter listed in `_PARAM_DEFS` (`envs/main/doraemon.py`) is not sampled uniformly —
+it is drawn from a per-parameter Beta distribution that `DoraemonScheduler`
+(`marinelab/marinelab/algorithms/doraemon.py`) widens over training, subject to a policy
+success-rate floor (`ALBCEnvCfg.doraemon.performance_lb` / `alpha`) and a per-step KL trust
+region (`kl_ub`). A parameter is curriculum-managed if and only if it appears in
+`_PARAM_DEFS`; every other `DomainRandomizationCfg` field (joint gains, thruster scales,
+`control_delay_steps`, …) is sampled uniformly every reset instead. To disable learning and
+freeze at whatever the curriculum last reached, set `env_cfg.doraemon.enable = False` (the
+env falls back to plain uniform sampling of the `DomainRandomizationCfg` ranges — see
+`envs/main/student/runner.py` for the pattern used to train the distillation student).
+Full mechanics (Beta math, `step()` control flow, eval-side interpolation, replay) are in
+[`reference/domain-randomization-and-doraemon.md`](../reference/domain-randomization-and-doraemon.md).
+
+---
+
+## 4. Enable action-latency DR (`control_delay_steps`)
+
+`control_delay_steps: tuple[int, int]` (integer control steps; 1 step = 20ms @ 50Hz) adds a
+random per-env transport delay to the applied action, drawn uniformly at reset. It is
+**not** a `_PARAM_DEFS` entry — integer delay does not fit the continuous Beta sampler, so it
+stays uniform-only by design.
+
+```python
+# config.py — enable a 0-3 step (0-60ms) random action delay
+control_delay_steps: tuple[int, int] = (0, 3)   # default: (0, 0) = off
+```
+
+`(0, 0)` skips allocating the `DelayBuffer` entirely (`_draw_control_delay` in
+`albc_env.py`), so leaving it at the default has zero overhead.
+
+---
+
+## 5. Enable the observation-noise DR knob (`obs_noise_scale`)
+
+There are two independent noise layers on the 69D observation:
+
+1. **Always-on sensor noise model** (`NoiseModelWithAdditiveBiasCfg`, `_OBS_NOISE_STD` /
+   `_OBS_BIAS_MAG` in `config.py`) — applies regardless of DR.
+2. **DR-managed extra layer** (`obs_noise_scale`, a `_PARAM_DEFS` entry) — a `[0, 1]`
+   curriculum knob that scales the *same* per-channel `_OBS_NOISE_STD` pattern and adds it
+   on top of layer 1. Nominal starts at `0.0` (byte-identical to no DR noise) and widens
+   toward `1.0` (total std ≈ √2× layer 1 alone) as the curriculum progresses.
+
+To force it to a fixed value instead of letting DORAEMON widen it (e.g. for an ablation that
+always trains with extra noise):
+
+```python
+env_cfg.doraemon.param_overrides = {"obs_noise_scale": (1.0, 1.0)}
+```
+
+When `randomization.enable` is `False`, `_dr_obs_noise_scale` is never allocated (`None`) —
+layer 2 has no effect regardless of the DORAEMON setting.
+
+---
+
+## 6. Add a new DR parameter
+
+Follow the `_PARAM_DEFS` pattern to make a new physical parameter curriculum-managed
+(uniform-only parameters only need step 1 + step 4).
+
+1. **Add the range field** to `DomainRandomizationCfg` in `config.py`:
+
+   ```python
+   thruster_deadzone_scale: tuple[float, float] = (0.8, 1.2)
+   ```
+
+2. **Register it in `_PARAM_DEFS`** (`envs/main/doraemon.py`) — this is what makes it a
+   curriculum dimension (increments `NDIMS`):
+
+   ```python
+   _PARAM_DEFS: list[tuple[str, str, float, float]] = [
+       ...
+       ("thruster_deadzone_scale", "thruster_deadzone_scale", 0.8, 1.2),
+   ]
+   ```
+
+   The 3rd/4th elements are only the module-load fallback bounds (used when no DR cfg is
+   supplied); the live range always comes from `config.py` via `getattr`.
+
+3. **Optionally set a non-midpoint starting nominal** in `_NOMINAL_OVERRIDES` (same file) —
+   e.g. `"thruster_deadzone_scale": 1.0` to start at "no deadzone" and widen from there, the
+   same pattern `ocean_current_strength` and `obs_noise_scale` use.
+
+4. **Wire the application** — a `_PARAM_DEFS` entry only makes the value *available* in the
+   per-reset `sampled` dict; something must still read it. In `mdp/events.py`, use
+   `_sample_or_uniform` so the physics code transparently falls back to a uniform draw when
+   the parameter isn't (yet, or ever) DORAEMON-managed:
+
+   ```python
+   deadzone_scales = _sample_or_uniform(
+       "thruster_deadzone_scale", sampled, n, cfg.thruster_deadzone_scale, device,
+   )
+   ```
+
+   (If the consumer isn't in `mdp/events.py` — e.g. an observation-side effect like
+   `obs_noise_scale` — apply the same `sampled.get(name, ...)` fallback pattern directly at
+   the consuming call site in `albc_env.py`.)
+
+Skipping step 4 is a common mistake: the parameter will show up in DORAEMON's
+`mean/<param>` / `std/<param>` wandb metrics and consume curriculum budget, but never
+actually perturb the simulation.
+
+---
+
+## Working examples
+
+### Train with the shipped defaults (DR + DORAEMON both on)
+
+No flags needed — `DomainRandomizationCfg.enable=True` and `DoraemonCfg.enable=True` are
+the checked-in defaults on `ALBCEnvCfg`:
+
+```bash
+cd /workspace/constrained-albc && python scripts/train.py \
+    --task Isaac-ConstrainedALBC-TRPO-v0 \
+    --num_envs 4096 --max_iterations 5000 \
+    --logger wandb --log_project_name albc_trpo
+```
+
+### One-off override before training (durable change without editing `config.py`)
+
+`scripts/train.py:main(env_cfg, agent_cfg)` receives the registered `ALBCEnvCfg` instance
+before `gym.make()` — mutate it there, or in a thin wrapper script that imports `main`:
+
+```python
+from constrained_albc.envs.main.config import DomainRandomizationCfg
+
+env_cfg.randomization.control_delay_steps = (0, 3)          # enable latency DR
+env_cfg.doraemon.param_overrides = {                          # freeze one dim
+    "ocean_current_strength": (0.0, 0.0),
+}
+```
+
+### Post-construction override (matches `student/runner.py`'s pattern)
+
+For scripts that already called `gym.make` (e.g. eval/play scripts), reach the cfg through
+the unwrapped env:
+
+```python
+env_cfg = env.unwrapped.cfg
+env_cfg.doraemon.enable = False                    # freeze curriculum, fall back to uniform
+env_cfg.randomization = DomainRandomizationCfg()   # reset to the shipped hard ranges
+```
+
+---
+
+## Related documents
+
+- [`reference/domain-randomization-and-doraemon.md`](../reference/domain-randomization-and-doraemon.md) — DR parameter catalog, DORAEMON math, eval-side DR (SSOT for numbers).
+- [`explanation/physics-tuning.md`](../explanation/physics-tuning.md) — PhysX/solver stability issues that interact with wide DR ranges (added-mass/inertia clamps, effort-limit impulse semantics).
