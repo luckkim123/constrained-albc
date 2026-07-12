@@ -57,13 +57,13 @@ class FrozenTeacher(nn.Module):
         # We don't have the real TensorDict here; instead we build bypassing obs_groups
         # by calling nn.Module construction of the components directly.
         # Easiest path: reuse ActorCriticEncoder via a minimal dummy obs dict.
-        from tensordict import TensorDict
-
-        from ..encoder.actor_critic_encoder import ActorCriticEncoder
-
         # Construct-time fallback bounds come from the teacher's variant package
         # (cfg.variant_module); the checkpoint load below overwrites persisted ones.
         import importlib
+
+        from tensordict import TensorDict
+
+        from ..encoder.actor_critic_encoder import ActorCriticEncoder
 
         _bounds_mod = importlib.import_module(f"{cfg.variant_module}.agents.rsl_rl_ppo_cfg")
         _PRIV_OBS_LOWER = _bounds_mod._PRIV_OBS_LOWER
