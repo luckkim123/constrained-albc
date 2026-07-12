@@ -118,10 +118,10 @@ constrained_albc/envs/main/
 ├── config.py         # ALBCEnvCfg + DomainRandomizationCfg + constraint terms
 ├── doraemon.py        # ALBC-specific DORAEMON param defs (engine lives in marinelab)
 ├── agents/            # rsl_rl_ppo_cfg.py (policy / algorithm / runner cfgs)
-├── algorithms/         # constraint_trpo.py (ConstraintTRPO + IPO)
-├── encoder/            # actor_critic_encoder.py, actor_critic_asym_constrained.py
-├── runners/            # constraint_encoder_runner.py
-├── student/            # TCN / GRU distillation (collector, models, runner, teacher)
+├── algorithms/         # constraint_trpo.py (ConstraintTRPO + IPO) — shim, impl in envs/_core/algorithms/
+├── encoder/            # actor_critic_encoder.py, actor_critic_asym_constrained.py — shims, impl in envs/_core/encoder/
+├── runners/            # constraint_encoder_runner.py — shim, impl in envs/_core/runners/
+├── student/            # TCN / GRU distillation (collector, models, runner, teacher) — shims, impl in envs/_core/student/
 ├── mdp/                # constraints.py, rewards.py, observations.py, events.py, faults.py
 └── utils/
 ```

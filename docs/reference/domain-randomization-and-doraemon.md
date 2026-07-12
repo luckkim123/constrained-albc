@@ -64,7 +64,7 @@ aspirational.
 | `constrained_albc/envs/main/config.py` | `DomainRandomizationCfg` / `FaultInjectionCfg` + the live `DoraemonCfg` override |
 | `constrained_albc/envs/main/mdp/events.py` | reset-time APPLICATION of sampled values to physics |
 | `constrained_albc/envs/main/albc_env.py` | WIRING: samples, stashes, records episodes, owns `_doraemon` |
-| `constrained_albc/envs/main/runners/` | per-iteration `_doraemon.step()` call site |
+| `constrained_albc/envs/_core/runners/` | per-iteration `_doraemon.step()` call site (real impl; `envs/main/runners/` holds the import shims) |
 | `constrained_albc/analysis/{eval.py,dr_config.py,common.py}` | EVAL-side fixed DR (bypasses the curriculum) |
 
 ---
@@ -459,8 +459,8 @@ per ITER    : runner.log() -> metrics = _doraemon.step(iteration=it)  -> re-emit
 
 | Path | Runner | `iteration` kwarg |
 |:---|:---|:---|
-| TRPO (default) | `ConstraintEncoderRunner` (`runners/constraint_encoder_runner.py:256`) | passed |
-| PPO ablations | `OnPolicyDoraemonRunner` (`runners/on_policy_doraemon_runner.py:83`) | not passed → `_trajectory` iter falls back to `_step_count` |
+| TRPO (default) | `ConstraintEncoderRunner` (`envs/_core/runners/constraint_encoder_runner.py:266`) | passed |
+| PPO ablations | `OnPolicyDoraemonRunner` (`envs/_core/runners/on_policy_doraemon_runner.py:83`) | not passed → `_trajectory` iter falls back to `_step_count` |
 
 **Checkpointing.** `state_dict` (`doraemon.py:773`) serializes `dist_a` / `dist_b`
 + step/episode counts + the full episode buffer. `export_recording`
@@ -620,6 +620,6 @@ trap and the correcting fact with its anchor.
 | **Live `DoraemonCfg` override** | `config.py:527` |
 | Reset-time application | `envs/main/mdp/events.py:46`, `:88`, `:144`, `:214` |
 | Sample + record wiring | `albc_env.py:445`, `:1398`, `:1493` |
-| Runner step call site | `runners/constraint_encoder_runner.py:256` |
+| Runner step call site | `envs/_core/runners/constraint_encoder_runner.py:266` |
 | Eval levels / anchor | `analysis/dr_config.py:206`, `:275`; `common.py:36`; `eval.py:345` |
 | Eval modes | `analysis/eval.py:890` (static), `:1183` (level loop), `:1517` (periodic) |

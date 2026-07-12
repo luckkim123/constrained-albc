@@ -54,7 +54,7 @@ the fixed **observation noise model** (`_OBS_NOISE_STD` in `config.py`, corrupts
 ## 2. The `log_std` parameter
 
 A single `nn.Parameter` of shape `(num_actions,) = (8,)`, initialized in
-`PolicyBase._init_base` (`_policy_base.py:96`):
+`PolicyBase._init_base` (`_core/encoder/_policy_base.py:96`):
 
 ```python
 self.log_std = nn.Parameter(torch.log(init_noise_std * torch.ones(num_actions)))
@@ -63,7 +63,7 @@ self.log_std = nn.Parameter(torch.log(init_noise_std * torch.ones(num_actions)))
 With `init_noise_std = 0.7` (`rsl_rl_ppo_cfg.py:142`), every dim starts at
 `log(0.7) ≈ -0.357`, i.e. std 0.7. It is **global / state-independent** — the same
 8-vector for every observation in the batch. The sampling distribution is built in
-`_update_distribution` (`_policy_base.py:128–130`):
+`_update_distribution` (`_core/encoder/_policy_base.py:128–130`):
 
 ```python
 def _update_distribution(self, mean: torch.Tensor) -> None:
@@ -85,7 +85,7 @@ optimizer split (§5) is what lets the KL trust region damp its collapse.
 ## 3. Std clamp — asymmetric, in log space, after the step
 
 After the TRPO step, `ConstraintTRPO.update` clamps `log_std` in place
-(`constraint_trpo.py:484–491`):
+(`_core/algorithms/constraint_trpo.py:505–511`):
 
 ```python
 with torch.no_grad():
@@ -132,7 +132,7 @@ rsl_rl upstream); the standing of a std floor at all is discussed in
 ## 4. Entropy bonus — per-dim, alongside the IPO barrier
 
 Entropy enters the surrogate as a third additive term
-(`constraint_trpo.py:466–480`):
+(`_core/algorithms/constraint_trpo.py:486–500`):
 
 ```python
 mean_entropy = self.policy.entropy.mean()
@@ -172,7 +172,7 @@ The measured effect, from the cfg comment: `entropy_coef=0.003` recovered noise
 ## 5. Why `log_std` is in the TRPO group (not Adam)
 
 ConstraintTRPO splits parameters into two optimizer groups by name prefix
-(`constraint_trpo.py:153–174`):
+(`_core/algorithms/constraint_trpo.py:156–175`):
 
 ```python
 # 1. Policy (actor + encoder + log_std): TRPO natural gradient (no optimizer)
@@ -190,10 +190,10 @@ for name, param in self.policy.named_parameters():
 group. The reason (cfg comment): keeping it under the KL trust region means the
 Fisher curvature *sees* the std, so a step that would slam entropy down is bounded
 in KL. The offset of the sigma slice is tracked (`_sigma_param_offset`,
-`:175–177`) for logging the sigma component of the flat step.
+`_core/algorithms/constraint_trpo.py:176–178`) for logging the sigma component of the flat step.
 
 **FVP includes `log_std`.** The Fisher-vector product
-(`_fisher_vector_product`, `constraint_trpo.py:354–365`) is a pure KL Hessian on
+(`_fisher_vector_product`, `_core/algorithms/constraint_trpo.py:368–379`) is a pure KL Hessian on
 `Normal(action_mean, action_std)`, differentiated over `self._policy_params` —
 which contains `log_std`. Since `action_std = exp(log_std)`, `log_std` genuinely
 contributes to the Fisher curvature and to the surrogate KL; it is **not**
@@ -246,7 +246,7 @@ different roles:
 | | Action noise | Observation noise |
 |---|---|---|
 | What | policy exploration std | sensor-simulation corruption |
-| Object | `log_std` (`_policy_base.py:96`) | `_OBS_NOISE_STD` (`config.py:259`) |
+| Object | `log_std` (`_core/encoder/_policy_base.py:96`) | `_OBS_NOISE_STD` (`config.py:259`) |
 | Learned? | **yes** — trained parameter, clamped each update | **no** — fixed cfg constant |
 | Applied to | the action *before* env | the observation `o_t` *before* the policy |
 | Purpose | drive exploration | sim-to-real robustness |
@@ -262,7 +262,7 @@ to the observation pipeline, not here. This document's entire subject is `log_st
 ## 8. What to watch (logged metrics)
 
 `ConstraintEncoderRunner._log_constraint_metrics` logs the noise/entropy state each
-iteration (`runners/constraint_encoder_runner.py:324, 337–338`):
+iteration (`_core/runners/constraint_encoder_runner.py:311, 349–350`):
 
 | Metric | Meaning | Read it for |
 |---|---|---|
@@ -288,13 +288,13 @@ All in `constrained_albc/envs/main/agents/rsl_rl_ppo_cfg.py` unless noted.
 | `entropy_coef_per_dim` | (0.01, 0.01, 0.001×6) | `:239` |
 | `min_std` / `max_std` (scalar) | 0.05 / 2.0 | `:242` / `:243` |
 | `min_std_per_dim` | (0.10, 0.10, 0.05×6) | `:246` |
-| std clamp application (log space) | — | `constraint_trpo.py:484–491` |
-| entropy bonus in surrogate | — | `constraint_trpo.py:466–480` |
-| param-group split (log_std → TRPO) | — | `constraint_trpo.py:153–174` |
-| FVP includes log_std | — | `constraint_trpo.py:354–365` |
-| log_std parameter | — | `_policy_base.py:96` |
-| `_update_distribution` (std = exp) | — | `_policy_base.py:128–130` |
-| entropy/noise log keys | Policy/entropy, Noise/std_mean, Noise/std_min | `constraint_encoder_runner.py:324, 337–338` |
+| std clamp application (log space) | — | `_core/algorithms/constraint_trpo.py:505–511` |
+| entropy bonus in surrogate | — | `_core/algorithms/constraint_trpo.py:486–500` |
+| param-group split (log_std → TRPO) | — | `_core/algorithms/constraint_trpo.py:156–175` |
+| FVP includes log_std | — | `_core/algorithms/constraint_trpo.py:368–379` |
+| log_std parameter | — | `_core/encoder/_policy_base.py:96` |
+| `_update_distribution` (std = exp) | — | `_core/encoder/_policy_base.py:128–130` |
+| entropy/noise log keys | Policy/entropy, Noise/std_mean, Noise/std_min | `_core/runners/constraint_encoder_runner.py:311, 349–350` |
 
 ---
 
@@ -324,13 +324,13 @@ All in `constrained_albc/envs/main/agents/rsl_rl_ppo_cfg.py` unless noted.
 
 ### 11.1 Why the clamp is justified
 
-The action sample is a raw Gaussian with no clamp (`actor_critic_encoder.py:277`
+The action sample is a raw Gaussian with no clamp (`_core/encoder/actor_critic_encoder.py:275–280`
 `distribution.sample()`, "no action clamping"). The clamp happens only in the env
 buffer (`albc_env.py:452` `self._actions = actions.clone().clamp(-1.0, 1.0)`). The
 vecenv `clip_actions` (Clamp#0) is unset → isaaclab default `None` → **no-op**; the
 only active clamp is this single env buffer.
 
-log-prob is computed on the **pre-clamp raw sample** (`constraint_trpo.py:459`) and
+log-prob is computed on the **pre-clamp raw sample** (`_core/algorithms/constraint_trpo.py:473`) and
 the clamp applies only to env dynamics. So "policy density" and "executed action" are
 each internally consistent — the **standard on-policy PPO/TRPO convention** of
 treating the clamp as part of the environment, not the policy (SB3 PPO =
@@ -388,8 +388,8 @@ That gap is the basis of the remaining experiments:
 
 ## Source files
 
-- `constrained_albc/envs/main/encoder/_policy_base.py` — `log_std` parameter (`:96`), `_update_distribution` (`:128`)
-- `constrained_albc/envs/main/algorithms/constraint_trpo.py` — std clamp (`:484`), entropy bonus (`:466`), param-group split (`:153`), FVP (`:354`)
+- `constrained_albc/envs/_core/encoder/_policy_base.py` — `log_std` parameter (`:96`), `_update_distribution` (`:128`)
+- `constrained_albc/envs/_core/algorithms/constraint_trpo.py` — std clamp (`:505`), entropy bonus (`:486`), param-group split (`:156`), FVP (`:368`)
 - `constrained_albc/envs/main/agents/rsl_rl_ppo_cfg.py` — `init_noise_std`, `entropy_coef(_per_dim)`, `min/max_std`, `min_std_per_dim`
-- `constrained_albc/envs/main/runners/constraint_encoder_runner.py` — `Policy/entropy`, `Noise/std_*` logging
+- `constrained_albc/envs/_core/runners/constraint_encoder_runner.py` — `Policy/entropy`, `Noise/std_*` logging
 - `constrained_albc/envs/main/config.py` — `_OBS_NOISE_STD` (the *observation* noise, contrasted in §7)

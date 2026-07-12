@@ -263,13 +263,13 @@ range. **But nothing ever writes them** — a code comment in `_reset_physics`
 ## 7. Tracking reward (how the command error is scored)
 
 The command error drives the tracking reward via a shared exponential-quadratic
-kernel `_exp_quad_saturating` (`mdp/rewards.py:109–129`):
+kernel `_exp_quad_saturating` (`mdp/rewards.py:129–149`):
 `exp(-e²/2σ²) - quad·e² - lin·|e| - (saturating)`.
 
 | Term | Consumes | cfg (k, σ) | Location |
 |---|---|---|---|
-| `att_rp_tracking` | `_att_rp_err` (roll,pitch), roll-weighted | k=9.0, σ=0.10, quad_ratio=0.833, `att_roll_weight=1.5` | `rewards.py:91,132–142` |
-| `yaw_vel_tracking` | `_yaw_rate_err` | k=3.5, σ=0.10, quad_ratio=1.0, tanh_coef=0.3 | `config.py:467`, `rewards.py:145–148` |
+| `att_rp_tracking` | `_att_rp_err` (roll,pitch), roll-weighted | k=9.0, σ=0.10, quad_ratio=0.833, `att_roll_weight=1.5` | `rewards.py:108–109,152–162` |
+| `yaw_vel_tracking` | `_yaw_rate_err` | k=3.5, σ=0.10, quad_ratio=1.0, tanh_coef=0.3 | `config.py:467`, `rewards.py:165–168` |
 
 Roll is up-weighted (`att_roll_weight=1.5`) because roll has weak TAM (see
 [glossary.md](glossary.md)) actuation (0.007 m roll arm vs. 0.145 m pitch arm —
@@ -293,7 +293,7 @@ command error (§5.2) is what these terms consume, closing command → error →
 | command in obs (first 3D, noise-free) | — | `observations.py:71–74`, `config.py:261` |
 | error compute (attitude wrapped) | — | `albc_env.py:1117–1124` |
 | integral (3 channels, gated leaky) | leak 0.99 / clamp 2.0 | `config.py:386–388`, `albc_env.py:1135–1155` |
-| att / yaw tracking reward (k, σ) | 9.0 / 3.5, 0.10 | `rewards.py:91`, `config.py:467` |
+| att / yaw tracking reward (k, σ) | 9.0 / 3.5, 0.10 | `rewards.py:108,110`, `config.py:467` |
 
 ---
 

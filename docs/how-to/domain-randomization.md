@@ -88,7 +88,7 @@ A parameter in `_PARAM_DEFS` (`envs/main/doraemon.py`) is curriculum-managed —
 
 To disable learning and freeze at whatever the curriculum last reached, set
 `env_cfg.doraemon.enable = False` (falls back to uniform sampling of the `DomainRandomizationCfg`
-ranges — see `envs/main/student/runner.py`'s pattern). Full mechanics (Beta math, `step()` control flow,
+ranges — see `envs/_core/student/runner.py`'s pattern). Full mechanics (Beta math, `step()` control flow,
 eval-side interpolation, replay): [`reference/domain-randomization-and-doraemon.md`](../reference/domain-randomization-and-doraemon.md).
 
 ---
@@ -210,7 +210,7 @@ env_cfg.doraemon.param_overrides = {                          # freeze one dim
 }
 ```
 
-### Post-construction override (matches `student/runner.py`'s pattern)
+### Post-construction override (matches `envs/_core/student/runner.py`'s pattern)
 
 For scripts that already called `gym.make` (e.g. eval/play scripts), reach the cfg through
 the unwrapped env:

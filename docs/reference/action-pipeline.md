@@ -110,11 +110,11 @@ firmware ESC channel layout `m0..m5` (`config.py:80–133`; see §5.2).
 
 Both action entry points return the raw network output:
 
-- `act()` (`actor_critic_encoder.py:272`): builds `actor_obs = cat[EmpiricalNorm(o_t), z_raw]`,
+- `act()` (`envs/_core/encoder/actor_critic_encoder.py:275`): builds `actor_obs = cat[EmpiricalNorm(o_t), z_raw]`,
   sets `distribution = Normal(actor(actor_obs), exp(log_std))`, and returns
   `distribution.sample()` — the docstring is explicit: *"Sample action from Gaussian
   policy (no action clamping)."*
-- `act_inference()` (`:279`): returns `actor(actor_obs)` directly — the mean, again
+- `act_inference()` (`:282`): returns `actor(actor_obs)` directly — the mean, again
   *"no clamping."*
 
 `std = exp(log_std)` is a single global parameter broadcast across the batch
@@ -495,8 +495,8 @@ only *which parts are action-derived*.
 
 ## Source files
 
-- `constrained_albc/envs/main/encoder/actor_critic_encoder.py` — `act()` / `act_inference()` (no clamp), actor obs assembly
-- `constrained_albc/envs/main/encoder/_policy_base.py` — global `log_std`, Gaussian `_update_distribution`
+- `constrained_albc/envs/_core/encoder/actor_critic_encoder.py` — `act()` / `act_inference()` (no clamp), actor obs assembly
+- `constrained_albc/envs/_core/encoder/_policy_base.py` — global `log_std`, Gaussian `_update_distribution`
 - `constrained_albc/envs/main/albc_env.py` — `_update_action_buffers` (clamp #2), `_apply_joint_pd_action` (delta integrator), `_apply_action` (PD + wrench), `_get_hist_features` (action history), `_pre_physics_step` (dispatch)
 - `constrained_albc/envs/main/config.py` — `action_space`, `delta_scale`, `ALBCThrusterCfg` (TAM, coeff, tau), `FaultInjectionCfg`
 - `constrained_albc/envs/main/mdp/observations.py` — `compute_policy_obs` (filtered thruster_state feedback)

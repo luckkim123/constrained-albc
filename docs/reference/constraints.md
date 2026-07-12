@@ -7,7 +7,7 @@
 > ALBC policy. Ten IPO constraints ship on this task — **5 probabilistic** (binary
 > violation-probability budgets) + **5 average** (expected-magnitude budgets) —
 > defined in `envs/main/config.py` and consumed by `ConstraintTRPO` in
-> `algorithms/constraint_trpo.py`.
+> `envs/_core/algorithms/constraint_trpo.py`.
 >
 > This is a code-level reference verified against disk. The legacy full-DOF variant
 > (`envs/full_dof/`, `Isaac-ConstrainedALBC-Full-*-v0`) reuses the same constraint
@@ -56,14 +56,14 @@ cost function f_k(state)  ->  compute_all_costs -> costs (num_envs, K)   [mdp/co
 cost GAE (cost_gamma, cost_lam)  ->  J_hat_C_k  (mean discounted cost return, K-vector)
         |
         v
-IPO adaptive threshold:  d_k^i = max(d_k, J_hat_C_k + alpha * d_k)         [constraint_trpo.py:306-308]
+IPO adaptive threshold:  d_k^i = max(d_k, J_hat_C_k + alpha * d_k)         [constraint_trpo.py:320-322]
         |
         v
 barrier margin_k = d_k^i - cost_surr_k          # plain difference, NOT / d_k
-barrier = -sum_k log(margin_k.clamp(min=1e-8)) / barrier_t                  [constraint_trpo.py:454-464]
+barrier = -sum_k log(margin_k.clamp(min=1e-8)) / barrier_t                  [constraint_trpo.py:468-484]
         |
         v
-surrogate L = -E[A * ratio]  +  barrier  -  entropy_bonus                   [constraint_trpo.py:461,480]
+surrogate L = -E[A * ratio]  +  barrier  -  entropy_bonus                   [constraint_trpo.py:475,500]
         |
         v
 TRPO natural-gradient step under a pure-KL trust region (barrier curvature NOT in Fisher)
@@ -234,7 +234,7 @@ fights normal yaw maneuvering.
 
 ## 4. ConstraintTRPO optimization
 
-Algorithm body: `algorithms/constraint_trpo.py`. `ConstraintTRPO` is a standalone algorithm
+Algorithm body: `envs/_core/algorithms/constraint_trpo.py`. `ConstraintTRPO` is a standalone algorithm
 (aliased `ALBCConstraintTRPO`, `rsl_rl_ppo_cfg.py:25`), not an `rsl_rl.PPO` subclass.
 
 **Provenance — NORBC's "Modified IPO", implemented faithfully (not a bespoke hybrid).** Kim et
@@ -266,7 +266,7 @@ $$
 \end{aligned}
 $$
 
-In code the barrier is built per update (`constraint_trpo.py:454-464`):
+In code the barrier is built per update (`constraint_trpo.py:468-484`):
 
 $$
 \begin{aligned}
@@ -282,7 +282,7 @@ Two implementation facts matter:
    anywhere in the file.
 2. **The two margin terms share a scale but not an explicit scaling factor in code.**
    `barrier_base = adaptive_d_k - mean_cost_returns` carries no explicit $1/(1-\gamma_c)$;
-   `cost_surr` is scaled by `inv_one_minus_gamma` (`constraint_trpo.py:462`). Both already live
+   `cost_surr` is scaled by `inv_one_minus_gamma` (`constraint_trpo.py:476`). Both already live
    on the discounted-return scale via the budget rescale $d_k=D_k/(1-\gamma_c)$.
 
 **`clamp(min=1e-8)` caps the barrier so it never literally reaches $\pm\infty$** — saturates at
@@ -309,7 +309,7 @@ in doubt, read the resolved per-run `params/agent.yaml`, not the class signature
 ### 4.2 Adaptive threshold and the violations diagnostic
 
 The adaptive threshold is recomputed every update from the current batch's mean cost returns
-(`constraint_trpo.py:306-308`, called at `:446`):
+(`constraint_trpo.py:320-322`, called at `:460`):
 
 $$
 d_k^{i} = \max\!\left(d_k,\; \hat{J}_{C_k} + \alpha\, d_k\right), \qquad
@@ -318,38 +318,40 @@ $$
 
 The reported `violations` monitoring metric compares $\hat{J}_{C_k}$ against the **raw** budget
 $d_k$, *not* the adaptive threshold: `violations = (mean_cost_returns - self.d_k)`
-(`constraint_trpo.py:447`). `adaptive_d_k` is used only inside the barrier margin (`:454`) and
-the logged barrier margin (`:449`).
+(`constraint_trpo.py:461`). `adaptive_d_k` is used only inside the barrier margin (`:468`) and
+the logged barrier margin (`:463`).
 
 ### 4.3 Feasibility, GAE, and standardization
 
 - **Cost GAE.** Per-constraint advantages use the same recursive $\delta/\lambda$-return formula
   as reward GAE but with `cost_gamma=0.99`, `cost_lam=0.95`, a vectorized $K$-dim accumulator
   run reverse in time, followed by a non-finite sanitize that zeros any constraint column
-  containing NaN/Inf across the rollout (`constraint_trpo.py:285-300`). `cost_gamma` must be
-  strictly $< 1$ or the constructor raises `ValueError` (`:143-144`).
+  containing NaN/Inf across the rollout (`constraint_trpo.py:295-314`). `cost_gamma` must be
+  strictly $< 1$ or the constructor raises `ValueError` (`:144-145`).
 - **Feasibility level is an estimator, not the true return.** Every feasibility judgment
   (`mean_cost_returns` → `barrier_base`, `violations`, adaptive threshold;
-  `constraint_trpo.py:443,447,454`) reads the **GAE($\lambda_c$) return** `cost_returns =
-  cost_advantage + cost_value` (`:291`), *not* a raw Monte-Carlo sum — it inherits the
+  `constraint_trpo.py:460,461,468`) reads the **GAE($\lambda_c$) return** `cost_returns =
+  cost_advantage + cost_value` (`:305`), *not* a raw Monte-Carlo sum — it inherits the
   `cost_lam=0.95` bias and the cost critic's estimation error.
 - **Consequence.** An *under-estimating* cost critic makes the barrier read **feasible** when the
   true cost already exceeds budget — a risk inherent to critic-based constrained RL generally,
   not a code defect.
 - **Time-out bootstrapping.** On time-out (not termination) the per-constraint cost is
   bootstrapped with `cost_gamma` and the per-constraint value vector, mirroring the reward-side
-  bootstrap on the cost channel (`constraint_trpo.py:264-266`).
+  bootstrap on the cost channel (`constraint_trpo.py:276-282`).
 - **Per-constraint cost-advantage standardization (NORBC Sec IV-B).** Each of the $K$
   cost-advantage columns is independently mean/std-normalized across the flattened batch dim,
   std floor-clamped to **`min=1.0`** — not the usual `1e-8` epsilon — because binary constraints
   can have near-zero std, causing $10^8$ amplification (inline comment,
-  `constraint_trpo.py:436-438`). Reward advantages use the ordinary `1e-8` guard (`:424-426`).
+  `constraint_trpo.py:449-452`). Reward advantages use the ordinary `1e-8` guard in stock rsl_rl's
+  `rollout_storage.py` (`compute_returns`, `normalize_advantage=True`); the in-algorithm
+  re-standardization was removed 2026-07-12 as redundant.
 
 <details>
 <summary>Why the barrier margin mixes a raw level with a standardized delta — NORBC Eq. (10) verbatim, not a code bug</summary>
 
 `barrier_base` uses the unstandardized `mean_cost_returns`, while `cost_surr` uses the
-standardized advantage (`:454` vs `:462`). NORBC relies on the *zero-mean* half to keep the
+standardized advantage (`:468` vs `:476`). NORBC relies on the *zero-mean* half to keep the
 problem always feasible at `ratio=1`: then $\mathbb{E}[\hat{A}^C_k]\approx 0$, so
 $\text{margin}_k \approx d_k^i - \hat{J}_{C_k} \ge \alpha d_k > 0$ and the $\log$ is always
 defined at the start of each update. The *std* half is NORBC's gradient-conditioning trick for
@@ -367,7 +369,7 @@ for this codebase.
 ### 4.4 TRPO trust-region step
 
 The natural-gradient step operates on the **single combined surrogate scalar**
-(`constraint_trpo.py:461,480`):
+(`constraint_trpo.py:475,500`):
 
 $$
 L = -\,\mathbb{E}\!\left[A\cdot \text{ratio}\right] \;+\; \text{barrier} \;-\; \beta_{\text{ent}}\, H
@@ -377,16 +379,16 @@ $$
   \log\sigma)$.
 - **Fisher-vector product uses pure KL curvature only** — a double backprop through the Gaussian
   KL between old and new policy, plus Tikhonov damping $Fv + \lambda_{\text{cg}} v$
-  (`constraint_trpo.py:354-365`). The barrier's curvature **never** enters the Fisher — the KL
+  (`constraint_trpo.py:368-379`). The barrier's curvature **never** enters the Fisher — the KL
   trust region does not "know" about the constraint geometry.
 - **Conjugate gradient.** Solves $F x = g$ with `cg_iters=10` and an early-exit residual
-  tolerance `1e-10` (`:367-386`).
+  tolerance `1e-10` (`:381-400`).
 - **Step size.** $\Delta\theta = -\sqrt{\delta_{\max} / (\tfrac{1}{2}\tilde g^\top g)}\,\tilde
   g$; the update aborts (returns `False`, no step) if $\tfrac{1}{2}\tilde g^\top g \le 0$ or
-  non-finite, or if the step direction contains NaN/Inf (`:539-547`).
+  non-finite, or if the step direction contains NaN/Inf (`:559-567`).
 - **Line search.** Backtracking, shrink factor `0.5`, max 10 backtracks; accepts a step iff the
   surrogate strictly decreases **and** realized $\mathrm{KL} \le \delta_{\max}\cdot
-  \text{line\_search\_kl\_margin}$ with margin `1.5` (`:400-410`) — **looser** than the
+  \text{line\_search\_kl\_margin}$ with margin `1.5` (`:413-421`) — **looser** than the
   $\delta_{\max}$ used to size the initial step, so an accepted step can exceed the nominal
   trust-region radius by up to 50%. On exhaustion, params revert to `old_params`.
 
@@ -397,7 +399,7 @@ ctor (`:43`) vs **0.005** cfg (`rsl_rl_ppo_cfg.py:201`) — drift, 2.5x looser, 
 ### 4.5 std clamping
 
 After every `_trpo_step` (unconditional on line-search success), `log_std` is clamped
-(`constraint_trpo.py:485-491`). At runtime the **per-dim floor branch is the one exercised**,
+(`constraint_trpo.py:504-511`). At runtime the **per-dim floor branch is the one exercised**,
 because `min_std_per_dim` is non-empty. The entropy bonus follows the same pattern: a scalar
 field and a per-dim field both exist, and the per-dim field wins whenever non-empty (default) —
 the scalar is dead at runtime.
@@ -427,22 +429,22 @@ comment, `:154-158`).
 observation (`evaluate_costs()`), not $K$ separate networks. Reward and cost critics update
 jointly in one backward pass: $\text{total} = \text{value\_loss\_coef}\cdot L_V +
 \text{cost\_value\_loss\_coef}\cdot L_{V_C}$, both coefficients `1.0`
-(`constraint_trpo.py:591-605`).
+(`constraint_trpo.py:611-621`).
 
 Per-constraint MSE is `.mean(dim=0)` over the batch → $K$-vector → `.mean()` across constraints
-→ scalar (`:596-597`). Critic-head activation detail lives in the policy class
+→ scalar (`:616-617`). Critic-head activation detail lives in the policy class
 `ALBCActorCriticEncoder`, not here — see the network-architecture reference.
 
 **Separate networks, one shared gradient clip (the reward/cost coupling).** `self.critic`
 (scalar) and `self.cost_critic` ($K$-dim) are **independent** MLPs, disjoint parameters, no
-shared backbone (`encoder/_policy_base.py:86,91` — the `value_backbone.` prefix is a
+shared backbone (`envs/_core/encoder/_policy_base.py:86,91` — the `value_backbone.` prefix is a
 classification catch, not an actual shared trunk). Disjoint parameters mean `total.backward()`
 does not cross-couple their gradients ($\partial L_{V_C}/\partial\theta_{\text{reward
 critic}}=0$).
 
 **One thing does couple them:** the value update applies a single
 `clip_grad_norm_(self._value_params, max_grad_norm=1.0)` over the **union** of both critics'
-parameters (`:601-605`). The cost critic has $K=10$ heads regressing rare-event returns and can
+parameters (`:621-625`). The cost critic has $K=10$ heads regressing rare-event returns and can
 dominate the combined norm — when the union exceeds `1.0`, the clip scales *both* critics down
 together, letting a noisy cost critic throttle the reward critic's step.
 
@@ -471,8 +473,8 @@ $$
 $$
 
 valid **only in the slack regime**, where the adaptive floor has not engaged, i.e. where
-`Constraint/viol/<name> == -Constraint/margin/<name>` exactly (`constraint_trpo.py:447` vs
-`:449`). When $\hat{J}_{C_k} + \alpha d_k > d_k$ the adaptive threshold engages and $d_k^i \ne
+`Constraint/viol/<name> == -Constraint/margin/<name>` exactly (`constraint_trpo.py:461` vs
+`:463`). When $\hat{J}_{C_k} + \alpha d_k > d_k$ the adaptive threshold engages and $d_k^i \ne
 d_k$, breaking that identity.
 
 **Experimental finding — a real teacher-run report misread the binding channel**
@@ -594,14 +596,14 @@ activations are unchanged.
 
 Constraint metrics are emitted once per training iteration by
 `ConstraintEncoderRunner._log_constraint_metrics` (invoked from the overridden `log()`, gated on
-`self._should_log`; `constraint_encoder_runner.py:248-250`). The algorithm keeps per-step
+`self._should_log`; `envs/_core/runners/constraint_encoder_runner.py:259-261`). The algorithm keeps per-step
 running state (`_last_violations`, `_last_barrier_margins`, `_last_barrier_penalty`) read only
 for this logging (`constraint_trpo.py:129-133`).
 
 | Metric | Meaning |
 |---|---|
-| `Constraint/viol/<name>` | $\hat{J}_{C_k} - d_k$ against the **raw** discounted budget (`constraint_trpo.py:447`); negative = slack |
-| `Constraint/margin/<name>` | $d_k^i - \hat{J}_{C_k}$ (adaptive-threshold margin, `:449`); **absolute**, not $d_k$-normalized |
+| `Constraint/viol/<name>` | $\hat{J}_{C_k} - d_k$ against the **raw** discounted budget (`constraint_trpo.py:461`); negative = slack |
+| `Constraint/margin/<name>` | $d_k^i - \hat{J}_{C_k}$ (adaptive-threshold margin, `:463`); **absolute**, not $d_k$-normalized |
 | `Constraint/barrier_penalty` | aggregate scalar barrier penalty (no per-constraint suffix) |
 | `Policy/line_search_success` | line-search accept rate this update |
 | `Policy/entropy` | mean policy entropy |
@@ -686,10 +688,10 @@ the exact motivation for the `lb 68 -> 250` / `kl_ub 0.06 -> 0.12` recalibration
   shipped 10 budgets), DORAEMON overrides, joint1 toggles
 - `constrained_albc/envs/main/config_noconstraint.py` — `ALBCNoConstraintEnvCfg` (terms=[],
   TRPO-NoIPO / PPO-Enc ablations)
-- `constrained_albc/envs/main/algorithms/constraint_trpo.py` — ConstraintTRPO + IPO barrier,
+- `constrained_albc/envs/_core/algorithms/constraint_trpo.py` — ConstraintTRPO + IPO barrier,
   adaptive threshold, cost GAE, TRPO step, std clamp, cost critic
 - `constrained_albc/envs/main/agents/rsl_rl_ppo_cfg.py` — `RslRlConstraintTRPOAlgorithmCfg`
   (runtime barrier_alpha/max_kl/std/entropy values)
-- `constrained_albc/envs/main/runners/constraint_encoder_runner.py` — `_log_constraint_metrics`,
+- `constrained_albc/envs/_core/runners/constraint_encoder_runner.py` — `_log_constraint_metrics`,
   `num_constraints` auto-sync
 - `.omx/profile/analyze_training.py` — `ANOMALY_RULES`, `_constraint_margin`

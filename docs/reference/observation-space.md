@@ -44,14 +44,14 @@ ENV emits  {"policy": o_t (69D), "privileged": p_t (28D)}      # albc_env.py:991
   p_t (28D) = DR-backed(25) + measured body lin_vel(3)         # observations.py:88-161
 
 ENCODER   p_t(28) --minmax--> MLP[256,128,64] elu -> LayerNorm -> softsign -> z(9)
-                                                                # actor_critic_encoder.py:206-217
+                                                                # _core/encoder/actor_critic_encoder.py:209-220
 
 ACTOR     cat[ EmpiricalNorm(o_t)(69) , z(9) ] = 78 -> MLP -> action(8)
-                                                                # actor_critic_encoder.py:246-256, 175,182
+                                                                # _core/encoder/actor_critic_encoder.py:249-259, 178,185
               (never receives raw p_t — asymmetry point)
 
-CRITIC    cat[ o_t(69) , z(9) , p_t(28) ] = 106 -> V(1)        # actor_critic_encoder.py:258-268
-COST CRITIC same 106D input -> K heads (K=num_constraints=10)  # _policy_base.py:91
+CRITIC    cat[ o_t(69) , z(9) , p_t(28) ] = 106 -> V(1)        # _core/encoder/actor_critic_encoder.py:261-271
+COST CRITIC same 106D input -> K heads (K=num_constraints=10)  # _core/encoder/_policy_base.py:91
               (train-only; sees everything for low-variance value + gradient into z)
 ```
 
@@ -60,8 +60,8 @@ COST CRITIC same 106D input -> K heads (K=num_constraints=10)  # _policy_base.py
 - `o_t`: `20 + 46 + 3 = 69` — `PROPRIO_DIM(20) + (10*hist_len + 8*hist_action_len) + integral_dims(3)`, with `hist_len=3`, `hist_action_len=2` (`config.py:442,448`), so `20 + (30 + 16) + 3 = 69` (`config.py:378`; guard `albc_env.py:151-162`).
 - history: `10*hist_len + 8*hist_action_len = 10*3 + 8*2 = 30 + 16 = 46` (`albc_env.py:973-975`).
 - `p_t`: `25 DR-backed + 3 measured lin_vel = 28` — hydro 7 + dynamics 3 + payload 4 + actuator 4 + env 4 + buoy 2 + latency 1 = 25, plus body lin_vel 3 = 28 (`config.py:382`; `rsl_rl_ppo_cfg.py:32-38,158`).
-- actor input: `policy_obs_dim(69) + encoder_latent_dim(9) = 78` (`actor_critic_encoder.py:175`).
-- critic input: `policy_obs_dim(69) + privileged_dim(28) += encoder_latent_dim(9) = 106` because `critic_uses_z=True` (`actor_critic_encoder.py:102-104`; `rsl_rl_ppo_cfg.py:173`).
+- actor input: `policy_obs_dim(69) + encoder_latent_dim(9) = 78` (`_core/encoder/actor_critic_encoder.py:178`).
+- critic input: `policy_obs_dim(69) + privileged_dim(28) += encoder_latent_dim(9) = 106` because `critic_uses_z=True` (`_core/encoder/actor_critic_encoder.py:105-107`; `rsl_rl_ppo_cfg.py:173`).
 
 ---
 
@@ -243,7 +243,7 @@ The main env uses an asymmetric actor-critic with a privileged encoder (class
 A crucial code-level subtlety: `obs_groups["policy"]=["policy","privileged"]` and
 `obs_groups["critic"]=["policy","privileged"]` (`rsl_rl_ppo_cfg.py:291-294`) do **not**
 mean rsl-rl auto-sums the two group dims. Because the policy class is a custom
-`PolicyBase` subclass, `_init_base` (`_policy_base.py:65-72`) parses the "policy"
+`PolicyBase` subclass, `_init_base` (`_core/encoder/_policy_base.py:65-72`) parses the "policy"
 group positionally as an ordered `[policy_obs_key, privileged_key]` pair and stores
 the keys; the network then splits and routes the two tensors itself. Only the plain
 PPO baseline (`class_name="ActorCritic"`) relies on obs_groups auto-summing, and it
@@ -252,16 +252,16 @@ uses `policy=["policy"]` (69D actor) / `critic=["policy","privileged"]` (97D)
 
 | tensor | name | dim | meaning | source | note |
 |:---|:---|:--:|:---|:---|:---|
-| encoder in | p_t (privileged) | 28 | Full privileged vector — the physical unknowns. | `obs[_privileged_key]`, `_encode` (`actor_critic_encoder.py:208`) | Static min-max → [-1,1] via `(2*p_t - midpoint)/range` (`:213`); bounds DR-derived at build time (`constraint_encoder_runner.py:86-94`), NOT cfg literals. `encoder_obs_indices=None` → all 28 dims used. |
-| encoder out | z (latent) | 9 | Compressed proxy for the physical unknowns. | `z = softsign(LayerNorm(encoder(p_t)))` (`actor_critic_encoder.py:216`); `encoder_latent_dim=9` (`rsl_rl_ppo_cfg.py:153`) | MLP[256,128,64] elu → LayerNorm (pre-softsign, `rsl_rl_ppo_cfg.py:174`) → softsign. Bounded to (-1,1) so it needs no running-stat norm. |
-| actor [0:69] | normalized o_t | 69 | Measurable obs (20 proprio + 46 history + 3 integral). | `obs_normed = actor_obs_normalizer(o_t)` (`actor_critic_encoder.py:253,255`); `policy_obs_dim=69` (`rsl_rl_ppo_cfg.py:157`) | Only `o_t` is EmpiricalNormalization-normalized (normalizer sized 69, `:176`); z is excluded. |
-| actor [69:78] | z (raw) | 9 | Encoder latent concatenated onto o_t; the actor's only window into the privileged physics. | `cat([obs_normed, z])` (`actor_critic_encoder.py:256`); `num_actor_obs = 69+9 = 78` (`:175`) | Actor **never** receives raw p_t. z passed raw (softsign already bounds it). |
-| actor out | action mean | 8 | 8D action (2D arm + 6D thruster); Gaussian policy, no clamp in the net. | `actor = MLP(78, 8, [256,128,64], elu)` (`actor_critic_encoder.py:182`) | `log_std` separate `nn.Parameter` (`_policy_base.py:96`); std clamp applied in the TRPO step, not here (see `action-pipeline.md`). |
-| critic [0:69] | o_t | 69 | Same measurable obs as actor (raw; `critic_obs_normalization=False`). | `parts=[obs[_policy_obs_key]]` (`actor_critic_encoder.py:264`) | `critic_obs_normalizer` is `nn.Identity` (`_policy_base.py:83-85`). |
-| critic [69:78] | z | 9 | Encoder latent injected into critic so value-loss gradient flows back through z into the encoder. | `if _critic_uses_z: parts.append(_encode(obs))` (`actor_critic_encoder.py:265-266`); `critic_uses_z=True` (`rsl_rl_ppo_cfg.py:173`) | This is why `num_critic_obs += encoder_latent_dim` (`:103-104`). If False, critic = 97D and encoder gets gradient only from actor surrogate. |
-| critic [78:106] | p_t | 28 | Raw privileged vector — the train-only critic sees ground-truth physics directly. | `parts.append(obs[_privileged_key])` (`actor_critic_encoder.py:267`); `num_critic_obs=69+28+9=106` (`:102-104`) | Critic sees BOTH z and raw p_t; z is present for the gradient path, not because the critic needs compression. |
-| critic out | value | 1 | Scalar `V(s)` for GAE/TRPO advantage. | `critic = MLP(106, 1, [512,256,128], elu)` (`_policy_base.py:86`) | `normalize_value=False` for default TRPO runner (`rsl_rl_ppo_cfg.py:296`). |
-| cost_critic out | per-constraint cost values | 10 | Multi-head cost value, one head per IPO constraint (`K=num_constraints`, auto-synced from env; main env = 10). | `cost_critic = MLP(106, num_constraints, [512,256,128], elu)` (`_policy_base.py:91`) | Shares the identical 106D input. K starts 0 in cfg, auto-synced by `ConstraintEncoderRunner.__init__` (`constraint_encoder_runner.py:42-63`). K=10 (5 prob + 5 avg). |
+| encoder in | p_t (privileged) | 28 | Full privileged vector — the physical unknowns. | `obs[_privileged_key]`, `_encode` (`_core/encoder/actor_critic_encoder.py:211`) | Static min-max → [-1,1] via `(2*p_t - midpoint)/range` (`:216`); bounds DR-derived at build time (`_core/runners/constraint_encoder_runner.py:96-102`), NOT cfg literals. `encoder_obs_indices=None` → all 28 dims used. |
+| encoder out | z (latent) | 9 | Compressed proxy for the physical unknowns. | `z = softsign(LayerNorm(encoder(p_t)))` (`_core/encoder/actor_critic_encoder.py:219`); `encoder_latent_dim=9` (`rsl_rl_ppo_cfg.py:153`) | MLP[256,128,64] elu → LayerNorm (pre-softsign, `rsl_rl_ppo_cfg.py:174`) → softsign. Bounded to (-1,1) so it needs no running-stat norm. |
+| actor [0:69] | normalized o_t | 69 | Measurable obs (20 proprio + 46 history + 3 integral). | `obs_normed = actor_obs_normalizer(o_t)` (`_core/encoder/actor_critic_encoder.py:256,258`); `policy_obs_dim=69` (`rsl_rl_ppo_cfg.py:157`) | Only `o_t` is EmpiricalNormalization-normalized (normalizer sized 69, `:179`); z is excluded. |
+| actor [69:78] | z (raw) | 9 | Encoder latent concatenated onto o_t; the actor's only window into the privileged physics. | `cat([obs_normed, z])` (`_core/encoder/actor_critic_encoder.py:259`); `num_actor_obs = 69+9 = 78` (`:178`) | Actor **never** receives raw p_t. z passed raw (softsign already bounds it). |
+| actor out | action mean | 8 | 8D action (2D arm + 6D thruster); Gaussian policy, no clamp in the net. | `actor = MLP(78, 8, [256,128,64], elu)` (`_core/encoder/actor_critic_encoder.py:185`) | `log_std` separate `nn.Parameter` (`_core/encoder/_policy_base.py:96`); std clamp applied in the TRPO step, not here (see `action-pipeline.md`). |
+| critic [0:69] | o_t | 69 | Same measurable obs as actor (raw; `critic_obs_normalization=False`). | `parts=[obs[_policy_obs_key]]` (`_core/encoder/actor_critic_encoder.py:267`) | `critic_obs_normalizer` is `nn.Identity` (`_core/encoder/_policy_base.py:83-85`). |
+| critic [69:78] | z | 9 | Encoder latent injected into critic so value-loss gradient flows back through z into the encoder. | `if _critic_uses_z: parts.append(_encode(obs))` (`_core/encoder/actor_critic_encoder.py:268-269`); `critic_uses_z=True` (`rsl_rl_ppo_cfg.py:173`) | This is why `num_critic_obs += encoder_latent_dim` (`:106-107`). If False, critic = 97D and encoder gets gradient only from actor surrogate. |
+| critic [78:106] | p_t | 28 | Raw privileged vector — the train-only critic sees ground-truth physics directly. | `parts.append(obs[_privileged_key])` (`_core/encoder/actor_critic_encoder.py:270`); `num_critic_obs=69+28+9=106` (`:105-107`) | Critic sees BOTH z and raw p_t; z is present for the gradient path, not because the critic needs compression. |
+| critic out | value | 1 | Scalar `V(s)` for GAE/TRPO advantage. | `critic = MLP(106, 1, [512,256,128], elu)` (`_core/encoder/_policy_base.py:86`) | `normalize_value=False` for default TRPO runner (`rsl_rl_ppo_cfg.py:296`). |
+| cost_critic out | per-constraint cost values | 10 | Multi-head cost value, one head per IPO constraint (`K=num_constraints`, auto-synced from env; main env = 10). | `cost_critic = MLP(106, num_constraints, [512,256,128], elu)` (`_core/encoder/_policy_base.py:91`) | Shares the identical 106D input. K starts 0 in cfg, auto-synced by `ConstraintEncoderRunner.__init__` (`_core/runners/constraint_encoder_runner.py:42-63`). K=10 (5 prob + 5 avg). |
 
 **Consumption arithmetic**: encoder `28 → 9`; actor `69 + 9 = 78 → 8`; critic
 `69 + 28 = 97, += 9 = 106 → 1`; cost critic `106 → K=10`. NoEncoder ablation critic =
@@ -270,8 +270,8 @@ uses `policy=["policy"]` (69D actor) / `critic=["policy","privileged"]` (97D)
 
 The `ConstraintEncoderRunner` overrides the hardcoded `_PRIV_OBS_LOWER/UPPER` cfg
 literals (`rsl_rl_ppo_cfg.py:54-130`) at build time with the DR-derived bounds
-(`constraint_encoder_runner.py:76-94`); the literals are only a standalone-build
-fallback (still imported by `student/teacher.py`) and had drifted from DR (payload
+(`_core/runners/constraint_encoder_runner.py:79-105`); the literals are only a standalone-build
+fallback (still imported by `_core/student/teacher.py`) and had drifted from DR (payload
 overflow, stale CoG radius). Reasoning about normalization from the cfg literals
 alone would be wrong.
 
@@ -290,8 +290,8 @@ alone would be wrong.
 - **Thruster fallback is a 3-way branch** (`obs:124-132`): per-env DR tensor → cfg scalar broadcast → zeros (no thruster). Dims 18–19 degrade gracefully.
 - **Encoder input normalization is static min-max and OVERRIDDEN at runtime** by DR-derived bounds; the cfg `_PRIV_OBS_LOWER/UPPER` literals are a fallback only and had drifted (payload_mass overflow 3→1.35>1, stale CoG xy radius 0.17 vs 0.08 m).
 - **Direct vs scale/offset norm forms**: payload_mass[12] `[0,3]` direct, payload_cog_z[15] `[-0.05,0]` direct, water_density[20] direct absolute, joint Kp[16]/Kd[17] direct; CoG/CoB use offset with nonzero base (CoG z base -0.05 → `[-0.09,-0.01]`).
-- **`obs_groups` is not auto-summed** for the custom encoder policy — it is parsed positionally into `_policy_obs_key`/`_privileged_key` (`_policy_base.py:65-72`). Only the plain PPO baseline relies on auto-summing.
-- **Critic redundantly sees z AND p_t**: `p_t` gives the lowest-variance value target; z's presence is purely to route value-loss gradient into the encoder (`actor_critic_encoder.py:261-263`), a second learning signal beyond the actor surrogate.
+- **`obs_groups` is not auto-summed** for the custom encoder policy — it is parsed positionally into `_policy_obs_key`/`_privileged_key` (`_core/encoder/_policy_base.py:65-72`). Only the plain PPO baseline relies on auto-summing.
+- **Critic redundantly sees z AND p_t**: `p_t` gives the lowest-variance value target; z's presence is purely to route value-loss gradient into the encoder (`_core/encoder/actor_critic_encoder.py:264-266`), a second learning signal beyond the actor surrogate.
 - **Only `o_t` is normalized on the actor path** (EmpiricalNorm sized 69); z is concatenated raw because softsign bounds it and normalizing a non-stationary encoder output with running stats causes KL instability. The critic path normalizer is `nn.Identity` by default.
 - **`hist_len==0` collapses history to 0D** (`albc_env.py:294-296`); `o_t` becomes proprio(+integral).
 - **Stale docstring warning**: `_init_history_buffers` still says "21D per step (joint 4D + body 9D + action 8D)" (`albc_env.py:282`), but `hist_feature_dim=18` and the actual concat is `4+6+8=18` (body is 6D here, not 9D). The 21D/9D wording is leftover from the full-DOF variant; the 18D config value governs the real buffer width.
