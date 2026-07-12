@@ -881,3 +881,11 @@
 - **Pages:** doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md
 - **Summary:** updated 'DORAEMON difficulty has 3 separable levers: kl_ub (step size), step_interval (dwell-time), max_iterations (number of expansions)'
 
+## [2026-07-12T12:00:42.413555] query
+- **Pages:** arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md, hydro_dr_train_eval_sampling_mismatch_is_real_but_left_as_is_opt.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, engine_gap_eval_npz_saves_no_raw_obs_std_privileged_blocks_exact.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md, encoder_priv_obs_normalization_bounds_must_be_dr_derived_not_har.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, policy_head_design_rationale_and_literature_standing_encoder_inp.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, baseline_repro_reproduces_teacher_deterministically_e4_control.md, encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md, uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload_.md, buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md, ee_leak_0_k_anchor_0_does_not_blow_up_joint1_settle_pade_ik_clam.md, leaky_integral_and_ema_bias_carry_over_the_mid_episode_command_r.md, onboard_measured_2026_07_06_arm_step_response_valid_sim_zeta_0_7.md, teacher_encoder_0_dead_latent_dims_keys_on_lateral_cog_cob_offse.md, added_mass_scale_upper_half_is_inert_post_dr_0_95_i_clamp_caps_i.md, command_is_not_domain_randomization_command_range_scale_is_inert.md, constraint_viol_trajectory_barrier_sign_metrics_4_10_starts_at_d.md
+- **Summary:** query 'privileged obs slim dims removal quad_damp lin_vel' -> 20 of 81
+
+## [2026-07-12T12:01:49.559370] add
+- **Pages:** priv_obs_slim_stage_2_lead_contested_p_t_dims_quad_damp_lin_vel_.md
+- **Summary:** created 'priv-obs slim Stage-2 lead: contested p_t dims (quad_damp, lin_vel) need WITH-vs-WITHOUT A/B; union kept them'
+
