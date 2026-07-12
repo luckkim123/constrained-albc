@@ -187,8 +187,17 @@ def _randomize_hydro_model(
     env_ids: torch.Tensor,
     dr: DRSampler,
     sampled: dict[str, torch.Tensor] | None = None,
+    volume_key: str = "volume_scale",
 ) -> None:
-    """Apply domain randomization to a hydrodynamics model."""
+    """Apply domain randomization to a hydrodynamics model.
+
+    Args:
+        volume_key: sampled-dict key AND ``dr.cfg`` attribute name for the volume
+            scale. Defaults to "volume_scale" (main body); the buoy call passes
+            "buoy_volume_scale" so both the DORAEMON-sampled value and the
+            eval-time uniform fallback (``sampled=None``, e.g. eval.py static)
+            decorrelate from the main body's.
+    """
     n = dr.num_envs
     cfg = dr.cfg
     base = _get_hydro_base(hydro)
@@ -214,8 +223,10 @@ def _randomize_hydro_model(
     yaw_scales = dr.get(cfg.yaw_damping_scale)
     hydro.quadratic_damping[env_ids, 5] = base.quadratic_damping[5] * yaw_scales
 
-    # Volume (DORAEMON if available)
-    vol_scales = _sample_or_uniform("volume_scale", sampled, n, cfg.volume_scale, device)
+    # Volume (DORAEMON if available; fallback range keyed off volume_key so the
+    # buoy's eval-time uniform fallback uses cfg.buoy_volume_scale, not the
+    # main body's cfg.volume_scale)
+    vol_scales = _sample_or_uniform(volume_key, sampled, n, getattr(cfg, volume_key), device)
     hydro.volume[env_ids] = base.volume * vol_scales
 
     # Water density (DORAEMON: absolute value, not scale)
@@ -279,8 +290,9 @@ def randomize_hydrodynamics(
 ) -> None:
     """Randomize hydrodynamic parameters for main body and buoy."""
     env_ids = _ensure_env_ids(env, env_ids)
-    _randomize_hydro_model(env._hydro, env_ids, dr, sampled)
-    _randomize_hydro_model(env._buoy_hydro, env_ids, dr, sampled)
+    _randomize_hydro_model(env._hydro, env_ids, dr, sampled)  # main: volume_scale
+    # Buoy volume uses buoy_volume_scale (decorrelated from the main body's).
+    _randomize_hydro_model(env._buoy_hydro, env_ids, dr, sampled, volume_key="buoy_volume_scale")
 
 
 def randomize_ocean_current(
@@ -535,7 +547,13 @@ def randomize_body_mass(
     dr: DRSampler,
     sampled: dict[str, torch.Tensor] | None = None,
 ) -> None:
-    """Randomize rigid body masses (single scale per env, broadcast to all bodies)."""
+    """Randomize rigid body masses.
+
+    All bodies use the shared ``body_mass_scale`` broadcast, except the buoy body:
+    its row is overwritten with the independent ``buoy_body_mass_scale`` before
+    ``set_masses``, so the buoy's PhysX mass -- and the ``env._buoy_hydro
+    .body_mass`` synced from it below -- decorrelates from the main body's.
+    """
     env_ids_cpu = env_ids.cpu()
 
     masses = env._robot.root_physx_view.get_masses()
@@ -543,13 +561,22 @@ def randomize_body_mass(
 
     scales = _sample_or_uniform("body_mass_scale", sampled, dr.num_envs, dr.cfg.body_mass_scale, dr.device).cpu()
     masses[env_ids_cpu] *= scales.unsqueeze(-1)
+
+    # Buoy: overwrite its row with the independent buoy scale, applied to the
+    # same default-mass baseline as the broadcast above (not the already-scaled
+    # main value) so it doesn't compound with body_mass_scale.
+    buoy_idx = env._buoy_body_id[0]
+    buoy_scales = _sample_or_uniform(
+        "buoy_body_mass_scale", sampled, dr.num_envs, dr.cfg.buoy_body_mass_scale, dr.device
+    ).cpu()
+    masses[env_ids_cpu, buoy_idx] = env._robot.data.default_mass[env_ids_cpu, buoy_idx] * buoy_scales
+
     masses = torch.clamp(masses, min=1e-6)
 
     env._robot.root_physx_view.set_masses(masses, env_ids_cpu)
 
     # Sync hydrodynamics body_mass tensors with PhysX (for privileged obs)
     body_idx = env._body_id[0]
-    buoy_idx = env._buoy_body_id[0]
     device = env.device
     if env._hydro.body_mass is not None:
         env._hydro.body_mass[env_ids] = masses[env_ids_cpu, body_idx].to(device)

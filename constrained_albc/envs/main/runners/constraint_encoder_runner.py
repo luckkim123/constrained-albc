@@ -88,6 +88,7 @@ class ConstraintEncoderRunner(OnPolicyRunner):
                 env_cfg.ocean_current.max_velocity,
                 env_cfg.thrusters,
                 hydro_cfg=env_cfg.hydrodynamics,
+                buoy_hydro_cfg=env_cfg.buoy_hydrodynamics,
             )
             logger.info("Overriding encoder_obs_lower/upper with DR-derived bounds (margin 0)")
             policy_cfg["encoder_obs_lower"] = lower

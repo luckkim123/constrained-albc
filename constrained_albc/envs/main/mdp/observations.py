@@ -88,32 +88,43 @@ def compute_policy_obs(
 def compute_privileged_obs(
     env: ALBCEnv,
 ) -> torch.Tensor:
-    """Compute privileged information p_t (27D).
+    """Compute privileged information p_t (27D, union layout 2026-07-12).
 
     Non-redundant set of independent DR parameters. Each dimension corresponds
     to a single random variable -- no correlated pairs from shared DR scales.
+
+    Union layout: Ixx and linear damping roll were REMOVED (priv-obs-slim
+    Stage-1 validated removals); quadratic damping and measured lin_vel are
+    RETAINED (slim marked them PENDING Stage-2 -- decide via a later A/B); the
+    2 buoy scalars were ADDED (DR-backed, decorrelated from the main body).
+    Dim count is unchanged at 27.
+
+    Invariant: all DR-backed dims come FIRST; measured lin_vel is ALWAYS the
+    final 3. The buoy scalars (22,23) are DR-backed, so they sit at the end of
+    the DR-backed block (after the ocean block), before measured lin_vel.
 
         Hydrodynamics (7D):
             [0]     main body volume
             [1:4]   main body CoG (x, y, z)
             [4:7]   main body CoB (x, y, z)
-        Dynamic Response (5D):
-            [7]     main body Ixx (representative inertia)
-            [8]     linear damping roll (representative)
-            [9]     quadratic damping roll (representative)
-            [10]    body mass
-            [11]    added mass surge
+        Dynamic Response (3D):
+            [7]     quadratic damping roll (representative)
+            [8]     body mass
+            [9]     added mass surge
         Payload (4D):
-            [12]    payload mass
-            [13:16] payload CoG offset (x, y, z)
+            [10]    payload mass
+            [11:14] payload CoG offset (x, y, z)
         Actuator (4D):
-            [16]    joint stiffness Kp
-            [17]    joint damping Kd
-            [18]    thrust coefficient
-            [19]    time constant up
+            [14]    joint stiffness Kp
+            [15]    joint damping Kd
+            [16]    thrust coefficient
+            [17]    time constant up
         Environment (4D):
-            [20]    water density
-            [21:24] ocean current velocity (x, y, z, world frame)
+            [18]    water density
+            [19:22] ocean current velocity (x, y, z, world frame)
+        Buoy (2D) -- DR-backed, decorrelated from main body:
+            [22]    buoy volume
+            [23]    buoy body mass
         Measured Velocity (3D):
             [24:27] body linear velocity (u, v, w)
     """
@@ -137,9 +148,7 @@ def compute_privileged_obs(
             env._hydro.volume.unsqueeze(-1),
             env._hydro.center_of_gravity,  # 3D: x, y, z
             env._hydro.center_of_buoyancy,  # 3D: x, y, z
-            # Dynamic Response (5D)
-            env._hydro.rigid_body_inertia[:, 0:1],  # Ixx only
-            env._hydro.linear_damping[:, 3:4],  # roll only
+            # Dynamic Response (3D) -- Ixx and lin_damp dropped (slim Stage-1 validated)
             env._hydro.quadratic_damping[:, 3:4],  # roll only
             env._hydro.body_mass.unsqueeze(-1),
             env._hydro.added_mass_matrix[:, 0, 0].unsqueeze(-1),  # surge
@@ -154,6 +163,11 @@ def compute_privileged_obs(
             # Environment (4D)
             env._hydro.water_density.unsqueeze(-1),
             env._hydro.current.velocity_w[:, :3],  # ocean current linear xyz (world frame)
+            # Buoy (2D) -- DR-backed, decorrelated from the main-body scales.
+            # At the END of the DR-backed block (before measured lin_vel) so the
+            # "DR dims first, measured last" p_t invariant holds.
+            env._buoy_hydro.volume.unsqueeze(-1),  # 22: buoy volume
+            env._buoy_hydro.body_mass.unsqueeze(-1),  # 23: buoy body mass
             # Measured velocity (3D) -- privileged: actor is blinded, critic sees it
             env._robot.data.root_lin_vel_b,  # 3D: body linear velocity (u, v, w)
         ],

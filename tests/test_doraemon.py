@@ -94,6 +94,8 @@ class _FakeDRCfg:
     cog_offset_y = (-0.01, 0.01)
     inertia_scale = (0.75, 1.3)
     body_mass_scale = (0.9, 1.1)
+    buoy_volume_scale = (0.9, 1.1)
+    buoy_body_mass_scale = (0.9, 1.1)
     payload_cog_offset_z = (-0.03, 0.0)
     ocean_current_strength_range = (0.0, 1.0)
     payload_cog_offset_xy_u_range = (0.0, 1.0)

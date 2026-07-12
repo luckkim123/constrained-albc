@@ -60,6 +60,8 @@ def _hard_dr():
         linear_damping_scale=(0.4, 1.7),
         quadratic_damping_scale=(0.4, 1.7),
         body_mass_scale=(0.75, 1.25),
+        buoy_volume_scale=(0.75, 1.25),
+        buoy_body_mass_scale=(0.75, 1.25),
         added_mass_scale=(0.5, 1.5),
         payload_mass_range=(0.0, 3.0),
         payload_cog_offset_xy_radius=0.08,
@@ -92,14 +94,20 @@ def _thruster():
     return types.SimpleNamespace(thrust_coefficient=40.0, time_constant_up=0.1)
 
 
+def _buoy_hydro():
+    """Stand-in ALBCBuoyHydrodynamicsCfg (buoy base values)."""
+    return types.SimpleNamespace(volume=0.00268, body_mass=0.93)
+
+
 _OCEAN_MAX = (0.5, 0.5, 0.25, 0.0, 0.0, 0.0)
 
 
 def _derive():
-    return derive(_hard_dr(), _OCEAN_MAX, _thruster(), hydro_cfg=_hydro())
+    return derive(_hard_dr(), _OCEAN_MAX, _thruster(), hydro_cfg=_hydro(), buoy_hydro_cfg=_buoy_hydro())
 
 
-# Spec section 3 derived column: [lower, upper] for all 27 dims.
+# Derived column for all 27 dims (union layout 2026-07-12: Ixx/lin_damp removed,
+# buoy volume/mass appended after the ocean block, measured lin_vel stays last).
 _EXPECTED = [
     (0.00675, 0.01125),  # 0 volume
     (-0.02, 0.02),  # 1 CoG x
@@ -108,23 +116,23 @@ _EXPECTED = [
     (-0.02, 0.02),  # 4 CoB x
     (-0.02, 0.02),  # 5 CoB y
     (-0.04, 0.04),  # 6 CoB z
-    (0.03976, 0.1988),  # 7 Ixx
-    (0.12, 0.51),  # 8 lin damp roll
-    (0.4, 1.7),  # 9 quad damp roll
-    (6.885, 11.475),  # 10 body mass
-    (4.0, 12.0),  # 11 added mass surge
-    (0.0, 3.0),  # 12 payload mass (MAJOR BUG fix)
-    (-0.08, 0.08),  # 13 payload cog x (stale radius fix)
-    (-0.08, 0.08),  # 14 payload cog y
-    (-0.05, 0.0),  # 15 payload cog z
-    (30.0, 150.0),  # 16 joint Kp
-    (0.3, 7.0),  # 17 joint Kd
-    (28.0, 52.0),  # 18 thrust coeff
-    (0.07, 0.13),  # 19 time const up
-    (995.0, 1025.0),  # 20 water density (direct absolute)
-    (-0.5, 0.5),  # 21 ocean x
-    (-0.5, 0.5),  # 22 ocean y
-    (-0.25, 0.25),  # 23 ocean z
+    (0.4, 1.7),  # 7 quad damp roll
+    (6.885, 11.475),  # 8 body mass
+    (4.0, 12.0),  # 9 added mass surge
+    (0.0, 3.0),  # 10 payload mass (MAJOR BUG fix)
+    (-0.08, 0.08),  # 11 payload cog x (stale radius fix)
+    (-0.08, 0.08),  # 12 payload cog y
+    (-0.05, 0.0),  # 13 payload cog z
+    (30.0, 150.0),  # 14 joint Kp
+    (0.3, 7.0),  # 15 joint Kd
+    (28.0, 52.0),  # 16 thrust coeff
+    (0.07, 0.13),  # 17 time const up
+    (995.0, 1025.0),  # 18 water density (direct absolute)
+    (-0.5, 0.5),  # 19 ocean x
+    (-0.5, 0.5),  # 20 ocean y
+    (-0.25, 0.25),  # 21 ocean z
+    (0.00201, 0.00335),  # 22 buoy volume (0.00268 * [0.75, 1.25])
+    (0.6975, 1.1625),  # 23 buoy body mass (0.93 * [0.75, 1.25])
     (-1.0, 1.0),  # 24 measured u
     (-1.0, 1.0),  # 25 measured v
     (-1.0, 1.0),  # 26 measured w
@@ -146,20 +154,20 @@ def test_each_dim_matches_spec(idx):
 
 
 def test_major_bug_payload_mass_overflow_fixed():
-    """idx12: hardcoded was [-0.1, 2.2] (3 kg overflowed > 1). Now [0, 3]."""
+    """idx10 (was idx12 pre-union): hardcoded was [-0.1, 2.2]. Now [0, 3]."""
     lower, upper = _derive()
-    assert lower[12] == pytest.approx(0.0)
-    assert upper[12] == pytest.approx(3.0)
+    assert lower[10] == pytest.approx(0.0)
+    assert upper[10] == pytest.approx(3.0)
 
 
 def test_major_bug_payload_cog_radius_fixed():
-    """idx13: hardcoded was +/-0.17 (stale 0.15 m radius). Now +/-0.08."""
+    """idx11 (was idx13 pre-union): hardcoded was +/-0.17 (stale radius). Now +/-0.08."""
     lower, upper = _derive()
-    assert lower[13] == pytest.approx(-0.08)
-    assert upper[13] == pytest.approx(0.08)
-    # idx14 shares the same scalar radius.
-    assert lower[14] == pytest.approx(-0.08)
-    assert upper[14] == pytest.approx(0.08)
+    assert lower[11] == pytest.approx(-0.08)
+    assert upper[11] == pytest.approx(0.08)
+    # idx12 shares the same scalar radius.
+    assert lower[12] == pytest.approx(-0.08)
+    assert upper[12] == pytest.approx(0.08)
 
 
 def test_cog_z_offset_to_negative_base():
@@ -170,10 +178,25 @@ def test_cog_z_offset_to_negative_base():
 
 
 def test_water_density_direct_not_scaled():
-    """idx20: direct absolute range, must NOT be multiplied by base 998."""
+    """idx18 (was idx20 pre-union): direct absolute range, NOT multiplied by base 998."""
     lower, upper = _derive()
-    assert lower[20] == pytest.approx(995.0)
-    assert upper[20] == pytest.approx(1025.0)
+    assert lower[18] == pytest.approx(995.0)
+    assert upper[18] == pytest.approx(1025.0)
+
+
+def test_buoy_dims_scale_from_buoy_base():
+    """idx22/23: buoy volume/mass scale from the BUOY base cfg, not the main body's.
+
+    Also the union-27D dispatch fingerprint (analysis/common.py): idx22 lower
+    must be strictly positive, unlike the pre-union layout where idx22 was
+    ocean-current y (symmetric, negative lower).
+    """
+    lower, upper = _derive()
+    assert lower[22] == pytest.approx(0.00268 * 0.75)
+    assert upper[22] == pytest.approx(0.00268 * 1.25)
+    assert lower[23] == pytest.approx(0.93 * 0.75)
+    assert upper[23] == pytest.approx(0.93 * 1.25)
+    assert lower[22] > 0.0
 
 
 def test_measured_dims_fixed_pm1():
@@ -236,7 +259,7 @@ def test_inherited_dr_fields_resolve_on_real_hard_cfg():
     assert getattr(hard, "water_density_range") == pytest.approx((995.0, 1025.0))
     assert getattr(hard, "ocean_current_strength_range") == pytest.approx((0.0, 1.0))
 
-    lower, upper = derive(hard, _OCEAN_MAX, _thruster(), hydro_cfg=_hydro())
-    assert lower[20] == pytest.approx(995.0)
-    assert upper[20] == pytest.approx(1025.0)
-    assert upper[21] == pytest.approx(0.5)  # ocean x = max_velocity[0] * strength_hi(1.0)
+    lower, upper = derive(hard, _OCEAN_MAX, _thruster(), hydro_cfg=_hydro(), buoy_hydro_cfg=_buoy_hydro())
+    assert lower[18] == pytest.approx(995.0)
+    assert upper[18] == pytest.approx(1025.0)
+    assert upper[19] == pytest.approx(0.5)  # ocean x = max_velocity[0] * strength_hi(1.0)

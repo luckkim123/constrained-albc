@@ -32,7 +32,8 @@ _runner_module.ALBCConstraintTRPO = ConstraintTRPO
 # 27D privileged obs bounds: 24D from the hard DomainRandomizationCfg + 3D measured lin_vel
 # (critic-only, appended at the tail to mirror compute_privileged_obs).
 # Each pair is (lower, upper) with ~10% margin beyond Hard DR range.
-# Layout: hydro(7) + dynamics(5) + payload(4) + actuator(4) + env(4)
+# Layout: hydro(7) + dynamics(3) + payload(4) + actuator(4) + env(4) + buoy(2)
+# (union 2026-07-12: Ixx/lin_damp removed, buoy volume/mass appended before measured)
 #
 # DEPRECATED as the live source of truth: ConstraintEncoderRunner.__init__ now
 # OVERRIDES encoder_obs_lower/upper at build time with DR-derived bounds via
@@ -43,10 +44,11 @@ _runner_module.ALBCConstraintTRPO = ConstraintTRPO
 # student/teacher.py still imports them (migration is a follow-up).
 # Spec: docs/plans/2026-06-30-dr-derived-priv-obs-normalization-bounds.md
 #
-# Base values from ALBCHydrodynamicsCfg:
-#   volume=0.009, CoG=(0,0,-0.05), CoB=(0,0,0), Ixx=0.0994
-#   lin_damp_roll=0.3, quad_damp_roll=1.0, mass=9.18, added_mass_surge=8.0
+# Base values from ALBCHydrodynamicsCfg (+ ALBCBuoyHydrodynamicsCfg for the buoy dims):
+#   volume=0.009, CoG=(0,0,-0.05), CoB=(0,0,0)
+#   quad_damp_roll=1.0, mass=9.18, added_mass_surge=8.0
 #   thrust_coeff=40, time_const_up=0.1, water_density=998
+#   buoy_volume=0.00268, buoy_body_mass=0.93
 _PRIV_OBS_LOWER: list[float] = [
     # Hydrodynamics (7D): volume, CoG(x,y,z), CoB(x,y,z)
     0.006,
@@ -56,9 +58,7 @@ _PRIV_OBS_LOWER: list[float] = [
     -0.025,
     -0.025,
     -0.05,
-    # Dynamic Response (5D): Ixx, lin_damp_roll, quad_damp_roll, mass, added_mass_surge
-    0.045,
-    0.10,
+    # Dynamic Response (3D): quad_damp_roll, mass, added_mass_surge
     0.3,
     6.5,
     4.3,
@@ -77,6 +77,9 @@ _PRIV_OBS_LOWER: list[float] = [
     -0.55,
     -0.55,
     -0.30,
+    # Buoy (2D): buoy_volume, buoy_body_mass (DR-backed, decorrelated from main)
+    0.0018,
+    0.63,
     # Measured velocity (3D): body lin_vel u, v, w -- normalization range, not a physical clamp
     -1.0,
     -1.0,
@@ -92,9 +95,7 @@ _PRIV_OBS_UPPER: list[float] = [
     0.025,
     0.025,
     0.05,
-    # Dynamic Response (5D)
-    0.19,
-    0.50,
+    # Dynamic Response (3D)
     1.8,
     12.5,
     12.3,
@@ -113,6 +114,9 @@ _PRIV_OBS_UPPER: list[float] = [
     0.55,
     0.55,
     0.30,
+    # Buoy (2D): buoy_volume, buoy_body_mass (DR-backed, decorrelated from main)
+    0.0037,
+    1.28,
     # Measured velocity (3D): body lin_vel u, v, w -- normalization range, not a physical clamp
     1.0,
     1.0,
