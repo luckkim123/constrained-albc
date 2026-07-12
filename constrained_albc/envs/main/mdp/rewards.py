@@ -231,6 +231,8 @@ class RewardManager:
         self._buf = torch.zeros(num_envs, dtype=torch.float32, device=device)
         self._extra_terms = [(t.name or t.func.__name__, t) for t in cfg.extra_terms]
         self._names = [n for n, _, _ in self._BUILTIN_TERMS] + [n for n, _ in self._extra_terms]
+        if len(set(self._names)) != len(self._names):
+            raise ValueError(f"Duplicate reward term names: {self._names}")
         self._episode_sums = {n: torch.zeros(num_envs, dtype=torch.float32, device=device) for n in self._names}
         # Preallocated per-axis bias weights (used by bias_ema_penalty each step).
         self._bias_w = torch.tensor(cfg.bias_weights, dtype=torch.float32, device=device)
