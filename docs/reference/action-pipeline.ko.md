@@ -218,13 +218,13 @@ joint는 robot asset의 `ImplicitActuatorCfg`로 구동된다
 | stiffness (Kp) | 100.0 | `J ≈ 0.15 kg·m²`에서 `ω_n ≈ 57.7 rad/s` |
 | damping (Kd) | 3.0 | damping ratio ≈ 0.7 (near-critical) |
 | `effort_limit_sim` | 13.0 Nm | PhysX hard cap, `arm_torque` constraint가 쓰는 9.5 Nm 모터 stall보다 위 |
-| `velocity_limit_sim` | 6.28 rad/s | 2π, PhysX hard cap |
+| `velocity_limit_sim` | 3.1 rad/s | 측정된 XW540-T260 no-load plateau(2026-07-06), PhysX hard cap |
 
-**혼동하기 쉬운 두 개의 arm 경계.** 13.0 Nm / 6.28 rad/s 수치는 액추에이터의
+**혼동하기 쉬운 두 개의 arm 경계.** 13.0 Nm / 3.1 rad/s 수치는 액추에이터의
 **PhysX hard cap**이다. constraint 항 `arm_torque`(`limit_nm=9.5`)와
-`arm_joint_vel`(`limit_rad_per_s=4.189`)은 *측정된* torque/velocity 위의 **soft cost
+`arm_joint_vel`(`limit_rad_per_s=2.8`)은 *측정된* torque/velocity 위의 **soft cost
 budget**이다 — penalize할 뿐, clip하지 않는다. 정책은 constraint cost를 물면서
-4.189 rad/s를 넘어 6.28 rad/s 물리 cap까지 갈 수 있다. constraint 제한을 물리 제한과
+2.8 rad/s를 넘어 3.1 rad/s 물리 cap까지 갈 수 있다. constraint 제한을 물리 제한과
 동일시하지 말 것.
 
 **Kp=100/Kd=3 근거는 이론 계산이지 실기 측정이 아니다.** `albc.py:198-201` 주석
@@ -379,7 +379,7 @@ action-derived인가*만이 요점이다.
 | delta_scale (arm step당) | 0.10 | `config.py:360` |
 | nominal_joint_pos (arm init target) | (0.0, π/2) | `config.py:359` |
 | arm actuator Kp / Kd | 100.0 / 3.0 | `marinelab/assets/albc/albc.py:196-202` |
-| arm effort / velocity cap (PhysX) | 13.0 Nm / 6.28 rad/s | `albc.py:196-202` |
+| arm effort / velocity cap (PhysX) | 13.0 Nm / 3.1 rad/s | `albc.py:196-202` |
 | thruster count / max_thrust | 6 / 50.0 N | `config.py:85-86` |
 | thrust_coefficient | 40.0 | `config.py:87` |
 | time_constant_up / down | 0.1 / 0.05 | `config.py:88-89` |

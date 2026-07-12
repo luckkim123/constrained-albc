@@ -2,7 +2,7 @@
 
 > **범위**: 기본 태스크 `Isaac-ConstrainedALBC-TRPO-v0`
 > (`constrained_albc/envs/main/`)의 observation(입력) 쪽 — 69D 전체 정책
-> observation `o_t`, 27D privileged observation `p_t`, `o_t` 중간을 채우는 strided
+> observation `o_t`, 28D privileged observation `p_t`, `o_t` 중간을 채우는 strided
 > proprioception history, 그리고 encoder / actor / critic이 이 텐서들을 비대칭적으로
 > 소비하는 방식. 이것은 **attitude-only** 태스크다: roll/pitch attitude + yaw-rate이며,
 > actor observation에는 **측정된 선속도가 없다**(실제 로봇에 DVL 없음). 측정된 선속도는
@@ -20,33 +20,33 @@
 ## 1. 개요
 
 env는 step마다 두 개의 키를 가진 observation dict를 내보낸다:
-`{"policy": o_t (69D), "privileged": p_t (27D)}`
+`{"policy": o_t (69D), "privileged": p_t (28D)}`
 (`albc_env.py:969-998`; `privileged`는 `state_space > 0`일 때만 존재,
-`albc_env.py:996-997`, `state_space=27`은 `config.py:341`).
+`albc_env.py:996-997`, `state_space=28`은 `config.py:341`).
 
 `o_t`는 실제 로봇이 측정 가능한 모든 것으로, step마다 한 번 `_get_observations`
 (`albc_env.py:969-982`)에서 세 개의 concat된 sub-block으로 조립된다: 20D 현재
 proprioception, 46D strided temporal history, 3D leaky-integrated error. `p_t`는 숨겨진
-physics 카탈로그로, 독립적인 domain-randomization(DR) 파라미터당 스칼라 하나(24D) 더하기
+physics 카탈로그로, 독립적인 domain-randomization(DR) 파라미터당 스칼라 하나(25D) 더하기
 실제 body-frame 선속도(3D)다. 이 둘은 세 소비자에게 비대칭적으로 공급된다: encoder는
 `p_t`**만** 9D latent `z`로 압축하고, actor는 `o_t + z`를 본다(raw `p_t`는 절대 보지
 않음). train-only critic은 `o_t + z + p_t`를 본다.
 
 ```
-ENV emits  {"policy": o_t (69D), "privileged": p_t (27D)}      # albc_env.py:991,997
+ENV emits  {"policy": o_t (69D), "privileged": p_t (28D)}      # albc_env.py:991,997
 
   o_t (69D) = proprio(20) + history(46) + integral(3)          # albc_env.py:969-982
-  p_t (27D) = DR params(24) + measured body lin_vel(3)         # observations.py:88-161
+  p_t (28D) = DR-backed(25) + measured body lin_vel(3)         # observations.py:88-161
 
-ENCODER   p_t(27) --minmax--> MLP[256,128,64] elu -> LayerNorm -> softsign -> z(9)
+ENCODER   p_t(28) --minmax--> MLP[256,128,64] elu -> LayerNorm -> softsign -> z(9)
                                                                 # actor_critic_encoder.py:206-217
 
 ACTOR     cat[ EmpiricalNorm(o_t)(69) , z(9) ] = 78 -> MLP -> action(8)
                                                                 # actor_critic_encoder.py:246-256, 175,182
               (never receives raw p_t — asymmetry point)
 
-CRITIC    cat[ o_t(69) , z(9) , p_t(27) ] = 105 -> V(1)        # actor_critic_encoder.py:258-268
-COST CRITIC same 105D input -> K heads (K=num_constraints=10)  # _policy_base.py:91
+CRITIC    cat[ o_t(69) , z(9) , p_t(28) ] = 106 -> V(1)        # actor_critic_encoder.py:258-268
+COST CRITIC same 106D input -> K heads (K=num_constraints=10)  # _policy_base.py:91
               (train-only; sees everything for low-variance value + gradient into z)
 ```
 
@@ -54,9 +54,9 @@ COST CRITIC same 105D input -> K heads (K=num_constraints=10)  # _policy_base.py
 
 - `o_t`: `20 + 46 + 3 = 69` — `PROPRIO_DIM(20) + (10*hist_len + 8*hist_action_len) + integral_dims(3)`, `hist_len=3`, `hist_action_len=2` (`config.py:398,404`)이므로 `20 + (30 + 16) + 3 = 69` (`config.py:337`; guard `albc_env.py:151-162`).
 - history: `10*hist_len + 8*hist_action_len = 10*3 + 8*2 = 30 + 16 = 46` (`albc_env.py:973-975`).
-- `p_t`: `24 DR + 3 measured lin_vel = 27` — hydro 7 + dynamics 5 + payload 4 + actuator 4 + env 4 = 24, 더하기 body lin_vel 3 = 27 (`config.py:341`; `rsl_rl_ppo_cfg.py:32-35,148`).
+- `p_t`: `25 DR-backed + 3 measured lin_vel = 28` — hydro 7 + dynamics 3 + payload 4 + actuator 4 + env 4 + buoy 2 + latency 1 = 25, 더하기 body lin_vel 3 = 28 (`config.py:341`; `rsl_rl_ppo_cfg.py:32-35,148`).
 - actor input: `policy_obs_dim(69) + encoder_latent_dim(9) = 78` (`actor_critic_encoder.py:175`).
-- critic input: `policy_obs_dim(69) + privileged_dim(27) += encoder_latent_dim(9) = 105`, `critic_uses_z=True`이기 때문 (`actor_critic_encoder.py:102-104`; `rsl_rl_ppo_cfg.py:163`).
+- critic input: `policy_obs_dim(69) + privileged_dim(28) += encoder_latent_dim(9) = 106`, `critic_uses_z=True`이기 때문 (`actor_critic_encoder.py:102-104`; `rsl_rl_ppo_cfg.py:163`).
 
 ---
 
@@ -173,49 +173,53 @@ oldest-first)이며, `observations.py:22-24` docstring이 개념적으로 암시
 
 ---
 
-## 4. Privileged observation `p_t` (27D)
+## 4. Privileged observation `p_t` (28D)
 
-`p_t`는 `state_space > 0`(`config.py:341` = 27)일 때마다 `compute_privileged_obs`
+`p_t`는 `state_space > 0`(`config.py:341` = 28)일 때마다 `compute_privileged_obs`
 (`observations.py:88-161`)가 내보낸다. 이것은 의도적으로 **비중복(non-redundant)**
-카탈로그다: dims 0–23은 정확히 독립 DR 파라미터당 스칼라 하나이며(docstring이 명시적으로
-언급, `observations.py:93-94`), dims 24–26은 4번째 종류의 채널 — 실제 body-frame 선속도
+카탈로그다: dims 0–24는 정확히 독립 DR 파라미터당 스칼라 하나이며(docstring이 명시적으로
+언급, `observations.py:93-94`), dims 25–27은 4번째 종류의 채널 — 실제 body-frame 선속도
 `(u,v,w)`로, DR 파라미터가 **아니라** actor가 눈이 가려진 실제 측정값이다. 비중복은
-설계상 의도다: encoder는 진짜로 27D → 9D를 압축해야 하며, 상관된 중복을 모델링하면 latent
-용량을 낭비하게 된다.
+설계상 의도다: encoder는 진짜로 28D → 9D를 압축해야 하며, 상관된 중복을 모델링하면 latent
+용량을 낭비하게 된다. Union layout(2026-07-12): 옛 27D layout 대비 Ixx와 linear
+damping roll이 제거됐고, buoy volume/mass 스칼라와 control-action delay가
+추가됐다.
 
 | index | name | dim | meaning | source | note |
 |:---|:---|:--:|:---|:---|:---|
 | 0 | body_volume | 1 | Main body 배제 체적(buoyancy driver). Base 0.009 m³. | `_hydro.volume` (`observations.py:137`) | Norm `scale(volume, volume_scale)` (`priv_obs_bounds.py:130`). DR. |
 | 1:4 | body_CoG_xyz | 3 | Body center of gravity offset. Base `(0,0,-0.05)`; z non-zero. | `_hydro.center_of_gravity` (`observations.py:138`) | Norm `offset(...)` (`priv_obs_bounds.py:131-133`); z→[-0.09,-0.01]. DR. |
 | 4:7 | body_CoB_xyz | 3 | Body center of buoyancy offset. Base `(0,0,0)`. CoG–CoB 분리가 restoring moment를 설정. | `_hydro.center_of_buoyancy` (`observations.py:139`) | Norm `offset(...)` (`priv_obs_bounds.py:134-136`). DR. |
-| 7 | body_Ixx | 1 | 대표 rigid-body inertia(roll/x). Base 0.0994. | `_hydro.rigid_body_inertia[:, 0:1]` (`observations.py:141`) | Ixx **만**(텐서의 index 0). `scale(...)` (`priv_obs_bounds.py:138`). DR. |
-| 8 | lin_damp_roll | 1 | 대표 linear damping, roll 축. Base 0.3. | `_hydro.linear_damping[:, 3:4]` (`observations.py:142`) | Roll만(index 3; 0-2=lin xyz, 3-5=ang). DR. |
-| 9 | quad_damp_roll | 1 | 대표 quadratic damping, roll 축. Base 1.0. | `_hydro.quadratic_damping[:, 3:4]` (`observations.py:143`) | Roll만(index 3). `scale(...)` (`priv_obs_bounds.py:140`). DR. |
-| 10 | body_mass | 1 | Body dry mass. Base 9.18 kg. | `_hydro.body_mass` (`observations.py:144`) | `scale(...)` (`priv_obs_bounds.py:141`). payload_mass[12]와 구별됨. DR. |
-| 11 | added_mass_surge | 1 | added-mass 행렬의 Surge(x) 대각. Base 8.0. | `_hydro.added_mass_matrix[:, 0, 0]` (`observations.py:145`) | Surge만(6×6의 `[0,0]`), raw DR upper 12.0 (`priv_obs_bounds.py:142`). DR. |
-| 12 | payload_mass | 1 | End-effector payload mass. Base 0; DR은 [0,3] kg 샘플링. | `_payload_mass` (`observations.py:147`) | **Direct** range `[0,3]` (`priv_obs_bounds.py:144`). 옛 하드코딩 `[-0.1,2.2]`는 norm 버그(3→1.35>1). DR. |
-| 13:16 | payload_CoG_offset_xyz | 3 | mount 기준 Payload CoG offset. xy는 radius에서, z는 direct. | `_payload_cog_offset` (`observations.py:148`) | x,y = `[-r,r]`, `r=0.08 m`(옛 0.17은 stale); z direct `[-0.05,0]` (`priv_obs_bounds.py:145-147`). DR. |
-| 16 | joint_stiffness_Kp | 1 | Arm joint implicit-actuator stiffness(Kp). | `_robot.data.joint_stiffness[:, jid:jid+1]` (`observations.py:150`), `jid=_albc_joint_ids[0]` (`obs:120`) | **Direct** range (`priv_obs_bounds.py:149`). Live actuator gain. DR. |
-| 17 | joint_damping_Kd | 1 | Arm joint implicit-actuator damping(Kd). | `_robot.data.joint_damping[:, jid:jid+1]` (`observations.py:151`) | **Direct** range (`priv_obs_bounds.py:150`). [16]과 동일 jid. DR. |
-| 18 | thrust_coeff | 1 | Thruster force coefficient(단위 command당 N). Base 40. | `thr._thrust_coeff` (`observations.py:125,152`); cfg-scalar fallback (`obs:128`) | 3-way fallback (`obs:124-132`). `scale(...)`. DR. |
-| 19 | thruster_time_const_up | 1 | Thruster spin-up 시상수. Base 0.1. | `thr._time_constant_up` (`observations.py:126,153`); cfg-scalar fallback (`obs:129`) | [18]과 동일 fallback branch. `scale(...)`. DR. |
-| 20 | water_density | 1 | 주변 물 밀도. Base ~998; DR은 absolute range 샘플링. | `_hydro.water_density` (`observations.py:155`) | **Direct absolute**(×998 없음) (`priv_obs_bounds.py:154`). DR. |
-| 21:24 | ocean_current_xyz | 3 | **world** frame의 ocean current 선속도 — 외란(external disturbance). | `_hydro.current.velocity_w[:, :3]` (`observations.py:156`) | World frame, 6개 중 첫 3개. Symmetric bounds `±ocean_max[i]*s_hi` (`priv_obs_bounds.py:155-157`). DR. |
-| 24:27 | measured_body_lin_vel_uvw | 3 | **실제** body-frame 선속도 `(u,v,w)`. 유일한 non-DR 채널: 실제 측정값. | `_robot.data.root_lin_vel_b` (`observations.py:158`) | DR-backed **아님**. 고정 norm range `[-1,1]`(물리 clamp가 아니라 norm span, `priv_obs_bounds.py:159-161`). Actor는 **눈이 가려짐**; critic+encoder는 봄 → 비대칭. |
+| 7 | quad_damp_roll | 1 | 대표 quadratic damping, roll 축. Base 1.0. | `_hydro.quadratic_damping[:, 3:4]` (`observations.py:156`) | Roll만(index 3). `scale(...)` (`priv_obs_bounds.py:140`). DR. Ixx와 linear damping roll은 union layout(2026-07-12)에서 제거됨. |
+| 8 | body_mass | 1 | Body dry mass. Base 9.18 kg. | `_hydro.body_mass` (`observations.py:157`) | `scale(...)` (`priv_obs_bounds.py:141`). payload_mass[10]와 구별됨. DR. |
+| 9 | added_mass_surge | 1 | added-mass 행렬의 Surge(x) 대각. Base 8.0. | `_hydro.added_mass_matrix[:, 0, 0]` (`observations.py:158`) | Surge만(6×6의 `[0,0]`), raw DR upper 12.0 (`priv_obs_bounds.py:142`). DR. |
+| 10 | payload_mass | 1 | End-effector payload mass. Base 0; DR은 [0,3] kg 샘플링. | `_payload_mass` (`observations.py:160`) | **Direct** range `[0,3]` (`priv_obs_bounds.py:144`). 옛 하드코딩 `[-0.1,2.2]`는 norm 버그(3→1.35>1). DR. |
+| 11:14 | payload_CoG_offset_xyz | 3 | mount 기준 Payload CoG offset. xy는 radius에서, z는 direct. | `_payload_cog_offset` (`observations.py:161`) | x,y = `[-r,r]`, `r=0.08 m`(옛 0.17은 stale); z direct `[-0.05,0]` (`priv_obs_bounds.py:145-147`). DR. |
+| 14 | joint_stiffness_Kp | 1 | Arm joint implicit-actuator stiffness(Kp). | `_robot.data.joint_stiffness[:, jid:jid+1]` (`observations.py:163`), `jid=_albc_joint_ids[0]` (`obs:120`) | **Direct** range (`priv_obs_bounds.py:149`). Live actuator gain. DR. |
+| 15 | joint_damping_Kd | 1 | Arm joint implicit-actuator damping(Kd). | `_robot.data.joint_damping[:, jid:jid+1]` (`observations.py:164`) | **Direct** range (`priv_obs_bounds.py:150`). [14]와 동일 jid. DR. |
+| 16 | thrust_coeff | 1 | Thruster force coefficient(단위 command당 N). Base 40. | `thr._thrust_coeff` (`observations.py:125,165`); cfg-scalar fallback (`obs:128`) | 3-way fallback (`obs:124-132`). `scale(...)`. DR. |
+| 17 | thruster_time_const_up | 1 | Thruster spin-up 시상수. Base 0.1. | `thr._time_constant_up` (`observations.py:126,166`); cfg-scalar fallback (`obs:129`) | [16]과 동일 fallback branch. `scale(...)`. DR. |
+| 18 | water_density | 1 | 주변 물 밀도. Base ~998; DR은 absolute range 샘플링. | `_hydro.water_density` (`observations.py:168`) | **Direct absolute**(×998 없음) (`priv_obs_bounds.py:154`). DR. |
+| 19:22 | ocean_current_xyz | 3 | **world** frame의 ocean current 선속도 — 외란(external disturbance). | `_hydro.current.velocity_w[:, :3]` (`observations.py:169`) | World frame, 6개 중 첫 3개. Symmetric bounds `±ocean_max[i]*s_hi` (`priv_obs_bounds.py:155-157`). DR. |
+| 22 | buoy_volume | 1 | Buoy 배제 체적(main body volume[0]과 decorrelated). | `_buoy_hydro.volume` (`observations.py:173`) | `scale(buoy_volume, buoy_volume_scale)` (`priv_obs_bounds.py:176`). DR-backed, union layout(2026-07-12)에서 추가. |
+| 23 | buoy_body_mass | 1 | Buoy body mass(main body mass[8]와 decorrelated). | `_buoy_hydro.body_mass` (`observations.py:174`) | `scale(buoy_body_mass, buoy_body_mass_scale)` (`priv_obs_bounds.py:177`). DR-backed, union layout(2026-07-12)에서 추가. |
+| 24 | control_action_delay | 1 | 정규화된 control-action delay(latency DR); latency DR이 off면 `0`. | `_control_delay_steps / max(control_delay_steps[1], 1)` (`observations.py:177-180`) | 고정 range `(0.0, 1.0)` (`priv_obs_bounds.py:180`). DR-backed, union layout(2026-07-12)에서 추가. |
+| 25:28 | measured_body_lin_vel_uvw | 3 | **실제** body-frame 선속도 `(u,v,w)`. 유일한 non-DR 채널: 실제 측정값. | `_robot.data.root_lin_vel_b` (`observations.py:182`) | DR-backed **아님**. 고정 norm range `[-1,1]`(물리 clamp가 아니라 norm span, `priv_obs_bounds.py:159-161`). Actor는 **눈이 가려짐**; critic+encoder는 봄 → 비대칭. |
 
-**산수**: `7 (hydro: vol 1 + CoG 3 + CoB 3) + 5 (dynamics: Ixx 1 +
-lin_damp_roll 1 + quad_damp_roll 1 + body_mass 1 + added_mass_surge 1) + 4 (payload:
-mass 1 + CoG 3) + 4 (actuator: Kp 1 + Kd 1 + thrust_coeff 1 + time_const_up 1) + 4
-(env: water_density 1 + ocean_current 3) + 3 (measured lin_vel) = 27` =
-`cfg.state_space` (`config.py:341`) = `policy.privileged_dim` (`rsl_rl_ppo_cfg.py:148`)
-= `PRIV_OBS_DIM` (`priv_obs_bounds.py:40`). DR-backed prefix는 24; measured-velocity
-tail은 3; `24 + 3 = 27`으로, cfg 주석 "24D from HardDomainRandomizationCfg + 3D
-measured lin_vel"(`rsl_rl_ppo_cfg.py:32-35`)과 일치.
+**산수**: `7 (hydro: vol 1 + CoG 3 + CoB 3) + 3 (dynamics: quad_damp_roll 1 +
+body_mass 1 + added_mass_surge 1) + 4 (payload: mass 1 + CoG 3) + 4 (actuator: Kp 1
++ Kd 1 + thrust_coeff 1 + time_const_up 1) + 4 (env: water_density 1 + ocean_current
+3) + 2 (buoy: volume 1 + body_mass 1) + 1 (latency: control_action_delay) + 3
+(measured lin_vel) = 28` = `cfg.state_space` (`config.py:341`) = `policy.privileged_dim`
+(`rsl_rl_ppo_cfg.py:148`) = `PRIV_OBS_DIM` (`priv_obs_bounds.py:46`). DR-backed
+prefix는 25; measured-velocity tail은 3; `25 + 3 = 28`. Ixx와 linear damping roll은
+옛 27D layout 대비 제거됐고, buoy pair(22,23)와 latency dim(24)이 추가돼 DR-backed
+prefix가 순증 `24 → 25`(2개 제거, 3개 추가).
 
 **Representative-scalar selection**: 여러 차원이 multi-DOF 양을 하나의 대표 축으로
-축약한다 — Ixx[7]은 inertia 텐서의 index 0만, lin_damp[8]/quad_damp[9]는 6-DOF damping
-벡터의 index 3(roll)만, added_mass[11]은 6×6 행렬의 `[0,0]`(surge)만 취한다. 따라서
-`p_t`는 전체 파라미터 집합이 아니라 physics에 대한 **sparse probe**다.
+축약한다 — quad_damp[7]는 6-DOF damping 벡터의 index 3(roll)만, added_mass[9]는
+6×6 행렬의 `[0,0]`(surge)만 취한다. 따라서 `p_t`는 전체 파라미터 집합이 아니라
+physics에 대한 **sparse probe**다.
 
 **Normalization**은 DR bounds로부터의 static min-max로, MLP 이전 encoder 내부에서
 적용된다 — running normalizer가 아니다. `derive_priv_obs_bounds_from_dr`
@@ -240,26 +244,26 @@ main env는 privileged encoder를 가진 asymmetric actor-critic(클래스
 `[policy_obs_key, privileged_key]` pair로 위치적으로 파싱하고 키를 저장한다. 그러면
 네트워크가 두 텐서를 스스로 split하고 라우팅한다. plain PPO baseline
 (`class_name="ActorCritic"`)만이 obs_groups auto-summing에 의존하며,
-`policy=["policy"]`(69D actor) / `critic=["policy","privileged"]`(96D)
+`policy=["policy"]`(69D actor) / `critic=["policy","privileged"]`(97D)
 (`rsl_rl_ppo_cfg.py:416-419`)를 사용한다.
 
 | tensor | name | dim | meaning | source | note |
 |:---|:---|:--:|:---|:---|:---|
-| encoder in | p_t (privileged) | 27 | 전체 privileged 벡터 — 물리적 unknowns. | `obs[_privileged_key]`, `_encode` (`actor_critic_encoder.py:208`) | Static min-max → [-1,1] via `(2*p_t - midpoint)/range` (`:213`); bounds는 build time에 DR-derived(`constraint_encoder_runner.py:86-94`), cfg literal이 **아님**. `encoder_obs_indices=None` → 27 차원 전부 사용. |
+| encoder in | p_t (privileged) | 28 | 전체 privileged 벡터 — 물리적 unknowns. | `obs[_privileged_key]`, `_encode` (`actor_critic_encoder.py:208`) | Static min-max → [-1,1] via `(2*p_t - midpoint)/range` (`:213`); bounds는 build time에 DR-derived(`constraint_encoder_runner.py:86-94`), cfg literal이 **아님**. `encoder_obs_indices=None` → 28 차원 전부 사용. |
 | encoder out | z (latent) | 9 | 물리적 unknowns의 압축 proxy. | `z = softsign(LayerNorm(encoder(p_t)))` (`actor_critic_encoder.py:216`); `encoder_latent_dim=9` (`rsl_rl_ppo_cfg.py:143`) | MLP[256,128,64] elu → LayerNorm(pre-softsign, `rsl_rl_ppo_cfg.py:164`) → softsign. (-1,1)에 bounded되어 running-stat norm이 불필요. |
 | actor [0:69] | normalized o_t | 69 | 측정 가능한 obs(20 proprio + 46 history + 3 integral). | `obs_normed = actor_obs_normalizer(o_t)` (`actor_critic_encoder.py:253,255`); `policy_obs_dim=69` (`rsl_rl_ppo_cfg.py:147`) | `o_t`만 EmpiricalNormalization-normalize됨(normalizer 크기 69, `:176`); z는 제외. |
 | actor [69:78] | z (raw) | 9 | o_t에 concat된 encoder latent; actor가 privileged physics를 보는 유일한 창. | `cat([obs_normed, z])` (`actor_critic_encoder.py:256`); `num_actor_obs = 69+9 = 78` (`:175`) | Actor는 raw p_t를 **절대** 받지 않음. z는 raw로 전달(softsign이 이미 bound). |
 | actor out | action mean | 8 | 8D action(2D arm + 6D thruster); Gaussian policy, net 내 clamp 없음. | `actor = MLP(78, 8, [256,128,64], elu)` (`actor_critic_encoder.py:182`) | `log_std`는 별도 `nn.Parameter`(`_policy_base.py:96`); std clamp는 여기가 아니라 TRPO step에서 적용(`action-pipeline.md` 참조). |
 | critic [0:69] | o_t | 69 | actor와 동일한 측정 가능 obs(raw; `critic_obs_normalization=False`). | `parts=[obs[_policy_obs_key]]` (`actor_critic_encoder.py:264`) | `critic_obs_normalizer`는 `nn.Identity`(`_policy_base.py:83-85`). |
-| critic [69:78] | z | 9 | critic에 주입된 encoder latent, value-loss gradient가 z를 통해 encoder로 되흐르도록. | `if _critic_uses_z: parts.append(_encode(obs))` (`actor_critic_encoder.py:265-266`); `critic_uses_z=True` (`rsl_rl_ppo_cfg.py:163`) | 이것이 `num_critic_obs += encoder_latent_dim`(`:103-104`)인 이유. False면 critic = 96D, encoder는 actor surrogate에서만 gradient를 받음. |
-| critic [78:105] | p_t | 27 | Raw privileged 벡터 — train-only critic이 ground-truth physics를 직접 봄. | `parts.append(obs[_privileged_key])` (`actor_critic_encoder.py:267`); `num_critic_obs=69+27+9=105` (`:102-104`) | Critic은 z와 raw p_t를 **둘 다** 봄; z는 gradient 경로를 위한 것이지 critic이 압축을 필요로 해서가 아님. |
-| critic out | value | 1 | GAE/TRPO advantage용 스칼라 `V(s)`. | `critic = MLP(105, 1, [512,256,128], elu)` (`_policy_base.py:86`) | 기본 TRPO runner에서 `normalize_value=False`(`rsl_rl_ppo_cfg.py:286`). |
-| cost_critic out | per-constraint cost values | 10 | Multi-head cost value, IPO constraint당 head 하나(`K=num_constraints`, env에서 auto-sync; main env = 10). | `cost_critic = MLP(105, num_constraints, [512,256,128], elu)` (`_policy_base.py:91`) | 동일한 105D 입력 공유. K는 cfg에서 0으로 시작, `ConstraintEncoderRunner.__init__`이 auto-sync(`constraint_encoder_runner.py:42-63`). K=10(5 prob + 5 avg). |
+| critic [69:78] | z | 9 | critic에 주입된 encoder latent, value-loss gradient가 z를 통해 encoder로 되흐르도록. | `if _critic_uses_z: parts.append(_encode(obs))` (`actor_critic_encoder.py:265-266`); `critic_uses_z=True` (`rsl_rl_ppo_cfg.py:163`) | 이것이 `num_critic_obs += encoder_latent_dim`(`:103-104`)인 이유. False면 critic = 97D, encoder는 actor surrogate에서만 gradient를 받음. |
+| critic [78:106] | p_t | 28 | Raw privileged 벡터 — train-only critic이 ground-truth physics를 직접 봄. | `parts.append(obs[_privileged_key])` (`actor_critic_encoder.py:267`); `num_critic_obs=69+28+9=106` (`:102-104`) | Critic은 z와 raw p_t를 **둘 다** 봄; z는 gradient 경로를 위한 것이지 critic이 압축을 필요로 해서가 아님. |
+| critic out | value | 1 | GAE/TRPO advantage용 스칼라 `V(s)`. | `critic = MLP(106, 1, [512,256,128], elu)` (`_policy_base.py:86`) | 기본 TRPO runner에서 `normalize_value=False`(`rsl_rl_ppo_cfg.py:286`). |
+| cost_critic out | per-constraint cost values | 10 | Multi-head cost value, IPO constraint당 head 하나(`K=num_constraints`, env에서 auto-sync; main env = 10). | `cost_critic = MLP(106, num_constraints, [512,256,128], elu)` (`_policy_base.py:91`) | 동일한 106D 입력 공유. K는 cfg에서 0으로 시작, `ConstraintEncoderRunner.__init__`이 auto-sync(`constraint_encoder_runner.py:42-63`). K=10(5 prob + 5 avg). |
 
-**Consumption 산수**: encoder `27 → 9`; actor `69 + 9 = 78 → 8`; critic
-`69 + 27 = 96, += 9 = 105 → 1`; cost critic `105 → K=10`. NoEncoder ablation critic =
-`69 + 27 = 96`(z 없음, `rsl_rl_ppo_cfg.py:301-304`); PPO baseline actor = 69(via
-`obs_groups=["policy"]`), critic = 96.
+**Consumption 산수**: encoder `28 → 9`; actor `69 + 9 = 78 → 8`; critic
+`69 + 28 = 97, += 9 = 106 → 1`; cost critic `106 → K=10`. NoEncoder ablation critic =
+`69 + 28 = 97`(z 없음, `rsl_rl_ppo_cfg.py:301-304`); PPO baseline actor = 69(via
+`obs_groups=["policy"]`), critic = 97.
 
 `ConstraintEncoderRunner`는 하드코딩된 `_PRIV_OBS_LOWER/UPPER` cfg
 literal(`rsl_rl_ppo_cfg.py:50-120`)을 build time에 DR-derived bounds로 override한다
@@ -273,12 +277,12 @@ stale CoG radius). cfg literal만으로 normalization을 추론하면 틀리게 
 
 - **Asymmetric history slice**: 46D history는 `18*3=54`가 아니다. 18D-per-step ring buffer는 index 10에서 split된다 — dims `[0:10]`(joint+body)은 `hist_len=3` step 전부에 걸쳐(30D), dims `[10:18]`(action)은 가장 최근 `hist_action_len=2` step만(16D). `30+16=46`; 가장 오래된 step의 action은 의도적으로 버려짐(`albc_env.py:973-975`).
 - **History는 strided이지 contiguous가 아님**: 저장된 3 step은 실제 시간 `hist_len*hist_stride*step_dt = 0.18s`에 걸쳐 있으며, 3번째 제어 step마다 기록됨(`albc_env.py:505-506`). 3개 연속 50 Hz step이 아님.
-- **`o_t`에 측정 선속도 없음** — 의도적 DVL-free 설계. 측정된 `root_lin_vel_b`는 `p_t[24:27]`(`observations.py:158`)에만 나타나므로, critic/encoder는 actor가 볼 수 없는 속도를 봄.
+- **`o_t`에 측정 선속도 없음** — 의도적 DVL-free 설계. 측정된 `root_lin_vel_b`는 `p_t[25:28]`(`observations.py:182`)에만 나타나므로, critic/encoder는 actor가 볼 수 없는 속도를 봄.
 - **Yaw는 RATE 채널**: `ang_cmd[2]`는 yaw-rate command이고 모든 yaw error 항(ang_err, integral)은 rate error(rad/s)인 반면, roll/pitch은 절대 attitude(rad)다. 3D integral은 두 angle-integral과 하나의 rate-integral을 섞는다.
 - **`joint_pos_error`는 `q_des_{t-1}`을 사용**: `_get_hist_features`가 `_apply_joint_pd_action`보다 먼저 실행되므로, `_joint_pos_targets`는 여전히 이전 step의 target을 담고 있음(`albc_env.py:457-459,474`) — 설계상 one-step-stale actuator-lag 신호.
 - **Noise는 우리 자신의 양을 0으로 만듦**: `_OBS_NOISE_STD`/`_OBS_BIAS_MAG`는 69-length 벡터로 command(3), manipulability(1), action-history(16), integral(3) 항목이 `0.0`(`config.py:239-278`). 측정된 euler/ang_vel/joint/thruster 채널(그리고 history 복사본)만 noise를 받음.
 - **두 개의 독립 dim 검사**가 69를 신뢰 가능하게 만듦: construction-time `ValueError` guard(`albc_env.py:157-162`, `python -O`에서 살아남음) 더하기 per-step runtime assert(`albc_env.py:992-995`).
-- **`p_t`는 설계상 non-redundant**(`observations.py:93-94`): 독립 DR 변수당 스칼라 하나이므로 encoder는 pass-through가 아니라 압축해야 함. 여러 차원은 multi-DOF 양의 대표 스칼라(Ixx index 0; damping index 3 = roll; added-mass `[0,0]` = surge).
+- **`p_t`는 설계상 non-redundant**(`observations.py:93-94`): 독립 DR 변수당 스칼라 하나이므로 encoder는 pass-through가 아니라 압축해야 함. 여러 차원은 multi-DOF 양의 대표 스칼라(damping index 3 = roll; added-mass `[0,0]` = surge).
 - **Thruster fallback은 3-way branch**(`obs:124-132`): per-env DR 텐서 → cfg scalar broadcast → zeros(no thruster). Dims 18–19는 우아하게 degrade됨.
 - **Encoder 입력 normalization은 static min-max이며 runtime에 OVERRIDE됨** — DR-derived bounds로. cfg `_PRIV_OBS_LOWER/UPPER` literal은 fallback일 뿐이며 drift한 상태였음(payload_mass overflow 3→1.35>1, stale CoG xy radius 0.17 vs 0.08 m).
 - **Direct vs scale/offset norm 형태**: payload_mass[12] `[0,3]` direct, payload_cog_z[15] `[-0.05,0]` direct, water_density[20] direct absolute, joint Kp[16]/Kd[17] direct; CoG/CoB는 nonzero base로 offset 사용(CoG z base -0.05 → `[-0.09,-0.01]`).

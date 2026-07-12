@@ -215,13 +215,13 @@ The joints are driven by an `ImplicitActuatorCfg` in the robot asset
 | stiffness (Kp) | 100.0 | `ω_n ≈ 57.7 rad/s` with `J ≈ 0.15 kg·m²` |
 | damping (Kd) | 3.0 | damping ratio ≈ 0.7 (near-critical) |
 | `effort_limit_sim` | 13.0 Nm | PhysX hard cap, above the 9.5 Nm motor stall used by the `arm_torque` constraint |
-| `velocity_limit_sim` | 6.28 rad/s | 2π, PhysX hard cap |
+| `velocity_limit_sim` | 3.1 rad/s | measured XW540-T260 no-load plateau (2026-07-06), PhysX hard cap |
 
-**Two distinct arm bounds, easy to confuse.** The 13.0 Nm / 6.28 rad/s figures are
+**Two distinct arm bounds, easy to confuse.** The 13.0 Nm / 3.1 rad/s figures are
 **PhysX hard caps** on the actuator. The constraint terms `arm_torque`
-(`limit_nm=9.5`) and `arm_joint_vel` (`limit_rad_per_s=4.189`) are **soft cost
+(`limit_nm=9.5`) and `arm_joint_vel` (`limit_rad_per_s=2.8`) are **soft cost
 budgets** on the *measured* torque/velocity — they penalize, they do not clip. A
-policy can exceed 4.189 rad/s (paying constraint cost) up to the 6.28 rad/s physical
+policy can exceed 2.8 rad/s (paying constraint cost) up to the 3.1 rad/s physical
 cap. Do not treat the constraint limit as a physical limit.
 
 **Kp/Kd basis is theoretical, not hardware-measured, and there is no sim↔hardware
@@ -389,7 +389,7 @@ only *which parts are action-derived*.
 | delta_scale (arm per-step) | 0.10 | `config.py:360` |
 | nominal_joint_pos (arm init target) | (0.0, π/2) | `config.py:359` |
 | arm actuator Kp / Kd | 100.0 / 3.0 | `marinelab/assets/albc/albc.py:196–202` |
-| arm effort / velocity cap (PhysX) | 13.0 Nm / 6.28 rad/s | `albc.py:196–202` |
+| arm effort / velocity cap (PhysX) | 13.0 Nm / 3.1 rad/s | `albc.py:196–202` |
 | thruster count / max_thrust | 6 / 50.0 N | `config.py:85–86` |
 | thrust_coefficient | 40.0 | `config.py:87` |
 | time_constant_up / down | 0.1 / 0.05 | `config.py:88–89` |

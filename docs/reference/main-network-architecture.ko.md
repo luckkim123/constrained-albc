@@ -3,7 +3,7 @@
 > **범위**: 기본 태스크 `Isaac-ConstrainedALBC-TRPO-v0`
 > (`constrained_albc/envs/main/`)의 신경망 아키텍처. attitude-only ALBC 정책
 > (roll/pitch + yaw-rate, 선속도 명령 없음)이며, 8D action(2D arm + 6D thruster),
-> 69D actor 관측, 27D privileged 관측을 갖는다.
+> 69D actor 관측, 28D privileged 관측을 갖는다.
 >
 > 본 문서는 `exp/joint1-constraint-redesign` 브랜치에서 디스크 코드에 대해 검증한
 > 코드 레벨 레퍼런스다. 네트워크 코드(`encoder/`, `agents/`, `algorithms/`,
@@ -20,16 +20,16 @@
 ## 1. 전체 구조 한눈에
 
 RMA/HORA 계열의 teacher actor-critic 정책으로, **비대칭(asymmetric) critic**과
-**별도의 multi-head cost critic**을 갖는다. **encoder**가 27D privileged physics
+**별도의 multi-head cost critic**을 갖는다. **encoder**가 28D privileged physics
 벡터 `p_t`를 9D latent `z`로 압축하고, **actor**는 69D 관측 `o_t`와 `z`만 본다
 (`p_t`에는 blind). **reward critic**과 **cost critic**은 모든 정보
-(`o_t + z + p_t`, 105D)를 직접 본다.
+(`o_t + z + p_t`, 106D)를 직접 본다.
 
 ```
-ENV obs dict  ->  {"policy": o_t (69D),  "privileged": p_t (27D)}
+ENV obs dict  ->  {"policy": o_t (69D),  "privileged": p_t (28D)}
 
-ENCODER  (입력 = p_t 27D, 관측 전체가 아님)
-  p_t(27D) -> static min-max 정규화 -> [-1, 1]      # HORA식, 결정론적, running stat 없음
+ENCODER  (입력 = p_t 28D, 관측 전체가 아님)
+  p_t(28D) -> static min-max 정규화 -> [-1, 1]      # HORA식, 결정론적, running stat 없음
           -> MLP[256, 128, 64]  (elu)
           -> LayerNorm(9)                            # pre-softsign
           -> softsign  ->  z (9D)                    # encoder_latent_dim = 9
@@ -41,19 +41,19 @@ ACTOR  (입력 78D)
   std = exp(global log_std[8]) -> expand             # state-INDEPENDENT
         init 0.7; ConstraintTRPO가 update 후 clamp
 
-CRITIC  (asymmetric, 입력 105D, critic_uses_z = True)
-  cat[ o_t(69D), z(9D), p_t(27D) ] (raw)             # value 그래디언트가 z를 거쳐 encoder로 역류
+CRITIC  (asymmetric, 입력 106D, critic_uses_z = True)
+  cat[ o_t(69D), z(9D), p_t(28D) ] (raw)             # value 그래디언트가 z를 거쳐 encoder로 역류
           -> MLP[512, 256, 128]  (elu) -> value (1D)
 
 COST CRITIC  (multi-head, K = num_constraints)
-  cat[ o_t(69D), z(9D), p_t(27D) ] (동일 105D 입력)
+  cat[ o_t(69D), z(9D), p_t(28D) ] (동일 106D 입력)
           -> MLP[512, 256, 128]  (elu) -> cost_values (K)   # constraint당 scalar head 1개
 ```
 
 **핵심 설계 결정 3가지.**
 1. encoder 입력은 *관측이 아니라 privileged physics 벡터*다(실로봇에서는 관측
    불가). `z`가 actor에게 "이 환경의 물리가 무엇인지"를 알려준다.
-2. critic은 비대칭이다 — privileged 정보를 직접 읽고(105D), actor는 압축된 `z`만
+2. critic은 비대칭이다 — privileged 정보를 직접 읽고(106D), actor는 압축된 `z`만
    받는다(78D). `critic_uses_z = True`이므로 value-loss 그래디언트가 `z`를 거쳐
    encoder로 역류한다. 따라서 encoder는 정책 신호와 가치 신호 **양쪽**으로 학습된다.
 3. encoder는 Adam value 그룹이 아니라 **TRPO natural-gradient 정책 그룹**(actor,
@@ -81,24 +81,28 @@ COST CRITIC  (multi-head, K = num_constraints)
 `albc_env.py:_get_observations()`(46D history + 3D integral).
 `policy_obs_dim=69`(`agents/rsl_rl_ppo_cfg.py:138`).
 
-### 2.2 Privileged 관측 — 27D (`p_t`)
+### 2.2 Privileged 관측 — 28D (`p_t`)
 
 시뮬레이터 전용 ground truth(DR된 물리 파라미터 + 측정 선속도. 선속도는 실로봇에
-센서가 없음 — DVL 없음).
+센서가 없음 — DVL 없음). Union layout(2026-07-12): 옛 27D layout 대비 Ixx와
+linear damping roll이 제거됐고, buoy volume/mass와 control-action delay가
+추가됐다.
 
 | 그룹 | 구성 | 차원 |
 |---|---|---:|
 | Hydrodynamics | volume(1) + CoG(3) + CoB(3) | 7 |
-| Dynamic response | Ixx + linear/quadratic damping (roll) + body_mass + added_mass (surge) | 5 |
+| Dynamic response | quadratic damping (roll) + body_mass + added_mass (surge) | 3 |
 | Payload | mass(1) + CoG offset(3) | 4 |
 | Actuator | Kp + Kd + thrust_coeff + time_constant_up | 4 |
 | Environment | water_density(1) + ocean current velocity (3) | 4 |
+| Buoy | buoy volume(1) + buoy body_mass(1) | 2 |
+| Latency | control-action delay (normalized steps, off이면 0) | 1 |
 | 측정 선속도 | body linear velocity u, v, w | 3 |
-| **합계** | | **27** |
+| **합계** | | **28** |
 
-출처: `mdp/observations.py:compute_privileged_obs()`. 앞 24D는 DR 파라미터,
-마지막 3D는 측정 body 선속도(critic 전용)다 — 실로봇이 측정할 수 없으므로 `o_t`에서
-제외된다. `privileged_dim=27`(`agents/rsl_rl_ppo_cfg.py:139`).
+출처: `mdp/observations.py:compute_privileged_obs()`. 측정 body 선속도(critic
+전용)는 실로봇이 측정할 수 없으므로 `o_t`에서 제외된다.
+`privileged_dim=28`(`agents/rsl_rl_ppo_cfg.py:139`).
 
 ### 2.3 Action — 8D
 
@@ -113,11 +117,11 @@ latent `z`에만 적용).
 
 ### 2.4 네트워크로의 라우팅
 
-`_get_observations()`는 `{"policy": (N, 69), "privileged": (N, 27)}`를 반환한다.
+`_get_observations()`는 `{"policy": (N, 69), "privileged": (N, 28)}`를 반환한다.
 encoder는 `privileged`를, actor는 `policy + z`를, critic·cost critic은
 `policy + z + privileged`를 소비한다. 비대칭 분할은 rsl-rl `obs_groups` 경로로
 하지 **않는다** — 두 그룹 모두 `["policy", "privileged"]`로 선언되고, 정책 클래스가
-`policy_obs_dim=69`·`privileged_dim=27` cfg 필드로 내부에서 slice한다.
+`policy_obs_dim=69`·`privileged_dim=28` cfg 필드로 내부에서 slice한다.
 
 ---
 
@@ -129,18 +133,18 @@ encoder는 `privileged`를, actor는 `policy + z`를, critic·cost critic은
 
 | 컴포넌트 | 입력 | Hidden | 출력 | Activation | cfg 라인 |
 |---|---|---|---|---|---|
-| Encoder | 27 (`privileged_dim`) | [256, 128, 64] | 9 (`encoder_latent_dim`) | elu + LayerNorm + softsign | hidden `:130`, latent `:134`, act `:135` |
+| Encoder | 28 (`privileged_dim`) | [256, 128, 64] | 9 (`encoder_latent_dim`) | elu + LayerNorm + softsign | hidden `:130`, latent `:134`, act `:135` |
 | Actor | 78 = 69 + 9 | [256, 128, 64] | 8 (`num_actions`) | elu | `:126`, act `:128` |
-| Critic | 105 = 69 + 9 + 27 | [512, 256, 128] | 1 | elu | `:127`, act `:128` |
-| Cost critic | 105 (동일) | [512, 256, 128] | K | elu | `:160` |
+| Critic | 106 = 69 + 9 + 28 | [512, 256, 128] | 1 | elu | `:127`, act `:128` |
+| Cost critic | 106 (동일) | [512, 256, 128] | K | elu | `:160` |
 
 - actor에서는 `o_t`(69D)만 EmpiricalNorm을 거친다; `z`는 raw로 들어간다.
-- `critic_uses_z=True`(`:154`)이면 critic 입력이 105D가 된다(False면 96D).
+- `critic_uses_z=True`(`:154`)이면 critic 입력이 106D가 된다(False면 97D).
 - `encoder_output_norm=True`(`:155`)가 softsign 직전 LayerNorm을 추가한다.
 - cost critic은 `num_constraints > 0`일 때만 빌드된다.
 
 **실제로 shape을 결정하는 필드(live wires):** `policy_obs_dim=69`(`:138`),
-`privileged_dim=27`(`:139`), `encoder_latent_dim=9`(`:134`),
+`privileged_dim=28`(`:139`), `encoder_latent_dim=9`(`:134`),
 `critic_uses_z=True`(`:154`), `encoder_output_norm=True`(`:155`),
 `num_constraints`(env에서 auto-sync, §6 참조), 그리고 네 개의 `*_hidden_dims` 리스트.
 `init_noise_std=0.7`(`:123`)이나 `*_normalization` 플래그는 레이어 shape을 바꾸지 않는다.
@@ -169,7 +173,7 @@ critic / cost_critic 구성, global `log_std`, Gaussian). `forward()`는
 - `ActorCriticEncoder(PolicyBase)` — encoder teacher 정책(배포 default,
   `class_name="ALBCActorCriticEncoder"`).
 - `ActorCriticAsymConstrained(PolicyBase)` — NoEncoder ablation(actor가 69D `o_t`만,
-  critic은 `cat([o_t, p_t]) = 96D`, `class_name="ALBCActorCriticAsymConstrained"`,
+  critic은 `cat([o_t, p_t]) = 97D`, `class_name="ALBCActorCriticAsymConstrained"`,
   `:296`).
 
 `ActorCriticAsymConstrained`는 `ActorCriticEncoder`를 상속하지 **않는다**.
@@ -264,7 +268,7 @@ curvature와 surrogate KL에 **기여한다** — "logging 전용"이 아니다.
 별도의 cost critic 네트워크가 **존재**하며, **single multi-head MLP**다(constraint당
 별도 네트워크가 아님):
 
-- **구조**: reward critic과 동일한 105D 비대칭 입력(`cat[o_t, z, p_t]`), hidden
+- **구조**: reward critic과 동일한 106D 비대칭 입력(`cat[o_t, z, p_t]`), hidden
   `[512, 256, 128]`, activation `elu` — reward critic과 같은 shape이되 K개의 scalar
   출력을 갖는다. `num_constraints > 0`일 때만 빌드되고 아니면 `None`
   (`_policy_base.py`). cfg `cost_critic_hidden_dims`(`:160`).
@@ -315,7 +319,7 @@ constraint 선택은 MLP 레이어 수·차원·activation을 **바꾸지 않는
 | encoder_output_norm (pre-softsign LayerNorm) | True | `:155` |
 | encoder static min-max bounds | `_PRIV_OBS_LOWER/UPPER` | 동일 파일에 정의 |
 | encoder_obs_normalization | False | `:136` |
-| critic_uses_z (105D vs 96D) | True | `:154` |
+| critic_uses_z (106D vs 97D) | True | `:154` |
 | init_noise_std | 0.7 | `:123` |
 | min_std / max_std (algo clamp) | 0.05 / 2.0 | `:221` / `:222` |
 | min_std_per_dim | (0.10, 0.10, 0.05 x6) | `:225` |
@@ -323,7 +327,7 @@ constraint 선택은 MLP 레이어 수·차원·activation을 **바꾸지 않는
 | max_kl / cg_iters / cg_damping | 0.005 / 10 / 0.1 | `:180-182` |
 | barrier_t / barrier_alpha (IPO) | 100.0 / 0.05 | `:206` / `:207` |
 | num_constraints (auto-sync K) | 0 -> 런타임 10 (joint1 constraint 켜면 11) | `:159` (실제 K = `config.py` constraint terms) |
-| policy_obs_dim / privileged_dim | 69 / 27 | `:138` / `:139` |
+| policy_obs_dim / privileged_dim | 69 / 28 | `:138` / `:139` |
 | joint1 constraint arm / budget (해당 브랜치) | "none" / 0.05 | `envs/main/config.py` |
 
 ---
@@ -337,7 +341,7 @@ constraint 선택은 MLP 레이어 수·차원·activation을 **바꾸지 않는
   없다; 유일한 추론 훅은 기본 비활성 z-ablation(`mode=None`)이다. 이는 프로젝트
   규칙과 일치한다(reconstruction loss 실패: decoder가 `z`를 무시하고 `z`가 collapse).
 - 런타임 `K`와 각 `_PRIV_OBS_LOWER/UPPER` 엔트리의 물리적 의미는 env config / `mdp/`에
-  정의돼 있다; 여기서는 길이(priv 27, constraints 10/11)만 교차검증했다.
+  정의돼 있다; 여기서는 길이(priv 28, constraints 10/11)만 교차검증했다.
 - 본 문서는 정적 코드 구조 레퍼런스다. 런타임 학습 dynamics(예: `z` collapse 여부)는
   별개 진단 대상이며 `analysis/encoder_tools.py sweep`을 사용한다.
 
