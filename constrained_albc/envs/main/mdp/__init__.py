@@ -40,6 +40,7 @@ from .observations import (
 from .rewards import (
     ALBCRewardCfg,
     RewardManager,
+    RewardTermCfg,
     action_smoothness,
     att_rp_tracking,
     joint_torque,

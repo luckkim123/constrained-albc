@@ -139,7 +139,7 @@ deterministic with no running statistics, which avoids `z` drift / KL spikes.
 
 **Bound derivation (`[U, L]`):**
 - **Source**: `derive_priv_obs_bounds_from_dr()` (`envs/main/utils/priv_obs_bounds.py`), injected by `ConstraintEncoderRunner.__init__` like the `num_constraints` auto-sync — bound = DR range exactly (margin 0), so a DR change auto-syncs.
-- **Fallback**: old hardcoded `_PRIV_OBS_LOWER/UPPER` in `agents/rsl_rl_ppo_cfg.py`, used only at construct time (still imported by `student/teacher.py`); it had drifted from DR (payload-mass overflow, stale CoG-xy radius) — the reason for the derivation refactor.
+- **Fallback**: old hardcoded `_PRIV_OBS_LOWER/UPPER` in `agents/rsl_rl_ppo_cfg.py`, used only at construct time (still imported by `envs/_core/student/teacher.py`); it had drifted from DR (payload-mass overflow, stale CoG-xy radius) — the reason for the derivation refactor.
 - **Guard**: a terminal `_assert_bounds_match_dr()` fails loud if a future DR change desyncs the derived bounds.
 - **Tracking**: branch `exp/dr-derived-norm-bounds`, audit item B1; see `docs/plans/2026-06-30-dr-derived-priv-obs-normalization-bounds.md`.
 
@@ -160,7 +160,7 @@ subclasses inherit from it **as siblings**:
 
 ## 4. ConstraintTRPO + IPO update
 
-Algorithm body: `algorithms/constraint_trpo.py`. Objective (from the module
+Algorithm body: `envs/_core/algorithms/constraint_trpo.py`. Objective (from the module
 docstring):
 
 $$
@@ -227,7 +227,7 @@ floor `min_std_per_dim` (arm dims 0.10, thruster dims 0.05), ceiling
 | GAE | `gamma=0.99`, `lam=0.95`, `cost_gamma=0.99`, `cost_lam=0.95` |
 | Entropy | `entropy_coef_per_dim = (0.01, 0.01, 0.001 x6)` (arm = 0.01, thruster = 0.001) |
 
-`num_constraints` (K) is auto-synced by `constraint_encoder_runner.py` from the
+`num_constraints` (K) is auto-synced by `envs/_core/runners/constraint_encoder_runner.py` from the
 env's constraints cfg before `super().__init__()`, so the placeholder `0` in the
 policy cfg is overwritten at runtime; `cost_critic` is only built when K > 0.
 
@@ -241,14 +241,14 @@ A separate cost critic network **exists**, and it is a **single multi-head MLP**
 - **Architecture**: identical 106D asymmetric input (`cat[o_t, z, p_t]`), hidden
   `[512, 256, 128]`, activation `elu` — same shape as the reward critic but with K
   scalar outputs. Built only when `num_constraints > 0`, else `None`
-  (`_policy_base.py`). cfg `cost_critic_hidden_dims` at `rsl_rl_ppo_cfg.py:181`.
+  (`envs/_core/encoder/_policy_base.py`). cfg `cost_critic_hidden_dims` at `rsl_rl_ppo_cfg.py:181`.
 - **Heads**: K scalar outputs, one head per constraint (`evaluate_costs()` returns
   K values from the same critic_obs). Cost returns/advantages are shaped `(T,N,K)`.
 - **Naming convention**: the `cost_critic.*` prefix is what routes it to the Adam
   value optimizer instead of the TRPO natural-gradient group.
 
 **`num_constraints` (K) is runtime-resolved.** The static cfg default is `0`
-placeholder (`rsl_rl_ppo_cfg.py:180`); `constraint_encoder_runner.py` overwrites it from
+placeholder (`rsl_rl_ppo_cfg.py:180`); `envs/_core/runners/constraint_encoder_runner.py` overwrites it from
 `len(cfg.constraints.terms)` before `super().__init__()`, so `cost_critic` is sized
 correctly at build time.
 
@@ -334,7 +334,7 @@ what rests on consensus vs. on our own measurements.
 |---|---|---|
 | Global state-independent `log_std` | **Standard** for on-policy PPO/TRPO | "37 Implementation Details of PPO" (state-independent, init 0); HORA `self.sigma = nn.Parameter`; rsl_rl `state_dependent_std=False` default. State-dependent std is the SAC norm, not TRPO. |
 | Linear action output (no tanh/clamp) | **Standard** for PPO/TRPO | raw Gaussian mean + env-side `[-1,1]` interpretation; tanh-squashing is a SAC trait (needs Jacobian correction). `MLP` last layer is linear (`last_activation=None`); `act()` does no clamping. |
-| `min_std` floor / `max_std` cap | **Project-custom** (not in rsl_rl upstream) | floor = prevents premature std collapse / preserves exploration; cap = prevents divergence. Similar floors seen in some robot-RL repos (e.g. MoE-Loco "clip min std 0.05") but no standardized recipe. Applied after the TRPO step in `constraint_trpo.py`. |
+| `min_std` floor / `max_std` cap | **Project-custom** (not in rsl_rl upstream) | floor = prevents premature std collapse / preserves exploration; cap = prevents divergence. Similar floors seen in some robot-RL repos (e.g. MoE-Loco "clip min std 0.05") but no standardized recipe. Applied after the TRPO step in `envs/_core/algorithms/constraint_trpo.py`. |
 | Entropy bonus added to TRPO | **Non-standard** (standard for PPO, not pure TRPO) | EnTRPO (arXiv:2110.13373) positions "TRPO + entropy regularization" as a *novelty* — if it were standard it would not be a paper. PPO routinely uses a positive `entropy_coef` (rsl_rl 0.01, IsaacLab AnymalB 0.005). |
 | Per-dim entropy / min_std (arm vs thruster) | **Project-custom** | task-specific: arm dims collapse faster (by iter ~1404), so they get a stronger entropy push (0.01 vs 0.001) and a higher floor (0.10 vs 0.05). |
 
@@ -354,11 +354,11 @@ version in `exploration-and-noise.md` §6.
 
 ## Source files
 
-- `constrained_albc/envs/main/encoder/_policy_base.py` — `PolicyBase`, global `log_std`, Gaussian, critic/cost_critic
-- `constrained_albc/envs/main/encoder/actor_critic_encoder.py` — encoder, actor, asymmetric critic wiring
-- `constrained_albc/envs/main/encoder/actor_critic_asym_constrained.py` — NoEncoder ablation policy
-- `constrained_albc/envs/main/algorithms/constraint_trpo.py` — ConstraintTRPO + IPO
-- `constrained_albc/envs/main/runners/constraint_encoder_runner.py` — runner, `num_constraints` auto-sync
+- `constrained_albc/envs/_core/encoder/_policy_base.py` — `PolicyBase`, global `log_std`, Gaussian, critic/cost_critic
+- `constrained_albc/envs/_core/encoder/actor_critic_encoder.py` — encoder, actor, asymmetric critic wiring
+- `constrained_albc/envs/_core/encoder/actor_critic_asym_constrained.py` — NoEncoder ablation policy
+- `constrained_albc/envs/_core/algorithms/constraint_trpo.py` — ConstraintTRPO + IPO
+- `constrained_albc/envs/_core/runners/constraint_encoder_runner.py` — runner, `num_constraints` auto-sync
 - `constrained_albc/envs/main/agents/rsl_rl_ppo_cfg.py` — `_ALBCPolicyCfg`, all dimensions and hyperparameters
 - `constrained_albc/envs/main/config.py` — `ALBCEnvCfg`, observation/action space
 - `constrained_albc/envs/main/albc_env.py` — obs assembly, action application

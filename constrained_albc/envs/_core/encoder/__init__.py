@@ -1,0 +1,6 @@
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
+"""Shared encoder modules. Import-light by design (see _core/__init__.py)."""

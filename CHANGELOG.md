@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `constrained_albc/envs/_core/` (P5.6, 2026-07-13): shared algorithm core extracted from
+  the main/full_dof parallel trees -- constraint_trpo, encoder (actor_critic_encoder,
+  actor_critic_asym_constrained, _policy_base, _z_ablation), runners
+  (constraint_encoder_runner, on_policy_doraemon_runner), the whole student package, and
+  utils logging/run_links (~2.3k LOC deduplicated). Variant paths keep 9-line import
+  shims, so every existing import and task registration is unchanged.
+- Reward-term registry (P5.6): `RewardManager` builtin terms live in one `_BUILTIN_TERMS`
+  table (the parallel hardcoded `_NAMES` list is derived, can no longer drift) and
+  experiments append terms cfg-side via `ALBCRewardCfg.extra_terms: list[RewardTermCfg]`,
+  mirroring `ALBCConstraintCfg.terms` -- the last routine core-edit for reward
+  experiments is gone. New test pins the extra-term flow through `compute()`.
 - Docs (P5 overhaul, 2026-07-12): `docs/tutorials/getting-started.md` (install -> 100-iter
   smoke train -> eval -> read the plots), `docs/reference/glossary.md`,
   `docs/reference/task-reference.md` (the single task-ID enumeration); `docs/README.md`
@@ -18,6 +29,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Behavior deltas bundled with the _core unification (P5.6), all drift-stops on the
+  legacy full_dof side: full_dof gains `Policy/clip_fraction` logging and
+  checkpoint-driven teacher `num_constraints` (identical result for its 10-head
+  checkpoints); the DR-derived priv-obs bounds override is now guarded to main envs
+  only -- previously a full_dof run through train.py's variant-blind runner dispatch
+  would have received wrong-layout (28D) bounds, a latent crash.
+- No-Isaac test suite now collects as a whole (367+1 tests): root `tests/conftest.py`
+  pre-imports tensordict before any module-level `_MockModule` stubs land in
+  sys.modules, and `test_config_equivalence.py` snapshots/restores sys.modules around
+  its stubbed loads. The previously recorded "363 passed" never included
+  `test_value_optimizer_groups.py` in the same collection.
 - Docs overhauled to Diátaxis EN-only against `envs/main` (P5, 2026-07-12):
   system-overview rewritten (was pre-refactor full_dof); reward-design reduced 513 -> 79
   lines (rationale only, values live in `reference/reward.md`); how-to sweep (deploy.md

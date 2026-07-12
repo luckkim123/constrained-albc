@@ -36,6 +36,7 @@ not by a reward term -- the reward-side centering penalty was removed 2026-07.
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 import torch
@@ -84,6 +85,23 @@ class TrackingTermCfg:
 
 
 @configclass
+class RewardTermCfg:
+    """Single extra reward term: value function + dt-scaled weight.
+
+    Mirrors ConstraintTermCfg (mdp/constraints.py) so experiments add reward
+    terms cfg-side (``env_cfg.reward.extra_terms = [*terms, RewardTermCfg(...)]``)
+    instead of editing RewardManager.compute(). ``func(robot, env, **params)``
+    returns the UNSCALED per-env value, shape (num_envs,); the manager applies
+    ``weight * dt`` exactly like every builtin term.
+    """
+
+    func: Callable = lambda _r, _e: torch.zeros(1)
+    params: dict = {}
+    weight: float = 0.0
+    name: str = ""
+
+
+@configclass
 class ALBCRewardCfg:
     """Tracking reward config. Two tracking terms (att_rp, yaw_vel) + penalty terms."""
 
@@ -101,6 +119,8 @@ class ALBCRewardCfg:
     bias_ema_alpha: float = 0.99  # effective window ~100 steps = 2 s at 50 Hz
     # Per-axis weights for bias penalty so roll (weak authority) gets stronger bias signal.
     bias_weights: tuple[float, float, float] = (1.5, 1.0, 1.0)
+    # Extra experiment terms appended cfg-side (registry pattern; see RewardTermCfg).
+    extra_terms: list[RewardTermCfg] = []
 
 
 # --- Reward Functions ---
@@ -189,14 +209,31 @@ def bias_ema_penalty(env: ALBCEnv) -> torch.Tensor:
 
 
 class RewardManager:
-    """Computes 6-term tracking reward with dt-scaling and episode tracking."""
+    """Computes the tracking reward (builtin registry + cfg extras) with dt-scaling.
 
-    _NAMES = ["att_rp", "yaw_vel", "torque", "thruster", "smoothness", "bias"]
+    Builtin terms live in _BUILTIN_TERMS below; experiments append extra terms
+    via ALBCRewardCfg.extra_terms (mirrors the ALBCConstraintCfg.terms registry)
+    so a new reward term needs no edit to this class.
+    """
+
+    # (name, weight getter, value fn(robot, env)) -- one row per builtin term.
+    _BUILTIN_TERMS: tuple[tuple[str, Callable, Callable], ...] = (
+        ("att_rp", lambda c: c.att_rp.k, lambda robot, env: att_rp_tracking(env)),
+        ("yaw_vel", lambda c: c.yaw_vel.k, lambda robot, env: yaw_vel_tracking(env)),
+        ("torque", lambda c: c.k_tau, joint_torque),
+        ("thruster", lambda c: c.k_thr, lambda robot, env: thruster_energy(env)),
+        ("smoothness", lambda c: c.k_s, lambda robot, env: action_smoothness(env)),
+        ("bias", lambda c: c.k_bias, lambda robot, env: bias_ema_penalty(env)),
+    )
 
     def __init__(self, cfg: ALBCRewardCfg, num_envs: int, device: str) -> None:
         self._cfg = cfg
         self._buf = torch.zeros(num_envs, dtype=torch.float32, device=device)
-        self._episode_sums = {n: torch.zeros(num_envs, dtype=torch.float32, device=device) for n in self._NAMES}
+        self._extra_terms = [(t.name or t.func.__name__, t) for t in cfg.extra_terms]
+        self._names = [n for n, _, _ in self._BUILTIN_TERMS] + [n for n, _ in self._extra_terms]
+        if len(set(self._names)) != len(self._names):
+            raise ValueError(f"Duplicate reward term names: {self._names}")
+        self._episode_sums = {n: torch.zeros(num_envs, dtype=torch.float32, device=device) for n in self._names}
         # Preallocated per-axis bias weights (used by bias_ema_penalty each step).
         self._bias_w = torch.tensor(cfg.bias_weights, dtype=torch.float32, device=device)
 
@@ -205,16 +242,12 @@ class RewardManager:
         cfg = self._cfg
         self._buf.zero_()
 
-        terms = [
-            ("att_rp", cfg.att_rp.k, att_rp_tracking(env)),
-            ("yaw_vel", cfg.yaw_vel.k, yaw_vel_tracking(env)),
-            ("torque", cfg.k_tau, joint_torque(robot, env)),
-            ("thruster", cfg.k_thr, thruster_energy(env)),
-            ("smoothness", cfg.k_s, action_smoothness(env)),
-            ("bias", cfg.k_bias, bias_ema_penalty(env)),
-        ]
-        for name, weight, value in terms:
-            scaled = value * weight * dt
+        for name, weight_of, func in self._BUILTIN_TERMS:
+            scaled = func(robot, env) * weight_of(cfg) * dt
+            self._buf += scaled
+            self._episode_sums[name] += scaled
+        for name, term in self._extra_terms:
+            scaled = term.func(robot, env, **term.params) * term.weight * dt
             self._buf += scaled
             self._episode_sums[name] += scaled
 
@@ -222,7 +255,7 @@ class RewardManager:
 
     def reset(self, env_ids: torch.Tensor) -> dict[str, float]:
         """Reset episode sums, return means before reset."""
-        sums = {n: self._episode_sums[n][env_ids].mean().item() for n in self._NAMES}
-        for n in self._NAMES:
+        sums = {n: self._episode_sums[n][env_ids].mean().item() for n in self._names}
+        for n in self._names:
             self._episode_sums[n][env_ids] = 0.0
         return sums

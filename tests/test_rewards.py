@@ -82,6 +82,7 @@ def _reward_cfg(**kw):
     cfg = SimpleNamespace(
         att_rp=_track_term(), att_roll_weight=1.5,
         lin_vel=_track_term(), yaw_vel=_track_term(),
+        extra_terms=[],
     )
     for k, v in kw.items():
         setattr(cfg, k, v)
@@ -202,3 +203,31 @@ def test_reward_manager_preallocates_bias_w():
     rm = R.RewardManager(cfg, num_envs=4, device="cpu")
     assert hasattr(rm, "_bias_w")
     assert torch.allclose(rm._bias_w, torch.tensor([1.5, 1.0, 1.0, 1.0, 1.0, 1.0]))
+
+
+def test_reward_manager_extra_terms_flow_through_compute():
+    """RewardTermCfg extras register in episode sums and add weight*dt-scaled values."""
+    def probe(robot, env, gain=1.0):
+        return torch.full((1,), 2.0) * gain
+
+    cfg = _reward_cfg(
+        att_rp=_track_term(k=0.0), yaw_vel=_track_term(k=0.0),
+        k_tau=0.0, k_thr=0.0, k_s=0.0, k_bias=0.0,
+        bias_weights=(1.0, 1.0, 1.0),
+        extra_terms=[R.RewardTermCfg(func=probe, params={"gain": 2.0}, weight=0.5, name="probe")],
+    )
+    rm = R.RewardManager(cfg, num_envs=1, device="cpu")
+    assert "probe" in rm._episode_sums
+
+    env = _env(
+        att_err=torch.zeros(1, 2), yaw_err=torch.zeros(1),
+        actions=torch.zeros(1, 8), prev=torch.zeros(1, 8), prev_prev=torch.zeros(1, 8),
+        bias_ema=torch.zeros(1, 3),
+    )
+    env._reward_manager = rm
+    robot = SimpleNamespace(data=SimpleNamespace(applied_torque=torch.zeros(1, 4)))
+    total = rm.compute(robot, dt=0.02, env=env)
+    # Builtin weights are all 0 here; only the extra term contributes:
+    # func 2.0 * gain 2.0 * weight 0.5 * dt 0.02 = 0.04.
+    assert total.item() == pytest.approx(0.04)
+    assert rm._episode_sums["probe"].item() == pytest.approx(0.04)

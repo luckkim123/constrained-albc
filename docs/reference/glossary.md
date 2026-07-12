@@ -107,12 +107,12 @@ ALBC ROS control package. See [action-pipeline.md](action-pipeline.md) §5.
 **TCN/GRU student** — The distillation student encoder: a TCN (windowed
 temporal-convolution) or GRU (recurrent) network trained to reproduce the
 teacher's latent `z` (`l_hat`) from observation history alone, without access
-to `p_t`. See `constrained_albc/envs/main/student/`.
+to `p_t`. See `constrained_albc/envs/_core/student/`.
 
 **Teacher-student distillation** — Training the TCN/GRU student encoder
 (supervised, frozen teacher actor) to approximate the privileged-encoder latent
 `z` from history the real robot actually has, so the deployed policy does not
-need `p_t` at inference. See `constrained_albc/envs/main/student/runner.py`.
+need `p_t` at inference. See `constrained_albc/envs/_core/student/runner.py`.
 
 **TDC** — Time Delay Control: a model-based control law (not RL) implemented
 as a separate task variant (`Isaac-ConstrainedALBC-TDC-v0`, `envs/tdc/`), used

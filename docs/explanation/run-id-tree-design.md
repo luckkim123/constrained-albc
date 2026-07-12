@@ -97,7 +97,7 @@ training, evaluation, and config are all reachable with a single run_id. No time
 The student is a child of the teacher. Instead of a separate top-level (`logs/rsl_rl/student_policy/`):
 - Option A (nested): `experiments/<teacher_run_id>/student/<student_run_id>/`
 - Option B (sibling + reference): `experiments/<student_run_id>/` + linked via the manifest's `parent_run_id`.
-  → **B recommended** (teacher/student can run independently, replacing the hardcoded teacher_run_dir at student/config.py:17).
+  → **B recommended** (teacher/student can run independently, replacing the hardcoded teacher_run_dir at envs/_core/student/config.py:27).
 
 ## 3. manifest.json — Entry Point for Tracing
 

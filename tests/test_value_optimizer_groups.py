@@ -28,7 +28,7 @@ import pytest
 import torch
 from tensordict import TensorDict
 
-_MAIN = Path(__file__).resolve().parents[1] / "constrained_albc" / "envs" / "main"
+_CORE = Path(__file__).resolve().parents[1] / "constrained_albc" / "envs" / "_core"
 
 
 def _load(name: str, path: Path):
@@ -40,13 +40,13 @@ def _load(name: str, path: Path):
 
 
 _pkg = types.ModuleType("_enc_pkg")
-_pkg.__path__ = [str(_MAIN / "encoder")]
+_pkg.__path__ = [str(_CORE / "encoder")]
 sys.modules["_enc_pkg"] = _pkg
-_load("_enc_pkg._z_ablation", _MAIN / "encoder" / "_z_ablation.py")
-_load("_enc_pkg._policy_base", _MAIN / "encoder" / "_policy_base.py")
-_ace = _load("_enc_pkg.actor_critic_encoder", _MAIN / "encoder" / "actor_critic_encoder.py")
+_load("_enc_pkg._z_ablation", _CORE / "encoder" / "_z_ablation.py")
+_load("_enc_pkg._policy_base", _CORE / "encoder" / "_policy_base.py")
+_ace = _load("_enc_pkg.actor_critic_encoder", _CORE / "encoder" / "actor_critic_encoder.py")
 ActorCriticEncoder = _ace.ActorCriticEncoder
-ConstraintTRPO = _load("_alg_constraint_trpo", _MAIN / "algorithms" / "constraint_trpo.py").ConstraintTRPO
+ConstraintTRPO = _load("_alg_constraint_trpo", _CORE / "algorithms" / "constraint_trpo.py").ConstraintTRPO
 
 
 def _build(critic_uses_z: bool):
