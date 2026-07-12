@@ -254,6 +254,11 @@ class ConstraintTRPO:
         self.transition.dones = dones
 
         if "time_outs" in extras:
+            # BUG (dormant, normalize_value=False by default): self.transition.values is
+            # normalized-scale when normalize_value=True, but gets baked into raw-scale
+            # storage.rewards here -- the runner only denormalizes storage.values post-hoc
+            # (constraint_encoder_runner.py _compute_returns_with_value_norm), never this.
+            # Must fix before normalize_value is ever enabled.
             self.transition.rewards += self.gamma * torch.squeeze(
                 self.transition.values * extras["time_outs"].unsqueeze(1).to(self.device), 1
             )
@@ -418,12 +423,9 @@ class ConstraintTRPO:
         obs_flat = self.storage.observations.flatten(0, 1).clone()
         actions_flat = self.storage.actions.flatten(0, 1).clone()
         returns_flat = self.storage.returns.flatten(0, 1).clone()
+        # Already standardized by storage.compute_returns() (normalize_advantage=True
+        # default, called earlier this iteration) -- re-standardizing here was a no-op.
         advantages_flat = self.storage.advantages.flatten(0, 1).clone()
-
-        # Standardize reward advantages
-        adv_std = advantages_flat.std()
-        if adv_std > 1e-8:
-            advantages_flat = (advantages_flat - advantages_flat.mean()) / adv_std
 
         old_log_prob_flat = self.storage.actions_log_prob.flatten(0, 1).clone()
         old_mu_flat = self.storage.mu.flatten(0, 1).clone()
