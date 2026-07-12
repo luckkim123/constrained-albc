@@ -1204,3 +1204,55 @@
 - **Pages:** diagnosis_md_2026_05_25_retirement_open_item_ledger.md
 - **Summary:** created 'DIAGNOSIS.md 2026-05-25 retirement: open-item ledger'
 
+## [2026-07-12T18:14:59.029839] query
+- **Pages:** joint1_cumulative_rotation_constraint_never_binds_policy_parks_a.md, joint1_anti_drift_constrain_the_command_cumulative_arm_b_not_the.md, joint1_cumulative_ipo_constraint_generalizes_drift_bounded_at_oo.md, arm_a_measured_angle_joint1_constraint_recovers_not_diverges_the.md, joint1_anti_drift_design_history.md, joint1_centering_reward_is_removed_on_main_6_term_but_alive_on_e.md, ee_leak_0_k_anchor_0_does_not_blow_up_joint1_settle_pade_ik_clam.md, reward_penalty_terms_thruster_smoothness_bias_block_3_temporal_b.md, constraint_health_index.md, engine_gap_flat_target_eval_records_joint1_trajectory_but_render.md, constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md, reward_md_deep_dive_session_2026_07_11_4_review_fix_prompts_queu.md, constraint_threshold_budget_tuning_thresholds_split_into_hard_ph.md, constraint_viol_trajectory_barrier_sign_metrics_4_10_starts_at_d.md, encoder_priv_obs_normalization_bounds_must_be_dr_derived_not_har.md, engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md, reward_cost_parallel_structure_mostly_mirroring_two_real_couplin.md, reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md
+- **Summary:** query 'joint1 cumulative rotation drift anti-drift constraint' -> 20 of 69
+
+## [2026-07-12T18:26:08.556497] add
+- **Pages:** joint1_stage_1_gate_go_drift_is_real_on_unlimited_physics_not_th.md
+- **Summary:** created 'joint1 Stage-1 gate GO: drift is real on unlimited physics, not the +-360deg wall artifact'
+
+## [2026-07-12T18:26:33.100520] add
+- **Pages:** joint1_anti_drift_design_history.md
+- **Summary:** updated 'joint1 anti-drift design history'
+
+## [2026-07-12T18:26:43.465984] add
+- **Pages:** the_checkpoint_is_a_full_dof_teacher_it_is_dimension_exact_for_i.md
+- **Summary:** created 'The checkpoint is a full-DOF teacher; it is dimension-exact for `Isaac-Constrain'
+
+## [2026-07-12T18:26:43.465984] add
+- **Pages:** the_env_is_byte_identical_to_the_ee_action_era_baseline_the_drif.md
+- **Summary:** created 'The env is byte-identical to the ee-action-era baseline — the drift was measured'
+
+## [2026-07-12T18:26:43.465984] add
+- **Pages:** the_joint1_command_excursion_reaches_one_full_revolution_for_the.md
+- **Summary:** created 'The joint1 command excursion reaches ≈one full revolution for the median env at '
+
+## [2026-07-12T18:26:43.465984] add
+- **Pages:** unbounded_monotonic_drift_exists_in_the_tail_the_single_env_surv.md
+- **Summary:** created 'Unbounded monotonic drift exists in the tail: the single env surviving all 155 s'
+
+## [2026-07-12T18:26:43.465984] add
+- **Pages:** lane_3_the_drift_is_an_artifact_of_the_old_360_wall_is_refuted_l.md
+- **Summary:** created 'Lane 3 (the drift is an artifact of the old ±360° wall) is refuted; Lane 1 (real'
+
+## [2026-07-12T18:26:43.465984] add
+- **Pages:** under_a_flat_zero_target_on_the_unlimited_wall_physics_the_old_t.md
+- **Summary:** created 'Under a flat (zero) target on the unlimited-wall physics, the old teacher fails '
+
+## [2026-07-12T18:26:43.465984] add
+- **Pages:** the_drift_is_one_directional_at_nominal_physics_but_degrades_tow.md
+- **Summary:** created 'The drift is one-directional at nominal physics but degrades toward a random wal'
+
+## [2026-07-12T18:26:43.465984] add
+- **Pages:** the_measured_drift_is_exactly_the_failure_mode_the_proposal_s_st.md
+- **Summary:** created "The measured drift is exactly the failure mode the proposal's Stage-2 probabilis"
+
+## [2026-07-12T18:26:43.465984] add
+- **Pages:** the_standard_training_analysis_groups_reward_decomposition_trpo_.md
+- **Summary:** created 'The standard training-analysis groups (reward decomposition, TRPO line-search/en'
+
+## [2026-07-12T18:38:25.025563] add
+- **Pages:** joint1_stage_1_gate_go_drift_is_real_on_unlimited_physics_not_th.md
+- **Summary:** updated 'joint1 Stage-1 gate GO: drift is real on unlimited physics, not the +-360deg wall artifact'
+
