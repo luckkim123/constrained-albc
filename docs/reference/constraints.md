@@ -464,9 +464,15 @@ breaking that identity.
 because their absolute margins looked numerically small — when in fact
 $\hat{J}_C/d_k = 0.003$ and $0.000$ respectively (the *deepest* slack), while the
 genuinely binding `thruster_util` ($\hat{J}_C/d_k \approx 0.87$) has a *large*
-absolute margin simply because its budget is large. The analysis engine still has
-this gap: `analyze_training.py:_constraint_margin()` (`:370-379`) returns the
-absolute margin with no $d_k$ normalization. Source: omx wiki
+absolute margin simply because its budget is large. The engine normalizes since commit `4ff9ea1`
+(2026-06-07): `.omx/profile/analyze_training.py` computes `_constraint_binding_ratio`
+(`:416-430`, $1 - \text{margin}/d_k$) and prints a `JC/dk=` column that flags the
+binding channel by max ratio (`:809`, `:820`), pinned by
+`test_constraint_margin_norm.py`. The low-level `_constraint_margin()` helper
+(`:370-379`) still returns the raw absolute margin, which its consumer (`:803`)
+normalizes. Like the manual formula, the engine ratio is exact only in the slack
+regime and saturates at $1-\alpha = 0.95$ for a genuinely-binding channel (it
+consumes the frozen margin). Source: omx wiki
 `constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md`.
 
 ---

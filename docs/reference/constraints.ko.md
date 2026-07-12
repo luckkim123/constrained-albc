@@ -461,9 +461,14 @@ $d_k^i \ne d_k$가 되고, 그 identity가 깨진다.
 "binding family"로 오독한 사례가 있다 — 실제로는 $\hat{J}_C/d_k = 0.003$과
 $0.000$(가장 깊은 slack)이었던 반면, 진짜로 binding인 `thruster_util`
 ($\hat{J}_C/d_k \approx 0.87$)은 단지 budget이 커서 절대 margin이 *크게*
-나온 것이었다. 분석 엔진에는 아직 이 gap이 남아 있다:
-`analyze_training.py:_constraint_margin()`(`:370-379`)은 $d_k$ 정규화 없이
-절대 margin을 반환한다. 출처: omx wiki
+나온 것이었다. 엔진은 commit `4ff9ea1`(2026-06-07)부터 정규화한다:
+`.omx/profile/analyze_training.py`가 `_constraint_binding_ratio`(`:416-430`,
+$1 - \text{margin}/d_k$)를 계산하고 `JC/dk=` 컬럼(`:809`)으로 max ratio 기준
+binding 채널을 플래그하며(`:820`) `test_constraint_margin_norm.py`로 pin된다.
+저수준 `_constraint_margin()`(`:370-379`)은 여전히 raw 절대 margin을 반환하지만
+그 소비자(`:803`)가 정규화한다. 수동 공식과 마찬가지로 엔진 비율도 로깅된 margin을
+소비하므로 slack 영역에서만 정확하고, 진짜 binding 채널은 margin이 $\alpha d_k$로
+동결돼 $1-\alpha = 0.95$에서 saturate한다. 출처: omx wiki
 `constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md`.
 
 ---
