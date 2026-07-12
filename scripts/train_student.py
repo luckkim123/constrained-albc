@@ -22,7 +22,9 @@ from isaaclab.app import AppLauncher
 parser = argparse.ArgumentParser(description="Train student policy from teacher checkpoint.")
 parser.add_argument("--task", type=str, default="Isaac-ConstrainedALBC-TRPO-v0")
 parser.add_argument("--encoder_type", type=str, choices=["tcn", "gru"], required=True)
-parser.add_argument("--run_name", type=str, default=None, help="Override auto-named run (default: student_<encoder_type>).")
+parser.add_argument(
+    "--run_name", type=str, default=None, help="Override auto-named run (default: student_<encoder_type>)."
+)
 parser.add_argument("--teacher_run_dir", type=str, required=True,
                     help="Run directory of the trained teacher to distill from (contains the checkpoint).")
 parser.add_argument("--teacher_checkpoint", type=str, default="model_4999.pt")
@@ -58,7 +60,9 @@ from datetime import datetime
 
 import gymnasium as gym
 import torch
+
 from isaaclab.envs import DirectRLEnvCfg
+
 from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper
 
 import isaaclab_tasks  # noqa: F401

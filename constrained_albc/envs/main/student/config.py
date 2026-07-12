@@ -30,7 +30,7 @@ class StudentCfg:
     # Architecture
     encoder_type: str = "tcn"       # "tcn" or "gru"
     policy_obs_dim: int = 69        # attitude-only: 20 proprio + 46 history + 3 integral
-    privileged_dim: int = 28        # attitude-only: 24 DR params + 3 measured lin_vel + 1 control-action delay (critic-only)
+    privileged_dim: int = 28        # attitude-only: 24 DR + 3 measured lin_vel + 1 control delay (critic-only)
     latent_dim: int = 9             # must match teacher encoder output
 
     # TCN-specific

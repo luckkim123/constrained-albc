@@ -22,8 +22,8 @@ from isaaclab.utils import configclass
 from isaaclab.utils.noise import GaussianNoiseCfg, NoiseModelWithAdditiveBiasCfg, UniformNoiseCfg
 
 from marinelab.assets import (
-    ALBC_JOINT_NAMES,
     ALBC_CFG,
+    ALBC_JOINT_NAMES,
     ALBCBuoyHydrodynamicsCfg,
     ALBCHydrodynamicsCfg,
     HydrodynamicsCfg,
