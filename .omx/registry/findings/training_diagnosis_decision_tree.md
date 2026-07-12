@@ -12,7 +12,7 @@ schemaVersion: 1
 
 # training diagnosis decision tree
 
-Maps an anomaly pattern (see [[training-anomaly-thresholds-tb-tag-alert-table]]) to a likely cause and the config knob to check. Source: train-analyze/analyze_training.py DIAGNOSIS block (engine at .omx/profile/analyze_training.py). Diagnosis always runs (not only when tier-1 anomalies fire); it checks anomaly patterns AND data-derived patterns (plateau, divergence).
+Maps an anomaly pattern (see [[training_anomaly_thresholds_tb_tag_alert_table]]) to a likely cause and the config knob to check. Source: train-analyze/analyze_training.py DIAGNOSIS block (engine at .omx/profile/analyze_training.py). Diagnosis always runs (not only when tier-1 anomalies fire); it checks anomaly patterns AND data-derived patterns (plateau, divergence).
 - entropy COLLAPSED + noise LOW -> noise floor too low, check min_std config
 - z SAT + grad DEAD -> encoder saturated, check weight_decay/activation/z_bounds_coef
 - ls_success FAIL -> barrier_t too low (cost gradient dominates) OR too many constraints active simultaneously

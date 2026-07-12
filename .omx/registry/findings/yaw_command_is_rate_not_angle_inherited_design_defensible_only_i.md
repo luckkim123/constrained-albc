@@ -33,5 +33,5 @@ A/B: yaw-angle command vs current yaw-rate command, for station-keeping. This is
 
 ## Open / unverified
 
-(a) Whether yaw-angle would regress the tuned baseline is UNTESTED (needs the A/B). (b) Marine-autopilot convention rests on secondary sources (Fossen Handbook Ch.7 primary not read). (c) arm-task implicit heading dependence not audited. Related: [[teacher_dr_harder_yaw_is_the_only_heavy_tail_axis_roll_is_dc_bias]], [[command_is_not_domain_randomization_command_range_scale_is_inert]].
+(a) Whether yaw-angle would regress the tuned baseline is UNTESTED (needs the A/B). (b) Marine-autopilot convention rests on secondary sources (Fossen Handbook Ch.7 primary not read). (c) arm-task implicit heading dependence not audited. Related: [[teacher_dr_harder_yaw_is_the_only_heavy_tail_axis_roll_is_dc_bia]], [[command_is_not_domain_randomization_command_range_scale_is_inert]].
 

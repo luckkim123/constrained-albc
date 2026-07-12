@@ -4,7 +4,7 @@ tags: ["heavy-tail", "per-env", "fault", "fault-tolerant", "thruster-failure", "
 created: 2026-06-14T04:36:22.611736
 updated: 2026-06-14T04:36:22.611736
 sources: []
-links: ["engine_gap_eval_npz_saves_no_raw_obs_std_privileged_blocks_exact.md", "state_dependent_std_difficulty_null_now_confirmed_on_real_dr_med.md", "heavy_tail_vs_sample_mean_divergence_are_independent.md"]
+links: ["engine_gap_eval_npz_saves_no_raw_obs_std_privileged_blocks_exact.md", "state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md", "heavy_tail_vs_sample_mean_divergence_are_independent.md"]
 category: reference
 confidence: high
 schemaVersion: 1
@@ -34,7 +34,7 @@ Scopes the existing per-env heavy-tail tooling against a planned fault-tolerant-
 - **Analysis deepening**: univariate corr -> multivariate / clustering on the joined (fault + DR) per-env table.
 
 ## NET
-The heavy-tail frame is reusable for FTC -- a fault is just a new per-env variation axis joined the same way DR is. But the DR-only schema + obs-less npz are hard blockers: you cannot heavy-tail-analyze a fault you do not record per-env. So FTC research order is: (1) fault injection + per-env fault snapshot (infra), THEN (2) heavy-tail/cluster analysis over fault envs, THEN (3) FTC training. Step 1 is a separate session's job (handoff prompt issued 2026-06-14). Related: [[state_dependent_std_difficulty_null_now_confirmed_on_real_dr_med]] (the per-env causal ceiling in practice), [[heavy_tail_vs_sample_mean_divergence_are_independent]] (the analysis frame).
+The heavy-tail frame is reusable for FTC -- a fault is just a new per-env variation axis joined the same way DR is. But the DR-only schema + obs-less npz are hard blockers: you cannot heavy-tail-analyze a fault you do not record per-env. So FTC research order is: (1) fault injection + per-env fault snapshot (infra), THEN (2) heavy-tail/cluster analysis over fault envs, THEN (3) FTC training. Step 1 is a separate session's job (handoff prompt issued 2026-06-14). Related: [[state_dependent_std_robustness_vs_nominal_trade_off_not_difficul]] (the per-env causal ceiling in practice), [[heavy_tail_vs_sample_mean_divergence_are_independent]] (the analysis frame).
 
 VERIFIED: dr_snapshot.py:19-27/35-85 (DR-only schema); eval.py:39/486/517/578/686 (per_env_dr wiring + npz); eval_adapter.py:45/121-131 (heavy-tail subcommand); wiki fault query returned 0 FTC pages (greenfield). Source: user FTC research-direction discussion, 2026-06-14.
 

@@ -1,6 +1,6 @@
 ---
 title: "engine-gap: eval npz saves no raw obs/std/privileged — blocks exact per-env std reconstruction"
-tags: ["engine-gap", "eval", "adaptivity", "state_dependent_std", "npz"]
+tags: ["engine-gap", "eval", "adaptivity", "state_dependent_std", "npz", "debugging"]
 created: 2026-06-09T04:03:28.206032
 updated: 2026-06-09T04:03:28.206032
 sources: ["diagnose-20260609-125556"]

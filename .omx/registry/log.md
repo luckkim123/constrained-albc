@@ -1168,3 +1168,35 @@
 - **Pages:** arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md
 - **Summary:** updated 'Arm velocity_limit_sim 6.28->3.1 ripple: dead-constraint trap + delta_scale runaway (retrain item, not one-line)'
 
+## [2026-07-12T14:11:29.031769] gc-apply
+- **Pages:** none
+- **Summary:** deleted 0, merged 3 source(s)
+
+## [2026-07-12T14:17:28.437628] add
+- **Pages:** joint1_anti_drift_constrain_the_command_cumulative_arm_b_not_the.md
+- **Summary:** updated 'joint1 anti-drift: constrain the COMMAND (cumulative, Arm B) not the MEASUREMENT (wrap, Arm A) to preserve attitude'
+
+## [2026-07-12T14:17:28.825256] add
+- **Pages:** engine_gap_omx_cli_gaps_found_re_analyzing_teacher_2026_06_06_ro.md
+- **Summary:** updated 'engine-gap: omx CLI gaps found re-analyzing teacher (2026-06-06 round 2)'
+
+## [2026-07-12T14:17:29.203213] add
+- **Pages:** dr_harder_campaign_index.md
+- **Summary:** created 'dr_harder campaign index'
+
+## [2026-07-12T14:17:29.584517] add
+- **Pages:** constraint_health_index.md
+- **Summary:** created 'constraint health index'
+
+## [2026-07-12T14:17:29.975491] add
+- **Pages:** engine_gap_status_board.md
+- **Summary:** created 'engine-gap status board'
+
+## [2026-07-12T14:17:30.367141] add
+- **Pages:** joint1_anti_drift_design_history.md
+- **Summary:** created 'joint1 anti-drift design history'
+
+## [2026-07-12T14:17:30.753217] add
+- **Pages:** constrained_albc_experiment_conventions.md
+- **Summary:** updated 'constrained-albc experiment conventions'
+

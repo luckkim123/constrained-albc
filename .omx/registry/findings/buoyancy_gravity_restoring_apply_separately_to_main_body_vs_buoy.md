@@ -4,7 +4,7 @@ tags: []
 created: 2026-07-07T08:11:25.359795
 updated: 2026-07-08T23:25:59.884745
 sources: []
-links: ["hydro_dr_train_eval_sampling_mismatch_is_real_but_left_as_is_opt.md", "uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload.md", "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md"]
+links: ["hydro_dr_train_eval_sampling_mismatch_is_real_but_left_as_is_opt.md", "uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload_.md", "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md"]
 category: reference
 confidence: high
 schemaVersion: 1
@@ -36,7 +36,7 @@ So restoring is done by the MAIN body, net lift by the BUOY. The 0.059 is verifi
 
 ## The decorrelation caveat (open, ungated experiment)
 
-Because both bodies share one DORAEMON scale, real-world INDEPENDENT buoyancy error between the two physically-separate parts (main hull vs float, different waterproofing/tolerance) is NOT representable in training -- the same single-scalar-broadcast limit as the per-axis hydro case. Prompt PROMPT_main_buoy_hydro_dr_decorrelation.md proposes splitting volume_scale into `_main`/`_buoy` (NDIMS +1), keeping water_density shared (same tank=same water). GATED: needs eval evidence of main/buoy buoyancy-mismatch failure or a hardware tolerance argument -- do NOT run on intuition. Same decorrelation family as [[hydro_dr_train_eval_sampling_mismatch_is_real_but_left_as_is_opt]]. See also [[uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload]].
+Because both bodies share one DORAEMON scale, real-world INDEPENDENT buoyancy error between the two physically-separate parts (main hull vs float, different waterproofing/tolerance) is NOT representable in training -- the same single-scalar-broadcast limit as the per-axis hydro case. Prompt PROMPT_main_buoy_hydro_dr_decorrelation.md proposes splitting volume_scale into `_main`/`_buoy` (NDIMS +1), keeping water_density shared (same tank=same water). GATED: needs eval evidence of main/buoy buoyancy-mismatch failure or a hardware tolerance argument -- do NOT run on intuition. Same decorrelation family as [[hydro_dr_train_eval_sampling_mismatch_is_real_but_left_as_is_opt]]. See also [[uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload_]].
 
 ---
 

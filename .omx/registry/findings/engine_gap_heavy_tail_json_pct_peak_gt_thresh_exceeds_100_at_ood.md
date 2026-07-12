@@ -1,6 +1,6 @@
 ---
 title: "engine-gap: heavy_tail.json pct_peak_gt_thresh exceeds 100% at ood level (denominator bug)"
-tags: ["engine-gap", "heavy-tail", "ood", "eval-adapter"]
+tags: ["engine-gap", "heavy-tail", "ood", "eval-adapter", "debugging"]
 created: 2026-06-08T03:03:19.015251
 updated: 2026-06-08T03:03:19.015251
 sources: ["diagnose-20260608 dr_harder replot"]
@@ -17,4 +17,4 @@ schemaVersion: 1
 [SPEC] Ensure the ood-level per-env peak is reduced to shape (N,) (err[s:].max(axis=0)) before the >threshold fraction, identical to in-dist. The correct teacher/E1/E2 ood roll heavy-tail is 3.1% (2/64), E4 ood 7.8% (5/64) -- verified by recomputing per-env directly.
 [EVIDENCE] dr_harder replot 2026-06-08: existing E1 heavy_tail.json ood roll pct_peak_gt_thresh=312.5; direct per-env recompute gives 3.1%. Same N=64 used.
 [STATUS] proposed
-Workaround for analysis: do NOT cite heavy_tail.json pct_peak_gt_thresh at ood; recompute per-env or cite peak_max (absolute, trustworthy). cf [[dr_harder_heavy_tail_correction_peak_20_is_not_zero_at_medium_ha]].
+Workaround for analysis: do NOT cite heavy_tail.json pct_peak_gt_thresh at ood; recompute per-env or cite peak_max (absolute, trustworthy). cf dr_harder_heavy_tail_correction_peak_20_is_not_zero_at_medium_ha.
