@@ -178,6 +178,13 @@ class DomainRandomizationCfg:
     body_mass_scale: tuple[float, float] = (0.75, 1.25)
     water_density_range: tuple[float, float] = (995.0, 1025.0)
 
+    # -- Buoy Volume / Mass (decorrelated from the main-body scales above) --
+    # The buoy is a separately-fabricated float with its own manufacturing
+    # tolerance. Ranges genuinely mirror volume_scale/body_mass_scale (0.75, 1.25)
+    # above so "buoy scale == main scale" reproduces the correlated baseline.
+    buoy_volume_scale: tuple[float, float] = (0.75, 1.25)
+    buoy_body_mass_scale: tuple[float, float] = (0.75, 1.25)
+
     # -- Joint Actuator --
     joint_stiffness_range: tuple[float, float] = (30.0, 150.0)
     joint_damping_range: tuple[float, float] = (0.3, 7.0)

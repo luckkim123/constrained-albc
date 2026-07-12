@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Privileged obs union layout (2026-07-12 consolidation, option (c)): p_t stays 27D but its
+  content changed -- REMOVED Ixx and linear-damping-roll (priv-obs-slim Stage-1 validated
+  removals; quad_damp + measured lin_vel RETAINED, pending their own A/B), ADDED buoy_volume
+  and buoy_body_mass (DR-backed, decorrelated from the main-body scales; new DORAEMON dims
+  buoy_volume_scale / buoy_body_mass_scale, NDIMS 18 -> 20). Buoy dims sit at p_t[22:24] (end
+  of the DR-backed block); measured lin_vel stays last at [24:27]. Both DORAEMON sampling and
+  the eval-time uniform fallback key the buoy volume off buoy_volume_scale (events
+  `volume_key`); `randomize_body_mass` overwrites the buoy mass row with the independent
+  scale. Analysis sweep dispatch fingerprints union-27D checkpoints by bounds content (idx22
+  lower > 0, buoy volume) so pre-union 27D checkpoints keep their previous dispatch behavior.
+  Supersedes the unmerged exp/priv-obs-slim (21D) and exp/dr-offset-prune-buoy (25D) branches;
+  slim's contested removals (quad_damp, lin_vel) and buoy's Exp-A xy-offset prune remain in
+  the experiment queue. Verification: per-dim bounds pins in test_priv_obs_bounds (27 dims),
+  buoy volume/mass wiring + collapse guards in test_buoy_dr, DORAEMON registration order
+  assert; full suite 353 passed (pre-existing deploy-engine failure unrelated).
+
 - Deploy artifacts now live under `deploy/<group>/<label>_<YYMMDD_HHMMSS>/`
   (mirrors the logs tree group layer, label-before-date, timestamp =
   `analysis.paths.RUN_TS_FORMAT`) instead of ad-hoc repo-root dirs. The CLI

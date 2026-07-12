@@ -279,6 +279,66 @@ def _build_constrained_albc_24d_sweep(
     ]
 
 
+def _build_constrained_albc_union27_sweep(
+    lower: np.ndarray, upper: np.ndarray, offset: int = 0,
+) -> list[SweepParam]:
+    """Build sweep params for the union-27D main-env privileged obs (2026-07-12).
+
+    Layout = the previous 27D layout MINUS Ixx / lin_damp_roll (priv-obs-slim
+    Stage-1 validated removals) PLUS the 2 buoy scalars (buoy volume, buoy body
+    mass -- DR-backed, decorrelated from the main body). Dim count is unchanged
+    at 27, so the caller fingerprints on bounds content: idx22 here is buoy
+    volume (scale bounds, strictly positive lower); in the pre-union layout
+    idx22 is ocean-current y (symmetric bounds, negative lower).
+
+    27D structure (mirrors compute_privileged_obs, mdp/observations.py):
+         0:     Main volume
+         1-3:   Main CoG (x, y, z)
+         4-6:   Main CoB (x, y, z)
+         7:     Quadratic damping roll (representative)
+         8:     Body mass
+         9:     Added mass surge
+        10:     Payload mass
+        11-13:  Payload CoG offset (x, y, z)
+        14:     Joint stiffness Kp
+        15:     Joint damping Kd
+        16:     Thrust coefficient
+        17:     Time constant up
+        18:     Water density
+        19-21:  Ocean current velocity (x, y, z, world frame)
+        22:     Buoy volume
+        23:     Buoy body mass
+        24-26:  Measured body linear velocity (u, v, w) -- critic-only
+
+    Uses static min-max bounds (lower/upper) from checkpoint as sweep ranges.
+    """
+    o = offset
+    names = [
+        "Main Volume", "Main CoG X", "Main CoG Y", "Main CoG Z",
+        "Main CoB X", "Main CoB Y", "Main CoB Z",
+        "Quad Damp Roll", "Body Mass", "Added Mass Surge",
+        "Payload Mass", "Payload CoG X", "Payload CoG Y", "Payload CoG Z",
+        "Joint Stiffness", "Joint Damping", "Thrust Coeff", "Time Const Up",
+        "Water Density", "Ocean Current X", "Ocean Current Y", "Ocean Current Z",
+        "Buoy Volume", "Buoy Body Mass",
+        "Lin Vel U", "Lin Vel V", "Lin Vel W",
+    ]
+    units = [
+        "m^3", "m", "m", "m",
+        "m", "m", "m",
+        "", "kg", "kg",
+        "kg", "m", "m", "m",
+        "Nm/rad", "Nm*s/rad", "", "s",
+        "kg/m^3", "m/s", "m/s", "m/s",
+        "m^3", "kg",
+        "m/s", "m/s", "m/s",
+    ]
+    return [
+        SweepParam(names[i], o + i, float(lower[i]), float(upper[i]), units[i])
+        for i in range(27)
+    ]
+
+
 def _build_reduced_encoder_sweep(
     input_dim: int,
     lower: np.ndarray,
@@ -351,6 +411,12 @@ def build_sweep_params_from_checkpoint(
             return _build_constrained_albc_24d_sweep(enc_obs_lower, enc_obs_upper)
         if input_dim == 23:
             return _build_constrained_albc_23d_sweep(enc_obs_lower, enc_obs_upper)
+        if input_dim == 27 and float(enc_obs_lower[22]) > 0.0:
+            # Union-27D fingerprint (2026-07-12 layout): idx22 is buoy volume
+            # (scale bounds, strictly positive lower). Pre-union 27D checkpoints
+            # have ocean-current y at idx22 (symmetric bounds, negative lower)
+            # and keep falling through to the generic path exactly as before.
+            return _build_constrained_albc_union27_sweep(enc_obs_lower, enc_obs_upper)
         # Reduced encoder (e.g. 15D): build sweep from bounds directly
         return _build_reduced_encoder_sweep(input_dim, enc_obs_lower, enc_obs_upper)
 

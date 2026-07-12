@@ -30,13 +30,18 @@ Design spec: docs/plans/2026-06-30-dr-derived-priv-obs-normalization-bounds.md
 
 from __future__ import annotations
 
-# Index ordering MUST mirror compute_privileged_obs (mdp/observations.py:135-160):
+# Index ordering MUST mirror compute_privileged_obs (mdp/observations.py):
 #   hydro(7) = volume, CoG(x,y,z), CoB(x,y,z)
-#   dynamics(5) = Ixx, lin_damp_roll, quad_damp_roll, body_mass, added_mass_surge
+#   dynamics(3) = quad_damp_roll, body_mass, added_mass_surge
+#              (Ixx / lin_damp_roll removed -- priv-obs-slim Stage-1 validated)
 #   payload(4) = mass, cog_offset(x,y,z)
 #   actuator(4) = joint_Kp, joint_Kd, thrust_coeff, time_const_up
 #   env(4) = water_density, ocean_current(x,y,z)
+#   buoy(2) = buoy_volume, buoy_body_mass (DR-backed, decorrelated from main)
 #   measured(3) = body lin_vel u, v, w
+# Invariant: all DR-backed dims come FIRST; measured lin_vel is ALWAYS the final 3.
+# The buoy scalars are DR-backed, so they sit at 22,23 (after the ocean block, the
+# last other DR-backed dim) and measured lin_vel stays at 24-26.
 PRIV_OBS_DIM = 27
 
 
@@ -45,6 +50,7 @@ def derive_priv_obs_bounds_from_dr(
     ocean_max_velocity,
     thruster_cfg,
     hydro_cfg=None,
+    buoy_hydro_cfg=None,
 ) -> tuple[list[float], list[float]]:
     """Derive the 27D privileged-obs normalization bounds from the DR config.
 
@@ -66,6 +72,9 @@ def derive_priv_obs_bounds_from_dr(
         hydro_cfg: Hydrodynamics config providing the base physical values. If
             ``None``, the default ``ALBCHydrodynamicsCfg`` is imported and
             instantiated.
+        buoy_hydro_cfg: Buoy hydrodynamics config providing the buoy base volume
+            (idx22) and buoy base body_mass (idx23). If ``None``, the default
+            ``ALBCBuoyHydrodynamicsCfg`` is imported and instantiated.
 
     Returns:
         ``(lower, upper)`` -- each a 27-element list of floats, exactly matching
@@ -78,17 +87,24 @@ def derive_priv_obs_bounds_from_dr(
 
         hydro_cfg = ALBCHydrodynamicsCfg()
 
+    if buoy_hydro_cfg is None:
+        # Same lazy-import pattern as hydro_cfg so the pure derivation stays
+        # unit-testable with a stand-in buoy_hydro_cfg (Isaac-free).
+        from marinelab.assets.albc.albc import ALBCBuoyHydrodynamicsCfg
+
+        buoy_hydro_cfg = ALBCBuoyHydrodynamicsCfg()
+
     # -- Base physical values (read from the asset cfg SSOT, never re-hardcoded) --
     volume = hydro_cfg.volume  # idx0 base
     cog = hydro_cfg.center_of_gravity  # idx1-3 base (z = -0.05, NOT 0)
     cob = hydro_cfg.center_of_buoyancy  # idx4-6 base
-    ixx = hydro_cfg.rigid_body_inertia[0]  # idx7 base
-    lin_damp_roll = hydro_cfg.linear_damping[3]  # idx8 base (roll = index 3)
-    quad_damp_roll = hydro_cfg.quadratic_damping[3]  # idx9 base (roll = index 3)
-    body_mass = hydro_cfg.body_mass  # idx10 base
-    added_mass_surge = hydro_cfg.added_mass[0]  # idx11 base (surge = index 0)
-    thrust_coeff = thruster_cfg.thrust_coefficient  # idx18 base
-    time_const_up = thruster_cfg.time_constant_up  # idx19 base
+    quad_damp_roll = hydro_cfg.quadratic_damping[3]  # idx7 base (roll = index 3)
+    body_mass = hydro_cfg.body_mass  # idx8 base
+    added_mass_surge = hydro_cfg.added_mass[0]  # idx9 base (surge = index 0)
+    thrust_coeff = thruster_cfg.thrust_coefficient  # idx16 base
+    time_const_up = thruster_cfg.time_constant_up  # idx17 base
+    buoy_volume = buoy_hydro_cfg.volume  # idx22 base
+    buoy_body_mass = buoy_hydro_cfg.body_mass  # idx23 base
 
     # -- DR ranges (getattr resolves inherited fields on the instance) --
     volume_scale = getattr(dr_cfg, "volume_scale")
@@ -98,10 +114,10 @@ def derive_priv_obs_bounds_from_dr(
     cob_off_x = getattr(dr_cfg, "cob_offset_x")
     cob_off_y = getattr(dr_cfg, "cob_offset_y")
     cob_off_z = getattr(dr_cfg, "cob_offset_z")
-    inertia_scale = getattr(dr_cfg, "inertia_scale")
-    lin_damp_scale = getattr(dr_cfg, "linear_damping_scale")
     quad_damp_scale = getattr(dr_cfg, "quadratic_damping_scale")
     body_mass_scale = getattr(dr_cfg, "body_mass_scale")
+    buoy_volume_scale = getattr(dr_cfg, "buoy_volume_scale")  # idx22
+    buoy_body_mass_scale = getattr(dr_cfg, "buoy_body_mass_scale")  # idx23
     added_mass_scale = getattr(dr_cfg, "added_mass_scale")
     payload_mass_range = getattr(dr_cfg, "payload_mass_range")
     payload_cog_xy_radius = getattr(dr_cfg, "payload_cog_offset_xy_radius")
@@ -134,27 +150,30 @@ def derive_priv_obs_bounds_from_dr(
         offset(cob[0], cob_off_x),  # 4 CoB x (base 0)
         offset(cob[1], cob_off_y),  # 5 CoB y (base 0)
         offset(cob[2], cob_off_z),  # 6 CoB z (base 0)
-        # -- Dynamic Response (5D) --
-        scale(ixx, inertia_scale),  # 7 main body Ixx
-        scale(lin_damp_roll, lin_damp_scale),  # 8 linear damping roll
-        scale(quad_damp_roll, quad_damp_scale),  # 9 quadratic damping roll
-        scale(body_mass, body_mass_scale),  # 10 body mass
-        scale(added_mass_surge, added_mass_scale),  # 11 added mass surge (raw DR 12.0)
+        # -- Dynamic Response (3D): Ixx / lin_damp removed (slim Stage-1 validated) --
+        scale(quad_damp_roll, quad_damp_scale),  # 7 quadratic damping roll
+        scale(body_mass, body_mass_scale),  # 8 body mass
+        scale(added_mass_surge, added_mass_scale),  # 9 added mass surge (raw DR 12.0)
         # -- Payload (4D) --
-        (payload_mass_range[0], payload_mass_range[1]),  # 12 DIRECT [0, 3] (base 0)
-        (-payload_cog_xy_radius, payload_cog_xy_radius),  # 13 radius -> [-r, r]
-        (-payload_cog_xy_radius, payload_cog_xy_radius),  # 14 radius -> [-r, r]
-        (payload_cog_z[0], payload_cog_z[1]),  # 15 DIRECT [-0.05, 0]
+        (payload_mass_range[0], payload_mass_range[1]),  # 10 DIRECT [0, 3] (base 0)
+        (-payload_cog_xy_radius, payload_cog_xy_radius),  # 11 radius -> [-r, r]
+        (-payload_cog_xy_radius, payload_cog_xy_radius),  # 12 radius -> [-r, r]
+        (payload_cog_z[0], payload_cog_z[1]),  # 13 DIRECT [-0.05, 0]
         # -- Actuator (4D) --
-        (joint_stiffness_range[0], joint_stiffness_range[1]),  # 16 Kp DIRECT (overwrite)
-        (joint_damping_range[0], joint_damping_range[1]),  # 17 Kd DIRECT (overwrite)
-        scale(thrust_coeff, thrust_coeff_scale),  # 18 thrust coefficient
-        scale(time_const_up, time_const_scale),  # 19 time constant up
+        (joint_stiffness_range[0], joint_stiffness_range[1]),  # 14 Kp DIRECT (overwrite)
+        (joint_damping_range[0], joint_damping_range[1]),  # 15 Kd DIRECT (overwrite)
+        scale(thrust_coeff, thrust_coeff_scale),  # 16 thrust coefficient
+        scale(time_const_up, time_const_scale),  # 17 time constant up
         # -- Environment (4D) --
-        (water_density_range[0], water_density_range[1]),  # 20 DIRECT absolute (no *998)
-        (-ocean_max[0] * s_hi, ocean_max[0] * s_hi),  # 21 ocean current x symmetric
-        (-ocean_max[1] * s_hi, ocean_max[1] * s_hi),  # 22 ocean current y symmetric
-        (-ocean_max[2] * s_hi, ocean_max[2] * s_hi),  # 23 ocean current z symmetric
+        (water_density_range[0], water_density_range[1]),  # 18 DIRECT absolute (no *998)
+        (-ocean_max[0] * s_hi, ocean_max[0] * s_hi),  # 19 ocean current x symmetric
+        (-ocean_max[1] * s_hi, ocean_max[1] * s_hi),  # 20 ocean current y symmetric
+        (-ocean_max[2] * s_hi, ocean_max[2] * s_hi),  # 21 ocean current z symmetric
+        # -- Buoy (2D): DR-backed, decorrelated from main-body scales. Placed at
+        # the END of the DR-backed block (before measured lin_vel) to preserve
+        # the "DR dims first, measured last" invariant. --
+        scale(buoy_volume, buoy_volume_scale),  # 22 buoy volume
+        scale(buoy_body_mass, buoy_body_mass_scale),  # 23 buoy body mass
         # -- Measured velocity (3D): not DR-backed, fixed normalization range --
         (-1.0, 1.0),  # 24 body lin_vel u
         (-1.0, 1.0),  # 25 body lin_vel v
@@ -175,13 +194,13 @@ def derive_priv_obs_bounds_from_dr(
         upper,
         scale_pairs={
             0: (volume, volume_scale),
-            7: (ixx, inertia_scale),
-            8: (lin_damp_roll, lin_damp_scale),
-            9: (quad_damp_roll, quad_damp_scale),
-            10: (body_mass, body_mass_scale),
-            11: (added_mass_surge, added_mass_scale),
-            18: (thrust_coeff, thrust_coeff_scale),
-            19: (time_const_up, time_const_scale),
+            7: (quad_damp_roll, quad_damp_scale),
+            8: (body_mass, body_mass_scale),
+            9: (added_mass_surge, added_mass_scale),
+            16: (thrust_coeff, thrust_coeff_scale),
+            17: (time_const_up, time_const_scale),
+            22: (buoy_volume, buoy_volume_scale),
+            23: (buoy_body_mass, buoy_body_mass_scale),
         },
         offset_pairs={
             1: (cog[0], cog_off_x),
@@ -192,17 +211,17 @@ def derive_priv_obs_bounds_from_dr(
             6: (cob[2], cob_off_z),
         },
         direct_pairs={
-            12: payload_mass_range,
-            15: payload_cog_z,
-            16: joint_stiffness_range,
-            17: joint_damping_range,
-            20: water_density_range,
+            10: payload_mass_range,
+            13: payload_cog_z,
+            14: joint_stiffness_range,
+            15: joint_damping_range,
+            18: water_density_range,
         },
-        radius_pairs={13: payload_cog_xy_radius, 14: payload_cog_xy_radius},
+        radius_pairs={11: payload_cog_xy_radius, 12: payload_cog_xy_radius},
         symmetric_pairs={
-            21: ocean_max[0] * s_hi,
-            22: ocean_max[1] * s_hi,
-            23: ocean_max[2] * s_hi,
+            19: ocean_max[0] * s_hi,
+            20: ocean_max[1] * s_hi,
+            21: ocean_max[2] * s_hi,
         },
     )
 
@@ -222,7 +241,8 @@ def _assert_bounds_match_dr(
 ):
     """Assert each DR-backed dim equals the DR range it derives from (margin 0).
 
-    Measured dims (24-26) are skipped: they have no DR field.
+    Measured dims (24-26) are skipped: they have no DR field. The buoy scalars
+    (22,23) ARE DR-backed and are checked via scale_pairs.
     """
 
     def _close(a, b):

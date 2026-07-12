@@ -53,6 +53,13 @@ _PARAM_DEFS: list[tuple[str, str, float, float]] = [
     ("cog_offset_y", "cog_offset_y", -0.01, 0.01),
     ("inertia_scale", "inertia_scale", 0.75, 1.3),
     ("body_mass_scale", "body_mass_scale", 0.9, 1.1),
+    # Buoy volume/mass decoupled from the main-body scales above so the
+    # separately-fabricated float (independent manufacturing tolerance) can vary
+    # independently. Fallback bounds mirror the volume_scale/body_mass_scale
+    # entries above (0.9, 1.1) -- this is only the module-load default used when
+    # no DR cfg is supplied; the live cfg field default is (0.75, 1.25), see config.py.
+    ("buoy_volume_scale", "buoy_volume_scale", 0.9, 1.1),
+    ("buoy_body_mass_scale", "buoy_body_mass_scale", 0.9, 1.1),
     ("payload_cog_offset_z", "payload_cog_offset_z", -0.03, 0.0),
     # payload XY offset radius promoted to a DORAEMON curriculum as a NORMALIZED
     # quantile u in [0,1]. cfg field is the (0,1) tuple payload_cog_offset_xy_u_range;
