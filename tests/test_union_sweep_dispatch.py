@@ -2,13 +2,13 @@
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
-"""Union-27D sweep-builder dispatch fingerprint (analysis/common.py).
+"""Union-28D sweep-builder dispatch (analysis/common.py).
 
-The union p_t layout (2026-07-12) kept the dim count at 27, so
-build_sweep_params_from_checkpoint cannot dispatch on input_dim alone. It
-fingerprints on bounds content: idx22 lower > 0 (buoy volume scale bounds)
-selects the union builder; pre-union 27D checkpoints (ocean-current y at
-idx22, symmetric bounds) must keep their previous generic path.
+The union p_t layout (2026-07-12, incl. the latency dim) is the only bounds-era
+28D layout; build_sweep_params_from_checkpoint additionally fingerprints on
+bounds content (idx22 lower > 0, buoy volume) as a guard. Pre-union 27D
+checkpoints (ocean-current y at idx22, symmetric bounds) must keep their
+previous generic path.
 """
 
 from __future__ import annotations
@@ -27,27 +27,30 @@ common = importlib.util.module_from_spec(_spec)
 sys.modules["_analysis_common"] = common
 _spec.loader.exec_module(common)
 
-# Union-27D bounds (matches tests/test_priv_obs_bounds.py _EXPECTED).
+# Union-28D bounds (matches tests/test_priv_obs_bounds.py _EXPECTED).
 _LO = np.array([0.00675, -0.02, -0.02, -0.09, -0.02, -0.02, -0.04, 0.4, 6.885, 4.0,
                 0.0, -0.08, -0.08, -0.05, 30.0, 0.3, 28.0, 0.07, 995.0,
-                -0.5, -0.5, -0.25, 0.00201, 0.6975, -1.0, -1.0, -1.0])
+                -0.5, -0.5, -0.25, 0.00201, 0.6975, 0.0, -1.0, -1.0, -1.0])
 _HI = np.array([0.01125, 0.02, 0.02, -0.01, 0.02, 0.02, 0.04, 1.7, 11.475, 12.0,
                 3.0, 0.08, 0.08, 0.0, 150.0, 7.0, 52.0, 0.13, 1025.0,
-                0.5, 0.5, 0.25, 0.00335, 1.1625, 1.0, 1.0, 1.0])
+                0.5, 0.5, 0.25, 0.00335, 1.1625, 1.0, 1.0, 1.0, 1.0])
 
 
 def test_union_bounds_route_to_union_builder():
-    params = common.build_sweep_params_from_checkpoint(27, np.zeros(27), _LO, _HI)
+    params = common.build_sweep_params_from_checkpoint(28, np.zeros(28), _LO, _HI)
     names = [p.name for p in params]
-    assert len(params) == 27
+    assert len(params) == 28
     assert names[7] == "Quad Damp Roll"  # Ixx/lin_damp removed
     assert names[22] == "Buoy Volume"
     assert names[23] == "Buoy Body Mass"
-    assert names[24:27] == ["Lin Vel U", "Lin Vel V", "Lin Vel W"]
+    assert names[24] == "Control Delay"
+    assert names[25:28] == ["Lin Vel U", "Lin Vel V", "Lin Vel W"]
 
 
-def test_pre_union_bounds_keep_generic_path():
-    lo_old = _LO.copy()
-    lo_old[22] = -0.5  # pre-union layout: ocean-current y at idx22 (symmetric)
-    params = common.build_sweep_params_from_checkpoint(27, np.zeros(27), lo_old, _HI)
+def test_pre_union_27d_bounds_keep_generic_path():
+    # Pre-union 27D layout: ocean-current y at idx22 (symmetric, negative lower).
+    lo27 = np.delete(_LO, 24)  # drop the latency dim -> 27 entries
+    hi27 = np.delete(_HI, 24)
+    lo27[22] = -0.5
+    params = common.build_sweep_params_from_checkpoint(27, np.zeros(27), lo27, hi27)
     assert params[22].name != "Buoy Volume"  # falls through exactly as before
