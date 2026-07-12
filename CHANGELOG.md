@@ -7,7 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- GRU distillation BC-target pairing (P3 hygiene, 2026-07-12): `student/collector.py`
+  flattened `obs_t`/`l_t`/`a_t` time-major while `l_hat_seq` (batch_first GRU output)
+  flattens env-major -- mismatched sample pairing in the GRU path. Added the missing
+  `.transpose(0, 1)` (same as the adjacent `obs_seq`/`dones_seq` lines) in both main and
+  full_dof. Default TCN path unaffected.
+- eval output-dir fallback is now loud: `_resolve_eval_output_dir` prints `[WARN]` when the
+  checkpoint path lacks a `train` segment and output falls back to a legacy dir (previously
+  silent -- documented as a trap in the workspace analysis rules).
+
 ### Changed
+
+- Removed the redundant advantage re-standardization in `ConstraintTRPO.update()` (main +
+  full_dof): rsl_rl `RolloutStorage.compute_returns(normalize_advantage=True)` already
+  standardizes in place, so the second pass was a near-no-op. Added a dormant-bug guard
+  comment at the timeout-bootstrap site (normalize_value=True would bake normalized-scale
+  values into raw-scale rewards during rollout; the runner only denormalizes
+  `storage.values` post-hoc -- fix before ever enabling the flag).
+- Migrated all `marinelab.physics` shim imports to `marinelab.core` (shim deleted in
+  marinelab); `priv_obs_bounds` now imports `ALBCHydrodynamicsCfg`/`ALBCBuoyHydrodynamicsCfg`
+  from the public `marinelab.assets` API instead of deep module paths.
+- scripts: folded `_sat_probe_play.py` (228-line near-clone) into `play.py --sat-probe`;
+  extracted the byte-identical launch boilerplate of train.py/play.py into
+  `scripts/_common.py` (`install_overlay_import_hook`, `launch_app`). Pure code moves.
+  Note: the audited "4th cli_args copy in eval.py" does not exist (eval.py uses a
+  structurally different subparser pattern); `analysis/cli_args.py` is a byte-identical
+  vendored copy of upstream isaaclab's -- left as-is, tracked as known duplication.
+- Added `[tool.ruff]`/`[tool.pyright]` to pyproject.toml (line-length 120, py310, Google
+  docstrings, overlay isort sections) so the format hook is no longer a no-op here; applied
+  the safe autofix subset (isort ordering, UP037, two E501 wraps). eval.py has 4 genuinely
+  dead F401 imports left in place for manual review; envs/main vs full_dof `doraemon.py`
+  shims intentionally NOT deduplicated (they genuinely diverged: main-only buoy DR dims).
+- analysis staleness cleanups: `scripts/analysis/` docstring paths ->
+  `constrained_albc/analysis/`, phantom `table` subcommand line removed from analyze.py,
+  `joint1_drift.py` imports `DR_LEVELS` from common.py, TODO(metric-drift) pointer comment
+  near `compute_level_metrics`.
 
 - Privileged obs union layout (2026-07-12 consolidation, option (c)): p_t stays 27D but its
   content changed -- REMOVED Ixx and linear-damping-roll (priv-obs-slim Stage-1 validated
