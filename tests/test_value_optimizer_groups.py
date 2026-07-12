@@ -44,7 +44,8 @@ _pkg.__path__ = [str(_MAIN / "encoder")]
 sys.modules["_enc_pkg"] = _pkg
 _load("_enc_pkg._z_ablation", _MAIN / "encoder" / "_z_ablation.py")
 _load("_enc_pkg._policy_base", _MAIN / "encoder" / "_policy_base.py")
-ActorCriticEncoder = _load("_enc_pkg.actor_critic_encoder", _MAIN / "encoder" / "actor_critic_encoder.py").ActorCriticEncoder
+_ace = _load("_enc_pkg.actor_critic_encoder", _MAIN / "encoder" / "actor_critic_encoder.py")
+ActorCriticEncoder = _ace.ActorCriticEncoder
 ConstraintTRPO = _load("_alg_constraint_trpo", _MAIN / "algorithms" / "constraint_trpo.py").ConstraintTRPO
 
 
