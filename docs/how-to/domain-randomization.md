@@ -76,20 +76,20 @@ and skips allocating the delay buffer entirely — no separate toggle needed.
 
 ---
 
-## 3. The DORAEMON curriculum (one paragraph)
+## 3. The DORAEMON curriculum
 
-Every parameter listed in `_PARAM_DEFS` (`envs/main/doraemon.py`) is not sampled uniformly —
-it is drawn from a per-parameter Beta distribution that `DoraemonScheduler`
-(`marinelab/marinelab/algorithms/doraemon.py`) widens over training, subject to a policy
-success-rate floor (`ALBCEnvCfg.doraemon.performance_lb` / `alpha`) and a per-step KL trust
-region (`kl_ub`). A parameter is curriculum-managed if and only if it appears in
-`_PARAM_DEFS`; every other `DomainRandomizationCfg` field (joint gains, thruster scales,
-`control_delay_steps`, …) is sampled uniformly every reset instead. To disable learning and
-freeze at whatever the curriculum last reached, set `env_cfg.doraemon.enable = False` (the
-env falls back to plain uniform sampling of the `DomainRandomizationCfg` ranges — see
-`envs/main/student/runner.py` for the pattern used to train the distillation student).
-Full mechanics (Beta math, `step()` control flow, eval-side interpolation, replay) are in
-[`reference/domain-randomization-and-doraemon.md`](../reference/domain-randomization-and-doraemon.md).
+A parameter in `_PARAM_DEFS` (`envs/main/doraemon.py`) is curriculum-managed — drawn from a per-parameter Beta distribution that `DoraemonScheduler` (`marinelab/marinelab/algorithms/doraemon.py`) widens over training, gated by:
+
+| Field | Role |
+|:---|:---|
+| `doraemon.performance_lb` / `alpha` | policy success-rate floor the curriculum must clear before widening |
+| `doraemon.kl_ub` | per-step KL trust region bounding how fast a Beta can widen |
+| `_PARAM_DEFS` membership | the only test for "curriculum-managed" — not listed means uniform sampling every reset instead (joint gains, thruster scales, `control_delay_steps`, …) |
+
+To disable learning and freeze at whatever the curriculum last reached, set
+`env_cfg.doraemon.enable = False` (falls back to uniform sampling of the `DomainRandomizationCfg`
+ranges — see `envs/main/student/runner.py`'s pattern). Full mechanics (Beta math, `step()` control flow,
+eval-side interpolation, replay): [`reference/domain-randomization-and-doraemon.md`](../reference/domain-randomization-and-doraemon.md).
 
 ---
 

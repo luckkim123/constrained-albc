@@ -37,11 +37,8 @@ cd /workspace/constrained-albc && python scripts/train.py \
     --num_envs 256 --max_iterations 100 --headless
 ```
 
-`--task`, `--num_envs`, `--max_iterations`, `--headless` are all real flags
-(verified against `scripts/train.py`'s argparse; `--headless` comes from
-Isaac Lab's `AppLauncher`). The default agent config (`ALBCTRPORunnerCfg`)
-sets `logger = "wandb"` — if WandB is not configured yet, add `--logger
-tensorboard` to this first run to skip the login prompt.
+- All four flags are verified against `scripts/train.py`'s argparse (`--headless` comes from Isaac Lab's `AppLauncher`).
+- Default logger is `wandb` (`ALBCTRPORunnerCfg`) — not configured yet? Add `--logger tensorboard` to skip the login prompt.
 
 ## 2. Where the run lands
 
@@ -73,10 +70,7 @@ for why the two trees exist, and the `run_id / group / campaign` entry in the
 
 ## 3. Evaluate the checkpoint
 
-The required evaluator is `eval.py static` — a text metric summary is not a
-substitute. Point `--checkpoint` at the checkpoint through the
-`experiments/.../train/` symlink (not the raw `logs/` path) and **do not
-pass `--output_dir`** — both are load-bearing for where the output lands:
+The required evaluator is `eval.py static` — a text metric summary is not a substitute.
 
 ```bash
 cd /workspace/constrained-albc && python constrained_albc/analysis/eval.py static \
@@ -84,12 +78,11 @@ cd /workspace/constrained-albc && python constrained_albc/analysis/eval.py stati
     --checkpoint experiments/rsl_rl/albc_trpo_teacher/<run_id>/train/model_<N>.pt
 ```
 
-Output lands at
-`experiments/rsl_rl/albc_trpo_teacher/<run_id>/eval/static_<eval_ts>/`.
-Passing `--output_dir` explicitly, or pointing `--checkpoint` at the raw
-`logs/` path, both skip this auto-resolution and scatter the output
-elsewhere — see `.claude/rules/03-analysis-quality.md` for the two pitfalls
-in detail.
+Output auto-resolves to `experiments/rsl_rl/albc_trpo_teacher/<run_id>/eval/static_<eval_ts>/`
+only if both hold (see `.claude/rules/03-analysis-quality.md` for the two pitfalls in detail):
+
+- `--checkpoint` points through the `experiments/.../train/` symlink, not the raw `logs/` path.
+- No explicit `--output_dir` is passed.
 
 ## 4. Reading the output plots
 
@@ -110,13 +103,15 @@ The default task is attitude-only, so `traj_linvel.png` /
 evaluating a linear-velocity-tracking task (e.g. the legacy
 `Isaac-ConstrainedALBC-Full-*` tasks).
 
-Each trajectory plot draws two lines per level: the across-env **mean**, and
-a dashed **sample** line for one representative env (the median-attitude-error
-env, picked once and reused across every panel). A sample line that tracks
-the mean closely means the policy's axes are correlated; a diverging sample
-line means that env does much better or worse on one axis than the others.
-See `.claude/rules/03-analysis-quality.md` ("Sample Env Plot Divergence
-Explained") for the full diagnostic reading.
+Each trajectory plot draws two lines per level: the across-env **mean**, and a dashed **sample**
+line for one representative env (the median-attitude-error env, picked once and reused across
+every panel).
+
+- Sample tracks mean closely → the policy's axes are correlated.
+- Sample diverges from mean → that env does much better or worse on one axis than the others.
+
+See `.claude/rules/03-analysis-quality.md` ("Sample Env Plot Divergence Explained") for the full
+diagnostic reading.
 
 View a plot with the Read tool, or open the PNG directly — evaluation in
 this repository requires visually inspecting the plots, not just the summary

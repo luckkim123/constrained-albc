@@ -116,28 +116,22 @@ mixes two angle-integrals (roll, pitch) and one **rate**-integral (yaw rate).
 
 ### 2.4 Observation noise
 
-Noise is applied once to the whole 69D vector at emit via the always-on
-`NoiseModelWithAdditiveBias` (`config.py:557-560`) plus the fault-injection path
-`faults.apply_sensor_noise` (`albc_env.py:987-989`). `_OBS_NOISE_STD` and
-`_OBS_BIAS_MAG` are 69-length vectors (`config.py:259-296`) whose command(3),
-manipulability(1), all action-history(16), and all integral(3) entries are `0.0` —
-these are computed/commanded, not sensed, so noise adds nothing there. Only measured
-euler / ang_vel / joint / thruster channels (and their history copies) receive
-Gaussian std + uniform additive bias. When fault injection is disabled,
-`apply_sensor_noise` is identity (`faults.py:73-77`), so the vector stays
-byte-identical; when enabled it scales the **same** 69D `_OBS_NOISE_STD` base, so
-zero-noise dims still receive zero extra noise.
+Noise is applied once to the whole 69D vector at emit, via two layers reading the same 69-length `_OBS_NOISE_STD` / `_OBS_BIAS_MAG` vectors (`config.py:259-296`): the always-on `NoiseModelWithAdditiveBias` (`config.py:557-560`) and the fault-injection path `faults.apply_sensor_noise` (`albc_env.py:987-989`).
+
+- **Zero-noise dims** (computed/commanded, not sensed): command(3), manipulability(1), all action-history(16), all integral(3) — entries are `0.0`.
+- **Noised dims**: measured euler / ang_vel / joint / thruster channels (and their history copies) — Gaussian std + uniform additive bias.
+- **Fault injection off**: `apply_sensor_noise` is identity (`faults.py:73-77`) — vector stays byte-identical.
+- **Fault injection on**: scales the **same** `_OBS_NOISE_STD` base, so zero-noise dims still receive zero extra noise.
 
 ---
 
 ## 3. Temporal history (46D): per-step 18D feature vs reassembled 46D slice
 
-The history is a strided ring buffer of past controller/system state. Per control
-step the env computes an **18D** feature vector (`_get_hist_features`,
-`albc_env.py:455-495`), writes it into a ring buffer of depth `hist_len=3` but only
-every `hist_stride=3`-th control step (`_update_hist`, `albc_env.py:497-512`), and
-at emit slices out **46D** asymmetrically (`_get_observations`,
-`albc_env.py:971-976`).
+The history is a strided ring buffer of past controller/system state, built in three steps each control cycle:
+
+1. **Compute** an 18D feature vector (`_get_hist_features`, `albc_env.py:455-495`).
+2. **Write** it into a ring buffer of depth `hist_len=3`, but only every `hist_stride=3`-th control step (`_update_hist`, `albc_env.py:497-512`).
+3. **Slice** 46D out asymmetrically at emit (`_get_observations`, `albc_env.py:971-976`).
 
 ### 3.1 Per-step 18D feature (`hist_feature_dim=18`)
 

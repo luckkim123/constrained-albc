@@ -44,12 +44,10 @@ update (ConstraintTRPO.update):
   log:   Policy/entropy, Noise/std_mean, Noise/std_min
 ```
 
-**Two independent "noise" concepts — do not conflate.** This document is about
-**action noise** (the policy's exploration std, `log_std`, learned at train time).
-It is *not* the **observation noise model** (`_OBS_NOISE_STD` in `config.py`, a
-fixed sensor-simulation constant applied to `o_t`). Same word, different object:
-action noise is what the policy *emits*, observation noise is what the sensors
-*corrupt*. §7 draws the line explicitly.
+**Two independent "noise" concepts — do not conflate.** This document covers only
+**action noise** (`log_std`, the trained exploration std the policy *emits*), never
+the fixed **observation noise model** (`_OBS_NOISE_STD` in `config.py`, corrupts
+`o_t`). Full side-by-side comparison: §7.
 
 ---
 
@@ -231,8 +229,9 @@ Because pure TRPO has only pressure 1 while this algorithm has 1 + 2, entropy
 collapses *faster* than vanilla TRPO — which is exactly why the (project-custom)
 entropy bonus and per-dim floor exist. The collapse-and-recovery is measured
 (§4.1). Pressure 2 (IPO barrier) is a mechanism inference plus general
-constrained-RL literature support; it is **not** isolated by a controlled
-experiment — the deferred test is in
+constrained-RL literature support (constraints suppress exploration: ESB-CPO
+arXiv:2302.14339; safe-RL review arXiv:2508.09128); it is **not** isolated by a
+controlled experiment — the deferred test is in
 `docs/plans/2026-06-30-entropy-collapse-ipo-barrier-experiment.md`. The literature
 standing of "TRPO + entropy bonus" (**non-standard**, an EnTRPO novelty) is in
 `main-network-architecture.md` §8.

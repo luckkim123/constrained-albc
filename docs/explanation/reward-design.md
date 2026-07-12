@@ -46,16 +46,15 @@ and joint-position limits, thruster utilization headroom, accumulated yaw, manip
 others — are wired as constraint costs consumed by the IPO log-barrier inside ConstraintTRPO
 instead (see `reference/constraints.md`).
 
-The distinction is about what kind of guarantee each mechanism gives. A reward penalty only
-discourages a behavior in proportion to its weight relative to every other term in the sum: too
-small a weight and a genuine physical limit can be crossed whenever the tracking gradient is
-strong enough to outweigh it; too large a weight and the policy sacrifices tracking performance
-broadly just to stay away from the limit, and that trade-off has to be re-balanced by hand every
-time another reward term's weight changes. A constraint cost instead specifies a budget — how
-often or how much a limit may be violated — and the optimizer enforces that budget directly through
-the barrier term, independent of how the rest of the reward happens to be weighted. Limits that
-must hold regardless of reward tuning are constraints; behaviors that should merely be discouraged
-in the aggregate are reward penalties.
+The distinction is about what kind of guarantee each mechanism gives:
+
+| Mechanism | Guarantee | Miscalibration failure mode |
+|:---|:---|:---|
+| Reward penalty | Discourages a behavior in proportion to its weight vs. every other term in the sum | Too small -> the limit gets crossed once the tracking gradient outweighs it; too large -> tracking is sacrificed broadly, and the trade-off must be re-balanced by hand whenever another term's weight changes |
+| Constraint cost (IPO barrier) | Enforces an explicit violation budget directly through the barrier term, independent of reward weighting | — |
+
+Limits that must hold regardless of reward tuning are constraints; behaviors that should merely be
+discouraged in the aggregate are reward penalties.
 
 ## Why the settling cost is gated, not always-on
 

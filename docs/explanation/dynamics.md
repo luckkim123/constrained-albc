@@ -14,14 +14,28 @@
 
 ---
 
+## Key Symbols
+
+Recurring notation used from Section 1 onward. Derivation-specific symbols (Jacobians, skew matrices) are introduced locally in Section 3.
+
+| Symbol | Meaning |
+|:---|:---|
+| $\eta$, $\nu$, $\Gamma$ | Earth-fixed position/attitude, body-fixed velocity, arm joint angles $[\gamma_1,\gamma_2]^T$ |
+| $M$, $M(\Gamma)$, $\bar{M}$ | System inertia -- constant model, arm-angle-dependent model, and TDC's fixed design (estimated) inertia |
+| $C(\nu)$, $D(\nu)$, $g(\eta)$ | Coriolis/centripetal, hydrodynamic damping, and restoring-force terms in the rigid-body EOM -- $g(\eta)$ is this vector, not the scalar gravitational acceleration $g$ used in §3.2 |
+| $\tau_{th}$, $b(\Gamma)$ | External generalized force: thruster force/torque and the arm-mounted buoyancy element's moment |
+| $M_{ROV}$, $I_{ROV}$ | Mini-ROV's own rigid-body mass / moment-of-inertia matrix (arm-independent) |
+| $m_A$ | Added mass of the buoyancy element ($\approx$ 1.83 kg, derived in §3.2) |
+| $z_t$, $\hat{z}_t$ | True / estimated latent vector encoding current physical parameters (§5) |
+
+---
+
 ## 1. Problem Statement
 
 ### TDC: Model-Based Controller
 
-TDC (Time Delay Control) is often called "model-free", but it is in fact a model-based controller.
-The design matrix $\bar{M}$ requires a rough estimate of the actual inertia $M(q)$.
-The real meaning of "model-free" here is that precise model identification is unnecessary (50% error is tolerated),
-not that a model is unnecessary at all.
+TDC (Time Delay Control) is often called "model-free", but it is in fact a model-based controller. The design matrix $\bar{M}$ requires a rough estimate of the actual inertia $M(q)$.
+The real meaning of "model-free" here is that precise model identification is unnecessary (50% error is tolerated), not that a model is unnecessary at all.
 
 **Stability condition**:
 
@@ -50,8 +64,7 @@ In reality, however, the inertia matrix changes significantly due to two causes:
 - When grasping an object, changes occur such as inertia $M \to M + M_{obj}$, center of gravity (CoG) shift, and center of buoyancy (CoB) change.
 - Directly measuring $m_{obj}$, $I_{obj}$, and CoM position of an unknown object is impractical.
 
-Both causes lead to a violation of the TDC stability condition with a fixed $\bar{M}$.
-Therefore, a mechanism to adapt $\bar{M}$ in real time is essential.
+Both causes lead to a violation of the TDC stability condition with a fixed $\bar{M}$, so a mechanism to adapt $\bar{M}$ in real time is essential.
 
 ---
 
@@ -75,8 +88,7 @@ Omitted dynamics items:
 | Coriolis/Centripetal | Additional Coriolis terms due to buoyancy element rotational motion |
 | Added Mass | Hydrodynamic added mass effect due to the large volume of the buoyancy element |
 
-Component-wise, Link 1/2 have small mass and volume and can be neglected, but
-the buoyancy element cannot be neglected because, despite its small mass, its volume is large.
+Component-wise, Link 1/2 have small mass and volume and can be neglected, but the buoyancy element cannot be neglected because, despite its small mass, its volume is large.
 
 ### Issue 2: Free-Floating Dynamics Not Reflected
 
@@ -113,8 +125,13 @@ Changes that occur when grasping an object:
 | Center of buoyancy (CoB) | $r_B \to r'_B$ | CoG-CoB relationship change |
 | Coriolis term | $C(\nu) \to C'(\nu)$ | Needs correction as the inertia matrix changes |
 
-In the ALBC experimental results as well, steady-state error was observed for 200g and 400g objects,
-and position/orientation divergence was observed for the 600g object.
+ALBC experimental results show the same pattern with grasped objects:
+
+| Object mass | Observed behavior |
+|:---|:---|
+| 200 g | Steady-state error |
+| 400 g | Steady-state error |
+| 600 g | Position/orientation divergence |
 
 ### Summary
 
@@ -131,18 +148,13 @@ and position/orientation divergence was observed for the 600g object.
 
 This is the derivation of a dynamics model that neglects the physical mass of the buoyancy element and considers only Added Mass.
 
-> **Note**: This derivation assumes $m_{bu} \approx 0$ (massless buoy), but
-> the actual URDF buoy body mass is about 0.93 kg. The code implementation (`compute_M_bb`)
-> uses `m_{total} = m_{body} + m_A` to include the buoy rigid body mass.
+> **Note**: This derivation assumes $m_{bu} \approx 0$ (massless buoy), but the actual URDF buoy
+> body mass is about 0.93 kg; the code implementation (`compute_M_bb`) uses `m_{total} = m_{body} + m_A` to include it.
 
 ### 3.1 Notation
 
-| Symbol | Definition | Size |
-|:---|:---|:---|
-| $\eta$ | Earth-fixed position/attitude | $\mathbb{R}^6$ |
-| $\nu$ | Body-fixed velocity | $\mathbb{R}^6$ |
-| $\Gamma = [\gamma_1, \gamma_2]^T$ | Joint angles | $\mathbb{R}^2$ |
-| $\zeta = [\nu^T, \dot{\Gamma}^T]^T$ | Velocity coordinates | $\mathbb{R}^8$ |
+$\eta$, $\nu$, $\Gamma$ are defined in [Key Symbols](#key-symbols) above. The derivation additionally stacks body
+and arm velocity into $\zeta = [\nu^T, \dot{\Gamma}^T]^T \in \mathbb{R}^8$.
 
 ### 3.2 Physical Motivation and Added Mass Estimation
 
@@ -295,13 +307,9 @@ Comparison with the existing ALBC model:
 
 ### 4.1 Workspace and Inertia Bounds
 
-Buoyancy element reach: $r_{max} = l_1 + l_2 = 0.466$ m
-
-Since $y_{bu} \in [-r_{max}, +r_{max}]$, the bounds of the Roll inertia:
-
-$$I_p^{min} = I_{p,ROV} + m_A h^2 \quad (y_{bu} = 0)$$
-
-$$I_p^{max} = I_{p,ROV} + m_A(r_{max}^2 + h^2) \quad (|y_{bu}| = r_{max})$$
+Buoyancy element reach: $r_{max} = l_1 + l_2 = 0.466$ m. Since $y_{bu} \in [-r_{max}, +r_{max}]$, the roll inertia
+$I_p = I_{p,ROV} + m_A(y_{bu}^2 + h^2)$ is minimized at $y_{bu}=0$ and maximized at $\lvert y_{bu}\rvert = r_{max}$
+-- computed next.
 
 ### 4.2 Numerical Analysis
 
@@ -316,29 +324,20 @@ Estimated parameters:
 
 Computation results:
 
-$$I_p^{min} = 0.1 + 1.83 \times 0.230^2 = 0.197 \text{ kg}\cdot\text{m}^2$$
-
-$$I_p^{max} = 0.1 + 1.83 \times (0.466^2 + 0.230^2) = 0.594 \text{ kg}\cdot\text{m}^2$$
-
-Relative change:
-
-$$\frac{I_p^{max} - I_p^{min}}{I_p^{min}} = \frac{0.397}{0.197} = 201\%$$
+| Quantity | Condition | Value |
+|:---|:---|:---|
+| $I_p^{min}$ | $y_{bu}=0$ | $0.1 + 1.83 \times 0.230^2 = 0.197$ kg$\cdot$m$^2$ |
+| $I_p^{max}$ | $\lvert y_{bu}\rvert = r_{max}$ | $0.1 + 1.83 \times (0.466^2 + 0.230^2) = 0.594$ kg$\cdot$m$^2$ |
+| Relative change | $(I_p^{max}-I_p^{min})/I_p^{min}$ | $0.397/0.197 = 201\%$ |
 
 Even considering only added mass, the roll inertia changes by about 200% (3x).
 
 ### 4.3 TDC Stability Condition Violation
 
-TDC stability condition: $\|I - \bar{M}^{-1}M(\Gamma)\| < 1$
+TDC stability condition: $\|I - \bar{M}^{-1}M(\Gamma)\| < 1$, requiring $\bar{M}$ within the 50%-200% range of the
+actual $M(\Gamma)$ (§1). Fixing $\bar{M} = I_p^{min}$ and using the §4.2 ratio $I_p^{max}/I_p^{min} = 3.02$ violates
+this condition (see table).
 
-This means $\bar{M}$ must lie within the 50%-200% range of the actual $M(\Gamma)$.
-
-When fixing $\bar{M} = I_p^{min}$:
-
-$$\bar{M}^{-1}M^{max} = \frac{I_p^{max}}{I_p^{min}} = \frac{0.594}{0.197} = 3.02$$
-
-$$\|I - \bar{M}^{-1}M^{max}\| = |1 - 3.02| = 2.02 > 1$$
-
-The stability condition is violated.
 When object grasping is also taken into account, the range of inertia variation is even larger, so with a fixed $\bar{M}$
 stable TDC operation is fundamentally impossible.
 
@@ -348,7 +347,7 @@ stable TDC operation is fundamentally impossible.
 | Added mass $m_A$ | 1.83 kg |
 | Roll inertia change | 201% (about 3x) |
 | $I_p^{max} / I_p^{min}$ | 3.02 |
-| TDC stability | Condition violated ($2.02 > 1$) |
+| TDC stability | $\|I - \bar{M}^{-1}M^{max}\| = \lvert 1-3.02\rvert = 2.02 > 1$ -- condition violated |
 | Conclusion | Adaptive $\bar{M}$ essential |
 
 ---

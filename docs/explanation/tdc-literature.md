@@ -86,22 +86,8 @@ Standard 2nd-order linear damped system. Gain selection:
 ### Complete TDC Block Diagram
 
 ```
-                   +--------+
-  q_d, q_dot_d --> | Desired |
-  q_ddot_d ------> | Error   |--> q_ddot_ref --+
-  q, q_dot ------> | Dynamics|                 |
-                   +--------+                  |
-                                               v
-                              +----------------------------------+
-                              |  tau = M_bar * q_ddot_ref        |
-                              |      + tau(t-L)                  |
-                              |      - M_bar * q_ddot(t-L)       |
-                              +----------------------------------+
-                                               |
-                                               v
-                                           [ Plant ]
-                                               |
-                                     q, q_dot, q_ddot
+[q_d, q_dot_d, q_ddot_d, q, q_dot] -> Desired Error Dynamics -> q_ddot_ref
+q_ddot_ref -> tau = M_bar*q_ddot_ref + tau(t-L) - M_bar*q_ddot(t-L) -> Plant -> feedback [q, q_dot, q_ddot]
 ```
 
 ---

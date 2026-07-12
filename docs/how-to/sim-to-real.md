@@ -89,18 +89,13 @@ Note: DR samples Kp/Kd by **uniform sampling of a fixed absolute range** and ove
 +-percentage scaled around the nominal 100.0/3.0. Those nominal values are only what is used when DR is
 disabled, not a preserved center.
 
-The former default/hard two-tier DR split was merged into one range on 2026-07-07
-(`config.py` `DomainRandomizationCfg` docstring: "formerly HardDomainRandomizationCfg ...
-collapsed into this single class. It now holds the Hard (training) values directly"); `[30,150]`
-/ `[0.3,7.0]` is the only range in the current codebase, for both `main` and `full_dof`.
-
-**TDC row correction (verified 2026-07-12)**: `TDCControllerCfg.joint_stiffness=200.0` /
-`joint_damping=10.0` (`envs/tdc/controllers/tdc.py:78-79`) are declared but never applied to the
-PhysX actuator -- no code path calls `write_joint_stiffness_to_sim`/`write_joint_damping_to_sim`
-with these fields (confirmed by grep across `envs/tdc/`). TDC's arm actuator is the inherited
-`full_dof` `ImplicitActuatorCfg` above, unchanged. Do not treat 200/10 as the real TDC gain --
-it is dead config. A previous pass of this doc had already flagged the TDC row as unverified;
-this is that verification.
+**History**: the former default/hard two-tier DR range was merged into one on 2026-07-07
+(`config.py` docstring: "formerly HardDomainRandomizationCfg ... collapsed into this single
+class"); `[30,150]` / `[0.3,7.0]` is the only range in the codebase now, for both `main` and
+`full_dof`. Verified 2026-07-12: `TDCControllerCfg.joint_stiffness=200.0` / `joint_damping=10.0`
+(`tdc.py:78-79`) are declared but never applied to PhysX — no code path calls
+`write_joint_stiffness_to_sim`/`write_joint_damping_to_sim`. TDC's arm actuator is the inherited
+`full_dof` `ImplicitActuatorCfg`, unchanged; treat 200/10 as dead config, not the real TDC gain.
 
 ### 2.2 DelayedPDActuator -- Failure record (2026-02-10)
 
@@ -145,17 +140,18 @@ Current status: reverted to `ImplicitActuatorCfg`. DelayedPDActuator is left as 
 
 ### 2.4 Thruster Channel Ordering (sim TAM <-> firmware ESC)
 
-The sim thruster allocation matrix (TAM) column order MUST match the physical
-robot firmware's ESC channel order. In `envs/main`/`envs/full_dof` the thruster is
-NOT a USD prim -- it is an analytical model: `ThrusterModel.compute_wrench()`
-applies `einsum("ij,nj->ni", TAM, thrust)` to turn a 6D per-thruster command into
-a body wrench (`Fx..Mz`) injected as an external force. Column `j` of the TAM is the
-ONLY thing that defines what physical direction sim thruster slot `j` produces, so
-matching the robot is purely a TAM column-order question -- no USD edit is involved.
+The sim thruster allocation matrix (TAM) column order MUST match the physical robot firmware's
+ESC channel order:
+
+- The thruster is not a USD prim — it's the analytical model `ThrusterModel.compute_wrench()`,
+  which applies `einsum("ij,nj->ni", TAM, thrust)` to turn a 6D per-thruster command into a
+  body wrench (`Fx..Mz`) injected as an external force.
+- Column `j` of the TAM is the only thing that defines what physical direction sim thruster slot
+  `j` produces, so matching the robot is purely a TAM column-order question — no USD edit needed.
 
 The robot firmware (agent-jetson `pid.cpp`) wires `m0,m3` = vertical (heave/depth,
 `PID_control_depth`) and `m1,m2,m4,m5` = horizontal (`PID_control_yaw`). The sim
-originally had heave on columns `T4,T5`. The fix (2026-07-03, main `238932c`)
+originally had heave on (pre-reorder) TAM columns `T4,T5`. The fix (2026-07-03, main `238932c`)
 reorders the TAM columns to firmware order via a single named constant:
 
 ```python
@@ -230,11 +226,11 @@ Step response measurement procedure for real-hardware calibration.
 
 ### 5.1 Settling Time Matching
 
-Settling time depends mainly on Kp.
+Settling time depends mainly on Kp ($\zeta$ = damping ratio, $\omega_n$ = natural frequency, $J$ = joint inertia):
 
 $$t_s = \frac{4}{\zeta \cdot \omega_n}, \quad \omega_n = \sqrt{K_p / J}$$
 
-If the real settling time is 300ms and J ~ 0.03 kg*m^2:
+If the real settling time is 300ms and joint inertia J ~ 0.03 kg*m^2:
 
 $$\omega_n = \frac{4}{0.87 \times 0.3} = 15.3 \text{ rad/s}, \quad K_p = \omega_n^2 \cdot J = 7.0$$
 
@@ -260,15 +256,19 @@ Example: 15ms / 5ms = 3 steps.
 
 ### 5.4 Dynamixel PID Register vs SI Units
 
-The Dynamixel PID gain register is not in SI units.
-PWM = Kp_dxl * pos_error + Ki_dxl * integral + Kd_dxl * vel.
-Since the conversion coefficient differs per motor model, step-response-based system identification is more practical.
+The Dynamixel PID gain register is not in SI units: `PWM = Kp_dxl*pos_error + Ki_dxl*integral +
+Kd_dxl*vel` (`_dxl` = raw register gain, differs per motor model) — step-response ID (§4-§5.3)
+beats converting registers directly.
 
-Measured on the real joint driver (`agent-jetson` repo, `joint_angle_command.cpp` + `dynamixel_config.h`): the driver
-actively writes Position P/I/D gain registers 84/82/80 with P=800, I=1, D=40, and also sets the Profile Velocity
-register. These are raw integer register values (model-specific PWM scaling), not SI units, so they cannot be
-substituted directly for the sim `ImplicitActuatorCfg` Kp/Kd. The nonzero I gain also means the real controller has
-a structurally different form from the sim's continuous PhysX PD (no integral term).
+Measured on the real driver (`agent-jetson`, `joint_angle_command.cpp` + `dynamixel_config.h`):
+
+| Register | Address | Value |
+|:---|:---|:---|
+| Position P/I/D gain | 84/82/80 | 800/1/40 |
+| Profile Velocity | — | set (rate limit) |
+
+Raw register values (not SI) — not substitutable for sim `ImplicitActuatorCfg` Kp/Kd; nonzero I
+means the real controller is structurally different from sim's continuous PD (no integral term).
 
 ---
 
@@ -345,8 +345,8 @@ on the real robot, Dynamixel generates the trajectory internally, so the positio
   - Attitude: Euler from quaternion (same convention)
   - Angular velocity: body frame
 - [ ] Action postprocessing: `[-1, 1]` joint velocity -> integrate to position target
-- [ ] Adaptation module z: history ring buffer at 50Hz, adapt_tconv inference
-- [ ] Online monitoring: z statistics, M_hat values, TDE residual ratio
+- [ ] Adaptation module `z` (9D encoder/adaptation latent, see [glossary](../reference/glossary.md)): history ring buffer at 50Hz, `adapt_tconv` inference
+- [ ] Online monitoring: `z` statistics, `M_hat` (TDC design-inertia term) and TDE (Time-Delay-Estimation) residual ratio — see [tdc-control-law.md](../explanation/tdc-control-law.md)
 
 ---
 

@@ -101,25 +101,22 @@ The student is a child of the teacher. Instead of a separate top-level (`logs/rs
 
 ## 3. manifest.json — Entry Point for Tracing
 
-```json
-{
-  "run_id": "2026-05-25_16-02-48_trpo",
-  "kind": "teacher | student",
-  "parent_run_id": "<teacher run_id>",        // only when student
-  "task": "Isaac-ConstrainedALBC-TRPO-v0",
-  "created": "2026-05-25T16:02:48",
-  "git": {"sha": "...", "branch": "...", "dirty": false},
-  "config": {"num_envs": 4096, "max_iterations": 2500, "seed": 30,
-             "algorithm": "ConstraintTRPO+IPO", "encoder_latent_dim": 9},
-  "wandb": {"project": "constrained-albc", "run_path": ".../runs/<id>", "url": "..."},
-  "paths": {"tb": "train/tb", "checkpoints": "train/checkpoints",
-            "evals": ["eval/static_2026-05-25_18-00-00", ...]},
-  "status": "running | completed | failed",
-  "repro": {"seed": 30, "rng_seeded": false, "dr_distribution_source": "tb",
-            "value_norm_persisted": false},   // INFRA §14 self-records the reproducibility grade
-  "final_metrics": {"att_ss_error_hard_deg": 8.2, ...}
-}
-```
+Emitted as `manifest.json` per run; fields and example values:
+
+| Field | Example | Notes |
+|:---|:---|:---|
+| `run_id` | `"2026-05-25_16-02-48_trpo"` | §2-A format |
+| `kind` | `"teacher"` \| `"student"` | |
+| `parent_run_id` | teacher's `run_id` | only present when `kind="student"` |
+| `task` | `"Isaac-ConstrainedALBC-TRPO-v0"` | registered task ID |
+| `created` | `"2026-05-25T16:02:48"` | |
+| `git.{sha,branch,dirty}` | `"..."`, `"..."`, `false` | |
+| `config.{num_envs,max_iterations,seed,algorithm,encoder_latent_dim}` | `4096`, `2500`, `30`, `"ConstraintTRPO+IPO"`, `9` | |
+| `wandb.{project,run_path,url}` | `"constrained-albc"`, `".../runs/<id>"`, `"..."` | |
+| `paths.{tb,checkpoints,evals}` | `"train/tb"`, `"train/checkpoints"`, `["eval/static_2026-05-25_18-00-00", ...]` | |
+| `status` | `"running"` \| `"completed"` \| `"failed"` | |
+| `repro.{seed,rng_seeded,dr_distribution_source,value_norm_persisted}` | `30`, `false`, `"tb"`, `false` | self-records reproducibility grade, INFRA §14 |
+| `final_metrics` | `{"att_ss_error_hard_deg": 8.2, ...}` | |
 
 Instead of grepping timestamp directories, post-hoc tools (analyze/compare) read the manifest to
 resolve paths. Knowing only the run_id, training, evaluation, config, and wandb URL are all reachable.

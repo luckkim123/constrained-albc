@@ -48,13 +48,10 @@ COST CRITIC  (multi-head, K = num_constraints)
           -> MLP[512, 256, 128]  (elu) -> cost_values (K)   # one head per constraint
 ```
 
-**Key design choices.** The encoder input is the privileged physics vector
-(unobservable on the real robot), not the observation — `z` tells the actor *what
-physics this environment has*. The critic is asymmetric: it reads privileged
-information directly (106D) while the actor only gets the compressed `z` (78D).
-Because `critic_uses_z = True`, the value loss gradient flows back through `z`
-into the encoder, so the encoder is trained by both the policy and the value
-signal.
+**Key design choices:**
+- Encoder sees privileged physics `p_t`, not the observation — `z` tells the actor *what physics this environment has* (`p_t` is unobservable on the real robot).
+- Critic is asymmetric — reads `p_t` directly (106D) while the actor only gets compressed `z` (78D).
+- `critic_uses_z = True` routes gradient into the encoder — the value-loss gradient flows back through `z`, so the encoder trains from both the policy and the value signal.
 
 ---
 
@@ -133,26 +130,18 @@ The runtime network is built by flattening `_ALBCPolicyCfg` (in
 | Critic | 106 = 69 + 28 + 9 | [512, 256, 128] (`critic_hidden_dims`) | 1 | elu | `critic_uses_z=True`; no normalization |
 | Cost critic | 106 (same) | [512, 256, 128] (`cost_critic_hidden_dims`) | K | elu | only built when `num_constraints > 0` |
 
-**Fields that actually decide the shape (live wires):** `policy_obs_dim=69`,
-`privileged_dim=28`, `encoder_latent_dim=9`, `critic_uses_z=True`,
-`encoder_output_norm=True`, `num_constraints` (auto-synced from the env), and the
-four `*_hidden_dims` lists. Fields like `init_noise_std=0.7` and the
-`*_normalization` flags do not change layer shapes.
+- **Shape-determining (live wires):** `policy_obs_dim=69`, `privileged_dim=28`, `encoder_latent_dim=9`, `critic_uses_z=True`, `encoder_output_norm=True`, `num_constraints` (auto-synced from the env), the four `*_hidden_dims` lists.
+- **No effect on shape:** `init_noise_std=0.7`, the `*_normalization` flags.
 
 **Encoder input normalization** is static min-max (HORA-style), not
 `EmpiricalNormalization`: the encoder computes `(2*p_t - (U+L)) / (U-L)`. It is
 deterministic with no running statistics, which avoids `z` drift / KL spikes.
 
-The bounds `[U, L]` are **derived from the DR config** at runner build time
-(`derive_priv_obs_bounds_from_dr()` in `envs/main/utils/priv_obs_bounds.py`,
-injected by `ConstraintEncoderRunner.__init__` like the `num_constraints`
-auto-sync), so bound = DR range exactly (margin 0) and a DR change auto-syncs.
-The old hardcoded `_PRIV_OBS_LOWER/UPPER` in `agents/rsl_rl_ppo_cfg.py` remain
-only as a construct-time fallback (still imported by `student/teacher.py`); they
-had drifted from DR (payload-mass overflow, stale CoG-xy radius) — the reason for
-the derivation refactor. A terminal `_assert_bounds_match_dr()` fails loud if a
-future DR change desyncs the derived bounds. (Branch `exp/dr-derived-norm-bounds`,
-audit item B1; see `docs/plans/2026-06-30-dr-derived-priv-obs-normalization-bounds.md`.)
+**Bound derivation (`[U, L]`):**
+- **Source**: `derive_priv_obs_bounds_from_dr()` (`envs/main/utils/priv_obs_bounds.py`), injected by `ConstraintEncoderRunner.__init__` like the `num_constraints` auto-sync — bound = DR range exactly (margin 0), so a DR change auto-syncs.
+- **Fallback**: old hardcoded `_PRIV_OBS_LOWER/UPPER` in `agents/rsl_rl_ppo_cfg.py`, used only at construct time (still imported by `student/teacher.py`); it had drifted from DR (payload-mass overflow, stale CoG-xy radius) — the reason for the derivation refactor.
+- **Guard**: a terminal `_assert_bounds_match_dr()` fails loud if a future DR change desyncs the derived bounds.
+- **Tracking**: branch `exp/dr-derived-norm-bounds`, audit item B1; see `docs/plans/2026-06-30-dr-derived-priv-obs-normalization-bounds.md`.
 
 ### 3.1 Class hierarchy
 
@@ -210,13 +199,12 @@ $$
 where $r$ is the importance ratio, $H$ the policy entropy, $\beta_{\text{ent}}$ the
 entropy coefficient, $\lambda_{\text{cg}}$ the CG damping, and $\delta_{\max}=\texttt{max\_kl}$.
 
-**Parameter-group split** (by name prefix): names matching
-`("critic.", "cost_critic.", ...)` go to an **Adam** optimizer (`value_lr`); all
-other params — actor MLP, `encoder.*`, and the bare `log_std` — go to the
-**TRPO natural-gradient** group. The encoder is deliberately kept in the policy
-group (decoupling it caused a measured ~85% encoder-gradient drop, per a code
-comment); `log_std` is in the policy group so the KL trust region damps entropy
-collapse.
+**Parameter-group split** (by name prefix):
+
+| Group | Members | Optimizer | Why |
+|---|---|---|---|
+| Value | `critic.*`, `cost_critic.*` | Adam (`value_lr`) | standard value-function fit |
+| Policy | actor MLP, `encoder.*`, bare `log_std` | TRPO natural gradient | encoder stays here because decoupling it caused a measured ~85% encoder-gradient drop (code comment); `log_std` stays here so the KL trust region damps entropy collapse |
 
 **FVP / log_std.** The Fisher-vector product computes a pure KL Hessian on the
 `Normal(action_mean, action_std)` distribution. Since `action_std = exp(log_std)`,
@@ -225,10 +213,9 @@ is not "logging-only". The `_sigma_param_offset` index merely slices the sigma
 component out of the flat step for logging.
 
 **Std clamp.** `std` is the single global `log_std` parameter (not
-state-dependent). After every update, `ConstraintTRPO` clamps `log_std` per
-dimension: floor `min_std_per_dim = (0.10, 0.10, 0.05, 0.05, 0.05, 0.05, 0.05,
-0.05)` (arm dims = 0.10, thruster dims = 0.05), ceiling `max_std = 2.0`;
-`init_noise_std = 0.7`.
+state-dependent); `ConstraintTRPO` clamps it per dimension after every update —
+floor `min_std_per_dim` (arm dims 0.10, thruster dims 0.05), ceiling
+`max_std=2.0`, `init_noise_std=0.7`. Full per-dim tuple: §6 knob-map table.
 
 ### 4.1 Key hyperparameters
 
@@ -353,30 +340,15 @@ what rests on consensus vs. on our own measurements.
 
 ### 8.1 Why entropy collapses despite TRPO
 
-A common misconception is that TRPO's KL trust region *prevents* entropy
-collapse. It does not — the trust region bounds the **size** of each step, not
-its **direction**. If the objective's gradient points toward smaller std at every
-step, each step stays small but the policy walks steadily toward zero entropy;
-the trust region only slows the descent. Two pressures push std down here:
-
-1. **Surrogate (advantage).** Policy gradient raises the probability of
-   high-advantage actions; for a Gaussian, concentrating probability on a chosen
-   action *is* shrinking std. This is the structural PPO/TRPO-common pressure the
-   trust region cannot block.
-2. **IPO log-barrier (project-specific amplifier).** A large std occasionally
-   samples constraint-violating actions, which shrinks the constraint margin
-   `d_k - hat{J}_{C_k}` and lowers the barrier term `log(...)`. The barrier
-   therefore adds pressure to reduce std so the policy stops sampling risky
-   actions — i.e. constraints make the policy "cautious" (lower noise).
-
-Because pure TRPO has only pressure 1 while we have 1 + 2, our entropy collapses
-*faster* than vanilla TRPO, which is why a (project-custom) entropy bonus is
-needed. Measured: `entropy_coef=0` -> noise collapses to 0.12; `entropy_coef=0.003`
--> noise recovers to 0.55. Pressure 2 is a mechanism inference plus general
-constrained-RL literature support (constraints suppress exploration: ESB-CPO
-arXiv:2302.14339; safe-RL review arXiv:2508.09128); it is **not** isolated by a
-controlled experiment — see the deferred test in
-`docs/plans/2026-06-30-entropy-collapse-ipo-barrier-experiment.md`.
+The KL trust region bounds the **size** of each TRPO step, not its **direction**
+— it slows entropy collapse, it does not prevent it. Two pressures push std down
+(surrogate/advantage concentrating probability on high-advantage actions; the IPO
+log-barrier discouraging risky high-std samples) against one pushing it up (the
+entropy bonus, §4.1). Measured: `entropy_coef=0` -> noise collapses to 0.12;
+`entropy_coef=0.003` -> noise recovers to 0.55. Full 3-pressure derivation +
+literature standing (EnTRPO non-standard novelty, ESB-CPO arXiv:2302.14339,
+safe-RL review arXiv:2508.09128, deferred isolation experiment): canonical
+version in `exploration-and-noise.md` §6.
 
 ---
 

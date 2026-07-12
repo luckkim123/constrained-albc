@@ -3,13 +3,14 @@
 > Verified against commit c5a8a08.
 
 > **Scope**: The domain-randomization (DR) system of the default task
-> `Isaac-ConstrainedALBC-TRPO-v0` (`constrained_albc/envs/main/`) — the
-> 20-parameter DORAEMON entropy-maximization curriculum in
-> `marinelab/marinelab/algorithms/doraemon.py`, the single `DomainRandomizationCfg`
-> config (curriculum-managed vs uniform-only params live on the same class), how
-> per-env sampled values reach the physics at reset, how the scheduler is stepped
-> inside the training loop, and the fixed uniform-interpolation DR used on the
-> eval side.
+> `Isaac-ConstrainedALBC-TRPO-v0` (`constrained_albc/envs/main/`):
+> - the 20-parameter DORAEMON entropy-maximization curriculum in
+>   `marinelab/marinelab/algorithms/doraemon.py`
+> - the single `DomainRandomizationCfg` config (curriculum-managed vs
+>   uniform-only params live on the same class)
+> - how per-env sampled values reach the physics at reset
+> - how the scheduler is stepped inside the training loop
+> - the fixed uniform-interpolation DR used on the eval side
 >
 > This is a code-level reference verified against disk (adversarially
 > cross-checked). It reflects the shipped default (`DomainRandomizationCfg`,
@@ -38,15 +39,15 @@ surface. Keeping them apart is the single most important thing to understand:
 | **Uniform-only DR** | joint gains/friction/effort, thruster scales, control-action delay | fixed uniform sampling per reset | on (when `randomization` active) |
 | **Fault injection** | thruster/sensor/joint component failure | `FaultInjectionCfg`, uniform | **off** |
 
-**DORAEMON optimizes physics DR only.** Command/task difficulty is a fixed task
-knob at scale `1.0` and is explicitly *not* curriculum-managed
-(`albc_env.py:1503` — "DORAEMON optimizes physics DR only; command difficulty
-is a fixed task knob"). The shipped default config instantiates
-`DomainRandomizationCfg()` directly (`config.py:504`), so **"DR on" with what
-used to be called the *hard* ranges is simply the shipped state** — there is no
-separate softer class to fall back to. Fault injection (`FaultInjectionCfg`,
-`config.py:316`) models component *failure*, a different thing from parameter
-*spread*, and is off by default.
+Key facts:
+- DORAEMON optimizes **physics DR only** — command/task difficulty is a fixed
+  knob at scale `1.0`, not curriculum-managed (`albc_env.py:1503` — "DORAEMON
+  optimizes physics DR only; command difficulty is a fixed task knob").
+- The shipped default instantiates `DomainRandomizationCfg()` directly
+  (`config.py:504`) — **"DR on" with the former *hard* ranges is simply the
+  shipped state**; there is no separate softer class to fall back to.
+- Fault injection (`FaultInjectionCfg`, `config.py:316`) models component
+  *failure*, a different thing from parameter *spread*, and is off by default.
 
 **DR is applied imperatively, not via Isaac Lab's `EventManager`.** Despite the
 `events.py:6` docstring naming the "Isaac Lab EventTerm pattern", the
@@ -56,15 +57,15 @@ aspirational.
 
 **File map** (where each piece lives):
 
-```
-marinelab/marinelab/algorithms/doraemon.py     # the ENGINE (robot-agnostic, 909 lines)
-constrained_albc/envs/main/doraemon.py         # ALBC coupling: _PARAM_DEFS (20 params) + re-export shim
-constrained_albc/envs/main/config.py           # DomainRandomizationCfg / FaultInjectionCfg + the live DoraemonCfg override
-constrained_albc/envs/main/mdp/events.py       # reset-time APPLICATION of sampled values to physics
-constrained_albc/envs/main/albc_env.py         # WIRING: samples, stashes, records episodes, owns _doraemon
-constrained_albc/envs/main/runners/            # per-iteration _doraemon.step() call site
-constrained_albc/analysis/{eval.py,dr_config.py,common.py}   # EVAL-side fixed DR (bypasses the curriculum)
-```
+| Path | Role |
+|:---|:---|
+| `marinelab/marinelab/algorithms/doraemon.py` | the ENGINE (robot-agnostic, 909 lines) |
+| `constrained_albc/envs/main/doraemon.py` | ALBC coupling: `_PARAM_DEFS` (20 params) + re-export shim |
+| `constrained_albc/envs/main/config.py` | `DomainRandomizationCfg` / `FaultInjectionCfg` + the live `DoraemonCfg` override |
+| `constrained_albc/envs/main/mdp/events.py` | reset-time APPLICATION of sampled values to physics |
+| `constrained_albc/envs/main/albc_env.py` | WIRING: samples, stashes, records episodes, owns `_doraemon` |
+| `constrained_albc/envs/main/runners/` | per-iteration `_doraemon.step()` call site |
+| `constrained_albc/analysis/{eval.py,dr_config.py,common.py}` | EVAL-side fixed DR (bypasses the curriculum) |
 
 ---
 
@@ -197,16 +198,16 @@ This is the objective DORAEMON maximizes (§4).
 
 ### `build_param_specs`: fusing three bound sources
 
-`build_param_specs` (`doraemon.py:65`) fuses the DR cfg ranges + `_PARAM_DEFS`
-order + `_NOMINAL_OVERRIDES` into the `ParamSpec` list the distribution is built
-from. Nominal = midpoint **except** three overrides in `_NOMINAL_OVERRIDES`
-(`envs/main/doraemon.py:83-87`): `ocean_current_strength`, `payload_cog_offset_xy_u`,
-and `obs_noise_scale` all start at `0.0`, so the curriculum **starts with no
-ocean current / no payload XY offset / no extra observation noise** and widens
-toward the full range as the policy learns simpler variants (`mu = 0` clamps to
-`0.01` → `a = 1.0, b = 99.0` at `c = 30`). A third bound source,
-`cfg.param_overrides` (`doraemon.py:332`), can override any parameter's bounds and
-resets its nominal to the midpoint.
+`build_param_specs` (`doraemon.py:65`) resolves each parameter's bounds and
+nominal from three bound sources plus one nominal-override rule:
+
+1. **DR cfg ranges** — the live bounds (primary; via `getattr(dr_cfg, field_name)`).
+2. **`_PARAM_DEFS` order** (`envs/main/doraemon.py:83-87`) — fallback-only literal bounds (§2).
+3. **`cfg.param_overrides`** (`doraemon.py:332`) — overrides any parameter's bounds and resets its nominal to the midpoint.
+
+Nominal defaults to the midpoint, **except** three `_NOMINAL_OVERRIDES` params (`envs/main/doraemon.py:83-87`) that start at `0.0` instead —
+`ocean_current_strength`, `payload_cog_offset_xy_u`, `obs_noise_scale` (semantics in Block A #17-19, §2) — and widen toward the full range as the
+policy masters simpler variants (`mu = 0` clamps to `0.01` → `a = 1.0, b = 99.0` at `c = 30`).
 
 > **`PARAM_SPECS` module constant vs the live start.** The
 > `PARAM_SPECS` list exported from `envs/main/doraemon.py` uses a **plain
@@ -252,7 +253,7 @@ $$
 | `step_interval` | 250 | 250 | RL iters between updates |
 | `buffer_size` | 2000 | 2000 | episode ring capacity |
 | `min_episodes` | 200 | 200 | min buffered before first update |
-| `min_ess_ratio` | 0.01 | 0.01 | ESS floor to accept an update |
+| `min_ess_ratio` | 0.01 | 0.01 | ESS (effective sample size) floor to accept an update |
 | `hard_performance_constraint` | True | True | use inverted problem when infeasible |
 
 > **Always read the caller's `DoraemonCfg`, not the engine defaults.** The
@@ -266,41 +267,35 @@ $$
 
 ### `step()` control flow (`doraemon.py:384`)
 
-```
-step(iteration):
-  xi, returns, success, log_probs = buffer.get_all()
-  if n < min_episodes:           -> metrics{skipped=1, entropy=...}   RETURN  (note key is 'entropy', not entropy_before/after)
-  report success_rate, entropy_before, per-param stats  (ALWAYS)
-  if step_count % step_interval != 0:  -> metrics{kl_step=0}          RETURN  (report-only between updates)
+**Early-exit guards** (checked in order):
 
-  prev_dist = dist.clone()
-  Ghat = _estimate_success_rate(xi, success, ref=prev_dist)
+1. `n < min_episodes` → report `{skipped=1, entropy=...}` (note: the key is
+   `entropy`, not `entropy_before`/`entropy_after`) → **return**.
+2. Otherwise, always report `success_rate`, `entropy_before`, per-param stats
+   before the next guard.
+3. Not at a `step_interval` boundary (`step_count % step_interval != 0`) →
+   report-only `{kl_step=0}` → **return**.
 
-  if hard_performance_constraint and Ghat < alpha:      # INFEASIBLE
-     feasible, ok = _find_feasible_start(prev_dist, ...)  # inverted problem: max Ghat, budget kl_ub - 1e-5
-     if ok:
-        set_flat_params(feasible)
-        if _estimate_success_rate() >= alpha:
-           _optimize_entropy(prev_dist, ...) ; mode = 1.0   # inverted + optimize
-        else:
-           mode = -2.0                                       # kept max-success dist
-     else:
-        dist = prev_dist ; mode = -3.0                       # inverted failed -> revert
-  else:                                                  # FEASIBLE (or soft)
-     _optimize_entropy(prev_dist, ...) ; mode = 0.0          # normal
+**At a boundary**, compute `prev_dist = dist.clone()` and
+`Ghat = _estimate_success_rate(xi, success, ref=prev_dist)`, then dispatch:
 
-  entropy_after, kl_step = ...
-  ess, ess_ratio = _compute_ess(...)
-  if ess < min_ess_ratio * n:   dist = prev_dist ; reverted = 1.0    # ESS revert
-  _trajectory.append({iter, a, b})                                    # for replay
-```
+| Condition | Action | `mode` |
+|:---|:---|:--:|
+| `hard_performance_constraint` and `Ghat < alpha` (infeasible); `_find_feasible_start` (inverted problem: maximize `Ghat`, KL budget `kl_ub - 1e-5`) succeeds, and re-estimated `Ghat >= alpha` | feasible start, then `_optimize_entropy` on top of it | `1.0` (inverted + optimize) |
+| same infeasible branch, but re-estimated `Ghat < alpha` after the feasible start | keep the max-success distribution as-is | `-2.0` (kept max-success) |
+| infeasible and `_find_feasible_start` itself fails | revert to `prev_dist` | `-3.0` (inverted-failure revert) |
+| `Ghat >= alpha` (feasible) | normal `_optimize_entropy` | `0.0` (normal) |
 
-The `mode` metric is a **multi-valued code**, not a boolean: `0.0` normal, `1.0`
-inverted+optimize, `-2.0` kept max-success, `-3.0` inverted-failure revert.
+**After dispatch**: compute `entropy_after`, `kl_step`, `ess`, `ess_ratio`;
+if `ess < min_ess_ratio * n`, revert to `prev_dist` and set `reverted = 1.0`
+(the ESS gate — independent of the `mode` dispatch above). Finally append
+`{iter, a, b}` to `_trajectory` for replay.
+
+`mode` is a multi-valued code, not a boolean — see the table above.
 
 ### The four equations behind the engine
 
-**KL constraint (reverse KL, per-dimension sum).** SLSQP receives it as
+**KL constraint (reverse KL, per-dimension sum).** SLSQP (Sequential Least Squares Programming, the `scipy.optimize.minimize` constrained solver) receives it as
 $g(\phi) = \varepsilon - \mathrm{KL} \ge 0$ (`doraemon.py:551`; helper
 `_compute_kl` at `doraemon.py:91`):
 
@@ -332,13 +327,14 @@ $$
 \quad \text{revert if } \mathrm{ESS}<\texttt{min\_ess\_ratio}\cdot n
 $$
 
-The optimization itself is SLSQP in **log-space** (`_optimize_entropy`,
-`doraemon.py:577`): variables are `log(a), log(b)`, Beta params clamped to
-`[1.0, 500.0]`. A non-converged SLSQP result is accepted **only if**
-`perf_ok AND result.fun < init_obj AND kl <= kl_ub` (`doraemon.py:653`) — this
-guard exists so a stalled solver cannot commit a sub-floor distribution.
-`_find_feasible_start` (`doraemon.py:679`) returns `False` immediately if there
-are zero successful episodes.
+**`_optimize_entropy`** (`doraemon.py:577`) — SLSQP in log-space:
+
+- Variables: `log(a), log(b)`; Beta params clamped to `[1.0, 500.0]`.
+- A non-converged SLSQP result is accepted only if
+  `perf_ok AND result.fun < init_obj AND kl <= kl_ub` (`doraemon.py:653`) —
+  prevents a stalled solver from committing a sub-floor distribution.
+- `_find_feasible_start` (`doraemon.py:679`) returns `False` immediately if
+  there are zero successful episodes.
 
 ---
 
@@ -381,11 +377,12 @@ warning.
 | **absolute value** | water_density, payload_mass |
 | **base + offset** | center-of-buoyancy (CoB), center-of-gravity (CoG) |
 
-Notable ordering quirks: rotational **DOF-5 (yaw) is double-processed** — the
-quadratic-damping scale is applied, then overwritten by `yaw_damping_scale`; both
-`env._hydro` and `env._buoy_hydro` share one sampled scale; buoyancy is recomputed
-after CoB/CoG offsets. When `enable = False` the randomizers early-return
-(no-op).
+**Ordering quirks:**
+- Rotational **DOF-5 (yaw) is double-processed** — the quadratic-damping
+  scale is applied, then overwritten by `yaw_damping_scale`.
+- `env._hydro` and `env._buoy_hydro` share one sampled scale.
+- Buoyancy is recomputed after CoB/CoG offsets.
+- When `enable = False`, the randomizers early-return (no-op).
 
 ### Payload
 
@@ -403,11 +400,12 @@ scalar (Block C). `_apply_xyz_offset_with_doraemon` (`events.py:63`) and
 
 ### Ocean current strength
 
-Three-way resolution (`events.py:294`, `ocean_current.py`): use the
-DORAEMON-sampled `ocean_current_strength` if present, else a uniform sample from
-`ocean_current_strength_range`, else fall back. The strength `[0, 1]` multiplies
-`ocean_current.max_velocity` **after** the noise term, and the whole path is
-gated on the env actually having an ocean-current component (`_has_ocean_current`).
+**Three-way resolution** (`events.py:294`, `ocean_current.py`): DORAEMON-sampled
+`ocean_current_strength` if present, else a uniform sample from
+`ocean_current_strength_range`, else fall back. The resolved strength `[0, 1]`
+multiplies `ocean_current.max_velocity` **after** the noise term, and the whole
+path is gated on the env actually having an ocean-current component
+(`_has_ocean_current`).
 
 ### Two stability clamps
 
@@ -457,21 +455,22 @@ per ITER    : runner.log() -> metrics = _doraemon.step(iteration=it)  -> re-emit
 > why the engine class docstring (`doraemon.py:307`) is misleading — the engine
 > never binarizes and never reads the stored `log_probs` for its math.
 
-**Runner split.** The default TRPO path uses `ConstraintEncoderRunner`
-(`runners/constraint_encoder_runner.py:256`, passes `iteration=`); PPO ablations
-use `OnPolicyDoraemonRunner` (`runners/on_policy_doraemon_runner.py:83`, no
-`iteration` kwarg → `_trajectory` iter falls back to `_step_count`). Behavior is
-otherwise identical.
+**Runner split** — behavior is otherwise identical:
+
+| Path | Runner | `iteration` kwarg |
+|:---|:---|:---|
+| TRPO (default) | `ConstraintEncoderRunner` (`runners/constraint_encoder_runner.py:256`) | passed |
+| PPO ablations | `OnPolicyDoraemonRunner` (`runners/on_policy_doraemon_runner.py:83`) | not passed → `_trajectory` iter falls back to `_step_count` |
 
 **Checkpointing.** `state_dict` (`doraemon.py:773`) serializes `dist_a` / `dist_b`
 + step/episode counts + the full episode buffer. `export_recording`
 (`doraemon.py:765`, `DoraemonScheduler` **only**) writes the curriculum trajectory
 for replay; it is guarded by `hasattr`, so a replay run writes nothing.
 
-**Emitted metrics** (under the `DORAEMON/` prefix): `success_rate`,
-`entropy_before` / `entropy_after` (or plain `entropy` in the skip branch),
-`kl_step`, `ess` / `ess_ratio`, `mode` (multi-valued, see §4), `reverted`,
-`skipped`, and per-parameter `mean/<name>` / `std/<name>`.
+**Emitted metrics** (all under the `DORAEMON/` prefix): the per-update stats
+`success_rate`, `entropy_before`/`entropy_after`, `kl_step`, `ess`/`ess_ratio`
+(§4 `step()` flow / equations); the outcome codes `mode`, `reverted`,
+`skipped` (§4 dispatch table); and per-parameter `mean/<name>` / `std/<name>`.
 
 ---
 
@@ -510,13 +509,13 @@ that the rules/CLAUDE.md still name (that file does not exist under that name).
 
 ### The four levels
 
-`none / soft / medium / hard` use fixed scale fractions `0.0 / 0.3 / 0.6 / 1.0`
-(the `DR_SCALE` map at `common.py:36`, which also carries a 5th `ood: 1.0`),
-linearly interpolating between a true-nominal single point (scale `0`) and a
-**hard anchor** (scale `1`). Per-level application is `apply_dr_config` in
-`eval.py:345`; the hard anchor itself is built by `get_hard_dr_config`
-(`dr_config.py:275`) from the DORAEMON-learned `mean ± 2·std` clamped to
-PARAM_SPEC bounds (`dr_config.py:237`).
+| Level | none | soft | medium | hard | ood (5th) |
+|:---|:--:|:--:|:--:|:--:|:--:|
+| Scale fraction | 0.0 | 0.3 | 0.6 | 1.0 | 1.0 |
+
+The `DR_SCALE` map (`common.py:36`) linearly interpolates each level between a true-nominal point (scale `0`) and a **hard anchor** (scale `1`) via
+`apply_dr_config` (`eval.py:345`); the hard anchor is built by `get_hard_dr_config` (`dr_config.py:275`) from the DORAEMON-learned `mean ± 2·std`,
+clamped to PARAM_SPEC bounds (`dr_config.py:237`).
 
 > **`soft`/`hard` are interpolation *endpoints*, not two different config
 > classes** — there is only one `DomainRandomizationCfg` now (§1). The hard
@@ -542,12 +541,12 @@ PARAM_SPEC bounds (`dr_config.py:237`).
 
 ### `dr_snapshot`
 
-`_eval_dr/dr_snapshot.py` (`:45`) is a **pure post-hoc reshaper** of
-already-fixed, post-clamp physics tensors into `dr_<name>[N]` arrays for logging —
-it is **not** a DR freeze/realize step. Reproducible fixed physics comes instead
-from `--deterministic-dr`, which collapses each `(lo, hi)` tuple to its midpoint.
-There is also a 5th OOD level (full DORAEMON-derived) that bypasses
-`apply_dr_config` entirely.
+- `_eval_dr/dr_snapshot.py` (`:45`) is a **pure post-hoc reshaper** of
+  already-fixed, post-clamp physics tensors into `dr_<name>[N]` arrays for
+  logging — **not** a DR freeze/realize step.
+- Reproducible fixed physics instead comes from `--deterministic-dr`, which
+  collapses each `(lo, hi)` tuple to its midpoint.
+- A 5th OOD level (full DORAEMON-derived) bypasses `apply_dr_config` entirely.
 
 ---
 

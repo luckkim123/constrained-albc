@@ -15,12 +15,16 @@
 > rather than duplicating.
 >
 > **Branch note.** All facts below track marinelab `main` (local `main` =
-> `02c1007`, 2026-07-12). The per-thruster fault path (`0c882df`/`8364cd6`), the
-> non-linear thrust curve (`c155aa7`, originally developed on the now-deleted
-> `exp/thruster-curve` branch), and per-step actuation-noise (`cc0d03a`/`18490c1`)
-> are all merged into `main` as of `20b7ae1` — each is off-by-default. There is
-> no branch split left to track; §5.3/§5.4 describe both toggles as plain
-> `main`-branch behavior.
+> `02c1007`, 2026-07-12). Three features are merged into `main` as of `20b7ae1`,
+> each off-by-default:
+>
+> - Per-thruster fault path (`0c882df`/`8364cd6`)
+> - Non-linear thrust curve (`c155aa7`, originally developed on the now-deleted
+>   `exp/thruster-curve` branch)
+> - Per-step actuation noise (`cc0d03a`/`18490c1`)
+>
+> There is no branch split left to track; §5.3/§5.4 describe both toggles as
+> plain `main`-branch behavior.
 
 ---
 
@@ -52,34 +56,35 @@ FEEDBACK
   the full 8D action re-enters the temporal history (8D x 2 steps = 16D)
 ```
 
-**Key design choices.** (a) The Gaussian is *unbounded*; `[-1, 1]` is an
-*interpretation contract* enforced by the env, not a policy-side squashing (this is
-the PPO/TRPO norm, unlike SAC's tanh). (b) The same 8D vector drives two completely
-different dynamics: the arm dims are a **position-delta integrator** (a leak-free
-accumulator on PD targets), while the thruster dims are a **force low-pass filter**
-(first-order ESC lag). (c) The observation feeds back the *filtered* thruster state,
-not the raw command, so the policy sees an ESC-feedback-like signal.
+*Symbols above: `q_des` = commanded joint position target (§4.1); `s` = filtered thruster
+state (§5.1); TAM = thrust allocation matrix (§5.2, [glossary.md](glossary.md)); ESC =
+electronic speed controller; CoG = center of gravity.*
+
+**Key design choices:**
+
+1. The Gaussian is *unbounded*; `[-1, 1]` is an *interpretation contract* enforced by the env, not a policy-side squashing (this is the PPO/TRPO norm, unlike SAC's tanh).
+2. The same 8D vector drives two completely different dynamics: the arm dims are a **position-delta integrator** (a leak-free accumulator on PD targets), while the thruster dims are a **force low-pass filter** (first-order ESC lag).
+3. The observation feeds back the *filtered* thruster state, not the raw command, so the policy sees an ESC-feedback-like signal.
 
 ### 1.1 Why one 8D vector drives two dynamics (no multi-head)
 
-The policy emits only normalized `[-1, 1]` commands; the env absorbs the
-scale/dynamics differences (arm `delta_scale=0.10` vs. thruster
-`thrust_coeff=40`; arm PD responds immediately vs. thruster has first-order
-filter lag — the policy sees this lag in the observation via the filtered
-`thruster_state`). This is a standard construction. The output layer is
-already 8 independent scalar heads (linear last layer, per-dim `log_std`) —
-only the hidden trunk (`[256, 128, 64]`) is shared. So "single vs.
-multi-head" really reduces to "should arm and thruster share the hidden
-trunk". They currently do: in attitude control, arm and thruster are
-strongly coupled (the thruster generates attitude torque, arm motion
-perturbs it via reaction force/CoG shift) — sharing a trunk is the natural
-choice to preserve that coupling, and splitting into separate heads would
-cut that coupling at the representation stage. A trunk split only pays off
-when the two subtasks are heterogeneous enough to interfere, or one
-gradient dominates the other — there is no such evidence in the current
-codebase. Do not introduce multi-head without first measuring arm/thruster
-gradient cosine similarity or running a separate-network ablation
-(`.claude/rules/03` — no generic solutions without evidence).
+The policy emits only normalized `[-1, 1]` commands; the env absorbs the scale/timing
+gap: arm `delta_scale = 0.10` vs. thruster `thrust_coeff = 40`; arm PD reacts
+immediately vs. thruster first-order filter lag (fed back as `thruster_state`). This
+is a standard construction.
+
+The output layer is already 8 independent scalar heads (linear last layer, per-dim
+`log_std`); only the hidden trunk (`[256, 128, 64]`) is shared, so "single vs.
+multi-head" reduces to "should arm and thruster share the trunk." They do: in
+attitude control the thruster generates attitude torque and arm motion perturbs it
+via reaction force/CoG shift, so a shared trunk preserves that coupling — separate
+heads would cut it at the representation stage.
+
+**Don't add multi-head without evidence.** A split only pays off if the subtasks are
+heterogeneous enough to interfere, or one gradient dominates — no such evidence
+exists here. Measure arm/thruster gradient cosine similarity or run a
+separate-network ablation first (`.claude/rules/03` — no generic solutions without
+evidence).
 
 ---
 
@@ -132,13 +137,15 @@ The value comes from `agent_cfg.clip_actions` at wrapper construction
 (`scripts/train.py:256`: `RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)`).
 When `clip_actions is None`, this is a no-op and only clamp #2 applies.
 
-**Currently a confirmed no-op, not a hypothetical.** `rsl_rl_ppo_cfg.py` does not
-set `clip_actions`, so it inherits the isaaclab base default `clip_actions=None`
-(`rl_cfg.py:181`); `train.py:256` passes that `None` through, and
-`train_student.py:124` passes `clip_actions=None` explicitly. So in every launch
-path today, clamp #1 is skipped and **only clamp #2 bounds actions** — the
-entropy-collapse / boundary-mass-waste discussion in §8 attaches to clamp #2
-alone.
+**Currently a confirmed no-op, not a hypothetical** — traced across every launch path:
+
+1. `rsl_rl_ppo_cfg.py` does not set `clip_actions` → inherits the isaaclab base default `clip_actions=None` (`rl_cfg.py:181`).
+2. `train.py:256` passes that `None` through unchanged.
+3. `train_student.py:124` passes `clip_actions=None` explicitly.
+
+So clamp #1 is skipped on every launch path today — **only clamp #2 bounds actions**
+— and the entropy-collapse / boundary-mass-waste discussion in §8 attaches to clamp
+#2 alone.
 
 ### 3.3 Clamp #2 — env action buffer (always)
 
@@ -151,31 +158,33 @@ self._prev_actions       = self._actions.clone()
 self._actions            = actions.clone().clamp(-1.0, 1.0)
 ```
 
-This clamp is the one that always holds. **Consequence for exploration:** because
-the policy std is unbounded and only the *input to physics* is clamped, a large
-`log_std` wastes probability mass on out-of-range samples that saturate at ±1 —
-which is one structural reason the std tends to shrink (see the entropy-collapse
-discussion in the network doc). The clamp is a hard saturation, not a smooth
+This clamp is the one that always holds — a hard saturation, not a smooth
 squash, so gradients do not flow back through the boundary.
+
+**Consequence for exploration:** because the policy std is unbounded and only
+the *input to physics* is clamped, a large `log_std` wastes probability mass
+on out-of-range samples that saturate at ±1 — one structural reason the std
+tends to shrink (see the entropy-collapse discussion in the network doc).
 
 ---
 
 ## 4. Arm path — delta integrator → PD
 
 `_pre_physics_step` slices `arm_actions = self._actions[:, :2]` and, gated by the
-control decimation, calls `_apply_joint_pd_action` (`albc_env.py:657–659`):
-
-```python
-arm_actions = self._actions[:, :2]
-if self._control_step_counter % self.cfg.control_decimation == 0:
-    self._apply_joint_pd_action(arm_actions)
-```
+control decimation, calls `_apply_joint_pd_action` (`albc_env.py:657–659`).
 
 ### 4.1 Delta accumulation (unbounded)
 
-`_apply_joint_pd_action` (`:668–687`) is a **leak-free position integrator**:
+`_apply_joint_pd_action` (`:668–687`) is a **leak-free position integrator**. The
+dispatch and the accumulation together:
 
 ```python
+# dispatch, gated by control_decimation (albc_env.py:657-659)
+arm_actions = self._actions[:, :2]
+if self._control_step_counter % self.cfg.control_decimation == 0:
+    self._apply_joint_pd_action(arm_actions)
+
+# _apply_joint_pd_action body (albc_env.py:668-687)
 delta = self._delta_scale * actions                       # delta_scale = 0.10
 if self._joint_act_noise_std is not None and self._joint_act_noise_std > 0.0:
     delta = delta * (1.0 + torch.randn_like(delta) * self._joint_act_noise_std)
@@ -192,40 +201,44 @@ With `a ∈ [-1, 1]` and `delta_scale = 0.10`, the per-step target change is at 
 This delta parameterization is deliberate: it limits per-step position change and so
 prevents PD actuator saturation from a step command.
 
-**`_joint_pos_targets` is never wrapped or clamped.** The only three writes are:
-init to nominal (`:322`, `nominal_joint_pos = (0.0, π/2)`), the `+=` accumulation
-(`:687`), and reset to the measured joint position (`:1439`). None clamps. The joints
-are continuous rotation motors, so the target integrator grows unbounded by design;
-joint1 cable wrapping is protected by the `joint1_position_cost` **constraint**
-(budget on `|θ_cum| > 4π`), *not* by clamping the target. (This is exactly why the
-joint1 anti-drift work is a constraint-redesign problem, not a clamp: see
-`constraints.md` §7 and the joint1 campaign docs.)
+**`_joint_pos_targets` is never wrapped or clamped.** Only three call sites write it,
+and none clamps:
 
-**This is a position-command integrator, not a PID error-integrator — the reset
-trigger is episode-scoped, never target-reached.** `_joint_pos_targets` accumulates
-the *commanded* position (`q_des += delta_scale * a`), not an error signal, so it
-grows unbounded *within* an episode and is only re-initialized at episode reset
-(`_reset_action_buffers`, `:1428`, called from the env reset at `:1426`) — per-env,
-to the *measured* joint position, not to `0` or to `nominal_joint_pos`. Resetting to
-the measured position is deliberate anti-bump init: PD torque ≈
-`Kp * (q_des - q_measured)`, so `q_des = q_measured` at reset makes the error zero
-even under a randomized initial pose. A "reset the integrator once the joint reaches
-its target, then compute the next target" scheme (the waypoint / error-integrator
-mental model) is **wrong for this structure and would break control** — reaching the
-target is a *hold* state, not a reset trigger, and zeroing `q_des` on reach would
-fling the arm back to `0`/nominal mid-episode. The only valid reset trigger is the
-episode boundary.
+- Init to nominal (`:322`, `nominal_joint_pos = (0.0, π/2)`)
+- The `+=` accumulation (`:687`)
+- Reset to the measured joint position (`:1439`, see below)
+
+The joints are continuous rotation motors, so the integrator grows unbounded by
+design; joint1 cable wrapping is protected by the `joint1_position_cost` **constraint**
+(budget on `|θ_cum| > 4π`, where `θ_cum` is joint1's cumulative rotation angle),
+*not* by clamping — exactly why the joint1 anti-drift work is a constraint-redesign
+problem, not a clamp (`constraints.md` §7, joint1 campaign docs).
+
+**Position-command integrator, not a PID error-integrator — reset is episode-scoped,
+never target-reached.** It accumulates the *commanded* position (`q_des +=
+delta_scale * a`), not an error signal, so it grows unbounded *within* an episode,
+re-initializing only at episode reset (`_reset_action_buffers`, `:1428`, called from
+the env reset at `:1426`), per-env, to the *measured* joint position — not to `0` or
+to `nominal_joint_pos`.
+
+This is deliberate anti-bump init: PD torque ≈ `Kp * (q_des - q_measured)` (where
+`q_measured` is the measured joint position), so `q_des = q_measured` at reset
+zeroes the error even under a randomized initial pose.
+
+**Wrong mental model to avoid:** "reset the integrator once the joint reaches its
+target" (the waypoint / error-integrator scheme) breaks control here — reaching the
+target is a *hold* state, not a reset trigger, and zeroing `q_des` on reach would fling
+the arm back to `0`/nominal mid-episode. The only valid reset trigger is the episode
+boundary.
 
 ### 4.2 PD actuator
 
-`_apply_action` (`:888–889`) writes the accumulated targets:
-
-```python
-self._robot.set_joint_position_target(self._joint_pos_targets, joint_ids=self._albc_joint_ids)
-```
+`_apply_action` (`:888–889`) writes the accumulated targets via
+`self._robot.set_joint_position_target(self._joint_pos_targets, joint_ids=self._albc_joint_ids)`.
 
 The joints are driven by an `ImplicitActuatorCfg` in the robot asset
-(`marinelab/assets/albc/albc.py:198–201`):
+(`marinelab/assets/albc/albc.py:198–201`). `ω_n` = natural frequency, `J` = arm
+moment of inertia used in the second-order calc below:
 
 | Field | Value | Note |
 |---|---|---|
@@ -234,40 +247,43 @@ The joints are driven by an `ImplicitActuatorCfg` in the robot asset
 | `effort_limit_sim` | 13.0 Nm | PhysX hard cap, above the 9.5 Nm motor stall used by the `arm_torque` constraint |
 | `velocity_limit_sim` | 3.1 rad/s | measured XW540-T260 no-load plateau (2026-07-06), PhysX hard cap |
 
-**Two distinct arm bounds, easy to confuse.** The 13.0 Nm / 3.1 rad/s figures are
-**PhysX hard caps** on the actuator. The constraint terms `arm_torque`
+**Two distinct arm bounds, easy to confuse:** the 13.0 Nm / 3.1 rad/s figures
+are **PhysX hard caps** on the actuator. The constraint terms `arm_torque`
 (`limit_nm=9.5`) and `arm_joint_vel` (`limit_rad_per_s=2.8`) are **soft cost
-budgets** on the *measured* torque/velocity — they penalize, they do not clip. A
-policy can exceed 2.8 rad/s (paying constraint cost) up to the 3.1 rad/s physical
-cap. Do not treat the constraint limit as a physical limit.
+budgets** on the *measured* torque/velocity — they penalize, they do not
+clip. A policy can exceed 2.8 rad/s (paying constraint cost) up to the 3.1
+rad/s physical cap. Do not treat the constraint limit as a physical limit.
 
-**Kp/Kd basis is theoretical, not hardware-measured, and there is no sim↔hardware
-gain mapping.** The `ω_n ≈ 57.7 rad/s` / damping-ratio-`0.7` figures in the table
-above come from a second-order calc assuming `J ≈ 0.15 kg·m²` (`albc.py:198–201`
-comments) — they are not derived from a step-response measurement, and the file
-names no motor model. The real arm hardware is a Dynamixel XW540-T260 with its own
-~1 kHz internal PID (`sim-to-real.md:13,19`); there is no code mapping the sim
-`ImplicitActuatorCfg` gains to the Dynamixel's register-space gains — the direct
-mapping is not possible (registers are not SI units, conversion is per-model), and
-the required step-response system identification is an open TODO
-(`sim-to-real.md:308–309`). Sim continuous-PD vs. real discrete-PID (1 kHz,
-integer registers, PWM saturation, firmware filters) is a **structural** gap that DR
-cannot cover — the same class of sim-to-real gap as the thruster deadband/quadratic
-curve (§5.3).
+**Kp/Kd basis is theoretical, not hardware-measured — no sim↔hardware gain
+mapping exists.** `ω_n ≈ 57.7 rad/s` / damping-ratio-0.7 (table above) come
+from a second-order calc assuming `J ≈ 0.15 kg·m²` (`albc.py:198–201`), not a
+step-response measurement — the file names no motor model.
 
-DR randomizes the joint gains/effort/friction **per env at reset only**
-(`randomize_joint_gains`, `mdp/events.py:473–485`; applied in `albc_env.py:1558–1567`
-when `rand_cfg.enable`), not per-step, and not under a DORAEMON curriculum (the range
-is fixed). Stiffness/damping DR samples an **absolute range that overwrites the
-nominal 100/3 values** — it is not a scaled window centered on nominal, and 100/3 is
-only the DR-off value. As of the 2026-07-07 config merge there is a single
-`DomainRandomizationCfg` (the former separate default/easy class was never
-instantiated on any training path and was removed): stiffness `[30, 150]`, damping
-`[0.3, 7.0]` (`config.py:192–193`) — these are the values formerly labeled the "Hard
-range"; there is no longer a separate default range. `joint_effort_limit_range` is a
-multiplicative scale `[0.7, 1.0]` (`config.py:195`); joint friction DR adds static
-`[0, 0.03]` / viscous `[0, 0.2]` (`config.py:196–197`). Separately, a joint fault
-scales the effort limit by per-env health (`faults.apply_joint_health`, `faults.py:80`).
+Real hardware is a Dynamixel XW540-T260 with its own ~1 kHz internal PID
+(`sim-to-real.md:13,19`); no code maps sim `ImplicitActuatorCfg` gains to its
+register-space gains (registers aren't SI units, conversion is per-model),
+and the required step-response system ID is an open TODO (`sim-to-real.md:308–309`).
+
+Sim continuous-PD vs. real discrete-PID (1 kHz, integer registers, PWM
+saturation, firmware filters) is a **structural** gap DR cannot cover — same
+class as the thruster deadband/quadratic curve (§5.3).
+
+**Joint gain DR (per-env at reset only, not per-step, not DORAEMON-curriculum, range
+fixed):** applied by `randomize_joint_gains` (`mdp/events.py:473–485`) in `albc_env.py:1558–1567` when `rand_cfg.enable`.
+
+| Field | Range | Type | Location |
+|---|---|---|---|
+| Stiffness (Kp) | `[30, 150]` | absolute, overwrites nominal 100 | `config.py:192–193` |
+| Damping (Kd) | `[0.3, 7.0]` | absolute, overwrites nominal 3 | `config.py:192–193` |
+| `joint_effort_limit_range` | `[0.7, 1.0]` | multiplicative scale | `config.py:195` |
+| Joint friction (static) | `[0, 0.03]` | additive | `config.py:196–197` |
+| Joint friction (viscous) | `[0, 0.2]` | additive | `config.py:196–197` |
+
+Stiffness/damping DR is an **absolute range** overwriting nominal 100/3, not a scaled
+window around it. Both were formerly the "Hard range"; the 2026-07-07 merge dropped
+the separate default/easy class (never instantiated on any training path), so there is
+no separate default anymore. A joint fault separately scales effort limit by per-env
+health (`faults.apply_joint_health`, `faults.py:80`).
 
 ---
 
@@ -276,17 +292,8 @@ scales the effort limit by per-env health (`faults.apply_joint_health`, `faults.
 Thruster dims `self._actions[:, 2:]` go to the marinelab `ThrusterModel`
 (`marinelab/core/thruster.py`). `_pre_physics_step` runs once per env step, so it
 advances the filter by `step_dt`, not `physics_dt`, there (`albc_env.py:661–664`;
-fixed 2026-07-12, `fab864f`):
-
-```python
-if self._thruster is not None:
-    # _pre_physics_step runs once per env step -> elapsed time between calls
-    # is step_dt (= physics_dt * decimation), not physics_dt.
-    self._thruster.apply_dynamics(self._actions[:, 2:], self.step_dt)
-```
-
-and reads the resulting wrench in `_apply_action` (`:916`), adding it to the
-hydrodynamic force before writing to the body.
+fixed 2026-07-12, `fab864f`), and reads the resulting wrench in `_apply_action`
+(`:916`), adding it to the hydrodynamic force before writing to the body.
 
 ### 5.1 First-order filter (asymmetric time constants)
 
@@ -295,6 +302,11 @@ hydrodynamic force before writing to the body.
 time constants — spin-up is slower than spin-down:
 
 ```python
+# dispatch (albc_env.py:661-664): once per env step, so dt = step_dt not physics_dt
+if self._thruster is not None:
+    self._thruster.apply_dynamics(self._actions[:, 2:], self.step_dt)
+
+# apply_dynamics body (thruster.py:123): own [-1,1] clamp + direction-dependent lag
 if self._act_noise_std is not None and self._act_noise_std > 0.0:
     commands = commands * (1.0 + torch.randn_like(commands) * self._act_noise_std)
 target_state = commands.clamp(-1.0, 1.0)
@@ -325,15 +337,19 @@ torques = body_wrench[:, 3:]
 ```
 
 **The live allocation matrix is column-reordered from the raw sim/TAM.yaml order to
-the robot firmware ESC channel order.** `config.py` keeps the original sim-thruster
-matrix as `_BASE_ALLOCATION_MATRIX` (`:80–87`, columns T0–T5, verbatim from
-`TAM.yaml`/`actuators.xacro`) and derives the matrix `ThrusterModel` actually uses,
-`ALBCThrusterCfg.allocation_matrix` (`:131–133`), by permuting its columns with
-`_reorder_columns(_BASE_ALLOCATION_MATRIX, _ESC_CHANNEL_ORDER)` (`:97–106`) where
-`_ESC_CHANNEL_ORDER = (4, 0, 1, 5, 2, 3)` (`:94`). Physics is invariant under a
-column permutation; what changes is which physical thruster each **action index**
-now drives — action dims `[2:8]` map to firmware channels `m0..m5`, not to the raw
-`T0..T5` sim order. The table below is the live (post-reorder) matrix, `m0..m5`:
+the robot firmware ESC channel order:**
+
+1. `config.py` keeps the original sim-thruster matrix as `_BASE_ALLOCATION_MATRIX`
+   (`:80–87`, columns T0–T5, verbatim from `TAM.yaml`/`actuators.xacro`).
+2. It derives the matrix `ThrusterModel` actually uses,
+   `ALBCThrusterCfg.allocation_matrix` (`:131–133`), by permuting those columns with
+   `_reorder_columns(_BASE_ALLOCATION_MATRIX, _ESC_CHANNEL_ORDER)` (`:97–106`), where
+   `_ESC_CHANNEL_ORDER = (4, 0, 1, 5, 2, 3)` (`:94`).
+3. Physics is invariant under a column permutation; what changes is which physical
+   thruster each **action index** now drives — action dims `[2:8]` map to firmware
+   channels `m0..m5`, not to the raw `T0..T5` sim order.
+
+The table below is the live (post-reorder) matrix, `m0..m5`:
 
 | Row | DOF | m0 | m1 | m2 | m3 | m4 | m5 | Layout |
 |---|---|---|---|---|---|---|---|---|
@@ -360,7 +376,8 @@ originally developed on the now-deleted `exp/thruster-curve` branch):
 - **Deadband**: `|state| < thrust_deadband (0.075)` → 0, modeling the T200 ESC
   PWM deadzone around neutral.
 - **Signed-square**: outside the deadband, `sign(state) * state²`, matching the
-  quadratic propeller law (thrust ∝ ω², ω ∝ command).
+  quadratic propeller law (thrust ∝ ω², ω ∝ command, where `ω` is propeller
+  angular velocity).
 
 Output stays in `[-1, 1]`, so the downstream `* thrust_coeff` range is unchanged.
 This is a structural non-linearity DR cannot emulate (a multiplicative scale cannot
@@ -369,24 +386,26 @@ off-by-default toggle (`getattr` fallback → byte-identical), not baseline beha
 
 ### 5.4 Optional per-thruster fault (off by default)
 
-`ThrusterModel.__init__` takes `enable_fault`
-(`thruster.py:41`); when True it allocates a per-env per-thruster health buffer
-`∈ [0, 1]` (`:88–91`), and `compute_wrench` multiplies health into the *unsaturated*
-magnitude **before** the ±50 N clamp (`:194–195`) so a degraded thruster has a
-reduced peak force. `set_thruster_health` (`:214`) injects it; the env samples it via
-`faults.sample_thruster_health` (`faults.py:27`) and pushes it in at reset. When
-`enable_fault` is False, no buffer is allocated and the multiply is skipped
-(byte-identical). Fault is off by default (`FaultInjectionCfg.enable=False`,
-`config.py:319`); it is FTC-research infrastructure, distinct from DR (a fault =
-component *failure*, DR = a valid-but-different vehicle). `_init_thrusters`
+`ThrusterModel.__init__` takes `enable_fault` (`thruster.py:41`) — off by default
+(`FaultInjectionCfg.enable=False`, `config.py:319`). Mechanism, when enabled:
+
+1. Allocates a per-env per-thruster health buffer `∈ [0, 1]` (`:88–91`).
+2. `compute_wrench` multiplies health into the *unsaturated* magnitude **before** the
+   ±50 N clamp (`:194–195`) — a degraded thruster gets reduced peak force, not a cutoff.
+3. `set_thruster_health` (`:214`) injects it; the env samples via
+   `faults.sample_thruster_health` (`faults.py:27`) and pushes it in at reset.
+
+When `enable_fault` is False, no buffer is allocated and the multiply is skipped
+(byte-identical). Fault is FTC-research infrastructure, distinct from DR — a fault is
+component *failure*, DR is a valid-but-different vehicle. `_init_thrusters`
 (`albc_env.py:401–422`) wires `enable_fault=self.cfg.fault.enable` and
 `enable_actuation_noise=self.cfg.actuation_noise.enable` (§4.1/§5.1) into the
 `ThrusterModel` constructor.
 
-**Fault, thrust curve, and actuation noise are all plain `main`-branch toggles.**
-All three landed via the merges listed in the top branch note; none require a
-special branch checkout, and none are mutually exclusive — they compose in
-pipeline order curve → coeff → health → clamp.
+**Fault, thrust curve, and actuation noise are all plain `main`-branch toggles.** All
+three landed via the merges listed in the top branch note; none require a special
+branch checkout, and none are mutually exclusive — they compose in pipeline order
+curve → coeff → health → clamp.
 
 ---
 
@@ -441,18 +460,18 @@ only *which parts are action-derived*.
   correction) is *not* used and would be a different algorithm. The MLP last layer is
   linear (`last_activation=None`); no `act()` clamping. (Same finding as
   `main-network-architecture.md` §8.)
-- **The external clamp does not break credit assignment, but it does distort it.**
-  The policy gradient uses `log pi(a_raw | o)` — the raw, un-clamped sampled action —
-  so the update always credits the value the policy actually emitted, not the
-  clamped one; there is no gradient/env inconsistency from clamping per se. The real
-  cost is that clamping *collapses* the out-of-range region: `a = 1.5` and `a = 3.5`
-  both saturate to `1.0`, so the env cannot distinguish them, and probability mass
-  placed there is wasted, producing a structural downward pressure on `log_std`
-  (§3.3, and `exploration-and-noise.md` §11). Tanh-squashing (SAC-style) avoids
-  this by keeping all mass in `(-1, 1)` with a smooth gradient, at the cost of the
-  log-prob Jacobian correction and a different algorithm class — see the tanh
-  discussion above; this project stays on the external-clamp path and offsets the
-  side-effects with the entropy bonus and per-dim `min_std` floor
+- **The external clamp does not break credit assignment.** The policy gradient uses
+  `log pi(a_raw | o)`, the raw un-clamped sampled action, so the update always
+  credits what the policy actually emitted — there is no gradient/env inconsistency
+  from clamping per se.
+- **But it does distort exploration.** Clamping *collapses* the out-of-range region:
+  `a = 1.5` and `a = 3.5` both saturate to `1.0`, so the env cannot distinguish them,
+  and the wasted probability mass produces a structural downward pressure on
+  `log_std` (§3.3, `exploration-and-noise.md` §11).
+- **Tanh-squashing (SAC-style) would avoid this** by keeping all mass in `(-1, 1)`
+  with a smooth gradient, at the cost of the log-prob Jacobian correction and a
+  different algorithm class. This project stays on the external-clamp path and
+  offsets the side-effect with the entropy bonus and per-dim `min_std` floor
   (`exploration-and-noise.md` §3.1 and §4).
 - **Two clamps are redundant-by-design, not a bug.** Clamp #1 (vecenv, optional)
   and clamp #2 (env buffer, always) both target `[-1, 1]`; the env clamp is the

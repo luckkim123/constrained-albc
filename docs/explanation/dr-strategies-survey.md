@@ -35,27 +35,16 @@ param_range(iter) = start + (end - start) * min(1, iter / end_iter)
 > Solving Rubik's Cube with a Robot Hand. OpenAI, 2019.
 > https://openai.com/index/solving-rubiks-cube/
 
-**Performance-based DR expansion/contraction.** Core algorithm:
+**Performance-based DR expansion/contraction.** Core algorithm (per iteration, on a randomly
+picked DR parameter `i`; `phi_H`/`phi_L` = expand/contract performance thresholds, `delta` = step size):
 
 1. Start in a non-randomized environment (all parameters = nominal)
-2. Each iteration: randomly select one DR parameter
-3. **Boundary sampling**: fix that parameter at a boundary value (upper or lower limit), sample the rest from the current range
-4. Evaluate performance over N episodes in that environment -> accumulate into a buffer
-5. Mean performance > threshold_H -> **expand boundary** (make DR harder)
-6. Mean performance < threshold_L -> **contract boundary** (make DR easier)
+2. Randomly select one DR parameter `i`
+3. **Boundary sampling**: fix `i` at a boundary value (upper or lower limit), sample the rest from the current range
+4. Evaluate performance over N episodes in that environment -> append to `buffer[i][boundary]`
+5. `mean(buffer) > phi_H` -> **expand boundary** by `delta` (make DR harder)
+6. `mean(buffer) < phi_L` -> **contract boundary** by `delta` (make DR easier)
 7. Repeat
-
-```
-For each iteration:
-    i = random DR parameter index
-    boundary = random choice (lower or upper)
-    fix param_i to boundary value, sample others normally
-    evaluate performance -> append to buffer[i][boundary]
-    if mean(buffer) > phi_H:
-        expand boundary by delta
-    elif mean(buffer) < phi_L:
-        contract boundary by delta
-```
 
 Key characteristics:
 - **Expand when the policy is ready, contract when it fails** (the decisive difference from the linear curriculum)
@@ -310,52 +299,12 @@ We are handling it with adaptive entropy, but this approach is rare in the liter
 
 ### Literature-Based Alternative Analysis
 
-#### Option A: ADR-style performance-based curriculum (recommendation: ★★★)
-
-Switch the current linear ramp -> to boundary sampling + threshold-based expansion.
-
-Pros:
-- DR does not expand if the policy is not ready (prevents the death spiral at its source)
-- Adaptive entropy may become unnecessary
-- Validated up to 100+ parameters at OpenAI
-
-Implementation complexity: medium
-- Each DR parameter needs boundary sampling + a performance buffer
-- Threshold settings required (phi_H, phi_L)
-- Modify BaseRunner.log()
-
-#### Option B: Stabilize encoder learning (recommendation: ★★☆)
-
-The original HORA paper works with full DR + encoder, without a curriculum.
-Diagnose why our encoder is unstable and focus on stabilization.
-
-Pros:
-- The curriculum itself may become unnecessary
-- The validated pipeline of the original paper
-
-Cons:
-- Underwater robots have lower control authority than legged robots, so the same application may be difficult
-- If the cause of encoder instability is regression-target contamination by DR noise, it is a fundamental limitation
-
-#### Option C: HIM-style contrastive encoder (recommendation: ★★☆)
-
-Replace the regression encoder -> with a contrastive encoder.
-
-Pros:
-- A representation robust to DR noise
-- The HIM paper demonstrates a large performance advantage over RMA
-
-Cons:
-- High implementation complexity (SwAV, Sinkhorn-Knopp, prototype management)
-- Requires 2-phase optimization (HIO + PPO)
-- A major change to the existing pipeline
-
-#### Option D: Keep the current approach + tune parameters (recommendation: ★☆☆)
-
-Keep adaptive entropy + linear DR curriculum, adjust only the parameters.
-
-Pros: minimal code change
-Cons: no success cases for this combination in the literature, and it may not be a fundamental solution
+| Option | Approach | Rec. | Pros | Cons | Complexity |
+|:---|:---|:---:|:---|:---|:---|
+| A | ADR-style performance-based curriculum: replace the linear ramp with boundary sampling + threshold-based expansion (§1.3) | ★★★ | DR does not expand if the policy is not ready (fixes the death spiral at its source); adaptive entropy may become unnecessary; validated to 100+ params at OpenAI | — | Medium — each DR parameter needs boundary sampling + a performance buffer; threshold tuning required (`phi_H`, `phi_L`); modify `BaseRunner.log()` |
+| B | Stabilize encoder learning: diagnose the instability, follow HORA's full-DR-without-curriculum approach | ★★☆ | Curriculum itself may become unnecessary; reuses the validated original-paper pipeline | Underwater robots have lower control authority than legged robots — the same fix may not transfer; if the instability is regression-target contamination by DR noise (§3.1), this is a fundamental limitation | — |
+| C | HIM-style contrastive encoder: replace the regression encoder with a contrastive one (§3.2) | ★★☆ | Representation robust to DR noise; HIM shows large gains over RMA | High implementation complexity (SwAV, Sinkhorn-Knopp, prototype management); requires 2-phase optimization (HIO + PPO); a major pipeline change | High |
+| D | Keep the current approach (adaptive entropy + linear DR curriculum), tune parameters only | ★☆☆ | Minimal code change | No literature precedent for this combination; may not be a fundamental fix | Low |
 
 ---
 

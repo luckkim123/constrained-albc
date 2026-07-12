@@ -29,19 +29,18 @@ physics_view.set_dof_max_forces(impulse_limit)
 
 ### Isaac Lab Status (verified against current disk)
 
-The ALBC arm actuator sets `ImplicitActuatorCfg(effort_limit_sim=13.0)` (Nm; above the
-Dynamixel XW540 stall torque of 9.5 Nm — `marinelab/marinelab/assets/albc/albc.py`). Isaac
-Lab's naming has moved on from the plain `effort_limit` field the earlier version of this
-doc cited: `effort_limit_sim` is now the PhysX-facing field, and for implicit actuators it is
-aliased 1:1 to `effort_limit` (`isaaclab/actuators/actuator_pd.py`).
+The ALBC arm actuator sets `ImplicitActuatorCfg(effort_limit_sim=13.0)` (Nm; above the Dynamixel XW540 stall
+torque of 9.5 Nm — `marinelab/marinelab/assets/albc/albc.py`). Isaac Lab's naming has moved on from the plain
+`effort_limit` field the earlier version of this doc cited: `effort_limit_sim` is now the PhysX-facing field,
+aliased 1:1 to `effort_limit` for implicit actuators (`isaaclab/actuators/actuator_pd.py`).
 
-`Articulation.write_joint_effort_limit_to_sim()` (`assets/articulation/articulation.py:805`)
-passes the limit straight to `root_physx_view.set_dof_max_forces()` with **no dt
-conversion** — confirmed by reading the current Isaac Sim 5.1 source, not inferred. Whether
-PhysX's implicit-actuator PD path (a solver constraint, not a raw applied force) makes the
-impulse-vs-force distinction moot in practice is still unverified; if it matters, compare
-joint torque between the two simulators under the same action, or set `effort_limit_sim` to
-an extreme low value (e.g. 0.1 Nm) and observe joint behavior.
+`Articulation.write_joint_effort_limit_to_sim()` (`assets/articulation/articulation.py:805`) passes the limit
+straight to `root_physx_view.set_dof_max_forces()` with **no dt conversion** — confirmed by reading the current
+Isaac Sim 5.1 source, not inferred. Whether PhysX's implicit-actuator PD path (a solver constraint, not a raw
+applied force) makes the impulse-vs-force distinction moot in practice is still unverified. To check:
+
+- Compare joint torque between the two simulators under the same action.
+- Set `effort_limit_sim` to an extreme low value (e.g. 0.1 Nm) and observe joint behavior.
 
 ## Joint Max Velocity
 
@@ -63,12 +62,11 @@ verified current in `marinelab/marinelab/assets/albc/albc.py`.
 RigidBodyPropertiesCfg(max_angular_velocity=720.0)  # deg/s (= 4*pi rad/s)
 ```
 
-Current value in `marinelab/marinelab/assets/albc/albc.py` is **720.0 deg/s**, not the
-180.0 deg/s an earlier version of this page claimed. The code comment explains why: "arm
-links accumulate parent joint velocities" — the arm's rotating links compound the base
-body's angular rate plus the joint's own spin, so a tighter cap tuned for the base body
-alone would clip legitimate arm motion. MarineGym's reference value (3.14 rad/s ≈ 180
-deg/s) does not carry this compounding concern since it caps a different body configuration.
+Current value in `marinelab/marinelab/assets/albc/albc.py` is **720.0 deg/s** (not the 180.0 deg/s an earlier
+version of this page claimed). Reason (per the code comment, "arm links accumulate parent joint velocities"):
+the arm's rotating links compound the base body's angular rate plus their own joint spin, so a tighter cap tuned
+for the base body alone would clip legitimate arm motion. MarineGym's reference value (3.14 rad/s ≈ 180 deg/s)
+does not carry this compounding concern since it caps a different body configuration.
 
 ## Damping Stability Clamp
 
@@ -101,6 +99,9 @@ max_am = threshold * gen_inertia
 clamped = torch.where(exceeded, max_am, am_diag)
 ```
 
+`gen_inertia` = per-axis randomized rigid inertia; `am_diag` = per-axis added-mass diagonal (pre-clamp);
+`exceeded` = boolean mask where `am_diag / gen_inertia >= threshold`; `max_am` = the clamped ceiling.
+
 ### Comparison
 
 | Item | MarineGym | Isaac Lab |
@@ -121,7 +122,7 @@ Note this is the module previously imported as `marinelab.physics` — that shim
 | Position iterations | 4 | 8 (`solver_position_iteration_count`, ALBC asset) |
 | Velocity iterations | 0 | 4 (`solver_velocity_iteration_count`, ALBC asset) |
 | Rigid body angular_damping | 0.2 | 0.2 (explicitly set, matches MarineGym — not a PhysX default) |
-| enable_stabilization | True | `False` (isaaclab `PhysxCfg` default; not overridden) |
+| `enable_stabilization` (PhysX position-bias stabilization pass) | True | `False` (isaaclab `PhysxCfg` default; not overridden) |
 
 Isaac Lab uses higher solver quality (2x position iterations + 4x velocity iterations) than
 MarineGym.
@@ -133,5 +134,4 @@ MarineGym.
 | Method | Finite-difference + EMA (alpha=0.3) | Uses PhysX acceleration directly (primary) |
 | Fallback | - | Finite-difference + EMA (alpha=0.3) |
 
-Isaac Lab is more accurate here: PhysX provides acceleration that reflects all
-constraints/forces, rather than being derived by differencing velocity.
+Isaac Lab is more accurate here: PhysX provides acceleration that reflects all constraints/forces, rather than being derived by differencing velocity.

@@ -1,14 +1,14 @@
 # Theoretical Analysis (NORBC Constrained RL)
 
-Results of analyzing the theoretical consistency of the ALBC codebase against the Constrained RL theory of the NORBC paper.
-Analysis date: 2026-03-05.
+Results of analyzing the theoretical consistency of the ALBC codebase against the Constrained RL theory of the NORBC paper. Analysis date: 2026-03-05.
 
 > File paths in this doc predate the repo split — current code lives in
 > `constrained_albc/envs/{main,full_dof}/` (`algorithms/constraint_trpo.py`,
 > `mdp/constraints.py`; both env packages carry an equivalent pair — `main` is the
 > default attitude-only task, `full_dof` is the legacy variant). The theory analysis
 > itself (ConstraintTRPO, IPO, cost-GAE, barrier) remains valid for the current
-> implementation.
+> implementation. Standard terms (TRPO, IPO, KL divergence, GAE) are defined in
+> [glossary.md](../reference/glossary.md); `max_kl` below is the per-update KL trust-region budget (agent config field).
 
 ---
 
@@ -25,9 +25,9 @@ Analysis date: 2026-03-05.
 
 ## 2. Reward System (Grade: A-)
 
-- PBRS (`rewards.py:375`): Optimal policy preservation guaranteed
+- PBRS (potential-based reward shaping, `rewards.py:375`): optimal policy preservation guaranteed
 - Crossover at ~20 deg: net reward negative beyond 20 deg error. PBRS mitigates.
-- Constrained Env: `joint_velocity_weight=0`, `joint_oscillation_weight=0` prevents double-counting with cost functions
+- Constrained Env: reward-side `joint_velocity_weight=0`, `joint_oscillation_weight=0` (zeroed to avoid double-counting with the matching cost functions)
 
 ---
 
@@ -58,26 +58,25 @@ The triple verification condition of the `_line_search()` method in `constraint_
 2. `kl <= max_kl * line_search_kl_margin` (default 1.5)
 3. `cost_surr_k > line_search_cost_margin * margin` -> reject (default 0.5)
 
-**KL margin (1.5x)**: Since the TRPO natural gradient already targets max_kl,
-the line search gives a slight margin to prevent overly conservative steps.
-Standard TRPO uses 1.0, but IPO's cost feasibility check serves as an additional safeguard.
+| Config field | Value | Rationale |
+|:---|:---|:---|
+| `line_search_kl_margin` | 1.5x | The TRPO natural-gradient step already targets `max_kl`; the line search's slightly looser margin avoids overly conservative steps. Standard TRPO uses 1.0x -- IPO's cost-feasibility check is an additional safeguard here. |
+| `line_search_cost_margin` | 0.5x | Caps a single step to consuming at most half the remaining constraint budget -- a conservative choice that leaves room to recover from a constraint violation next step. |
 
-**Cost margin (0.5x)**: Allow consuming at most half of the remaining constraint budget in a single step.
-A conservative strategy that guarantees the possibility of recovering from a constraint violation in the next step.
-
-Both constants have been parameterized to be configurable (2026-03-05).
+Both fields are configurable (parameterized 2026-03-05).
 
 #### Adaptive Alpha Separation
 
-Split `adaptive_threshold_alpha` into two roles:
-- `adaptive_threshold_scale`: the threshold scale in `target = max(d_k, j_c_k + scale * d_k)`
-- `adaptive_ema_alpha`: the EMA smoothing coefficient `d_k_adaptive = (1-a)*old + a*target`
+`adaptive_threshold_alpha` was split into two independently-tunable config fields:
 
-The split enables independent tuning:
-- High EMA alpha + low threshold scale = fast adaptation, conservative threshold
-- Low EMA alpha + high threshold scale = slow adaptation, aggressive threshold
+| Field | Role | Formula |
+|:---|:---|:---|
+| `adaptive_threshold_scale` | Threshold scale | `target = max(d_k, j_c_k + scale * d_k)` |
+| `adaptive_ema_alpha` | EMA smoothing coefficient | `d_k_adaptive = (1-a)*old + a*target` |
 
-Default: `adaptive_ema_alpha=None` (preserves the existing behavior, uses the `adaptive_threshold_alpha` value).
+Tuning: high EMA alpha + low threshold scale = fast adaptation, conservative threshold; low EMA alpha + high
+threshold scale = slow adaptation, aggressive threshold. Default `adaptive_ema_alpha=None` preserves prior
+behavior (uses `adaptive_threshold_alpha` for both roles).
 
 ---
 
@@ -89,8 +88,8 @@ A physically reasonable range. For details, see `DOMAIN_RANDOMIZATION.md`.
 
 ## 5. Encoder/Adaptation Gradient Flow (Grade: A)
 
-- Phase 1 Encoder: z_gt stop-gradient, encoder learns regression
-- Phase 2 Adaptation: z_hat.detach() blocks PPO gradient, only aux loss trains adapt_tconv
+- Phase 1 Encoder: `z_gt` (ground-truth privileged latent) stop-gradient, encoder learns regression
+- Phase 2 Adaptation: `z_hat` (student-estimated latent) `.detach()` blocks PPO gradient, only aux loss trains `adapt_tconv` (the adaptation TCN module)
 - ConstraintTRPO: encoder gradient deferred after TRPO line search -- correct
 
 ---

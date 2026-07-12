@@ -19,6 +19,7 @@ cd /workspace/constrained-albc && python scripts/export_deploy.py \
   mirrors the logs tree group layer). Never pass ad-hoc `--out` paths.
 - `--golden` appends: golden vectors (CPU), `npforward.py` copy, parity self-close
   (loud-fail if not closed), `MANIFEST.json` (payload-derived dims + per-file sha256).
+- `--report` additionally writes `EXPORT_REPORT.md` alongside the pack.
 - Use `scripts/export_deploy.py` (import-isolation launcher), NOT
   `python -m constrained_albc.deploy` — the `-m` form fires the package `__init__`
   -> sim stack -> `pxr` and dies on export hosts.
