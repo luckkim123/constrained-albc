@@ -84,14 +84,14 @@ def derive_priv_obs_bounds_from_dr(
     if hydro_cfg is None:
         # Imported lazily so the pure derivation can be unit-tested with a
         # stand-in hydro_cfg without pulling in Isaac Sim / marinelab.
-        from marinelab.assets.albc.albc import ALBCHydrodynamicsCfg
+        from marinelab.assets import ALBCHydrodynamicsCfg
 
         hydro_cfg = ALBCHydrodynamicsCfg()
 
     if buoy_hydro_cfg is None:
         # Same lazy-import pattern as hydro_cfg so the pure derivation stays
         # unit-testable with a stand-in buoy_hydro_cfg (Isaac-free).
-        from marinelab.assets.albc.albc import ALBCBuoyHydrodynamicsCfg
+        from marinelab.assets import ALBCBuoyHydrodynamicsCfg
 
         buoy_hydro_cfg = ALBCBuoyHydrodynamicsCfg()
 
