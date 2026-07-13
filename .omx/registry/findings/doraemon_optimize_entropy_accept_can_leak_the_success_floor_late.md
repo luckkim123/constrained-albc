@@ -2,14 +2,14 @@
 title: "DORAEMON _optimize_entropy accept can leak the success floor (latent divergence from reference, dead path so far)"
 tags: ["doraemon", "floor-leak", "optimize-entropy", "impl-vs-ref", "latent-bug", "teacher"]
 created: 2026-07-06T02:12:16.207679
-updated: 2026-07-06T02:12:16.207679
+updated: 2026-07-13T05:19:13.182854
 sources: ["trpo_main_teacher_260525_232805"]
 links: []
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 ---
 
 # DORAEMON _optimize_entropy accept can leak the success floor (latent divergence from reference, dead path so far)
@@ -33,3 +33,8 @@ RELATED harmless diffs found in the same 2026-05-27 impl-vs-ref comparison:
 
 VERIFIED: code read 2026-05-27 (ours l.637/425/489/460; ref l.920/598); doraemon_state.pt SLSQP replay; TB step-level leak-check (0/19 sub-floor accepts). Source run: trpo_main_teacher_260525_232805.
 
+---
+
+## Update (2026-07-13T05:19:13.182854)
+
+[STATUS] already-fixed (verified 2026-07-13, post-p7_tail planning session). The proposed 1-line fix IS in the code: marinelab commit ef46cb7 ('fix(doraemon): re-verify perf floor in _optimize_entropy accept condition', 2026-05-27) gates the OR-accept branch on perf_ok = perf_ineq(result.x) >= 0.0 (marinelab/algorithms/doraemon.py:653-654), an ancestor of current HEAD. Combined with the earlier replay evidence (0/19 sub-floor accepts on the teacher run), this item is CLOSED — drop it from candidate rosters. The page's 'FIX CANDIDATE ... NOT urgent' phrasing predates the fix landing.

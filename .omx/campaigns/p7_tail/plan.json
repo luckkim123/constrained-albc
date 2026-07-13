@@ -11,6 +11,26 @@
       "proposal_id": "next-20260713-122216",
       "summary": "e2_biasobs: expose _bias_ema as 3D obs (69->72D, default-off toggle) vs trpo_baseline_260713_031325 (GPU1)",
       "added_at": "2026-07-13T03:31:31.486749+00:00"
+    },
+    {
+      "proposal_id": "next-20260713-142601",
+      "summary": "OOD eval magnitude-axis extension (payload/inertia/damping into _MAGNITUDE_AXES) + baseline re-eval \u2014 measurement instrument, no e-number",
+      "added_at": "2026-07-13T05:33:28.162677+00:00"
+    },
+    {
+      "proposal_id": "next-20260713-142602",
+      "summary": "delayed-eval axis: control_delay_steps sweep d=0..3 on baseline + e1 checkpoints \u2014 measurement instrument, no e-number",
+      "added_at": "2026-07-13T05:33:28.601318+00:00"
+    },
+    {
+      "proposal_id": "next-20260713-142604",
+      "summary": "curriculum-budget extension: resume baseline +5000 iters (10k total), zero config delta \u2014 discriminates budget-limited vs structural tail",
+      "added_at": "2026-07-13T05:33:29.053874+00:00"
+    },
+    {
+      "proposal_id": "next-20260713-143610",
+      "summary": "xy-offset DR prune Part 1 ONLY (4 dims out of _PARAM_DEFS, NDIMS 20->16; z-wiring untouched; supersedes 142603) \u2014 NDIMS-dilution vs load-bearing-offsets discriminator",
+      "added_at": "2026-07-13T05:40:36.162639+00:00"
     }
   ]
 }

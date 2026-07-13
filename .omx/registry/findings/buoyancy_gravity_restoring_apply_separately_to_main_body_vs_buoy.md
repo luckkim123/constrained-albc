@@ -2,14 +2,14 @@
 title: "buoyancy/gravity/restoring apply SEPARATELY to main body vs buoy(link3); gravity HAS DR (body_mass_scale+payload_mass); DR is body-shared not independent"
 tags: []
 created: 2026-07-07T08:11:25.359795
-updated: 2026-07-08T23:25:59.884745
+updated: 2026-07-13T05:36:10.718175
 sources: []
 links: ["hydro_dr_train_eval_sampling_mismatch_is_real_but_left_as_is_opt.md", "uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload_.md", "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md"]
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 70
-qualityReasons: ["no-source-marker", "generic-only-tags"]
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 ---
 
 # buoyancy/gravity/restoring apply SEPARATELY to main body vs buoy(link3); gravity HAS DR (body_mass_scale+payload_mass); DR is body-shared not independent
@@ -56,3 +56,8 @@ This is NOT a prompt failure -- it is the gate working as designed (blocking a d
 
 GATE OPENED (2026-07-08, user domain-judgment override): the buoy volume/mass decorrelation experiment, previously DORMANT (2026-07-07, both gates unmet), has been IMPLEMENTED. The user opened Gate 2 by a domain-physics tolerance argument: a near-cylindrical single-material buoyancy float has fabrication/waterproofing tolerance INDEPENDENT of the main hull, so its buoyancy/mass error is physically independent. Implemented on branch exp/dr-offset-prune-buoy: volume_scale split into main + buoy_volume_scale (_PARAM_DEFS), buoy_body_mass_scale added on the randomize_body_mass path, both added to p_t (23->25). water_density stays SHARED (same tank). NDIMS 13->15, p_t 23->25. Training launch remains a separate user gate. This supersedes the DORMANT note above for the volume/mass decorrelation item (the CoB/CoG offset decorrelation family is unaffected).
 
+---
+
+## Update (2026-07-13T05:36:10.718175)
+
+CORRECTION to the 2026-07-08 buoy-split design's Exp-A Part-2 premise (found by independent proposal review, 2026-07-13, on proposal next-20260713-142603): the design's section-5 guard ('buoy restoring is invariant to z-offset DR by construction, since CoG=CoB') is PHYSICALLY INCOMPLETE. cog_offset_z and cob_offset_z are two INDEPENDENT DORAEMON Beta dims, each applied from its own sampled[key] (constrained_albc/envs/main/mdp/events.py:249,264 verified) — so under DR the buoy's nominally-coincident CoB=CoG=(0,0,0.059) DIVERGE vertically per env, creating a spurious metacentric (self-restoring) moment on a body designed to have none. Consequence 1: 'apply z-offset DR to main body only' is NOT a measurement-neutral cleanup — it removes live physics and is a real experiment variable on the tail metrics. Consequence 2: the Exp-A package (xy-prune + z-main-only) is TWO variables; the re-proposal splits it — xy-prune alone first, z-main-only as its own later one-variable probe if wanted.

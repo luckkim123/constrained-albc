@@ -1464,3 +1464,111 @@
 - **Pages:** gpu_memory_4096_env_albc_training_needs_11_3_gb_rtx_4060_8gb_can.md
 - **Summary:** created 'GPU memory: 4096-env ALBC training needs ~11.3 GB — RTX 4060 8GB cannot co-run a second experiment'
 
+## [2026-07-13T05:14:40.130483] query
+- **Pages:** bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md, dr_harder_ood_verdict_e2_best_survives_ood_the_harder_curriculum.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, engine_gap_heavy_tail_json_pct_peak_gt_thresh_exceeds_100_at_ood.md, dr_harder_campaign_synthesis_speed_kills_attitude_center_shift_o.md, eval_analysis_core_does_stats_adapter_does_heavy_tail.md, kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md, doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md, arm_a_measured_angle_joint1_constraint_recovers_not_diverges_the.md, joint1_anti_drift_constrain_the_command_cumulative_arm_b_not_the.md, joint1_stage_1_gate_go_drift_is_real_on_unlimited_physics_not_th.md, reward_md_6_error_buffers_reward_call_site_dt_scaling_theory_rev.md, yaw_command_is_rate_not_angle_inherited_design_defensible_only_i.md, engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md, engine_gap_eval_npz_saves_no_raw_obs_std_privileged_blocks_exact.md, exp_analyze_must_run_analyze_training_py_for_training_side_diagn.md, ee_leak_0_k_anchor_0_does_not_blow_up_joint1_settle_pade_ik_clam.md, engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md, engine_gap_flat_target_eval_records_joint1_trajectory_but_render.md, engine_gap_omx_cli_gaps_found_re_analyzing_teacher_2026_06_06_ro.md
+- **Summary:** query 'hard DR heavy tail DC bias steady state' -> 20 of 22
+
+## [2026-07-13T05:14:40.635961] query
+- **Pages:** teacher_hard_dr_cv_explodes_without_heavy_tail_dc_bias_dispersio.md, teacher_dr_harder_yaw_is_the_only_heavy_tail_axis_roll_is_dc_bia.md, joint1_cumulative_ipo_constraint_generalizes_drift_bounded_at_oo.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md, teacher_segmented_post_switch_roll_transient_jumps_under_hard_dr.md, student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md, teacher_dr_harder_doraemon_curriculum_froze_before_run_end_unuse.md, dr_harder_reward_decomposition_confirms_eval_trades_on_the_train.md, teacher_cross_axis_correlation_collapses_none_hard_axis_decorrel.md, constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md, constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md, sequential_overnight_campaign_wall_clock_budget_not_crashes_kill.md, joint1_cumulative_rotation_constraint_never_binds_policy_parks_a.md, engine_generic_flags_entropy_collapse_barrier_spike_reward_plate.md, teacher_encoder_0_dead_latent_dims_keys_on_lateral_cog_cob_offse.md
+- **Summary:** query 'hard DR heavy tail DC bias steady state' -> 15 of 15
+
+## [2026-07-13T05:15:05.576829] query
+- **Pages:** constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, constraint_viol_trajectory_barrier_sign_metrics_4_10_starts_at_d.md, constraint_threshold_budget_tuning_thresholds_split_into_hard_ph.md, joint1_cumulative_ipo_constraint_generalizes_drift_bounded_at_oo.md, constraint_health_index.md, session_state_2026_07_12_constraint_deep_dive_q_a_covered_struct.md, teacher_dr_harder_yaw_is_the_only_heavy_tail_axis_roll_is_dc_bia.md, arm_a_measured_angle_joint1_constraint_recovers_not_diverges_the.md, constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md, joint1_cumulative_rotation_constraint_never_binds_policy_parks_a.md, reward_cost_parallel_structure_mostly_mirroring_two_real_couplin.md, student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md, arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md, constrainttrpo_faithful_norbc_modified_ipo_kim_2024_arxiv_2308_1.md, engine_gap_heavy_tail_json_pct_peak_gt_thresh_exceeds_100_at_ood.md, eval_analysis_core_does_stats_adapter_does_heavy_tail.md, heavy_tail_vs_sample_mean_divergence_are_independent.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md
+- **Summary:** query 'slack tail constraint' -> 20 of 91
+
+## [2026-07-13T05:15:08.513701] query
+- **Pages:** action_bounding_is_justified_raw_gaussian_external_clamp_tanh_ru.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md, real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md, constrainttrpo_faithful_norbc_modified_ipo_kim_2024_arxiv_2308_1.md, ee_leak_0_k_anchor_0_does_not_blow_up_joint1_settle_pade_ik_clam.md, bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md, policy_head_design_rationale_and_literature_standing_encoder_inp.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, reward_cost_parallel_structure_mostly_mirroring_two_real_couplin.md, reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md, session_state_2026_07_12_constraint_deep_dive_q_a_covered_struct.md, yaw_command_is_rate_not_angle_inherited_design_defensible_only_i.md, actuator_hardware_identification_arm_xw540_t260_board_measured_p.md, added_mass_scale_upper_half_is_inert_post_dr_0_95_i_clamp_caps_i.md, arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md, both_value_heads_converge_cleanly_from_large_initial_losses_no_c.md, constraint_threshold_budget_tuning_thresholds_split_into_hard_ph.md, constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md, diagnosis_md_2026_05_25_retirement_open_item_ledger.md
+- **Summary:** query 'action pipeline clamp multi-head' -> 20 of 74
+
+## [2026-07-13T05:15:10.504752] query
+- **Pages:** doraemon_optimize_entropy_accept_can_leak_the_success_floor_late.md, our_doraemon_original_both_entropy_max_center_can_move_kl_ub_is_.md, reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md, ocean_nominal_shift_collapses_actor_entropy_e2_dr_harder.md, doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md, engine_gap_analyze_training_deep_plot_has_2_blank_panels_inconsi.md, engine_generic_flags_entropy_collapse_barrier_spike_reward_plate.md, reward_md_6_error_buffers_reward_call_site_dt_scaling_theory_rev.md, teacher_dr_harder_doraemon_curriculum_froze_before_run_end_unuse.md, doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md, ee_leak_0_k_anchor_0_does_not_blow_up_joint1_settle_pade_ik_clam.md, leaky_integral_and_ema_bias_carry_over_the_mid_episode_command_r.md, policy_head_design_rationale_and_literature_standing_encoder_inp.md, uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload_.md, constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md, dr_harder_campaign_synthesis_speed_kills_attitude_center_shift_o.md, dr_harder_ood_verdict_e2_best_survives_ood_the_harder_curriculum.md, frontier_seeking_dr_curriculum_literature_survey_adr_currot_acce.md, kl_ub_0_12_trades_attitude_for_translation_e1_dr_harder.md, kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md
+- **Summary:** query 'doraemon optimize entropy leak' -> 20 of 70
+
+## [2026-07-13T05:15:12.625989] query
+- **Pages:** policy_head_design_rationale_and_literature_standing_encoder_inp.md, yaw_command_is_rate_not_angle_inherited_design_defensible_only_i.md, joint1_anti_drift_design_history.md, constrainttrpo_faithful_norbc_modified_ipo_kim_2024_arxiv_2308_1.md, joint1_cumulative_rotation_constraint_never_binds_policy_parks_a.md, teacher_dr_harder_doraemon_curriculum_froze_before_run_end_unuse.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md, bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md, leaky_integral_and_ema_bias_carry_over_the_mid_episode_command_r.md, student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md, tracking_kernel_exp_quad_tanh_dead_zone_diagnosis_correct_but_fi.md, action_bounding_is_justified_raw_gaussian_external_clamp_tanh_ru.md, both_value_heads_converge_cleanly_from_large_initial_losses_no_c.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md, encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md, engine_gap_m1_critic_side_encoder_gradient_is_not_logged_policy_.md, joint_dr_params_kp_kd_effort_friction_need_no_dedicated_measurem.md, next_experiment_workflow_pick_a_baseline_train_once_then_re_tune.md, omx_wiki_has_no_delete_subcommand_by_design_removal_is_gc_apply_.md
+- **Summary:** query 'policy head design rationale' -> 20 of 88
+
+## [2026-07-13T05:16:14.066949] query
+- **Pages:** engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md, engine_gap_analyze_training_py_needs_the_logs_run_dir_not_the_ex.md, engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md, engine_gap_eval_npz_saves_no_raw_obs_std_privileged_blocks_exact.md, engine_gap_flat_target_eval_records_joint1_trajectory_but_render.md, engine_gap_heavy_tail_json_pct_peak_gt_thresh_exceeds_100_at_ood.md, engine_gap_m1_critic_side_encoder_gradient_is_not_logged_policy_.md, engine_gap_omx_cli_gaps_found_re_analyzing_teacher_2026_06_06_ro.md, eval_analysis_core_does_stats_adapter_does_heavy_tail.md, exp_analyze_must_run_analyze_training_py_for_training_side_diagn.md, joint1_stage_1_gate_go_drift_is_real_on_unlimited_physics_not_th.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, arm_a_measured_angle_joint1_constraint_recovers_not_diverges_the.md, dr_harder_ood_verdict_e2_best_survives_ood_the_harder_curriculum.md, kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md
+- **Summary:** query 'engine-gap' -> 15 of 15
+
+## [2026-07-13T05:16:18.116938] query
+- **Pages:** joint1_stage_1_gate_go_drift_is_real_on_unlimited_physics_not_th.md, joint1_anti_drift_design_history.md, arm_a_measured_angle_joint1_constraint_recovers_not_diverges_the.md, ee_leak_0_k_anchor_0_does_not_blow_up_joint1_settle_pade_ik_clam.md, engine_gap_flat_target_eval_records_joint1_trajectory_but_render.md, joint1_anti_drift_constrain_the_command_cumulative_arm_b_not_the.md, joint1_centering_reward_is_removed_on_main_6_term_but_alive_on_e.md, joint1_cumulative_ipo_constraint_generalizes_drift_bounded_at_oo.md, joint1_cumulative_rotation_constraint_never_binds_policy_parks_a.md, the_measured_drift_is_exactly_the_failure_mode_the_proposal_s_st.md, priv_obs_slim_stage_2_lead_contested_p_t_dims_quad_damp_lin_vel_.md, the_joint1_command_excursion_reaches_one_full_revolution_for_the.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md, reward_md_deep_dive_session_2026_07_11_4_review_fix_prompts_queu.md, all_10_constraints_are_satisfied_for_the_whole_final_window_ever.md, constraint_health_index.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, constraint_threshold_budget_tuning_thresholds_split_into_hard_ph.md, constraint_viol_trajectory_barrier_sign_metrics_4_10_starts_at_d.md, constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md
+- **Summary:** query 'joint1 stage' -> 20 of 31
+
+## [2026-07-13T05:18:28.658920] add
+- **Pages:** engine_gap_heavy_tail_json_pct_peak_gt_thresh_exceeds_100_at_ood.md
+- **Summary:** updated 'engine-gap: heavy_tail.json pct_peak_gt_thresh exceeds 100% at ood level (denominator bug)'
+
+## [2026-07-13T05:19:13.182854] add
+- **Pages:** doraemon_optimize_entropy_accept_can_leak_the_success_floor_late.md
+- **Summary:** updated 'DORAEMON _optimize_entropy accept can leak the success floor (latent)'
+
+## [2026-07-13T05:29:07.511445] query
+- **Pages:** hydro_dr_train_eval_sampling_mismatch_is_real_but_left_as_is_opt.md, reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md, added_mass_scale_upper_half_is_inert_post_dr_0_95_i_clamp_caps_i.md, analysis_engine_map_what_is_grow_able_vs_off_limits.md, buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md
+- **Summary:** query 'added_mass_scale adopt already analysis are att_norm axes axis' -> 5 of 131
+
+## [2026-07-13T05:29:08.646953] query
+- **Pages:** baseline_consolidated_main_reference_trpo_baseline_260713_031325.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md, baseline_repro_reproduces_teacher_deterministically_e4_control.md, next_experiment_workflow_pick_a_baseline_train_once_then_re_tune.md
+- **Summary:** query 'across add att_norm axes axis base baseline bearing' -> 5 of 124
+
+## [2026-07-13T05:29:09.504065] query
+- **Pages:** reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, tam_columns_must_match_robot_firmware_esc_channel_order_reorder_.md, tracking_kernel_exp_quad_tanh_dead_zone_diagnosis_correct_but_fi.md, all_10_constraints_are_satisfied_for_the_whole_final_window_ever.md
+- **Summary:** query 'accelerates adopt apply approved att_norm audit auto axes' -> 5 of 125
+
+## [2026-07-13T05:29:10.358041] query
+- **Pages:** constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md, joint1_anti_drift_constrain_the_command_cumulative_arm_b_not_the.md, tracking_kernel_exp_quad_tanh_dead_zone_diagnosis_correct_but_fi.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md
+- **Summary:** query 'above add adopted advancing att_norm bands baselines binding' -> 5 of 111
+
+## [2026-07-13T05:30:51.297365] query
+- **Pages:** baseline_consolidated_main_reference_trpo_baseline_260713_031325.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md, baseline_repro_reproduces_teacher_deterministically_e4_control.md, next_experiment_workflow_pick_a_baseline_train_once_then_re_tune.md
+- **Summary:** query 'across add att_norm axes axis base baseline bearing' -> 5 of 124
+
+## [2026-07-13T05:30:57.483663] query
+- **Pages:** reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, tam_columns_must_match_robot_firmware_esc_channel_order_reorder_.md, tracking_kernel_exp_quad_tanh_dead_zone_diagnosis_correct_but_fi.md, all_10_constraints_are_satisfied_for_the_whole_final_window_ever.md
+- **Summary:** query 'accelerates adopt apply approved att_norm audit auto axes' -> 5 of 125
+
+## [2026-07-13T05:31:17.552735] query
+- **Pages:** hydro_dr_train_eval_sampling_mismatch_is_real_but_left_as_is_opt.md, reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md, added_mass_scale_upper_half_is_inert_post_dr_0_95_i_clamp_caps_i.md, analysis_engine_map_what_is_grow_able_vs_off_limits.md, buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md
+- **Summary:** query 'added_mass_scale adopt already analysis are att_norm axes axis' -> 5 of 131
+
+## [2026-07-13T05:31:22.222745] query
+- **Pages:** constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md, joint1_anti_drift_constrain_the_command_cumulative_arm_b_not_the.md, tracking_kernel_exp_quad_tanh_dead_zone_diagnosis_correct_but_fi.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md
+- **Summary:** query 'above add adopted advancing att_norm bands baselines binding' -> 5 of 111
+
+## [2026-07-13T05:31:23.334219] query
+- **Pages:** reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, tam_columns_must_match_robot_firmware_esc_channel_order_reorder_.md, tracking_kernel_exp_quad_tanh_dead_zone_diagnosis_correct_but_fi.md, all_10_constraints_are_satisfied_for_the_whole_final_window_ever.md
+- **Summary:** query 'accelerates adopt apply approved att_norm audit auto axes' -> 5 of 125
+
+## [2026-07-13T05:31:34.247747] add
+- **Pages:** constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md
+- **Summary:** updated 'ConstraintTRPO slack tail: 9 of 10 constraints deep-slack is plausibly healthy complementary slackness (UNVERIFIED) -- confirm via training-time trajectory + loosening ablation before tuning budgets'
+
+## [2026-07-13T05:32:01.361233] add
+- **Pages:** state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md
+- **Summary:** updated 'state_dependent_std: robustness-vs-nominal trade-off, NOT difficulty-adaptive (Phase-2 falsification)'
+
+## [2026-07-13T05:33:25.386532] query
+- **Pages:** experiment_launch_checklist_run_id_wandb_latest_alias_naming.md, constrained_albc_experiment_conventions.md, experiment_output_directory_standard_logs_vs_experiments_index_t.md, reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md, dr_harder_campaign_synthesis_speed_kills_attitude_center_shift_o.md, sequential_overnight_campaign_wall_clock_budget_not_crashes_kill.md, train_py_run_group_creates_the_group_layer_no_more_manual_post_m.md, dr_harder_campaign_index.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md, encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md, gpu_memory_4096_env_albc_training_needs_11_3_gb_rtx_4060_8gb_can.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, unbounded_monotonic_drift_exists_in_the_tail_the_single_env_surv.md, arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md, engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md, joint_dr_params_kp_kd_effort_friction_need_no_dedicated_measurem.md, analysis_engine_map_what_is_grow_able_vs_off_limits.md, e5_alpha075_ood_per_axis_generalization_gap_universal_failure_ro.md, experiment_idea_feed_o_t_into_the_encoder_alongside_p_t_state_co.md, next_experiment_workflow_pick_a_baseline_train_once_then_re_tune.md
+- **Summary:** query 'wandb project single campaign latest alias naming' -> 20 of 77
+
+## [2026-07-13T05:36:10.718175] add
+- **Pages:** buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md
+- **Summary:** updated 'buoyancy/gravity/restoring apply SEPARATELY to main body vs buoy(link3); gravity HAS DR (body_mass_scale+payload_mass); DR is body-shared not independent'
+
+## [2026-07-13T05:37:05.096191] query
+- **Pages:** reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, policy_head_design_rationale_and_literature_standing_encoder_inp.md, tracking_kernel_exp_quad_tanh_dead_zone_diagnosis_correct_but_fi.md, yaw_command_is_rate_not_angle_inherited_design_defensible_only_i.md
+- **Summary:** query 'above accelerates adopt approved att_norm audit auto axes' -> 5 of 125
+
+## [2026-07-13T05:37:27.397869] query
+- **Pages:** reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, policy_head_design_rationale_and_literature_standing_encoder_inp.md, tracking_kernel_exp_quad_tanh_dead_zone_diagnosis_correct_but_fi.md, yaw_command_is_rate_not_angle_inherited_design_defensible_only_i.md
+- **Summary:** query 'above accelerates adopt approved att_norm audit auto axes' -> 5 of 125
+
+## [2026-07-13T05:38:51.611002] query
+- **Pages:** reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, policy_head_design_rationale_and_literature_standing_encoder_inp.md, tracking_kernel_exp_quad_tanh_dead_zone_diagnosis_correct_but_fi.md, yaw_command_is_rate_not_angle_inherited_design_defensible_only_i.md
+- **Summary:** query 'above accelerates adopt approved att_norm audit auto axes' -> 5 of 125
+
+## [2026-07-13T05:40:13.709549] add
+- **Pages:** doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md
+- **Summary:** updated 'DORAEMON alpha is a feasibility FLOOR, not a DR-expansion lever (E5 dr-harder)'
+

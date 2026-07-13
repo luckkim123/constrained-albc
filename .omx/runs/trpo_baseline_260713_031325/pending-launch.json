@@ -1,0 +1,9 @@
+{
+  "gpu_gate": "GPU0 after e2 (and after 142604 extension if user orders it first); code implementation + byte-identical regression gate required pre-launch; USER APPROVAL REQUIRED",
+  "launch_delta": "TRAIN on exp/dr-xy-prune branch (off tag baseline-260713-p7tail; Part 1 only per revised proposal): python scripts/train.py --task Isaac-ConstrainedALBC-TRPO-v0 --num_envs 4096 --max_iterations 5000 --headless --run_group p7_tail --logger wandb --log_project_name p7_tail agent.run_name=e<N>_xyprune (e-number at launch)",
+  "proposal_id": "next-20260713-143610",
+  "queued_at": "2026-07-13T05:40:36.778945+00:00",
+  "queued_commit": "52d639ac3935c23b11acd89d309c053235f228ec",
+  "schema_version": 1,
+  "status": "pending approval"
+}
