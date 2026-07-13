@@ -386,6 +386,11 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     integral_leak: float = 0.99  # Leaky integrator decay: I_{t+1} = leak * I_t + err * dt
     integral_clamp: float = 2.0  # Windup prevention: clamp |I| <= this value
     integral_gated: bool = True  # Error-gated integration: only accumulate when |err| < reward sigma
+    # bias-ema-obs experiment (off by default = byte-identical). Exposes the 3D _bias_ema
+    # buffer [roll, pitch, yaw_rate] the reward.k_bias penalty already reads but the policy
+    # cannot observe (non-Markov bias reward, R1). +3 obs dims when on; materialized by
+    # apply_bias_ema_obs() below, called from ALBCEnv.__init__ before super().__init__().
+    use_bias_ema_obs: bool = False
     debug_vis: bool = False
 
     viewer: ViewerCfg = ViewerCfg(eye=(0.0, 0.0, 12.0), lookat=(0.0, 0.0, 4.5))
@@ -579,3 +584,42 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # cfg AFTER hydra, so that is the correct materialization point.
     joint1_constraint_arm: str = "none"  # one of {"none", "B"}
     joint1_constraint_budget: float = 0.05  # per-step average budget d_k for the joint1 term
+
+
+def apply_bias_ema_obs(cfg) -> None:
+    """Materialize the bias-ema-obs experiment toggle, in place.
+
+    MUST be called from ALBCEnv.__init__ BEFORE super().__init__() (mirrors
+    ALBCEnv._convert_noise_cfg_tuples): observation_space and observation_noise_model
+    are consumed by DirectRLEnv.__init__ to build the gym spaces and the noise model,
+    so the bump must land before that call -- not in a cfg __post_init__, which runs
+    at cfg construction BEFORE hydra applies its overrides to use_bias_ema_obs.
+
+    use_bias_ema_obs=False (default): no-op, byte-identical to today (69D obs).
+    use_bias_ema_obs=True: observation_space 69 -> 72, appending the 3D _bias_ema
+    buffer [roll, pitch, yaw_rate] after the integral dims (see
+    ALBCEnv._get_observations). The noise/bias tuples tied to the 69 obs channels are
+    extended by 3 zeros each, mirroring how the 3 integral dims are already treated
+    (computed, not sensor-noised: _OBS_NOISE_STD / _OBS_BIAS_MAG both end in [0.0]*3
+    for those channels).
+    """
+    if not cfg.use_bias_ema_obs:
+        return
+    if cfg.observation_space != 69:
+        raise ValueError(
+            f"use_bias_ema_obs=True expects observation_space=69 pre-bump, got "
+            f"{cfg.observation_space} (materializer already applied, or observation_space "
+            "was overridden elsewhere)"
+        )
+    if cfg.reward.k_bias == 0.0:
+        raise ValueError(
+            "use_bias_ema_obs=True requires a nonzero reward.k_bias -- _bias_ema is not "
+            "updated otherwise (see ALBCEnv._get_rewards' `if self.cfg.reward.k_bias != 0.0` gate)"
+        )
+    cfg.observation_space += 3
+    zeros3 = (0.0, 0.0, 0.0)
+    noise_cfg = cfg.observation_noise_model.noise_cfg
+    bias_cfg = cfg.observation_noise_model.bias_noise_cfg
+    noise_cfg.std = tuple(noise_cfg.std) + zeros3
+    bias_cfg.n_min = tuple(bias_cfg.n_min) + zeros3
+    bias_cfg.n_max = tuple(bias_cfg.n_max) + zeros3

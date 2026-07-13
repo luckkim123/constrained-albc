@@ -8,7 +8,7 @@
 Flat subclass of OnPolicyRunner that combines:
     - Teacher encoder metrics logging (if encoder present)
     - Log-barrier constraint metrics (TRPO + IPO)
-    - Auto-sync of num_constraints from env config
+    - Auto-sync of num_constraints and policy_obs_dim from env config
 """
 
 from __future__ import annotations
@@ -31,7 +31,7 @@ class ConstraintEncoderRunner(OnPolicyRunner):
     Provides:
         - Encoder metrics: z latent statistics, gradient norms (when encoder present)
         - Constraint metrics: barrier margins, penalty (Modified IPO)
-        - Auto-sync: num_constraints from env config to algorithm/policy config
+        - Auto-sync: num_constraints and policy_obs_dim from env config to algorithm/policy config
     """
 
     def __init__(self, env, train_cfg, log_dir=None, device="cpu"):
@@ -65,6 +65,23 @@ class ConstraintEncoderRunner(OnPolicyRunner):
             self._constraint_names = constraints_cfg.constraint_names
         else:
             self._constraint_names = ()
+
+        # Auto-sync policy_obs_dim from env config (mirrors num_constraints above). Static
+        # defaults (69 main / 87 full_dof) already match observation_space for every existing
+        # config, so this is a no-op there. The bias-ema-obs toggle (main env,
+        # use_bias_ema_obs) bumps env.cfg.observation_space 69 -> 72 without touching the
+        # agent cfg; without this sync the actor/critic networks would silently build at the
+        # wrong input width instead of at the observation's actual width.
+        env_obs_dim = getattr(env.unwrapped.cfg, "observation_space", None)
+        if env_obs_dim is not None:
+            sync_policy_cfg = train_cfg["policy"]
+            if "policy_obs_dim" in sync_policy_cfg and sync_policy_cfg["policy_obs_dim"] != env_obs_dim:
+                logger.info(
+                    "Auto-syncing policy_obs_dim: policy %d -> %d",
+                    sync_policy_cfg["policy_obs_dim"],
+                    env_obs_dim,
+                )
+                sync_policy_cfg["policy_obs_dim"] = env_obs_dim
 
         # Override encoder normalization bounds with DR-derived values.
         # The hardcoded _PRIV_OBS_LOWER/UPPER in rsl_rl_ppo_cfg.py are only a

@@ -25,7 +25,7 @@ from isaaclab.utils.math import euler_xyz_from_quat, quat_apply, quat_apply_inve
 
 from marinelab.core import HydrodynamicsModel
 
-from .config import ALBCEnvCfg
+from .config import ALBCEnvCfg, apply_bias_ema_obs
 from .mdp import faults
 from .mdp.constraints import apply_joint1_constraint_arm, compute_all_costs
 from .mdp.events import (
@@ -104,6 +104,12 @@ class ALBCEnv(DirectRLEnv):
             render_mode: Render mode for visualization.
             **kwargs: Additional arguments.
         """
+        # Materialize the bias-ema-obs experiment toggle (no-op unless cfg.use_bias_ema_obs).
+        # MUST run before super().__init__(): it bumps cfg.observation_space and extends the
+        # noise-model tuples that DirectRLEnv.__init__ consumes to build gym spaces + the
+        # noise model. See config.apply_bias_ema_obs.
+        apply_bias_ema_obs(cfg)
+
         # Convert noise config tuples to tensors before DirectRLEnv creates the noise model.
         # Tuples are used in config for OmegaConf/Hydra serialization compatibility.
         self._convert_noise_cfg_tuples(cfg)
@@ -177,6 +183,8 @@ class ALBCEnv(DirectRLEnv):
         #   - history contributes 0 when self._hist_buf is None (hist_len == 0); per step it is
         #     joint(4) + body(6) -> 10*hist_len, plus action(8) -> 8*hist_action_len.
         #   - integral contributes self.cfg.integral_dims only when self.cfg.use_integral_obs.
+        #   - bias_ema contributes 3 (fixed, apply_bias_ema_obs already bumped observation_space
+        #     to match) only when self.cfg.use_bias_ema_obs.
         #   - On mismatch, raise ValueError with expected vs computed and the relevant cfg flags,
         #     matching the f-string style of the state_space / control_freq guards.
         PROPRIO_DIM = 20
@@ -185,11 +193,14 @@ class ALBCEnv(DirectRLEnv):
             expected_obs_dim += 10 * self._hist_len + 8 * self._hist_action_len
         if self.cfg.use_integral_obs:
             expected_obs_dim += self.cfg.integral_dims
+        if self.cfg.use_bias_ema_obs:
+            expected_obs_dim += 3
         if expected_obs_dim != self.cfg.observation_space:
             raise ValueError(
                 f"observation_space={self.cfg.observation_space} != computed obs dim {expected_obs_dim} "
                 f"(proprio={PROPRIO_DIM}, hist_len={self._hist_len}, hist_action_len={self._hist_action_len}, "
-                f"use_integral_obs={self.cfg.use_integral_obs}, integral_dims={self.cfg.integral_dims})"
+                f"use_integral_obs={self.cfg.use_integral_obs}, integral_dims={self.cfg.integral_dims}, "
+                f"use_bias_ema_obs={self.cfg.use_bias_ema_obs})"
             )
 
         # Pre-build the integral error-gating sigma tensor once (step-invariant cfg constants).
@@ -434,9 +445,9 @@ class ALBCEnv(DirectRLEnv):
             self._joint_health = torch.ones(self.num_envs, device=self.device)
             # base_std for the extra per-env sensor noise = the always-on obs-noise std,
             # so a fault scales the EXISTING sensor-noise pattern rather than inventing one.
-            from .config import _OBS_NOISE_STD
-
-            self._fault_obs_base_std = torch.tensor(_OBS_NOISE_STD, device=self.device)
+            # Read from cfg (not a fresh _OBS_NOISE_STD import) so it stays the SAME width as
+            # the always-on model even when use_bias_ema_obs extends it 69D -> 72D.
+            self._fault_obs_base_std = self.cfg.observation_noise_model.noise_cfg.std.clone().to(self.device)
         else:
             self._sensor_noise_scale = None
             self._joint_health = None
@@ -492,13 +503,13 @@ class ALBCEnv(DirectRLEnv):
         # is on -- so it still fills at eval (DORAEMON disabled). Filled each reset in
         # _reset_physics from sampled["obs_noise_scale"] (training) or a uniform draw over
         # obs_noise_scale_range (eval fallback, mirroring the fault/events path). base_std
-        # is the always-on 69D _OBS_NOISE_STD so the DR layer scales the SAME per-channel
-        # pattern. DR disabled entirely -> None (no extra obs noise, byte-identical).
+        # is the always-on obs-noise std (69D, or 72D when use_bias_ema_obs extends it) so
+        # the DR layer scales the SAME per-channel pattern -- read from cfg rather than a
+        # fresh _OBS_NOISE_STD import, mirroring _init_faults above. DR disabled entirely
+        # -> None (no extra obs noise, byte-identical).
         if self.cfg.randomization.enable:
-            from .config import _OBS_NOISE_STD
-
             self._dr_obs_noise_scale = torch.zeros(self.num_envs, device=self.device)
-            self._dr_obs_base_std = torch.tensor(_OBS_NOISE_STD, device=self.device)
+            self._dr_obs_base_std = self.cfg.observation_noise_model.noise_cfg.std.clone().to(self.device)
         else:
             self._dr_obs_noise_scale = None
             self._dr_obs_base_std = None
@@ -1091,9 +1102,16 @@ class ALBCEnv(DirectRLEnv):
         if self.cfg.use_integral_obs:
             policy_obs = torch.cat([policy_obs, self._error_integral], dim=-1)
 
+        # Append EMA bias buffer (3D) when enabled -- lands after integral (69:72). Exposes
+        # the sustained per-env offset that reward.k_bias penalizes but the policy otherwise
+        # cannot observe (non-Markov fix, R1). No-op when disabled -> obs byte-identical.
+        if self.cfg.use_bias_ema_obs:
+            policy_obs = torch.cat([policy_obs, self._bias_ema], dim=-1)
+
         # Per-env sensor-noise fault: extra noise on top of the always-on noise model.
-        # No-op (identity) when fault is disabled -> obs byte-identical. base_std is the
-        # 69D _OBS_NOISE_STD, so integral dims (std 0) and command dims (std 0) get none.
+        # No-op (identity) when fault is disabled -> obs byte-identical. base_std tracks
+        # the always-on noise model's std (69D, or 72D when use_bias_ema_obs extends it),
+        # so integral/bias_ema dims (std 0) and command dims (std 0) get none.
         policy_obs = faults.apply_sensor_noise(
             policy_obs, self._sensor_noise_scale, base_std=self._fault_obs_base_std
         )
