@@ -2,14 +2,14 @@
 title: "experiment launch checklist: run_id / wandb / latest-alias naming"
 tags: ["albc", "conventions", "launch", "wandb", "run_id", "campaign", "branch", "project", "baseline", "comparison"]
 created: 2026-06-07T05:58:58.720019
-updated: 2026-07-13T05:42:02.267825
+updated: 2026-07-13T06:12:04.653539
 sources: []
 links: ["constrained_albc_experiment_conventions.md", "experiment_output_directory_standard_logs_vs_experiments_index_t.md", "experiment_result_recording_location_experiments_tree_is_ssot_no.md"]
 category: convention
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 ---
 
 # experiment launch checklist: run_id / wandb / latest-alias naming
@@ -64,4 +64,34 @@ The fixed reading:
 Pre-launch check to add to the rule-3 gate: before a comparison launch, run
 `--log_project_name <baseline's project>` (confirm it matches the baseline you intend to overlay), not a
 fresh per-phase name.
+
+---
+
+## Update (2026-07-13T06:12:04.653539)
+
+## Rule 3 REVISED (2026-07-13, user decision): wandb project = PHASE, campaign = group
+
+Supersedes both the original "one project per campaign" wording and the earlier 2026-07-13
+"campaign = comparison set" clarification. Motivation: a 2026-07-13 audit found 17 wandb
+projects under the entity (most holding 1-6 runs) — per-campaign projects make cross-campaign
+web comparison impossible and scatter the project list.
+
+- wandb project (`--log_project_name`) = the WORK PHASE, named `<exp_short>_<phase>`.
+  Currently open phase: `teacher_baseline_opt` (= albc_trpo_teacher's baseline-optimization
+  arc: finding/optimizing the new reference baseline). EVERY campaign in the phase logs here.
+- campaign = `--run_group` (unchanged); run identity = run_id via make_run_id + tags.
+- A phase opens/closes ONLY by explicit user declaration (a qualitatively new goal, e.g.
+  optimal baseline adopted -> sim-to-real, student distillation). Default = keep logging to
+  the currently open phase project. This guardrail is what stops the 17-project scatter from
+  recurring under phase names.
+- Cross-project migration CORRECTION to the "UI only" claim above: `wandb sync
+  --include-synced -p <project> <local run dir>` re-uploads a run (same run id, history,
+  config, group) into another project whenever the local `.wandb` file still exists
+  (verified wandb 0.28.0; local run dirs are cwd-relative `constrained-albc/wandb/run-<ts>-<id>/`).
+  "UI only" applies only when local files are gone. Artifacts/media do not migrate
+  automatically; after verifying the new copy (history step count), delete the old-project
+  copy (API `run.delete()` if available, else UI) and retire the emptied project via UI.
+- Pending migration (post p7_tail training, 2026-07-13): baseline `0dghehbh` + e1 `7xe8vyut`
+  + e2 -> `teacher_baseline_opt`; then update both campaign DESIGN.md wandb references and
+  retire the empty `baseline` / `p7_tail` projects.
 

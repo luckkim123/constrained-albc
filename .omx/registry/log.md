@@ -1584,3 +1584,7 @@
 - **Pages:** track_cmd_att_deg_logs_the_env_mean_of_command_not_the_command_r.md
 - **Summary:** created 'Track/cmd_att/*_deg logs the env-mean of |command|, not the command range (13.5 deg = uniform +-30 x 0.9)'
 
+## [2026-07-13T06:12:04.653539] add
+- **Pages:** experiment_launch_checklist_run_id_wandb_latest_alias_naming.md
+- **Summary:** updated 'experiment launch checklist: run_id / wandb / latest-alias naming'
+
