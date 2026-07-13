@@ -2,12 +2,14 @@
 title: "Action bounding is justified (raw Gaussian + external clamp) -- tanh ruled out, 3 experiment leads remain"
 tags: ["action-clamp", "tanh", "exploration", "noise", "clip-fraction", "raw-gaussian", "constraint-trpo", "experiment-lead", "max-std", "init-noise-std", "ipo-barrier", "entropy-collapse"]
 created: 2026-07-02T09:00:08.575699
-updated: 2026-07-02T09:00:08.575699
+updated: 2026-07-13T06:37:50.097930
 sources: []
 links: ["action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md"]
 category: convention
 confidence: high
 schemaVersion: 1
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 ---
 
 # Action bounding is justified (raw Gaussian + external clamp) -- tanh ruled out, 3 experiment leads remain
@@ -32,4 +34,18 @@ Lead 3 -- Isolate the IPO barrier->entropy causality (entropy_coef_per_dim=0 vs 
 DISCARDED: tanh vs raw+clamp comparison run (ruled out above).
 
 LITERATURE (verified, no fabrication). Haarnoja et al. 2018 SAC arXiv:1801.01290 App.C (tanh Jacobian correction). Fujita & Maeda 2018 Clipped Action Policy Gradient ICML arXiv:1802.07564 (clip-bias theory + CAPG fix). Schulman 2015 TRPO arXiv:1502.05477 / 2017 PPO arXiv:1707.06347 (plain-Gaussian convention). Chou et al. 2017 ICML Beta-policy (both clip and squash have boundary artifacts). NO-SOURCE-FOUND (flagged gaps, not claims): squashed-Gaussian TRPO validation; direct tanh-vs-clip comparison at boundary optima.
+
+---
+
+## Update (2026-07-13T06:37:50.097930)
+
+## Lead 2 status-correction (2026-07-13): max_std / init_noise_std revisit is DISSOLVED, not open
+
+An earlier framing left "Lead 2: revisit max_std=2.0 / init_noise_std=0.7" as an open training
+comparison gated only on data. That is superseded. The P4 batch added clip_fraction logging
+(Lead 1) and the new baseline `trpo_baseline_260713_031325` measured clip_fraction ~0.0048 —
+i.e. <0.5% of actions hit the |a|>=1 saturation boundary. The saturation motivation for raising
+max_std/init_noise_std is therefore dissolved (there is almost no saturation to relieve). Do NOT
+re-propose Lead 2 as a probe; it matches the PROMPT_next_experiment_planning §3 rejection. Lead 3
+(entropy-IPO causal split) remains a separate open item; Lead 1 (clip_fraction logging) is done.
 

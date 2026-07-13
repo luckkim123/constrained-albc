@@ -1588,3 +1588,11 @@
 - **Pages:** experiment_launch_checklist_run_id_wandb_latest_alias_naming.md
 - **Summary:** updated 'experiment launch checklist: run_id / wandb / latest-alias naming'
 
+## [2026-07-13T06:37:37.923550] query
+- **Pages:** state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, engine_gap_eval_npz_saves_no_raw_obs_std_privileged_blocks_exact.md, bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md, doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md, joint1_stage_1_gate_go_drift_is_real_on_unlimited_physics_not_th.md, reward_md_6_error_buffers_reward_call_site_dt_scaling_theory_rev.md, dr_harder_ood_verdict_e2_best_survives_ood_the_harder_curriculum.md, ee_leak_0_k_anchor_0_does_not_blow_up_joint1_settle_pade_ik_clam.md, kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md, engine_gap_analyze_training_py_needs_the_logs_run_dir_not_the_ex.md, engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md, engine_gap_flat_target_eval_records_joint1_trajectory_but_render.md, engine_gap_heavy_tail_json_pct_peak_gt_thresh_exceeds_100_at_ood.md, eval_analysis_core_does_stats_adapter_does_heavy_tail.md, reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md, engine_gap_omx_cli_gaps_found_re_analyzing_teacher_2026_06_06_ro.md
+- **Summary:** query 'action bounding init_noise_std max_std' -> 16 of 16
+
+## [2026-07-13T06:37:50.097930] add
+- **Pages:** action_bounding_is_justified_raw_gaussian_external_clamp_tanh_ru.md
+- **Summary:** updated 'action bounding is justified: raw gaussian + external clamp (tanh runaway avoided)'
+
