@@ -1580,3 +1580,7 @@
 - **Pages:** doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md
 - **Summary:** updated 'DORAEMON alpha is a feasibility FLOOR, not a DR-expansion lever (E5 dr-harder)'
 
+## [2026-07-13T05:55:24.505691] add
+- **Pages:** track_cmd_att_deg_logs_the_env_mean_of_command_not_the_command_r.md
+- **Summary:** created 'Track/cmd_att/*_deg logs the env-mean of |command|, not the command range (13.5 deg = uniform +-30 x 0.9)'
+
