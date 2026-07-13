@@ -1660,3 +1660,55 @@
 - **Pages:** the_one_place_the_tail_signal_is_real_and_adverse_ood_env_with_p.md
 - **Summary:** created 'The one place the tail signal is real and adverse: ood #env with peak |error_rol'
 
+## [2026-07-13T13:32:52.637538] query
+- **Pages:** bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md, reward_penalty_terms_thruster_smoothness_bias_block_3_temporal_b.md, teacher_dr_harder_yaw_is_the_only_heavy_tail_axis_roll_is_dc_bia.md, teacher_hard_dr_cv_explodes_without_heavy_tail_dc_bias_dispersio.md, student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md, leaky_integral_and_ema_bias_carry_over_the_mid_episode_command_r.md, e5_alpha075_ood_per_axis_generalization_gap_universal_failure_ro.md, joint1_cumulative_ipo_constraint_generalizes_drift_bounded_at_oo.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, engine_gap_heavy_tail_json_pct_peak_gt_thresh_exceeds_100_at_ood.md, baseline_consolidated_main_reference_trpo_baseline_260713_031325.md, eval_analysis_core_does_stats_adapter_does_heavy_tail.md, heavy_tail_vs_sample_mean_divergence_are_independent.md, joint1_stage_1_gate_go_drift_is_real_on_unlimited_physics_not_th.md, teacher_segmented_post_switch_roll_transient_jumps_under_hard_dr.md, reward_md_deep_dive_session_2026_07_11_4_review_fix_prompts_queu.md, constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md, failure_dr_join_now_covers_fault_channels_not_just_dr_per_env_fa.md
+- **Summary:** query 'bias_ema observation heavy-tail DC bias roll authority limited' -> 20 of 115
+
+## [2026-07-13T13:32:53.026882] query
+- **Pages:** heavy_tail_vs_sample_mean_divergence_are_independent.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md, engine_gap_heavy_tail_json_pct_peak_gt_thresh_exceeds_100_at_ood.md, joint1_cumulative_ipo_constraint_generalizes_drift_bounded_at_oo.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md, teacher_dr_harder_yaw_is_the_only_heavy_tail_axis_roll_is_dc_bia.md, teacher_hard_dr_cv_explodes_without_heavy_tail_dc_bias_dispersio.md, eval_analysis_core_does_stats_adapter_does_heavy_tail.md, bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md, reward_penalty_terms_thruster_smoothness_bias_block_3_temporal_b.md, baseline_consolidated_main_reference_trpo_baseline_260713_031325.md, e1_s_raw_npz_heavy_tail_is_much_smaller_than_the_baseline_s_at_h.md, eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md, the_hard_ood_dispersion_is_a_genuine_heavy_tail_confirmed_on_the.md, failure_dr_join_now_covers_fault_channels_not_just_dr_per_env_fa.md, constraint_viol_trajectory_barrier_sign_metrics_4_10_starts_at_d.md, sequential_overnight_campaign_wall_clock_budget_not_crashes_kill.md
+- **Summary:** query 'heavy-tail tail authority-limited vs observability credit assignment' -> 20 of 120
+
+## [2026-07-13T13:47:17.565874] add
+- **Pages:** bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md
+- **Summary:** created 'bias_ema observability (69->72D) improves absolute attitude tracking + CV but does NOT shrink the hard-DR heavy-tail ratio -- the DC-bias tail is authority-limited (p7_tail e2)'
+
+## [2026-07-13T13:47:17.958008] add
+- **Pages:** e2_s_doraemon_curriculum_ended_wider_than_the_baseline_s_so_e2_s.md
+- **Summary:** created "e2's DORAEMON curriculum ended WIDER than the baseline's, so e2's `--doraemon-dr"
+
+## [2026-07-13T13:47:17.958008] add
+- **Pages:** e2_improves_absolute_attitude_tracking_at_every_level_including_.md
+- **Summary:** created 'e2 improves absolute attitude tracking at EVERY level including the matched `non'
+
+## [2026-07-13T13:47:17.958008] add
+- **Pages:** reward_is_tracking_dominated_and_healthy_episode_return_268_sits.md
+- **Summary:** created 'Reward is tracking-dominated and healthy; episode return 268 sits ABOVE performa'
+
+## [2026-07-13T13:47:17.958008] add
+- **Pages:** optimizer_mechanics_are_healthy_line_search_always_succeeds_tiny.md
+- **Summary:** created 'Optimizer mechanics are healthy (line search always succeeds, tiny KL); policy e'
+
+## [2026-07-13T13:47:17.958008] add
+- **Pages:** both_critics_converge_to_small_stable_losses_the_asymmetric_crit.md
+- **Summary:** created 'Both critics converge to small stable losses — the asymmetric-critic + cost-crit'
+
+## [2026-07-13T13:47:17.958008] add
+- **Pages:** the_encoder_latent_is_alive_and_bounded_not_collapsed_to_a_const.md
+- **Summary:** updated 'The encoder latent is alive and bounded (not collapsed to a constant); the +3 bi'
+
+## [2026-07-13T13:47:17.958008] add
+- **Pages:** all_10_constraints_active_with_healthy_complementary_slackness_t.md
+- **Summary:** created 'All 10 constraints active with healthy complementary slackness (thruster_util bi'
+
+## [2026-07-13T13:47:17.958008] add
+- **Pages:** unlike_e1_e2_s_curriculum_is_feasible_and_expanded_past_the_base.md
+- **Summary:** created "Unlike e1, e2's curriculum is FEASIBLE and expanded past the baseline: mode 0 (n"
+
+## [2026-07-13T13:47:17.958008] add
+- **Pages:** the_heavy_tail_ratio_is_not_reduced_by_observability_25_8x_vs_23.md
+- **Summary:** created 'The heavy-tail RATIO is NOT reduced by observability (25.8x vs 23.2x, top-6 45.8'
+
+## [2026-07-13T13:47:17.958008] add
+- **Pages:** one_adverse_signal_e2_has_more_envs_with_a_transient_peak_error_.md
+- **Summary:** created 'One adverse signal: e2 has MORE envs with a transient peak |error_roll| > 20deg '
+

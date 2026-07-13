@@ -1,9 +1,9 @@
 ---
 title: "The encoder latent is alive and bounded (not collapsed to a constant), so the de"
-tags: ["auto-captured", "trpo_e1_latdr_260713_124923"]
+tags: ["auto-captured", "trpo_e1_latdr_260713_124923", "trpo_e2_biasobs_260713_173456"]
 created: 2026-07-13T10:08:21.544030
-updated: 2026-07-13T10:08:21.544030
-sources: ["experiments/rsl_rl/albc_trpo_teacher/p7_tail/trpo_e1_latdr_260713_124923/analysis/diagnose-20260713-184751/report.md"]
+updated: 2026-07-13T13:47:17.958008
+sources: ["experiments/rsl_rl/albc_trpo_teacher/p7_tail/trpo_e1_latdr_260713_124923/analysis/diagnose-20260713-184751/report.md", "experiments/rsl_rl/albc_trpo_teacher/p7_tail/trpo_e2_biasobs_260713_173456/analysis/diagnose-20260713-223534/report.md"]
 links: []
 category: session-log
 confidence: low
@@ -20,3 +20,14 @@ The encoder latent is alive and bounded (not collapsed to a constant), so the de
 [CONFIDENCE: MED]
 
 source report: experiments/rsl_rl/albc_trpo_teacher/p7_tail/trpo_e1_latdr_260713_124923/analysis/diagnose-20260713-184751/report.md
+
+---
+
+## Update (2026-07-13T13:47:17.958008)
+
+The encoder latent is alive and bounded (not collapsed to a constant); the +3 bias_ema obs dims did not destabilise the representation.
+
+[EVIDENCE: analyze_training.py TIER 1 Encoder/z_std 0.40, Encoder/z_min -0.73, Encoder/z_max 0.73, z_mean 0.01; per rule 03 a "latent is used" claim would need encoder_tools.py sweep (not run for this probe)]
+[CONFIDENCE: MED]
+
+source report: experiments/rsl_rl/albc_trpo_teacher/p7_tail/trpo_e2_biasobs_260713_173456/analysis/diagnose-20260713-223534/report.md
