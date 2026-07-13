@@ -1,0 +1,5 @@
+{
+  "campaign_id": "baseline",
+  "created": "2026-07-12T18:12:25.238926+00:00",
+  "goal": "From-scratch reference baseline on consolidated main (commit 7ac39c8): 28D union p_t + P4 sim-fix batch (thruster dt 4x, arm vel 3.1/2.8, hydro slice) + M1 encoder-in-value-optimizer + clip_fraction logging, thruster-curve OFF. wandb project=baseline. New reference for all P7 experiments."
+}

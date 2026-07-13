@@ -1256,3 +1256,211 @@
 - **Pages:** joint1_stage_1_gate_go_drift_is_real_on_unlimited_physics_not_th.md
 - **Summary:** updated 'joint1 Stage-1 gate GO: drift is real on unlimited physics, not the +-360deg wall artifact'
 
+## [2026-07-12T23:09:04.402417] query
+- **Pages:** training_log_analysis_engine_reference_adapter.md, engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md, exp_analyze_must_run_analyze_training_py_for_training_side_diagn.md, analysis_engine_map_what_is_grow_able_vs_off_limits.md, engine_gap_analyze_training_deep_plot_has_2_blank_panels_inconsi.md, engine_gap_analyze_training_py_needs_the_logs_run_dir_not_the_ex.md, engine_gap_heavy_tail_json_pct_peak_gt_thresh_exceeds_100_at_ood.md, engine_gap_omx_cli_gaps_found_re_analyzing_teacher_2026_06_06_ro.md, engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md, eval_analysis_core_does_stats_adapter_does_heavy_tail.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, the_standard_training_analysis_groups_reward_decomposition_trpo_.md, coverage_lint_ok_is_a_floor_not_a_quality_gate_re_analysis_uses_.md, engine_gap_flat_target_eval_records_joint1_trajectory_but_render.md, failure_dr_join_now_covers_fault_channels_not_just_dr_per_env_fa.md, arm_a_measured_angle_joint1_constraint_recovers_not_diverges_the.md, constraint_viol_trajectory_barrier_sign_metrics_4_10_starts_at_d.md, engine_gap_status_board.md, experiment_output_directory_standard_logs_vs_experiments_index_t.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md
+- **Summary:** query 'analysis engine reference adapter how to analyze training' -> 20 of 116
+
+## [2026-07-12T23:46:26.844974] add
+- **Pages:** baseline_consolidated_main_reference_trpo_baseline_260713_031325.md
+- **Summary:** created 'baseline (consolidated main) reference: trpo_baseline_260713_031325'
+
+## [2026-07-12T23:46:27.232691] add
+- **Pages:** engine_gap_m1_critic_side_encoder_gradient_is_not_logged_policy_.md
+- **Summary:** created 'engine-gap: M1 critic-side encoder gradient is not logged (Policy/encoder_grad_norm is actor-path only)'
+
+## [2026-07-12T23:46:27.626318] add
+- **Pages:** engine_generic_flags_entropy_collapse_barrier_spike_reward_plate.md
+- **Summary:** created 'engine generic flags (entropy-collapse / barrier-spike / reward-plateau) are benign for a converged teacher'
+
+## [2026-07-12T23:48:37.357434] add
+- **Pages:** the_policy_converges_early_iter_490_then_plateaus_healthily_rewa.md
+- **Summary:** created 'The policy converges early (~iter 490) then plateaus healthily — reward is satur'
+
+## [2026-07-12T23:48:37.357434] add
+- **Pages:** the_engine_reward_plateaued_converged_early_diagnosis_is_expecte.md
+- **Summary:** created 'The engine "reward plateaued / converged early" diagnosis is expected teacher be'
+
+## [2026-07-12T23:48:37.357434] add
+- **Pages:** attitude_tracking_dominates_the_reward_every_shaping_penalty_tor.md
+- **Summary:** created 'Attitude tracking dominates the reward; every shaping penalty (torque/thruster/s'
+
+## [2026-07-12T23:48:37.357434] add
+- **Pages:** trpo_optimisation_is_healthy_and_well_conditioned_every_update_p.md
+- **Summary:** created 'TRPO optimisation is healthy and well-conditioned: every update passes line sear'
+
+## [2026-07-12T23:48:37.357434] add
+- **Pages:** the_engine_entropy_collapse_exploration_dead_flag_is_a_generic_h.md
+- **Summary:** created 'The engine "entropy collapse -> exploration dead" flag is a generic heuristic th'
+
+## [2026-07-12T23:48:37.357434] add
+- **Pages:** both_value_heads_converge_cleanly_from_large_initial_losses_no_c.md
+- **Summary:** created 'Both value heads converge cleanly from large initial losses; no critic divergenc'
+
+## [2026-07-12T23:48:37.357434] add
+- **Pages:** the_encoder_is_active_its_latent_has_not_collapsed_and_spans_the.md
+- **Summary:** created 'The encoder is active — its latent has not collapsed and spans the full softsign'
+
+## [2026-07-12T23:48:37.357434] add
+- **Pages:** policy_encoder_grad_norm_is_the_actor_path_gradient_into_the_enc.md
+- **Summary:** created '`Policy/encoder_grad_norm` is the ACTOR-path gradient into the encoder (TRPO sur'
+
+## [2026-07-12T23:48:37.357434] add
+- **Pages:** all_10_constraints_are_satisfied_for_the_whole_final_window_ever.md
+- **Summary:** created 'All 10 constraints are satisfied for the whole final window (every normalized ma'
+
+## [2026-07-12T23:48:37.357434] add
+- **Pages:** the_engine_barrier_penalty_spikes_0_1_flag_is_minor_the_barrier_.md
+- **Summary:** created 'The engine "barrier penalty spikes >0.1" flag is minor: the barrier is active bu'
+
+## [2026-07-12T23:48:37.357434] add
+- **Pages:** the_curriculum_sits_mid_progression_47_success_dr_still_widening.md
+- **Summary:** created 'The curriculum sits mid-progression (~47% success, DR still widening) with well-'
+
+## [2026-07-12T23:48:37.357434] add
+- **Pages:** mean_steady_state_error_stays_sub_degree_on_every_axis_at_every_.md
+- **Summary:** created 'Mean steady-state error stays sub-degree on every axis at every DR level; the su'
+
+## [2026-07-12T23:48:37.357434] add
+- **Pages:** the_hard_ood_dispersion_is_a_genuine_heavy_tail_confirmed_on_the.md
+- **Summary:** created 'The hard/OOD dispersion is a genuine heavy tail, confirmed on the raw per-env da'
+
+## [2026-07-12T23:48:37.357434] add
+- **Pages:** ss_jitter_ac_oscillation_is_small_and_roughly_flat_across_dr_an_.md
+- **Summary:** created 'ss_jitter (AC oscillation) is small and roughly flat across DR, an order below t'
+
+## [2026-07-12T23:48:37.357434] add
+- **Pages:** overshoot_of_step_decreases_as_dr_hardens_while_rise_time_length.md
+- **Summary:** created 'Overshoot (% of step) decreases as DR hardens while rise time lengthens slightly'
+
+## [2026-07-12T23:48:37.357434] add
+- **Pages:** the_trajectory_variance_bands_widen_monotonically_with_dr_hard_o.md
+- **Summary:** created 'The trajectory variance bands widen monotonically with DR (hard/OOD widest) — th'
+
+## [2026-07-12T23:48:37.357434] add
+- **Pages:** survival_is_100_at_every_level_including_ood_no_env_crashes_anyw.md
+- **Summary:** created 'Survival is 100% at every level including OOD — no env crashes anywhere in the s'
+
+## [2026-07-12T23:48:37.357434] add
+- **Pages:** the_ood_generalization_gap_ood_hard_is_modest_and_concentrated_i.md
+- **Summary:** created 'The OOD generalization gap (ood − hard) is modest and concentrated in the transi'
+
+## [2026-07-12T23:48:37.357434] add
+- **Pages:** the_sample_median_attitude_env_hugs_the_mean_trajectory_at_every.md
+- **Summary:** created 'The sample (median-attitude) env hugs the mean trajectory at every DR level — no'
+
+## [2026-07-13T03:07:41.018520] add
+- **Pages:** the_policy_converges_early_iter_490_then_plateaus_healthily_rewa.md
+- **Summary:** updated 'The policy converges early (~iter 490) then plateaus healthily — reward is satur'
+
+## [2026-07-13T03:07:41.018520] add
+- **Pages:** the_engine_reward_plateaued_converged_early_diagnosis_is_expecte.md
+- **Summary:** updated 'The engine "reward plateaued / converged early" diagnosis is expected teacher be'
+
+## [2026-07-13T03:07:41.018520] add
+- **Pages:** attitude_tracking_dominates_the_reward_every_shaping_penalty_tor.md
+- **Summary:** updated 'Attitude tracking dominates the reward; every shaping penalty (torque/thruster/s'
+
+## [2026-07-13T03:07:41.018520] add
+- **Pages:** trpo_optimisation_is_healthy_and_well_conditioned_every_update_p.md
+- **Summary:** updated 'TRPO optimisation is healthy and well-conditioned: every update passes line sear'
+
+## [2026-07-13T03:07:41.018520] add
+- **Pages:** the_engine_entropy_collapse_exploration_dead_flag_is_a_generic_h.md
+- **Summary:** updated 'The engine "entropy collapse -> exploration dead" flag is a generic heuristic th'
+
+## [2026-07-13T03:07:41.018520] add
+- **Pages:** both_value_heads_converge_cleanly_from_large_initial_losses_no_c.md
+- **Summary:** updated 'Both value heads converge cleanly from large initial losses; no critic divergenc'
+
+## [2026-07-13T03:07:41.018520] add
+- **Pages:** the_encoder_is_active_its_latent_has_not_collapsed_and_spans_the.md
+- **Summary:** updated 'The encoder is active — its latent has not collapsed and spans the full softsign'
+
+## [2026-07-13T03:07:41.018520] add
+- **Pages:** policy_encoder_grad_norm_is_the_actor_path_gradient_into_the_enc.md
+- **Summary:** updated '`Policy/encoder_grad_norm` is the ACTOR-path gradient into the encoder (TRPO sur'
+
+## [2026-07-13T03:07:41.018520] add
+- **Pages:** all_10_constraints_are_satisfied_for_the_whole_final_window_ever.md
+- **Summary:** updated 'All 10 constraints are satisfied for the whole final window (every normalized ma'
+
+## [2026-07-13T03:07:41.018520] add
+- **Pages:** the_engine_barrier_penalty_spikes_0_1_flag_is_minor_the_barrier_.md
+- **Summary:** updated 'The engine "barrier penalty spikes >0.1" flag is minor: the barrier is active bu'
+
+## [2026-07-13T03:07:41.018520] add
+- **Pages:** the_curriculum_sits_mid_progression_47_success_dr_still_widening.md
+- **Summary:** updated 'The curriculum sits mid-progression (~47% success, DR still widening) with well-'
+
+## [2026-07-13T03:07:41.018520] add
+- **Pages:** mean_steady_state_error_stays_sub_degree_on_every_axis_at_every_.md
+- **Summary:** updated 'Mean steady-state error stays sub-degree on every axis at every DR level; the su'
+
+## [2026-07-13T03:07:41.018520] add
+- **Pages:** the_hard_ood_dispersion_is_a_genuine_heavy_tail_confirmed_on_the.md
+- **Summary:** updated 'The hard/OOD dispersion is a genuine heavy tail, confirmed on the raw per-env da'
+
+## [2026-07-13T03:07:41.018520] add
+- **Pages:** ss_jitter_ac_oscillation_is_small_and_roughly_flat_across_dr_an_.md
+- **Summary:** updated 'ss_jitter (AC oscillation) is small and roughly flat across DR, an order below t'
+
+## [2026-07-13T03:07:41.018520] add
+- **Pages:** overshoot_of_step_decreases_as_dr_hardens_while_rise_time_length.md
+- **Summary:** updated 'Overshoot (% of step) decreases as DR hardens while rise time lengthens slightly'
+
+## [2026-07-13T03:07:41.018520] add
+- **Pages:** the_trajectory_variance_bands_widen_monotonically_with_dr_hard_o.md
+- **Summary:** updated 'The trajectory variance bands widen monotonically with DR (hard/OOD widest) — th'
+
+## [2026-07-13T03:07:41.018520] add
+- **Pages:** survival_is_100_at_every_level_including_ood_no_env_crashes_anyw.md
+- **Summary:** updated 'Survival is 100% at every level including OOD — no env crashes anywhere in the s'
+
+## [2026-07-13T03:07:41.018520] add
+- **Pages:** the_ood_generalization_gap_ood_hard_is_modest_and_concentrated_i.md
+- **Summary:** updated 'The OOD generalization gap (ood − hard) is modest and concentrated in the transi'
+
+## [2026-07-13T03:07:41.018520] add
+- **Pages:** the_sample_median_attitude_env_hugs_the_mean_trajectory_at_every.md
+- **Summary:** updated 'The sample (median-attitude) env hugs the mean trajectory at every DR level — no'
+
+## [2026-07-13T03:08:19.120555] query
+- **Pages:** next_experiment_workflow_pick_a_baseline_train_once_then_re_tune.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, experiment_output_directory_standard_logs_vs_experiments_index_t.md, baseline_consolidated_main_reference_trpo_baseline_260713_031325.md, constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md, real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md, action_bounding_is_justified_raw_gaussian_external_clamp_tanh_ru.md, baseline_repro_reproduces_teacher_deterministically_e4_control.md, experiment_idea_feed_o_t_into_the_encoder_alongside_p_t_state_co.md, experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md, experiment_launch_checklist_run_id_wandb_latest_alias_naming.md, experiment_result_recording_location_experiments_tree_is_ssot_no.md, leaky_integral_and_ema_bias_carry_over_the_mid_episode_command_r.md, constrained_albc_experiment_conventions.md, cross_run_reference_values_must_be_re_extracted_fresh_never_carr.md, onboard_measured_2026_07_06_arm_step_response_valid_sim_zeta_0_7.md, priv_obs_slim_stage_2_lead_contested_p_t_dims_quad_damp_lin_vel_.md, reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md, all_10_constraints_are_satisfied_for_the_whole_final_window_ever.md, attitude_tracking_dominates_the_reward_every_shaping_penalty_tor.md
+- **Summary:** query 'next experiment plan baseline' -> 20 of 99
+
+## [2026-07-13T03:18:23.784935] query
+- **Pages:** bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, dr_harder_ood_verdict_e2_best_survives_ood_the_harder_curriculum.md, engine_gap_heavy_tail_json_pct_peak_gt_thresh_exceeds_100_at_ood.md, dr_harder_campaign_synthesis_speed_kills_attitude_center_shift_o.md, kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md, doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md, eval_analysis_core_does_stats_adapter_does_heavy_tail.md, arm_a_measured_angle_joint1_constraint_recovers_not_diverges_the.md, joint1_stage_1_gate_go_drift_is_real_on_unlimited_physics_not_th.md, joint1_anti_drift_constrain_the_command_cumulative_arm_b_not_the.md, yaw_command_is_rate_not_angle_inherited_design_defensible_only_i.md, engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md, engine_gap_eval_npz_saves_no_raw_obs_std_privileged_blocks_exact.md, reward_md_6_error_buffers_reward_call_site_dt_scaling_theory_rev.md, engine_gap_omx_cli_gaps_found_re_analyzing_teacher_2026_06_06_ro.md, exp_analyze_must_run_analyze_training_py_for_training_side_diagn.md, reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md, ee_leak_0_k_anchor_0_does_not_blow_up_joint1_settle_pade_ik_clam.md, engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md
+- **Summary:** query 'hard-DR steady-state heavy-tail DC bias roll' -> 20 of 22
+
+## [2026-07-13T03:18:24.173391] query
+- **Pages:** teacher_dr_harder_yaw_is_the_only_heavy_tail_axis_roll_is_dc_bia.md, teacher_hard_dr_cv_explodes_without_heavy_tail_dc_bias_dispersio.md, joint1_cumulative_ipo_constraint_generalizes_drift_bounded_at_oo.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md, teacher_segmented_post_switch_roll_transient_jumps_under_hard_dr.md, student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md, teacher_dr_harder_doraemon_curriculum_froze_before_run_end_unuse.md, dr_harder_reward_decomposition_confirms_eval_trades_on_the_train.md, teacher_cross_axis_correlation_collapses_none_hard_axis_decorrel.md, constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md, constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md, sequential_overnight_campaign_wall_clock_budget_not_crashes_kill.md, joint1_cumulative_rotation_constraint_never_binds_policy_parks_a.md, teacher_encoder_0_dead_latent_dims_keys_on_lateral_cog_cob_offse.md, engine_generic_flags_entropy_collapse_barrier_spike_reward_plate.md
+- **Summary:** query 'hard-DR steady-state heavy-tail DC bias roll' -> 15 of 15
+
+## [2026-07-13T03:18:26.289240] query
+- **Pages:** engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md, engine_gap_analyze_training_py_needs_the_logs_run_dir_not_the_ex.md, engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md, engine_gap_eval_npz_saves_no_raw_obs_std_privileged_blocks_exact.md, engine_gap_flat_target_eval_records_joint1_trajectory_but_render.md, engine_gap_heavy_tail_json_pct_peak_gt_thresh_exceeds_100_at_ood.md, engine_gap_m1_critic_side_encoder_gradient_is_not_logged_policy_.md, engine_gap_omx_cli_gaps_found_re_analyzing_teacher_2026_06_06_ro.md, eval_analysis_core_does_stats_adapter_does_heavy_tail.md, exp_analyze_must_run_analyze_training_py_for_training_side_diagn.md, joint1_stage_1_gate_go_drift_is_real_on_unlimited_physics_not_th.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, arm_a_measured_angle_joint1_constraint_recovers_not_diverges_the.md, dr_harder_ood_verdict_e2_best_survives_ood_the_harder_curriculum.md, kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md
+- **Summary:** query 'engine-gap' -> 15 of 15
+
+## [2026-07-13T03:25:20.714945] query
+- **Pages:** buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, action_bounding_is_justified_raw_gaussian_external_clamp_tanh_ru.md, ee_leak_0_k_anchor_0_does_not_blow_up_joint1_settle_pade_ik_clam.md, joint1_centering_reward_is_removed_on_main_6_term_but_alive_on_e.md
+- **Summary:** query 'above ac39c8 acting actions also anchor applies approved' -> 5 of 64
+
+## [2026-07-13T03:25:21.469432] query
+- **Pages:** constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, e5_alpha075_ood_per_axis_generalization_gap_universal_failure_ro.md, reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md, doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md
+- **Summary:** query 'actuation adopt after alpha append assignment att_norm authority' -> 5 of 108
+
+## [2026-07-13T03:27:21.982526] query
+- **Pages:** buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, action_bounding_is_justified_raw_gaussian_external_clamp_tanh_ru.md, ee_leak_0_k_anchor_0_does_not_blow_up_joint1_settle_pade_ik_clam.md, joint1_centering_reward_is_removed_on_main_6_term_but_alive_on_e.md
+- **Summary:** query 'above ac39c8 acting actions also anchor applies approved' -> 5 of 64
+
+## [2026-07-13T03:27:31.345160] query
+- **Pages:** constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, e5_alpha075_ood_per_axis_generalization_gap_universal_failure_ro.md, reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md, doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md
+- **Summary:** query 'actuation adopt after alpha append assignment att_norm authority' -> 5 of 108
+
+## [2026-07-13T03:33:17.361855] add
+- **Pages:** baseline_consolidated_main_reference_trpo_baseline_260713_031325.md
+- **Summary:** updated 'baseline (consolidated main) reference: trpo_baseline_260713_031325'
+
+## [2026-07-13T03:53:22.227623] add
+- **Pages:** gpu_memory_4096_env_albc_training_needs_11_3_gb_rtx_4060_8gb_can.md
+- **Summary:** created 'GPU memory: 4096-env ALBC training needs ~11.3 GB — RTX 4060 8GB cannot co-run a second experiment'
+

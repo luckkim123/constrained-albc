@@ -1,0 +1,16 @@
+{
+  "campaign_id": "p7_tail",
+  "created": "2026-07-13T03:31:30.729064+00:00",
+  "planned": [
+    {
+      "proposal_id": "next-20260713-122215",
+      "summary": "e1_latdr: control_delay_steps (0,0)->(0,3) latency DR toggle-on vs trpo_baseline_260713_031325 (GPU0)",
+      "added_at": "2026-07-13T03:31:31.106705+00:00"
+    },
+    {
+      "proposal_id": "next-20260713-122216",
+      "summary": "e2_biasobs: expose _bias_ema as 3D obs (69->72D, default-off toggle) vs trpo_baseline_260713_031325 (GPU1)",
+      "added_at": "2026-07-13T03:31:31.486749+00:00"
+    }
+  ]
+}
