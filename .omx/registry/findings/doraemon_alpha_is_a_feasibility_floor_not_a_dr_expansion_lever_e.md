@@ -2,7 +2,7 @@
 title: "DORAEMON alpha is a feasibility FLOOR, not a DR-expansion lever (E5 dr-harder)"
 tags: ["doraemon", "alpha", "curriculum", "kl_ub", "dr-harder"]
 created: 2026-06-07T02:50:59.890630
-updated: 2026-07-13T05:40:13.709549
+updated: 2026-07-13T05:49:59.299800
 sources: ["diagnose-20260607-114548"]
 links: []
 category: decision
@@ -21,3 +21,9 @@ E5 (trpo_260606_225859) raised DORAEMON alpha 0.50->0.75; all other knobs at tea
 ## Update (2026-07-13T05:40:13.709549)
 
 RECURRING QUESTION SETTLED (2026-07-13, user asked on trpo_baseline_260713_031325): 'success_rate only peaks ~0.6 then declines — should it not reach ~0.9 before declining? adjust performance_lb/kl_ub?' ANSWER: the observed shape IS the designed alpha=0.5 closed-loop equilibrium, not a defect. Measured on baseline TB: success 0.003(it500) -> 0.627 PEAK(it3258) -> 0.429(it4999), while DORAEMON/entropy_before stays flat (-45.9) until success crosses alpha~0.5 at it~2000-2500 and THEN rises monotonically (-44.5 -> -30.1) — i.e. the controller starts widening exactly when success clears the floor, and the widening pulls success back down toward alpha. Success parking at 0.9 under alpha=0.5 would be the DEFECT (unused headroom, the E5 pattern above). The 'should reach 0.9' intuition belongs to alpha~0.9 configs (binary-success DORAEMON setups); this project gates on return>=performance_lb=250 (mean return 232.6, so the gate sits near the return median) with alpha=0.5 (env.yaml:508-510). Knob evidence: kl_ub-up rejected (dr_harder E1, speed kills attitude); alpha-up tried (E5, this page: floor not lever); performance_lb has no evidence of miscalibration (eval healthy: sub-degree means, 100% survival). The only open question is BUDGET (curriculum still expanding at it5000) — probed by proposal next-20260713-142604 (resume +5000 iters, zero config delta). Do NOT reflexively retrain baseline+in-flight runs over this curve shape.
+
+---
+
+## Update (2026-07-13T05:49:59.299800)
+
+REFERENCE-VERIFIED (2026-07-13, /workspace/references/doraemon official repo + arXiv:2311.01885 full text, ICLR 2024): the '0.9-peak-then-decay' expectation for success_rate is NOT the paper's canonical shape. (1) Paper sec 5.2: 'the value of alpha=0.5 generalizes sufficiently well ... selected this value for all our experiments' — ALL 8 reproduce commands use succRate50 (reproduce_paper_results.md:26-33); succRate75/90 presets exist but are unused in main results. Our alpha=0.5 matches the paper exactly. (2) Reference algorithm hovers success AT the bound by design: train_until_performance_lb (default true, default.yaml:12) skips all updates until first feasibility (doraemon.py:833-843), then IS-estimated success >= alpha gates each expansion (doraemon.py:719-755) — realized success reads at/below the bound right after each widening. marinelab's hard_performance_constraint + inverted-problem fallback (doraemon.py:430-445) is the same structure; baseline TB confirms the gate (entropy flat until success ~0.5 at it~2200, rising from ~2500). (3) Peak height above alpha is an overshoot ARTIFACT of check cadence: reference trains ~100k SAC env-steps per DORAEMON check (7.5M/75 iters) so success can overshoot far past the bound on the narrow init distribution; ours checks every 250 KL-bounded TRPO updates, overshoot +0.13 (peak 0.627). Peak height is not a correctness criterion. (4) Paper kl_ub 0.001-0.1 per env vs ours 0.12 — same family, units differ (per-check). (5) OPEN CHECK ITEM (no action now): paper App A.1 calibrates J_LB as ~80% of a no-DR nominal policy's return; our performance_lb=250 has never been checked against a measured no-DR nominal return.
