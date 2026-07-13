@@ -1,13 +1,15 @@
 ---
 title: "experiment launch checklist: run_id / wandb / latest-alias naming"
-tags: ["albc", "conventions", "launch", "wandb", "run_id", "campaign", "branch"]
+tags: ["albc", "conventions", "launch", "wandb", "run_id", "campaign", "branch", "project", "baseline", "comparison"]
 created: 2026-06-07T05:58:58.720019
-updated: 2026-06-07T06:10:13.430011
+updated: 2026-07-13T05:42:02.267825
 sources: []
 links: ["constrained_albc_experiment_conventions.md", "experiment_output_directory_standard_logs_vs_experiments_index_t.md", "experiment_result_recording_location_experiments_tree_is_ssot_no.md"]
 category: convention
 confidence: high
 schemaVersion: 1
+qualityScore: 100
+qualityReasons: []
 ---
 
 # experiment launch checklist: run_id / wandb / latest-alias naming
@@ -32,3 +34,34 @@ CHECKLIST (verify each BEFORE walking away from a launch):
 4. latest alias lives INSIDE the group directory. For a grouped tree <exp>/<group>/<run_id>, the alias must be <exp>/<group>/latest, not <exp>/latest one level up. update_latest_symlink keys off the launch dir, so after launch run readlink on the alias and confirm it points at this run.
 
 POST-LAUNCH VERIFY (one command each): ls the run folder name (rule 1), readlink the group/latest alias (rule 4), confirm the wandb run landed in the campaign project with the right group/tags (rule 3). If any fails, fix immediately -- the longer a mis-named run sits, the more downstream references (campaign README, report.md, manifest.json) bind to the wrong id.
+
+---
+
+## Update (2026-07-13T05:42:02.267825)
+
+## Rule 3 clarification (2026-07-13): the campaign = the comparison set, NOT the phase/group
+
+Rule 3 said "one project per campaign" but did not pin down what draws the campaign boundary, so
+"new phase P7 -> new project p7_tail" read as legitimate. It is not. Concrete drift: P7 launched
+`--run_group p7_tail --log_project_name p7_tail agent.run_name=e1_latdr` while its baseline lived in a
+separate group `baseline` (project `baseline`). Both under `<exp>=albc_trpo_teacher`, two groups -> two
+projects -> the web UI cannot overlay them (group filter is within-project only; no move-run API).
+
+The fixed reading:
+- **The wandb project (`--log_project_name`) = the set of runs you will overlay in one chart** — a baseline
+  and every experiment you compare against it. It is NOT a phase (P6/P7) and NOT the `--run_group`.
+- **`--log_project_name` defaults to the group name ONLY for a single-group campaign** (dr_harder:
+  campaign == group == project, baseline_repro control lived in that same group/project, so it worked).
+  The general assertion "wandb project = group name" is TRUE only in that single-group case; do not
+  generalize it.
+- **When a baseline and its comparison experiments sit in different `--run_group`s, set
+  `--log_project_name` to the shared campaign name for all of them**, and distinguish baseline vs
+  experiment by `--run_group` + `run.name` + tags. Never let the project follow the group there.
+- Already split (like P7 vs baseline): fix is wandb UI Move-to-project only (SDK cannot move/copy/delete
+  across projects). Do not kill a running run to "fix" its project — project is fixed at launch; move it
+  after it finishes, or (no-move workaround) build a wandb Report pulling both projects' panels.
+
+Pre-launch check to add to the rule-3 gate: before a comparison launch, run
+`--log_project_name <baseline's project>` (confirm it matches the baseline you intend to overlay), not a
+fresh per-phase name.
+

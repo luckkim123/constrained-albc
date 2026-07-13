@@ -1572,3 +1572,7 @@
 - **Pages:** doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md
 - **Summary:** updated 'DORAEMON alpha is a feasibility FLOOR, not a DR-expansion lever (E5 dr-harder)'
 
+## [2026-07-13T05:42:02.267825] add
+- **Pages:** experiment_launch_checklist_run_id_wandb_latest_alias_naming.md
+- **Summary:** updated 'experiment launch checklist: run_id / wandb / latest-alias naming'
+
