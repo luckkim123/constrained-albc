@@ -130,6 +130,19 @@ def test_materializer_on_bumps_dims_and_extends_vectors_with_zeros():
     assert n_max[-3:] == (0.0, 0.0, 0.0)
 
 
+def test_materializer_bumps_space_when_noise_model_none_eval_path():
+    # Regression: eval nulls observation_noise_model, but the 72D policy still needs the +3
+    # space bump. The materializer must bump the space and skip the tuple extension (no model
+    # to extend) instead of AttributeError-ing on None.noise_cfg. The DR/fault base_std is
+    # reconstructed at 72D in ALBCEnv._obs_noise_base_std.
+    apply_bias_ema_obs = _load_apply_bias_ema_obs()
+    cfg = _make_fake_cfg(use_bias_ema_obs=True, observation_space=69, k_bias=-2.0)
+    cfg.observation_noise_model = None
+    apply_bias_ema_obs(cfg)
+    assert cfg.observation_space == 72
+    assert cfg.observation_noise_model is None
+
+
 def test_materializer_raises_when_k_bias_zero():
     apply_bias_ema_obs = _load_apply_bias_ema_obs()
     cfg = _make_fake_cfg(use_bias_ema_obs=True, observation_space=69, k_bias=0.0)

@@ -432,6 +432,26 @@ class ALBCEnv(DirectRLEnv):
             enable_actuation_noise=self.cfg.actuation_noise.enable,
         )
 
+    def _obs_noise_base_std(self) -> torch.Tensor:
+        """Always-on obs-noise std as a tensor, width-tracking use_bias_ema_obs (69D or 72D).
+
+        Reads the live noise model's std when present (training). Eval nulls
+        observation_noise_model (eval.py sets it to None), so there fall back to the
+        _OBS_NOISE_STD constant -- padded with 3 zeros when use_bias_ema_obs extends obs to
+        72D, mirroring apply_bias_ema_obs. This keeps the DR/fault obs-noise layer active at
+        eval exactly as before the bias_ema change (obs_noise_scale is a swept DORAEMON dim),
+        preserving parity with the baseline eval. Mirrors full_dof/albc_env.py's constant read.
+        """
+        nm = self.cfg.observation_noise_model
+        if nm is not None:
+            return nm.noise_cfg.std.clone().to(self.device)
+        from .config import _OBS_NOISE_STD
+
+        base = list(_OBS_NOISE_STD)
+        if getattr(self.cfg, "use_bias_ema_obs", False):
+            base = base + [0.0, 0.0, 0.0]
+        return torch.tensor(base, device=self.device)
+
     def _init_faults(self) -> None:
         """Initialize per-env fault buffers (None when fault injection is disabled).
 
@@ -445,9 +465,9 @@ class ALBCEnv(DirectRLEnv):
             self._joint_health = torch.ones(self.num_envs, device=self.device)
             # base_std for the extra per-env sensor noise = the always-on obs-noise std,
             # so a fault scales the EXISTING sensor-noise pattern rather than inventing one.
-            # Read from cfg (not a fresh _OBS_NOISE_STD import) so it stays the SAME width as
-            # the always-on model even when use_bias_ema_obs extends it 69D -> 72D.
-            self._fault_obs_base_std = self.cfg.observation_noise_model.noise_cfg.std.clone().to(self.device)
+            # Width-tracks the always-on model (69D, or 72D when use_bias_ema_obs extends it);
+            # survives eval nulling observation_noise_model (see _obs_noise_base_std).
+            self._fault_obs_base_std = self._obs_noise_base_std()
         else:
             self._sensor_noise_scale = None
             self._joint_health = None
@@ -504,12 +524,12 @@ class ALBCEnv(DirectRLEnv):
         # _reset_physics from sampled["obs_noise_scale"] (training) or a uniform draw over
         # obs_noise_scale_range (eval fallback, mirroring the fault/events path). base_std
         # is the always-on obs-noise std (69D, or 72D when use_bias_ema_obs extends it) so
-        # the DR layer scales the SAME per-channel pattern -- read from cfg rather than a
-        # fresh _OBS_NOISE_STD import, mirroring _init_faults above. DR disabled entirely
+        # the DR layer scales the SAME per-channel pattern (see _obs_noise_base_std, which
+        # survives eval nulling observation_noise_model). DR disabled entirely
         # -> None (no extra obs noise, byte-identical).
         if self.cfg.randomization.enable:
             self._dr_obs_noise_scale = torch.zeros(self.num_envs, device=self.device)
-            self._dr_obs_base_std = self.cfg.observation_noise_model.noise_cfg.std.clone().to(self.device)
+            self._dr_obs_base_std = self._obs_noise_base_std()
         else:
             self._dr_obs_noise_scale = None
             self._dr_obs_base_std = None

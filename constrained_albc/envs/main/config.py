@@ -617,9 +617,14 @@ def apply_bias_ema_obs(cfg) -> None:
             "updated otherwise (see ALBCEnv._get_rewards' `if self.cfg.reward.k_bias != 0.0` gate)"
         )
     cfg.observation_space += 3
-    zeros3 = (0.0, 0.0, 0.0)
-    noise_cfg = cfg.observation_noise_model.noise_cfg
-    bias_cfg = cfg.observation_noise_model.bias_noise_cfg
-    noise_cfg.std = tuple(noise_cfg.std) + zeros3
-    bias_cfg.n_min = tuple(bias_cfg.n_min) + zeros3
-    bias_cfg.n_max = tuple(bias_cfg.n_max) + zeros3
+    # eval nulls observation_noise_model (eval.py sets it to None) while the 72D policy still
+    # needs the space bump above. There is then no noise model to width-extend; the DR/fault
+    # base_std is reconstructed at 72D in ALBCEnv._obs_noise_base_std. Skip the tuple extension
+    # when the model is absent (training keeps it -> byte-identical there).
+    if cfg.observation_noise_model is not None:
+        zeros3 = (0.0, 0.0, 0.0)
+        noise_cfg = cfg.observation_noise_model.noise_cfg
+        bias_cfg = cfg.observation_noise_model.bias_noise_cfg
+        noise_cfg.std = tuple(noise_cfg.std) + zeros3
+        bias_cfg.n_min = tuple(bias_cfg.n_min) + zeros3
+        bias_cfg.n_max = tuple(bias_cfg.n_max) + zeros3
