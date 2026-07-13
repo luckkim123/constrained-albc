@@ -1596,3 +1596,67 @@
 - **Pages:** action_bounding_is_justified_raw_gaussian_external_clamp_tanh_ru.md
 - **Summary:** updated 'action bounding is justified: raw gaussian + external clamp (tanh runaway avoided)'
 
+## [2026-07-13T10:06:18.148103] query
+- **Pages:** cross_run_reference_values_must_be_re_extracted_fresh_never_carr.md, reward_md_6_error_buffers_reward_call_site_dt_scaling_theory_rev.md, teacher_dr_harder_doraemon_curriculum_froze_before_run_end_unuse.md, uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload_.md, hydro_dr_train_eval_sampling_mismatch_is_real_but_left_as_is_opt.md, doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md, experiment_launch_checklist_run_id_wandb_latest_alias_naming.md, kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md, engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, train_py_run_group_creates_the_group_layer_no_more_manual_post_m.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md, dr_harder_ood_verdict_e2_best_survives_ood_the_harder_curriculum.md, e5_alpha075_ood_per_axis_generalization_gap_universal_failure_ro.md, experiment_output_directory_standard_logs_vs_experiments_index_t.md, failure_dr_join_now_covers_fault_channels_not_just_dr_per_env_fa.md, hmm_regime_count_separates_dr_harder_runs_overfit_vs_healthy.md, buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md, doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md, engine_gap_flat_target_eval_records_joint1_trajectory_but_render.md
+- **Summary:** query 'eval doraemon-dr load per-run distribution cross-run comparability' -> 20 of 140
+
+## [2026-07-13T10:06:18.846968] query
+- **Pages:** doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md, doraemon_optimize_entropy_accept_can_leak_the_success_floor_late.md, doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md, frontier_seeking_dr_curriculum_literature_survey_adr_currot_acce.md, ocean_nominal_shift_collapses_actor_entropy_e2_dr_harder.md, teacher_dr_harder_doraemon_curriculum_froze_before_run_end_unuse.md, our_doraemon_original_both_entropy_max_center_can_move_kl_ub_is_.md, engine_generic_flags_entropy_collapse_barrier_spike_reward_plate.md, uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload_.md, engine_gap_analyze_training_deep_plot_has_2_blank_panels_inconsi.md, hmm_regime_count_separates_dr_harder_runs_overfit_vs_healthy.md, the_curriculum_sits_mid_progression_47_success_dr_still_widening.md, constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md, dr_harder_ood_verdict_e2_best_survives_ood_the_harder_curriculum.md, reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md, reward_md_6_error_buffers_reward_call_site_dt_scaling_theory_rev.md, action_bounding_is_justified_raw_gaussian_external_clamp_tanh_ru.md, e5_alpha075_ood_per_axis_generalization_gap_universal_failure_ro.md, kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md
+- **Summary:** query 'DORAEMON curriculum stall success rate below alpha mode infeasible entropy collapse' -> 20 of 111
+
+## [2026-07-13T10:08:05.594876] add
+- **Pages:** eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md
+- **Summary:** created 'eval.py static --doraemon-dr grades each run on its OWN learned DR — cross-run hard/ood is non-comparable, only none is fair'
+
+## [2026-07-13T10:08:06.059795] add
+- **Pages:** an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md
+- **Summary:** created 'an off-DORAEMON channel that costs return stalls the curriculum below the alpha floor (mode -2 entire run)'
+
+## [2026-07-13T10:08:21.544030] add
+- **Pages:** eval_py_static_doraemon_dr_anchors_each_dr_level_to_the_run_s_ow.md
+- **Summary:** created "`eval.py static --doraemon-dr` anchors each DR level to the RUN'S OWN learned cu"
+
+## [2026-07-13T10:08:21.544030] add
+- **Pages:** at_the_matched_none_level_e1_tracks_markedly_worse_on_every_atti.md
+- **Summary:** created 'At the matched `none` level e1 tracks markedly worse on every attitude axis; the'
+
+## [2026-07-13T10:08:21.544030] add
+- **Pages:** jitter_ac_oscillation_is_where_the_delay_bites_hardest_and_it_is.md
+- **Summary:** created 'Jitter (AC oscillation) is where the delay bites hardest and it is NOT confounde'
+
+## [2026-07-13T10:08:21.544030] add
+- **Pages:** reward_composition_is_healthy_in_shape_tracking_term_dominates_e.md
+- **Summary:** created 'Reward composition is healthy in shape (tracking term dominates, every penalty ~'
+
+## [2026-07-13T10:08:21.544030] add
+- **Pages:** optimizer_mechanics_are_healthy_line_search_always_succeeds_kl_c.md
+- **Summary:** created 'Optimizer mechanics are healthy (line search always succeeds, KL controlled) but'
+
+## [2026-07-13T10:08:21.544030] add
+- **Pages:** both_critics_converge_to_small_stable_losses_the_constraint_mach.md
+- **Summary:** created 'Both critics converge to small stable losses — the constraint machinery (cost cr'
+
+## [2026-07-13T10:08:21.544030] add
+- **Pages:** the_encoder_latent_is_alive_and_bounded_not_collapsed_to_a_const.md
+- **Summary:** created 'The encoder latent is alive and bounded (not collapsed to a constant), so the de'
+
+## [2026-07-13T10:08:21.544030] add
+- **Pages:** all_10_constraints_active_with_healthy_complementary_slackness_o.md
+- **Summary:** created 'All 10 constraints active with healthy complementary slackness (one binding, mos'
+
+## [2026-07-13T10:08:21.544030] add
+- **Pages:** the_curriculum_stalled_in_the_infeasible_branch_for_the_entire_r.md
+- **Summary:** created 'The curriculum STALLED in the infeasible branch for the entire run and never rec'
+
+## [2026-07-13T10:08:21.544030] add
+- **Pages:** mechanism_the_0_60_ms_delay_costs_10_return_pinning_most_episode.md
+- **Summary:** created 'Mechanism: the 0–60 ms delay costs ~10% return, pinning most episodes below perf'
+
+## [2026-07-13T10:08:21.544030] add
+- **Pages:** e1_s_raw_npz_heavy_tail_is_much_smaller_than_the_baseline_s_at_h.md
+- **Summary:** created "e1's raw-npz heavy-tail is much smaller than the baseline's at hard and ood, but"
+
+## [2026-07-13T10:08:21.544030] add
+- **Pages:** the_one_place_the_tail_signal_is_real_and_adverse_ood_env_with_p.md
+- **Summary:** created 'The one place the tail signal is real and adverse: ood #env with peak |error_rol'
+
