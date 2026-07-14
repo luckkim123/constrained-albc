@@ -541,7 +541,7 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # kl_ub 0.06 -> 0.12: doubles the per-step trust region so the distribution widens fast
     # enough to compensate for the slower expansion that the raised lb induces. Both levers move
     # together by design -- lb alone makes DR easier, kl_ub alone leaves success_rate pinned at 1.
-    doraemon: DoraemonCfg = DoraemonCfg(enable=True, kl_ub=0.12, performance_lb=250.0, step_interval=250)
+    doraemon: DoraemonCfg = DoraemonCfg(enable=True, kl_ub=0.12, performance_lb=200.0, step_interval=250)
 
     # ==========================================================================
     # Payload
