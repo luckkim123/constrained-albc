@@ -62,6 +62,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Thruster allocation matrix was a physically wrong plant model (2026-07-14, blocks the
+  post-TAM baseline retrain): the horizontal channels were mis-modeled two ways a column
+  permutation alone (commit 238932c) could not fix. (1) The ESC permutation mis-assigned 3
+  of 4 horizontal channels; the 2026-07-06 B1 rotation measurement gives m1<-T1, m2<-T3,
+  m4<-T2, m5<-T0, so `_ESC_CHANNEL_ORDER` (4,0,1,5,2,3)->(4,1,3,5,2,0). (2) The Mz (yaw) row
+  was all `+0.144` (every horizontal thruster contributing the same yaw sign), but the real
+  robot's diagonal thruster pairs counter-rotate -- a 2-2 sign split (m1,m4=-0.144;
+  m2,m5=+0.144). Because a column permutation is sign-preserving, the Fx/Fy/Mz row VALUES had
+  to be rewritten in `_BASE_ALLOCATION_MATRIX`, not just reordered. Live matrix independently
+  recomputed from the literals: all four horizontal + both vertical channels match the
+  measurement (main + full_dof, byte-identical block; opus reviewer re-derived: PASS). Old
+  checkpoints are invalid under the new column meaning -> retrain from scratch (this is the
+  correction that `teacher_baseline_opt` + e1-e4 trained without; those runs are void as
+  absolute results). STILL OPEN, not fixed here: vertical Fz/My single-motor dual-ESC row
+  redesign (blocked on m4 remeasurement), IMU 45deg frame, TAM/max_thrust DR band. Baseline
+  anchor: tag `baseline-260714-pre-tam-rewrite`.
 - Thruster first-order lag advanced at 1/4 speed (P4 sim-fix, 2026-07-12): `albc_env.py`
   called `ThrusterModel.apply_dynamics(cmds, self.physics_dt)` from `_pre_physics_step`,
   which runs once per env step -- elapsed time between calls is `step_dt = physics_dt *
