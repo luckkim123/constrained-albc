@@ -1880,3 +1880,27 @@
 - **Pages:** next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md, action_bounding_is_justified_raw_gaussian_external_clamp_tanh_ru.md, experiment_idea_feed_o_t_into_the_encoder_alongside_p_t_state_co.md, experiment_output_directory_standard_logs_vs_experiments_index_t.md, reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md, constraint_viol_trajectory_barrier_sign_metrics_4_10_starts_at_d.md, constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md, experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md, experiment_result_recording_location_experiments_tree_is_ssot_no.md, leaky_integral_and_ema_bias_carry_over_the_mid_episode_command_r.md, next_experiment_workflow_pick_a_baseline_train_once_then_re_tune.md, real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md, uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload_.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md, buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md, incident_post_mortem_teacher_baseline_opt_e1_e4_trained_on_a_tam.md, kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md, priv_obs_slim_stage_2_lead_contested_p_t_dims_quad_damp_lin_vel_.md, reward_cost_parallel_structure_mostly_mirroring_two_real_couplin.md
 - **Summary:** query 'await gated bucket learning dynamics experiment roster' -> 20 of 136
 
+## [2026-07-14T09:55:25.068251] add
+- **Pages:** tam_columns_must_match_robot_firmware_esc_channel_order_reorder_.md
+- **Summary:** updated 'TAM columns must match robot firmware ESC channel order (reorder + retrain, not a mixer permutation)'
+
+## [2026-07-14T09:55:52.971012] add
+- **Pages:** tam_vertical_single_motor_dual_esc_measured_2026_07_05.md
+- **Summary:** updated 'TAM vertical single motor dual ESC measured 2026-07-05'
+
+## [2026-07-14T09:55:53.590020] add
+- **Pages:** imu_45deg_offset_pitch_negation_sim_uncompensated_2026_07_05.md
+- **Summary:** updated 'IMU 45deg offset pitch negation sim uncompensated 2026-07-05'
+
+## [2026-07-14T09:55:54.109606] add
+- **Pages:** sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md
+- **Summary:** updated 'sim hydro nominal is analytical (not measured); IMU+pressure can anchor rotation/heave but not surge/sway/TAM'
+
+## [2026-07-14T09:56:26.815912] add
+- **Pages:** baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md
+- **Summary:** updated 'Baseline open experiment-leads backlog (beyond heavy-tail): triage by value x launchability with blockers'
+
+## [2026-07-14T09:56:27.306248] add
+- **Pages:** open_actionable_ledger_read_before_any_sim_plant_code_change_or_.md
+- **Summary:** updated 'OPEN-ACTIONABLE LEDGER: read before any sim-plant code change or baseline launch (TAM/IMU HARD-gate + experiment backlog)'
+

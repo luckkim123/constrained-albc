@@ -2,12 +2,15 @@
 title: "TAM columns must match robot firmware ESC channel order (reorder + retrain, not a mixer permutation)"
 tags: []
 created: 2026-07-03T07:26:21.665355
-updated: 2026-07-05T15:41:21
+updated: 2026-07-14T09:55:25.068251
 sources: []
 links: ["thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md", "actuator_hardware_identification_arm_xw540_t260_board_measured_p.md"]
 category: convention
 confidence: high
 schemaVersion: 1
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
+status: resolved
 ---
 
 # TAM columns must match robot firmware ESC channel order (reorder + retrain, not a mixer permutation)
@@ -75,3 +78,9 @@ VERIFICATION LEDGER. 3 independent adversarial verifiers (ultracode workflow, co
 결론 한줄: **이건 순열(238932c) 문제가 아니라 sim TAM이 물리적으로 틀린 행렬이었다. 수평 3행 값 + 순열 둘 다 실측으로 재작성해야 한다.**
 
 관련: [[tam_vertical_single_motor_dual_esc_measured_2026_07_05]], [[imu_45deg_offset_pitch_negation_sim_uncompensated_2026_07_05]]
+
+---
+
+## Update (2026-07-14T09:55:25.068251)
+
+Horizontal TAM APPLIED in commit 3bb042b (fix(tam): rewrite horizontal TAM rows + ESC permutation to 2026-07-06 B1 measurement). Verified post-hoc in envs/main/config.py: Mz row (0.144,-0.144,-0.144,0.144) = 2-2 sign split (was all-+0.144, physically wrong); _ESC_CHANNEL_ORDER=(4,1,3,5,2,0) = m1<-T1,m2<-T3,m4<-T2,m5<-T0 (2026-07-06 B1), superseding refuted 238932c. Resolved 2026-07-14 by code verification. NOTE: only HORIZONTAL rows are applied; vertical Fz/My + IMU 45deg + TAM-DR-band remain open (see the open-actionable ledger).

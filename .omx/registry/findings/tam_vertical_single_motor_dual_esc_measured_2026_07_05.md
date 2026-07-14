@@ -2,12 +2,16 @@
 title: "TAM vertical pair is one physical motor with dual-ESC wiring (measured 2026-07-05)"
 tags: []
 created: 2026-07-05T15:24:24
-updated: 2026-07-05T15:24:24
+updated: 2026-07-14T09:55:52.971012
 sources: []
 links: ["tam_columns_must_match_robot_firmware_esc_channel_order_reorder_.md", "next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md"]
 category: reference
 confidence: high
 schemaVersion: 1
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
+status: needs-apply-before-retrain
+blocked-on: "m4 remeasurement (HW fault) + full B1 vertical translation"
 ---
 
 # TAM vertical pair is one physical motor with dual-ESC wiring (measured 2026-07-05)
@@ -25,3 +29,9 @@ POSITION (wasd frame, launch-agent w=forward convention): the vertical thruster 
 CAVEAT (do not conflate): m4's intermittent/faulty behavior (see the horizontal measurement in [[tam_columns_must_match_robot_firmware_esc_channel_order_reorder_]]'s checkpoint) is a SEPARATE per-unit hardware fault on a different (horizontal) channel -- unrelated to this vertical dual-ESC finding, and not evidence of a design flaw. Sim should still model a healthy actuator; unit-specific faults belong in FaultInjectionCfg, not the nominal TAM.
 
 STATUS: measured, high confidence for the "one physical motor, dual-ESC" finding and the left-right placement. The exact TAM row rewrite (Fz/My values) is NOT yet implemented -- pending full B1 completion (translation axes, m4 remeasurement) before any config.py edit, per the "no premature TAM rewrite" constraint on this session.
+
+---
+
+## Update (2026-07-14T09:55:52.971012)
+
+Flagged needs-apply-before-retrain 2026-07-14. Verified NOT applied: envs/main/config.py:93 Fz row (0,0,0,0,1,1) still models T4,T5 as two independent heave channels; header comment lines 86-88 confirm "OPEN (unchanged): Fz/My vertical rows ... redesign blocked on m4 remeasurement". Horizontal TAM (3bb042b) was applied piecemeal; this vertical row was NOT. Any from-scratch reference baseline must apply this together or explicitly record pre-vertical-TAM.

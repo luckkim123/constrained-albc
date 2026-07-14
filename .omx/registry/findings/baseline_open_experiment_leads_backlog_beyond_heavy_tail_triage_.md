@@ -2,14 +2,15 @@
 title: "Baseline open experiment-leads backlog (beyond heavy-tail): triage by value x launchability with blockers"
 tags: ["backlog", "experiment-roster", "next-experiment", "heavy-tail", "doraemon-per-axis-gate", "command-box", "tam-dr", "sim-to-real", "triage", "teacher-baseline"]
 created: 2026-07-14T07:57:24.357274
-updated: 2026-07-14T07:57:24.357274
+updated: 2026-07-14T09:56:26.815912
 sources: ["diagnose-20260713-081707"]
 links: []
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 80
-qualityReasons: ["no-source-marker"]
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
+status: needs-experiment
 ---
 
 # Baseline open experiment-leads backlog (beyond heavy-tail): triage by value x launchability with blockers
@@ -45,3 +46,8 @@ heavy-tail thread. Reference baseline: trpo_baseline_260713_031325 (consolidated
 
 Of everything above, only two are both high-value and unblocked today: (1) command-box extension eval (zero-GPU; without it the whole heavy-tail success/failure judgment is made on the inner half of the trained envelope), and (2) DORAEMON per-axis gate / lb recalibration (engine code, but it unblocks every future return-costly probe that currently stalls like e1). The sim-to-real gaps (TAM DR, thruster curve, hydro) may matter MORE than heavy-tail for real deployment but are design-first / measurement-gated, not launchable now. Formalize any chosen lead through exp-design (single variable, H1/H2 discriminator, human-gated launch); do NOT auto-launch.
 
+---
+
+## Update (2026-07-14T09:56:26.815912)
+
+Flagged needs-experiment 2026-07-14: this is the open experiment-leads backlog (command-box eval, DORAEMON per-axis gate, latency-as-DR-dim, state_std z-cond, etc.). Soft actionable -- every next-experiment/summary pass must enumerate these leads (omx wiki list --status needs-experiment) and carry or explicitly defer them, so the heavy-tail-flatten drop cannot recur.

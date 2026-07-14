@@ -2,12 +2,16 @@
 title: "sim hydro nominal is analytical (not measured); IMU+pressure can anchor rotation/heave but not surge/sway/TAM"
 tags: ["measurement", "system-id", "domain-randomization", "sim-to-real", "damping", "free-decay", "TAM", "sensors", "fault-tolerant-control", "thruster", "load-cell", "arm-step-response"]
 created: 2026-06-14T07:38:12.841674
-updated: 2026-07-02T08:51:07.153669
+updated: 2026-07-14T09:55:54.109606
 sources: []
 links: []
 category: reference
 confidence: high
 schemaVersion: 1
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
+status: needs-apply-before-retrain
+blocked-on: "source a defensible TAM moment-arm / max_thrust DR band (no load cell to measure)"
 ---
 
 # sim hydro nominal is analytical (not measured); IMU+pressure can anchor rotation/heave but not surge/sway/TAM
@@ -60,3 +64,8 @@ PRACTICAL VERDICT (no load cell):
 
 Cross-links: actuator_hardware_identification_arm_xw540_t260_board_measured_p.md (arm XW540-T260 board-measured registers / discrete-PID structural gap), thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md (thrust deadband + nonlinear curve, off-by-default).
 
+---
+
+## Update (2026-07-14T09:55:54.109606)
+
+Flagged needs-apply-before-retrain 2026-07-14 for the ledger item "TAM moment-arm + max_thrust DR band". Verified NOT applied: envs/main/config.py has NO DR range for allocation_matrix or max_thrust (max_thrust=50.0 fixed, line 139); the DR fields present are joint_damping/payload_mass/ocean_current/thruster_health only. TAM/max_thrust is the only systematic-bias axis with no DR. Add a physically-defensible band before a reference retrain, or record pre-TAM-DR.

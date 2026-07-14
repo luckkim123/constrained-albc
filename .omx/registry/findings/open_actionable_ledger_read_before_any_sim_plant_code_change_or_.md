@@ -2,14 +2,14 @@
 title: "OPEN-ACTIONABLE LEDGER: read before any sim-plant code change or baseline launch (TAM/IMU HARD-gate + experiment backlog)"
 tags: ["open-actionable", "ledger", "pre-retrain-gate", "launch-gate", "needs-action", "tam", "imu", "tam-dr", "single-source"]
 created: 2026-07-14T08:29:04.373111
-updated: 2026-07-14T08:29:04.373111
+updated: 2026-07-14T09:56:27.306248
 sources: []
 links: ["incident_post_mortem_teacher_baseline_opt_e1_e4_trained_on_a_tam.md", "tam_columns_must_match_robot_firmware_esc_channel_order_reorder.md", "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md", "imu_45deg_offset_pitch_negation_sim_uncompensated_2026_07_05.md", "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage.md"]
 category: convention
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
 ---
 
 # OPEN-ACTIONABLE LEDGER: read before any sim-plant code change or baseline launch (TAM/IMU HARD-gate + experiment backlog)
@@ -52,3 +52,8 @@ DESIGN "this baseline is pre-<item>" for each unapplied one. Never launch a "ref
 baseline with a silent open HARD-gate item. The structural enforcement of this rule is the deferred
 harness fix: /workspace/.sp/plans/2026-07-14-wiki-family-backlog-mechanism-handoff.md.
 
+---
+
+## Update (2026-07-14T09:56:27.306248)
+
+STATUS SYNC 2026-07-14 (wiki-status mechanism now live in omx v0.7.0): HARD-GATE item 1 (TAM horizontal 3-row rewrite + ESC permutation) was APPLIED in commit 3bb042b -> its page is now status:resolved; the table row above is stale on that point. Items 2-4 remain OPEN and are now machine-enumerable via status:needs-apply-before-retrain (tam_vertical / imu_45deg / sim_hydro_nominal-TAM-DR-band) -- omx queue-launch will REFUSE until each is applied or explicitly --ack-gate <slug>. The experiment backlog page is status:needs-experiment. This ledger stays the human roster; the per-item statuses are the machine gate.
