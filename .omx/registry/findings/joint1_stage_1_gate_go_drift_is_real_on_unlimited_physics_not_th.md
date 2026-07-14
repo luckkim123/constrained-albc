@@ -2,14 +2,15 @@
 title: "joint1 Stage-1 gate GO: drift is real on unlimited physics, not the +-360deg wall artifact"
 tags: ["joint1", "drift", "cumulative-rotation", "unlimited-physics", "stage-1-gate", "ee-action", "ttf-correction"]
 created: 2026-07-12T18:26:08.556497
-updated: 2026-07-12T18:38:25.025563
+updated: 2026-07-14T12:07:34.730666
 sources: ["diagnose-20260713-031533"]
 links: ["joint1_anti_drift_design_history.md", "engine_gap_flat_target_eval_records_joint1_trajectory_but_render.md"]
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 80
-qualityReasons: ["no-source-marker"]
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
+status: needs-experiment
 ---
 
 # joint1 Stage-1 gate GO: drift is real on unlimited physics, not the +-360deg wall artifact
@@ -38,3 +39,9 @@ Related: [[joint1_anti_drift_design_history]] (entry 7), engine-gap [[engine_gap
 ## Update (2026-07-12T18:38:25.025563)
 
 CORRECTION (post-review, report-reviewer catch): the fast-fail metric is 'failing-env median time-to-failure' = 7.2/9.7/9.1/6.8 s at none/soft/medium/hard — FLAT-to-decreasing, ~7-10s at every DR level. Do NOT use the median-over-all-64-with-survivors-filled-at-155s (which reads 7.2/10.5/15.8/55.0) — that statistic is dominated by the survival fraction, not failure speed, and misleadingly implies '55s survival at hard'. Survival fraction RISES with DR (1/64 -> 28/64), a SEPARATE fact from fail-ttf (which falls). Attitude-error magnitude (sqrt(err_roll^2+err_pitch^2) pre-term window mean, from data_<level>.npz) = 60.8/55.7/53.8/53.5 deg (supersedes the earlier eval-log '48-55deg' which used a different definition/window).
+
+---
+
+## Update (2026-07-14T12:07:34.730666)
+
+Backlog tag (Phase 0): open lead — Stage 2 (re-measure drift on station-keeping / ee-action baseline) not yet run; do NOT auto-proceed. Soft, not run-invalidating.

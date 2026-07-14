@@ -2,12 +2,15 @@
 title: "Thruster nonlinear curve (T200 sim-to-real): off-by-default deadband + signed-square toggle (d34debc)"
 tags: []
 created: 2026-07-01T10:05:27.006437
-updated: 2026-07-02T06:42:32.542076
+updated: 2026-07-14T12:07:34.220227
 sources: []
 links: ["actuator_hardware_identification_arm_xw540_t260_board_measured_p.md", "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md"]
 category: reference
 confidence: high
 schemaVersion: 1
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
+status: needs-experiment
 ---
 
 # Thruster nonlinear curve (T200 sim-to-real): off-by-default deadband + signed-square toggle (d34debc)
@@ -33,3 +36,9 @@ NEXT / CONSEQUENCE: (1) push is user-gated (d34debc UNPUSHED). (2) Enabling the 
 ## Update (2026-07-02T06:42:32.542076)
 
 ADDENDUM 2026-07-02 (deploy analysis -> KEEP OFF until bench-measured). Decision: leave enable_thrust_curve=False (the default; main has no curve) UNTIL a real command->thrust curve is bench-measured. WHY the curve is different from fault (the key asymmetry): fault/health is a DR-style training PERTURBATION -- an approximate model is still a net win and is irrelevant at deploy (no fault at deploy). The curve is a PLANT MODEL (command->force map): the policy learns a command strategy that PRESUMES this force response, so at deploy the real thruster must reproduce the SAME curve or the policy is optimized for the WRONG plant. Consequence: an INACCURATE curve can be WORSE than the linear default -- the linear default is a KNOWN gap, a wrong curve MANUFACTURES a new gap. Since signed-square+deadband(0.075) has no measured/literature backing (provenance unverified per this card), curve-ON pays off ONLY IF it actually approximates the real T200, which is unverified -> stay OFF. DEPLOY question answered: "just deploy as before (linear passthrough)?" is correct ONLY while curve is OFF; if a curve-trained policy is ever deployed, either the real thruster must naturally realize that curve (path A) or the deploy code must re-apply the same _thrust_command (path B) -- "as before" is NOT automatically safe for a curve-trained policy. RE-ENABLE PATH: bench-measure real command->thrust -> confirm or replace the shape in _thrust_command -> then train curve-ON (only then does the curve REDUCE the gap). Same conclusion as the arm-PD side: sim-to-real gap body = hardware dynamic response, must be measured. cf [[actuator_hardware_identification_arm_xw540_t260_board_measured_p]] [[sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an]].
+
+---
+
+## Update (2026-07-14T12:07:34.220227)
+
+Backlog tag (Phase 0): open lead — real T200 curve implemented but off-by-default; bench-measure command->thrust before enabling. Not run-invalidating (feature off), so soft, not blocking.
