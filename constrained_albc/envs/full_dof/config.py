@@ -72,25 +72,35 @@ _FULL_DOF_CONSTRAINT_TERMS: list[ConstraintTermCfg] = [
 ]
 
 
-# Original sim thruster order (as authored from the ALBC ROS control package
-# config/TAM.yaml). Columns are sim thrusters T0-T5. Preserved verbatim for
-# physical audit; the live allocation_matrix below is derived from this by
-# reordering columns via _ESC_CHANNEL_ORDER.
+# Thruster allocation matrix in ORIGINAL SIM thruster order (columns T0-T5);
+# the live allocation_matrix is derived by reordering columns to the robot
+# firmware ESC channel order via _ESC_CHANNEL_ORDER.
+#
+# Horizontal Fx/Fy/Mz rows carry the 2026-07-06 B1 measured per-channel wrench
+# (rotation measurement + xacro geometry + a/d frame convention), authored so
+# that after _ESC_CHANNEL_ORDER the four horizontal channels m1,m2,m4,m5 carry
+# their measured values. Mz is a 2-2 sign split (diagonal thruster pairs
+# counter-rotate) -- the old all-+0.144 model was physically wrong, and a column
+# permutation is sign-preserving, so this required a row-value rewrite.
+# OPEN (unchanged, known-imperfect): Fz/My vertical rows still model T4,T5 as two
+# independent heave channels (real robot is one motor, dual-ESC -- redesign blocked
+# on m4 remeasurement); horizontal Mx/My +-0.007 coupling is unverified sim
+# carry-over, kept pending measurement.
 _BASE_ALLOCATION_MATRIX: tuple[tuple[float, ...], ...] = (
-    (0.707, -0.707, 0.707, -0.707, 0.0, 0.0),  # Fx surge
-    (-0.707, -0.707, 0.707, 0.707, 0.0, 0.0),  # Fy sway
-    (0.0, 0.0, 0.0, 0.0, 1.0, 1.0),  # Fz heave
-    (0.007, 0.007, -0.007, -0.007, 0.0, 0.0),  # Mx roll
-    (0.007, -0.007, 0.007, -0.007, 0.145, -0.145),  # My pitch
-    (0.144, 0.144, 0.144, 0.144, 0.0, 0.0),  # Mz yaw
+    (0.707, 0.707, -0.707, -0.707, 0.0, 0.0),  # Fx surge
+    (-0.707, 0.707, -0.707, 0.707, 0.0, 0.0),  # Fy sway
+    (0.0, 0.0, 0.0, 0.0, 1.0, 1.0),  # Fz heave (OPEN: single-motor dual-ESC redesign pending)
+    (0.007, 0.007, -0.007, -0.007, 0.0, 0.0),  # Mx roll (horizontal coupling unverified, kept)
+    (0.007, -0.007, 0.007, -0.007, 0.145, -0.145),  # My pitch (vertical OPEN; horiz coupling unverified)
+    (0.144, -0.144, -0.144, 0.144, 0.0, 0.0),  # Mz yaw (2-2 sign split, measured 2026-07-06)
 )
 
 # ESC channel order: new column j = original sim column _ESC_CHANNEL_ORDER[j].
 # Firmware (agent-jetson) wiring: m0,m3 = vertical (heave); m1,m2,m4,m5 = horizontal.
-# Vertical pair (m0<-T4, m3<-T5) and "which channels are vertical" are CONFIRMED.
-# Horizontal-4 individual mapping (m1<-T0, m2<-T1, m4<-T2, m5<-T3) is PROVISIONAL,
-# pending B1 watertank measurement -- edit ONLY this tuple to update it.
-_ESC_CHANNEL_ORDER: tuple[int, ...] = (4, 0, 1, 5, 2, 3)
+# Vertical pair (m0<-T4, m3<-T5) CONFIRMED. Horizontal mapping (m1<-T1, m2<-T3,
+# m4<-T2, m5<-T0) is the 2026-07-06 B1 measured assignment, superseding the earlier
+# provisional m1<-T0,m2<-T1,m4<-T2,m5<-T3 (commit 238932c: 3 of 4 mis-assigned).
+_ESC_CHANNEL_ORDER: tuple[int, ...] = (4, 1, 3, 5, 2, 0)
 
 
 def _reorder_columns(
@@ -108,8 +118,10 @@ def _reorder_columns(
 class ALBCThrusterCfg(ThrusterCfg):
     """ALBC 6-thruster configuration.
 
-    TAM from the ALBC ROS control package (config/TAM.yaml) (verified against
-    actuators.xacro). Columns are then reordered to the robot firmware ESC wiring
+    TAM originally from the ALBC ROS control package (config/TAM.yaml, verified
+    against actuators.xacro); the horizontal Fx/Fy/Mz rows were later rewritten to
+    the 2026-07-06 B1 measured wrench (see the _BASE_ALLOCATION_MATRIX header
+    comment). Columns are then reordered to the robot firmware ESC wiring
     via _ESC_CHANNEL_ORDER, so the live column order no longer matches the raw
     TAM.yaml/xacro sim order (original sim order preserved in
     _BASE_ALLOCATION_MATRIX). Thruster parameters use BlueROV T200 as baseline;
