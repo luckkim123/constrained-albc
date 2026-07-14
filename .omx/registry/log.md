@@ -1712,3 +1712,95 @@
 - **Pages:** one_adverse_signal_e2_has_more_envs_with_a_transient_peak_error_.md
 - **Summary:** created 'One adverse signal: e2 has MORE envs with a transient peak |error_roll| > 20deg '
 
+## [2026-07-13T23:34:22.396946] sync-profile
+- **Pages:** profile.md
+- **Summary:** regenerated from .omx/profile/
+
+## [2026-07-13T23:34:22.780923] query
+- **Pages:** training_log_analysis_engine_reference_adapter.md, engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md, exp_analyze_must_run_analyze_training_py_for_training_side_diagn.md, analysis_engine_map_what_is_grow_able_vs_off_limits.md, engine_gap_analyze_training_py_needs_the_logs_run_dir_not_the_ex.md, engine_gap_analyze_training_deep_plot_has_2_blank_panels_inconsi.md, experiment_output_directory_standard_logs_vs_experiments_index_t.md, engine_gap_heavy_tail_json_pct_peak_gt_thresh_exceeds_100_at_ood.md, engine_gap_omx_cli_gaps_found_re_analyzing_teacher_2026_06_06_ro.md, engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md, engine_gap_m1_critic_side_encoder_gradient_is_not_logged_policy_.md, eval_analysis_core_does_stats_adapter_does_heavy_tail.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, the_standard_training_analysis_groups_reward_decomposition_trpo_.md, engine_generic_flags_entropy_collapse_barrier_spike_reward_plate.md, constraint_viol_trajectory_barrier_sign_metrics_4_10_starts_at_d.md, coverage_lint_ok_is_a_floor_not_a_quality_gate_re_analysis_uses_.md, engine_gap_flat_target_eval_records_joint1_trajectory_but_render.md, engine_gap_status_board.md, failure_dr_join_now_covers_fault_channels_not_just_dr_per_env_fa.md
+- **Summary:** query 'analysis engine reference adapter how to analyze training log' -> 20 of 164
+
+## [2026-07-13T23:34:23.173665] query
+- **Pages:** bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, teacher_dr_harder_yaw_is_the_only_heavy_tail_axis_roll_is_dc_bia.md, teacher_hard_dr_cv_explodes_without_heavy_tail_dc_bias_dispersio.md, joint1_cumulative_ipo_constraint_generalizes_drift_bounded_at_oo.md, reward_penalty_terms_thruster_smoothness_bias_block_3_temporal_b.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md, bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md, teacher_segmented_post_switch_roll_transient_jumps_under_hard_dr.md, the_heavy_tail_ratio_is_not_reduced_by_observability_25_8x_vs_23.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, e1_s_raw_npz_heavy_tail_is_much_smaller_than_the_baseline_s_at_h.md, e5_alpha075_ood_per_axis_generalization_gap_universal_failure_ro.md, eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md, baseline_consolidated_main_reference_trpo_baseline_260713_031325.md, kl_ub_0_12_trades_attitude_for_translation_e1_dr_harder.md, dr_harder_ood_verdict_e2_best_survives_ood_the_harder_curriculum.md, the_hard_ood_dispersion_is_a_genuine_heavy_tail_confirmed_on_the.md, dr_harder_campaign_index.md
+- **Summary:** query 'hard DR steady-state DC-bias heavy-tail roll max median top-6' -> 20 of 164
+
+## [2026-07-13T23:34:23.568303] query
+- **Pages:** eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md, cross_run_reference_values_must_be_re_extracted_fresh_never_carr.md, teacher_dr_harder_doraemon_curriculum_froze_before_run_end_unuse.md, experiment_launch_checklist_run_id_wandb_latest_alias_naming.md, reward_md_6_error_buffers_reward_call_site_dt_scaling_theory_rev.md, doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md, eval_py_static_doraemon_dr_anchors_each_dr_level_to_the_run_s_ow.md, hydro_dr_train_eval_sampling_mismatch_is_real_but_left_as_is_opt.md, kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md, train_py_run_group_creates_the_group_layer_no_more_manual_post_m.md, an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md, hmm_regime_count_separates_dr_harder_runs_overfit_vs_healthy.md, bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, dr_harder_ood_verdict_e2_best_survives_ood_the_harder_curriculum.md, kl_ub_0_12_trades_attitude_for_translation_e1_dr_harder.md, teacher_cross_axis_correlation_collapses_none_hard_axis_decorrel.md, analysis_engine_map_what_is_grow_able_vs_off_limits.md, arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md, dr_harder_campaign_index.md, experiment_output_directory_standard_logs_vs_experiments_index_t.md
+- **Summary:** query 'eval hard DORAEMON-derived run-relative comparability confound cross-run fair point' -> 20 of 150
+
+## [2026-07-13T23:52:42.715919] add
+- **Pages:** e3_extend10k_regressed_the_policy_training_budget_is_not_the_p7_.md
+- **Summary:** created 'e3 extend10k REGRESSED the policy — training budget is NOT the p7_tail tail lever; keep 5000 iters'
+
+## [2026-07-13T23:52:43.111604] add
+- **Pages:** doraemon_over_widens_then_oscillates_when_a_converged_teacher_is.md
+- **Summary:** created 'DORAEMON over-widens then oscillates when a converged teacher is given extra budget (chases alpha floor, overshoots, contracts)'
+
+## [2026-07-13T23:52:53.410508] add
+- **Pages:** e3_s_end_of_training_dr_is_materially_wider_than_baseline_s_on_e.md
+- **Summary:** created "e3's end-of-training DR is materially WIDER than baseline's on every curriculum "
+
+## [2026-07-13T23:52:53.410508] add
+- **Pages:** at_the_fair_none_level_e3_is_2_9_5_1x_worse_than_baseline_on_eve.md
+- **Summary:** created 'At the fair `none` level e3 is 2.9–5.1x WORSE than baseline on every attitude ax'
+
+## [2026-07-13T23:52:53.410508] add
+- **Pages:** the_e3_baseline_gap_narrows_as_the_dr_level_rises_att_norm_4_42x.md
+- **Summary:** created 'The e3/baseline gap NARROWS as the DR level rises (att_norm 4.42x@none → 1.38x@h'
+
+## [2026-07-13T23:52:53.410508] add
+- **Pages:** at_none_e3_s_per_env_median_roll_error_is_2_80_vs_baseline_0_18_.md
+- **Summary:** created "At `none`, e3's per-env median roll error is 2.80° vs baseline 0.18° (15.5x). Th"
+
+## [2026-07-13T23:52:53.410508] add
+- **Pages:** even_on_e3_s_own_harder_hard_exam_the_tail_is_worse_than_baselin.md
+- **Summary:** created "Even on e3's OWN (harder) hard exam the tail is WORSE than baseline's, not bette"
+
+## [2026-07-13T23:52:53.410508] add
+- **Pages:** the_regression_is_dc_bias_and_oscillation_e3_s_none_roll_ss_jitt.md
+- **Summary:** created "The regression is DC-bias AND oscillation: e3's none roll ss_jitter is 1.19° vs "
+
+## [2026-07-13T23:52:53.410508] add
+- **Pages:** survival_is_100_at_every_level_for_both_runs_the_regression_is_t.md
+- **Summary:** created 'Survival is 100% at every level for both runs — the regression is tracking-quali'
+
+## [2026-07-13T23:52:53.410508] add
+- **Pages:** e3_shows_no_genuine_robustness_gain_because_the_only_fair_cross_.md
+- **Summary:** created 'e3 shows no genuine robustness gain: because the only fair cross-run point (`non'
+
+## [2026-07-13T23:52:53.410508] add
+- **Pages:** per_step_reward_fell_from_7_74_to_6_69_14_after_3x_the_budget_at.md
+- **Summary:** created 'Per-step reward fell from 7.74 to 6.69 (−14%) after 3x the budget: attitude-trac'
+
+## [2026-07-13T23:52:53.410508] add
+- **Pages:** episode_return_over_the_extension_is_non_monotone_and_net_negati.md
+- **Summary:** created 'Episode return over the extension is non-monotone and net-negative: `Train/mean_'
+
+## [2026-07-13T23:52:53.410508] add
+- **Pages:** trpo_optimisation_itself_stayed_healthy_and_well_conditioned_to_.md
+- **Summary:** created 'TRPO optimisation itself stayed healthy and well-conditioned to the end — the re'
+
+## [2026-07-13T23:52:53.410508] add
+- **Pages:** both_value_heads_stayed_converged_slightly_higher_losses_than_ba.md
+- **Summary:** created 'Both value heads stayed converged; slightly higher losses than baseline reflect '
+
+## [2026-07-13T23:52:53.410508] add
+- **Pages:** the_encoder_latent_stayed_active_and_non_collapsed_through_the_e.md
+- **Summary:** created 'The encoder latent stayed active and non-collapsed through the extension — its d'
+
+## [2026-07-13T23:52:53.410508] add
+- **Pages:** all_10_ipo_constraints_remained_satisfied_at_the_end_of_the_exte.md
+- **Summary:** created 'All 10 IPO constraints remained satisfied at the end of the extension (every nor'
+
+## [2026-07-13T23:52:53.410508] add
+- **Pages:** the_extension_did_keep_advancing_the_curriculum_past_baseline_en.md
+- **Summary:** created 'The extension DID keep advancing the curriculum past baseline (entropy_before −3'
+
+## [2026-07-13T23:52:53.410508] add
+- **Pages:** this_is_the_precise_mechanism_by_which_more_budget_regressed_the.md
+- **Summary:** created 'This is the precise mechanism by which more budget REGRESSED the policy rather t'
+
+## [2026-07-13T23:59:24.291196] add
+- **Pages:** train_py_max_iterations_under_resume_is_iters_from_resume_not_an.md
+- **Summary:** created 'train.py --max_iterations under --resume is iters-FROM-resume, not an absolute target (e3 got +10000 not +5000)'
+
