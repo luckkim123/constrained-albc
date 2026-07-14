@@ -1,0 +1,28 @@
+# omx tree schema — codified from the existing tree by `omx tree-codify`.
+# Review before approval: level NAMES are placeholders (level1..levelN);
+# rename them, and add run_dir.entries / deprecated as this project needs.
+# v1 limitation: run_id labels are dash-only ([a-z0-9-]); a writer that
+# emits underscore-bearing labels gets the label tail attributed to the
+# tag (affects only tag-presence checks, never a crash).
+version: 1
+pending_approval: true
+trees:
+  index:
+    root: experiments
+    levels: [level1, level2, "level3?"]
+  data:
+    root: logs/rsl_rl
+    # levels not inferred (single-branch ambiguity) — fill these before relying on tree-audit against the data tree
+    levels: []
+run_id:
+  grammar: "<label>[_<tag>]_<ts>"
+  ts_format: "%y%m%d_%H%M%S"
+  tag: required
+links:
+  train: {kind: data_pointer, required: true}
+run_dir:
+  requires: [manifest.json]
+  eval_pattern: "eval/<mode>_<ts>"
+  eval_modes: [static]
+walk:
+  ignore: ["legacy", "_*"]

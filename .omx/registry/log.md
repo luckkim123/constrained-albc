@@ -1804,3 +1804,7 @@
 - **Pages:** train_py_max_iterations_under_resume_is_iters_from_resume_not_an.md
 - **Summary:** created 'train.py --max_iterations under --resume is iters-FROM-resume, not an absolute target (e3 got +10000 not +5000)'
 
+## [2026-07-14T07:04:42.426308] add
+- **Pages:** group_folder_name_equals_wandb_project_name_equals_experiment_pu.md
+- **Summary:** updated 'Group folder name equals wandb project name equals experiment purpose (unified naming, 2026-07-14 revision)'
+
