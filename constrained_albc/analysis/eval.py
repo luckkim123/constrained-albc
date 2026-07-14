@@ -90,6 +90,31 @@ sp_static = subparsers.add_parser("static", description="Evaluate DR robustness 
 _add_common(sp_static)
 sp_static.add_argument("--segment_duration", type=float, default=5.0, help="Duration per segment in seconds.")
 sp_static.add_argument(
+    "--att-amp-deg",
+    type=float,
+    default=None,
+    help="Static eval attitude step amplitude in deg; default = full trained box (trajectory.ATT_AMP_DEG).",
+)
+sp_static.add_argument(
+    "--yaw-rate-amp",
+    type=float,
+    default=None,
+    help="Static eval yaw-rate step amplitude in rad/s; default = full trained box (trajectory.YAW_RATE_AMP).",
+)
+sp_static.add_argument(
+    "--save-policy-obs",
+    action="store_true",
+    default=False,
+    help="Also store the realized 69D policy obs per step into data_<level>.npz (additive; off by default).",
+)
+sp_static.add_argument(
+    "--save-action-std",
+    action="store_true",
+    default=False,
+    help="Also store the per-step action std (from the non-sampling Gaussian distribution) into "
+    "data_<level>.npz (additive; off by default).",
+)
+sp_static.add_argument(
     "--doraemon-dr",
     action=argparse.BooleanOptionalAction,
     default=True,
@@ -580,6 +605,8 @@ def run_evaluation(
     step_dt,
     num_envs,
     device,
+    save_policy_obs: bool = False,
+    save_action_std: bool = False,
 ) -> dict:
     """Run one evaluation pass and collect per-step data.
 
@@ -587,7 +614,18 @@ def run_evaluation(
     - roll_deg, pitch_deg: attitude commands (deg -> rad)
     - vx, vy, vz: linear velocity commands (m/s, body frame)
     - yaw_rate: yaw rate command (rad/s)
+
+    save_policy_obs / save_action_std: purely additive diagnostics. When set, also
+    accumulate the realized 69D policy obs (pre-step) and the per-step action std
+    (from a non-sampling distribution populate, NOT .act() -- the stepped action stays
+    the deterministic act_inference mean either way) into the returned dict under
+    "policy_obs" / "action_std". Off by default -> no extra memory, no extra keys.
     """
+    if save_action_std and not hasattr(policy_nn, "_update_distribution"):
+        raise AttributeError(
+            f"--save-action-std set but policy {type(policy_nn).__name__} has no "
+            "_update_distribution (not a PolicyBase-derived policy)"
+        )
     total_steps = len(time_s)
     steps_per_seg = int(segment_duration / step_dt)
     target_roll_deg = targets["roll_deg"]
@@ -622,6 +660,11 @@ def run_evaluation(
     # Termination
     terminated = np.zeros((total_steps, num_envs), dtype=bool)
     time_to_failure = np.full(num_envs, float("nan"))
+    # Optional raw policy-obs / action-std logs (populated only when the matching
+    # flag is set; empty lists -> excluded from `out` below -> byte-identical npz
+    # to before this diagnostic existed).
+    policy_obs_log: list[np.ndarray] = []
+    action_std_log: list[np.ndarray] = []
 
     # Force full reset via throwaway step
     raw_env.episode_length_buf[:] = raw_env.max_episode_length
@@ -662,6 +705,14 @@ def run_evaluation(
 
         with torch.inference_mode():
             actions = policy(obs)  # ablated action (z_ablation active) -> stepped into env
+            if save_policy_obs:
+                policy_obs_log.append(obs["policy"].detach().cpu().numpy())
+            if save_action_std:
+                # Non-sampling: populates policy_nn.distribution from the already-computed
+                # (deterministic) `actions` mean, does NOT call .act()/.sample(), and does
+                # NOT change `actions` itself (env.step still steps the same tensor below).
+                policy_nn._update_distribution(actions)
+                action_std_log.append(policy_nn.action_std.detach().cpu().numpy())
             if _ablation_active:
                 _prev = policy_nn._z_ablation
                 policy_nn._z_ablation = None  # restore TRUE z for one diagnostic forward
@@ -773,6 +824,12 @@ def run_evaluation(
             "lin_vel_z": lin_vel_z,
             "lin_vel_norm": lin_vel_norm,
         })
+    # Optional raw diagnostics (additive; keys present only when the matching
+    # --save-* flag was set, so default output is byte-identical to before).
+    if policy_obs_log:
+        out["policy_obs"] = np.stack(policy_obs_log, axis=0)  # (T, num_envs, policy_obs_dim: 69 main / 87 full_dof)
+    if action_std_log:
+        out["action_std"] = np.stack(action_std_log, axis=0)  # (T, num_envs, action_dim)
     return out
 
 
@@ -1167,6 +1224,8 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     time_s, targets, segment_names, warmup_steps = build_step_trajectory(
         segment_duration=args_cli.segment_duration,
         step_dt=step_dt,
+        att_amp_deg=args_cli.att_amp_deg,
+        yaw_rate_amp=args_cli.yaw_rate_amp,
     )
     if getattr(args_cli, "flat_target", False):
         # Pure station-keeping: zero every command channel so the only thing that
@@ -1179,7 +1238,9 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         f" = {len(time_s)} steps ({time_s[-1]:.0f}s)"
         f", warmup={WARMUP_SEGMENTS} segs ({warmup_steps} steps)"
     )
-    print(f"[INFO] Targets: att +-{ATT_AMP_DEG}deg, lin +-{LIN_VEL_AMP}m/s, yaw +-{YAW_RATE_AMP}rad/s")
+    _att_amp_used = ATT_AMP_DEG if args_cli.att_amp_deg is None else args_cli.att_amp_deg
+    _yaw_rate_amp_used = YAW_RATE_AMP if args_cli.yaw_rate_amp is None else args_cli.yaw_rate_amp
+    print(f"[INFO] Targets: att +-{_att_amp_used}deg, lin +-{LIN_VEL_AMP}m/s, yaw +-{_yaw_rate_amp_used}rad/s")
 
     # ---- Run evaluation for each DR level ----
     all_data = {}
@@ -1216,6 +1277,8 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
             step_dt=step_dt,
             num_envs=num_envs,
             device=device,
+            save_policy_obs=args_cli.save_policy_obs,
+            save_action_std=args_cli.save_action_std,
         )
         all_data[level] = data
 

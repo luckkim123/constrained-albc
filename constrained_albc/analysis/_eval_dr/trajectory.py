@@ -11,15 +11,17 @@ from __future__ import annotations
 
 import numpy as np
 
-ATT_AMP_DEG = 15.0  # Attitude step amplitude (degrees)
+ATT_AMP_DEG = 30.0  # Attitude step amplitude (degrees); full trained att envelope (config att_cmd_rp_range +-pi/6)
 LIN_VEL_AMP = 0.25  # Linear velocity step amplitude (m/s)
-YAW_RATE_AMP = 0.25  # Yaw rate step amplitude (rad/s)
+YAW_RATE_AMP = 0.5  # Yaw rate step amplitude (rad/s); full trained yaw envelope (config yaw_rate_cmd_range +-0.5)
 WARMUP_SEGMENTS = 1  # Initial warmup segments (inter-block warmups also excluded via _classify_segment)
 
 
 def build_step_trajectory(
     segment_duration: float,
     step_dt: float,
+    att_amp_deg: float | None = None,
+    yaw_rate_amp: float | None = None,
 ) -> tuple[np.ndarray, dict[str, np.ndarray], list[str], int]:
     """Build 6-DOF step-change target trajectory with inter-block warmups.
 
@@ -32,15 +34,21 @@ def build_step_trajectory(
     Lin vel block (10 segs): 2x2x2 corners (+/-v) + (0,0,0) twice.
     Yaw block (4 segs): (+w, -w, 0, 0).
 
+    Args:
+        segment_duration: seconds per segment.
+        step_dt: seconds per sim step.
+        att_amp_deg: override for ATT_AMP_DEG (module default when None).
+        yaw_rate_amp: override for YAW_RATE_AMP (module default when None).
+
     Returns:
         time_s: 1D time array (seconds).
         targets: dict of 1D target arrays keyed by channel name.
         seg_names: list of segment labels.
         warmup_steps: number of warmup steps to skip in metrics/plots.
     """
-    a = ATT_AMP_DEG
+    a = ATT_AMP_DEG if att_amp_deg is None else att_amp_deg
     v = LIN_VEL_AMP
-    w = YAW_RATE_AMP
+    w = YAW_RATE_AMP if yaw_rate_amp is None else yaw_rate_amp
 
     # (roll_deg, pitch_deg, vx, vy, vz, yaw_rate, name)
     # NOTE: every block now starts with a logged zero-command segment so the
