@@ -8,6 +8,11 @@
       "proposal_id": "next-20260715-015350",
       "summary": "performance_lb 250->200: recalibrate DORAEMON return threshold to corrected-TAM plant p25 (revive stalled exploration)",
       "added_at": "2026-07-14T17:00:30.895854+00:00"
+    },
+    {
+      "proposal_id": "next-20260715-141045",
+      "summary": "P-B1 bias_ema obs (use_bias_ema_obs False->True, 69->72D) re-validate vs post-TAM raised roll floor; H1 obs-limited floor drops / H2 authority-limited or transient-trade",
+      "added_at": "2026-07-15T05:16:50.241653+00:00"
     }
   ]
 }

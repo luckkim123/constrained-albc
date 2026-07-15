@@ -1,0 +1,19 @@
+{
+  "acknowledged_gates": [
+    "imu_45deg_offset_pitch_negation_sim_uncompensated_2026_07_05.md",
+    "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md",
+    "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md"
+  ],
+  "gpu_gate": "nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits",
+  "launch_delta": "config.py:544 performance_lb=250.0->200.0; all else identical to baseline (kl_ub=0.12, alpha=0.5, min_std=0.05, entropy_coef=0.003, step_interval=250, seed 30, 4096 envs, 5000 iters)",
+  "open_leads": [
+    "baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md",
+    "joint1_stage_1_gate_go_drift_is_real_on_unlimited_physics_not_th.md",
+    "thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md"
+  ],
+  "proposal_id": "next-20260715-015350",
+  "queued_at": "2026-07-14T17:06:27.429940+00:00",
+  "queued_commit": "8c075846ea532eea314ce1488cafcda533b801d0",
+  "schema_version": 1,
+  "status": "pending approval"
+}

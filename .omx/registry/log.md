@@ -2180,3 +2180,19 @@
 - **Pages:** posttam_constraint_set_is_healthy_8_active_guards_exactly_2_dorm.md
 - **Summary:** created 'Posttam constraint set is healthy: 8 active guards + exactly 2 dormant (rp_vel_settling, manipulability)'
 
+## [2026-07-15T05:09:52.978836] query
+- **Pages:** bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, tam_plant_correctness_fix_collapses_the_void_hard_dr_roll_heavy_.md, xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e.md, incident_post_mortem_teacher_baseline_opt_e1_e4_trained_on_a_tam.md, dr_harder_ood_verdict_e2_best_survives_ood_the_harder_curriculum.md, e3_extend10k_regressed_the_policy_training_budget_is_not_the_p7_.md, engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md, joint1_stage_1_gate_go_drift_is_real_on_unlimited_physics_not_th.md, reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md, arm_a_measured_angle_joint1_constraint_recovers_not_diverges_the.md, doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md, yaw_command_is_rate_not_angle_inherited_design_defensible_only_i.md, engine_gap_eval_adapter_heavy_tail_lacks_median_based_tail_ratio.md, reward_md_6_error_buffers_reward_call_site_dt_scaling_theory_rev.md, engine_gap_omx_cli_gaps_found_re_analyzing_teacher_2026_06_06_ro.md, joint1_anti_drift_constrain_the_command_cumulative_arm_b_not_the.md, kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md, engine_gap_eval_npz_saves_no_raw_obs_std_privileged_blocks_exact.md
+- **Summary:** query 'bias_ema observability roll DC bias floor 69 72D' -> 20 of 25
+
+## [2026-07-15T05:09:53.382952] query
+- **Pages:** teacher_dr_harder_yaw_is_the_only_heavy_tail_axis_roll_is_dc_bia.md, teacher_hard_dr_cv_explodes_without_heavy_tail_dc_bias_dispersio.md, student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md, teacher_segmented_post_switch_roll_transient_jumps_under_hard_dr.md, doraemon_over_widens_then_oscillates_when_a_converged_teacher_is.md, joint1_cumulative_ipo_constraint_generalizes_drift_bounded_at_oo.md, an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md, constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md, constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md, posttam_encoder_is_alive_and_specialized_z_sweep_exploration_col.md, teacher_cross_axis_correlation_collapses_none_hard_axis_decorrel.md, teacher_encoder_0_dead_latent_dims_keys_on_lateral_cog_cob_offse.md
+- **Summary:** query 'bias_ema observability roll DC bias floor 69 72D' -> 13 of 13
+
+## [2026-07-15T05:11:37.996746] query
+- **Pages:** bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md, constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md, kl_ub_0_12_trades_attitude_for_translation_e1_dr_harder.md
+- **Summary:** query 'actuation adopt adopting alone appends att authority before' -> 5 of 142
+
+## [2026-07-15T05:12:51.394476] query
+- **Pages:** bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md, constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md, kl_ub_0_12_trades_attitude_for_translation_e1_dr_harder.md
+- **Summary:** query 'actuation adopt adopting alone appends att authority before' -> 5 of 142
+
