@@ -2212,3 +2212,75 @@
 - **Pages:** perflb200_final_dr_anatomy_17_bulk_params_at_config_ceiling_unif.md
 - **Summary:** created 'perflb200 final DR anatomy: 17 bulk params at config ceiling (uniform), 3 deployment-relevant params (ocean_current/obs_noise/payload_cog) are TIME-limited not feasibility-limited'
 
+## [2026-07-15T10:25:44.104352] query
+- **Pages:** training_log_analysis_engine_reference_adapter.md, analysis_engine_map_what_is_grow_able_vs_off_limits.md, engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md, exp_analyze_must_run_analyze_training_py_for_training_side_diagn.md, engine_gap_analyze_training_deep_plot_has_2_blank_panels_inconsi.md, engine_gap_heavy_tail_json_pct_peak_gt_thresh_exceeds_100_at_ood.md, engine_gap_analyze_training_py_needs_the_logs_run_dir_not_the_ex.md, engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md, engine_gap_omx_cli_gaps_found_re_analyzing_teacher_2026_06_06_ro.md, eval_analysis_core_does_stats_adapter_does_heavy_tail.md, engine_gap_eval_adapter_heavy_tail_lacks_median_based_tail_ratio.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, coverage_lint_ok_is_a_floor_not_a_quality_gate_re_analysis_uses_.md, failure_dr_join_now_covers_fault_channels_not_just_dr_per_env_fa.md, engine_gap_flat_target_eval_records_joint1_trajectory_but_render.md, engine_gap_m1_critic_side_encoder_gradient_is_not_logged_policy_.md, arm_a_measured_angle_joint1_constraint_recovers_not_diverges_the.md, engine_gap_status_board.md, engine_generic_flags_entropy_collapse_barrier_spike_reward_plate.md, experiment_output_directory_standard_logs_vs_experiments_index_t.md
+- **Summary:** query 'analysis engine reference adapter how to analyze' -> 20 of 230
+
+## [2026-07-15T10:25:44.577947] query
+- **Pages:** bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, reward_penalty_terms_thruster_smoothness_bias_block_3_temporal_b.md, bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md, e5_alpha075_ood_per_axis_generalization_gap_universal_failure_ro.md, leaky_integral_and_ema_bias_carry_over_the_mid_episode_command_r.md, teacher_dr_harder_yaw_is_the_only_heavy_tail_axis_roll_is_dc_bia.md, roll_error_is_dc_bias_dominated_ss_jitter_ss_error_pitch_carries.md, teacher_hard_dr_cv_explodes_without_heavy_tail_dc_bias_dispersio.md, xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md, doraemon_optimize_entropy_accept_can_leak_the_success_floor_late.md, student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md, the_regression_is_dc_bias_and_oscillation_e3_s_none_roll_ss_jitt.md, reward_cost_parallel_structure_mostly_mirroring_two_real_couplin.md, tam_plant_correctness_fix_collapses_the_void_hard_dr_roll_heavy_.md, the_heavy_tail_ratio_is_not_reduced_by_observability_25_8x_vs_23.md, one_adverse_signal_e2_has_more_envs_with_a_transient_peak_error_.md, reward_md_deep_dive_session_2026_07_11_4_review_fix_prompts_queu.md, teacher_segmented_post_switch_roll_transient_jumps_under_hard_dr.md, coverage_lint_ok_is_a_floor_not_a_quality_gate_re_analysis_uses_.md
+- **Summary:** query 'bias_ema observability roll pitch floor DC bias' -> 20 of 144
+
+## [2026-07-15T10:45:08.430019] add
+- **Pages:** at_the_only_dr_fair_comparison_point_none_both_roll_and_pitch_dc.md
+- **Summary:** created 'At the ONLY DR-fair comparison point (`none`), both roll and pitch DC-bias floor'
+
+## [2026-07-15T10:45:08.430019] add
+- **Pages:** at_soft_still_low_dr_closer_to_fair_than_hard_medium_roll_ss_err.md
+- **Summary:** created 'At `soft` (still low-DR, closer to fair than hard/medium), roll ss_error and jit'
+
+## [2026-07-15T10:45:08.430019] add
+- **Pages:** at_medium_hard_the_picture_is_mixed_and_not_directly_attributabl.md
+- **Summary:** created 'At `medium`/`hard`, the picture is mixed and NOT directly attributable to observ'
+
+## [2026-07-15T10:45:08.430019] add
+- **Pages:** reference_ood_dr_relative_run_specific_box_for_context_only_no_p.md
+- **Summary:** created 'Reference `ood` (DR-relative, run-specific box) for context only — no P-B1 count'
+
+## [2026-07-15T10:45:08.430019] add
+- **Pages:** for_p_b1_the_none_hard_spread_a_proxy_for_in_dist_to_ood_general.md
+- **Summary:** created 'For P-B1, the none->hard spread (a proxy for in-dist-to-OOD generalization gap, '
+
+## [2026-07-15T10:45:08.430019] add
+- **Pages:** pitch_generalizes_more_gracefully_than_roll_on_both_runs_smaller.md
+- **Summary:** created 'Pitch generalizes more gracefully than roll on both runs (smaller none->hard mul'
+
+## [2026-07-15T10:45:08.430019] add
+- **Pages:** p_b1_s_total_decomposed_reward_is_higher_than_the_reference_s_9_.md
+- **Summary:** created "P-B1's total decomposed reward is higher than the reference's (9.16 vs 7.39), dr"
+
+## [2026-07-15T10:45:08.430019] add
+- **Pages:** entropy_and_noise_std_are_collapsed_on_both_runs_the_standing_we.md
+- **Summary:** created 'Entropy and noise_std are collapsed on BOTH runs (the standing weakness, unchang'
+
+## [2026-07-15T10:45:08.430019] add
+- **Pages:** p_b1_s_episode_return_is_markedly_higher_272_vs_215_27_at_the_sa.md
+- **Summary:** created "P-B1's episode return is markedly higher (272 vs 215, +27%) at the same lb=250, "
+
+## [2026-07-15T10:45:08.430019] add
+- **Pages:** p_b1_s_value_function_loss_loss_value_function_is_much_lower_tha.md
+- **Summary:** created "P-B1's value function loss (Loss/value_function) is much lower than the referenc"
+
+## [2026-07-15T10:45:08.430019] add
+- **Pages:** the_encoder_is_alive_and_equally_healthy_on_both_runs_no_materia.md
+- **Summary:** created 'The encoder is alive and equally healthy on both runs — no material difference f'
+
+## [2026-07-15T10:45:08.430019] add
+- **Pages:** the_binding_constraint_max_jc_dk_is_thruster_util_on_both_runs_t.md
+- **Summary:** created 'The binding constraint (max JC/dk) is `thruster_util` on BOTH runs — the actuati'
+
+## [2026-07-15T10:45:08.430019] add
+- **Pages:** barrier_penalty_ipo_barrier_term_is_similar_on_both_runs_ref_0_1.md
+- **Summary:** created '`barrier_penalty` (IPO barrier term) is similar on both runs (ref -0.1278 vs P-B'
+
+## [2026-07-15T10:45:08.430019] add
+- **Pages:** p_b1_same_lb_250_as_the_reference_did_not_hit_the_reference_s_fe.md
+- **Summary:** created "P-B1 (same lb=250 as the reference) did NOT hit the reference's feasibility stal"
+
+## [2026-07-15T10:45:08.430019] add
+- **Pages:** consequently_p_b1_s_final_doraemon_dr_is_wider_than_the_referenc.md
+- **Summary:** created "Consequently P-B1's final DORAEMON DR is WIDER than the reference's — P-B1 reach"
+
+## [2026-07-15T10:45:29.173902] add
+- **Pages:** bias_ema_observability_p_b1_confirmed_at_the_fair_none_point_68_.md
+- **Summary:** created "bias_ema observability (P-B1) confirmed at the fair 'none' point (-68% roll, -29% pitch) AND unexpectedly cleared the DORAEMON feasibility stall on unchanged lb=250"
+
