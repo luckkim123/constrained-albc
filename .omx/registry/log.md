@@ -2172,3 +2172,11 @@
 - **Pages:** n_a_out_of_distribution_dr_level_generalization_is_an_eval_side_.md
 - **Summary:** created 'N/A: out-of-distribution / DR-level generalization is an EVAL-side property (sid'
 
+## [2026-07-15T05:05:54.627769] add
+- **Pages:** posttam_encoder_is_alive_and_specialized_z_sweep_exploration_col.md
+- **Summary:** created 'Posttam encoder is alive and specialized (z-sweep) — exploration collapse is a converged optimum, not a dead encoder'
+
+## [2026-07-15T05:05:55.023871] add
+- **Pages:** posttam_constraint_set_is_healthy_8_active_guards_exactly_2_dorm.md
+- **Summary:** created 'Posttam constraint set is healthy: 8 active guards + exactly 2 dormant (rp_vel_settling, manipulability)'
+
