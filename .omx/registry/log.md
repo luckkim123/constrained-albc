@@ -2196,3 +2196,63 @@
 - **Pages:** bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md, constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md, kl_ub_0_12_trades_attitude_for_translation_e1_dr_harder.md
 - **Summary:** query 'actuation adopt adopting alone appends att authority before' -> 5 of 142
 
+## [2026-07-15T10:47:40.153248] query
+- **Pages:** experiment_launch_checklist_run_id_wandb_latest_alias_naming.md, train_py_run_group_creates_the_group_layer_no_more_manual_post_m.md, xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e.md, exp_analyze_must_run_analyze_training_py_for_training_side_diagn.md, train_py_max_iterations_under_resume_is_iters_from_resume_not_an.md, engine_gap_analyze_training_py_needs_the_logs_run_dir_not_the_ex.md, eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md, experiment_output_directory_standard_logs_vs_experiments_index_t.md, group_folder_name_equals_wandb_project_name_equals_experiment_pu.md, cross_run_reference_values_must_be_re_extracted_fresh_never_carr.md, engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md, doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md, gpu_memory_4096_env_albc_training_needs_11_3_gb_rtx_4060_8gb_can.md, uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload_.md, arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md, constraint_viol_trajectory_barrier_sign_metrics_4_10_starts_at_d.md, sequential_overnight_campaign_wall_clock_budget_not_crashes_kill.md, teacher_dr_harder_doraemon_curriculum_froze_before_run_end_unuse.md, an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md, doraemon_over_widens_then_oscillates_when_a_converged_teacher_is.md
+- **Summary:** query 'resume continuation more iterations run_id naming load_run checkpoint continue training' -> 20 of 227
+
+## [2026-07-15T19:00:13.758977] add
+- **Pages:** at_the_fair_none_point_both_axes_show_worse_nominal_tracking_pre.md
+- **Summary:** created 'At the fair `none` point, both axes show WORSE nominal tracking precision on P-A'
+
+## [2026-07-15T19:00:13.758977] add
+- **Pages:** despite_the_nominal_precision_cost_the_heavy_tail_transient_peak.md
+- **Summary:** created 'Despite the nominal-precision cost, the heavy-tail transient-peak count improved'
+
+## [2026-07-15T19:00:13.758977] add
+- **Pages:** soft_medium_hard_levels_are_run_relative_dr_rule03_and_doubly_no.md
+- **Summary:** created '`soft`/`medium`/`hard` levels are RUN-RELATIVE-DR (rule03) and doubly non-compar'
+
+## [2026-07-15T19:00:13.758977] add
+- **Pages:** the_none_hard_spread_narrows_on_p_a8_for_both_axes_by_a_similar_.md
+- **Summary:** created 'The none->hard spread NARROWS on P-A8 for both axes by a similar magnitude (roll'
+
+## [2026-07-15T19:00:13.758977] add
+- **Pages:** p_a8_s_total_decomposed_reward_is_lower_than_the_reference_s_5_4.md
+- **Summary:** created "P-A8's total decomposed reward is lower than the reference's (5.40 vs 7.35), dri"
+
+## [2026-07-15T19:00:13.758977] add
+- **Pages:** entropy_and_noise_std_remain_collapsed_on_both_runs_standing_wea.md
+- **Summary:** created 'Entropy and noise_std remain collapsed on both runs (standing weakness, unaffect'
+
+## [2026-07-15T19:00:13.758977] add
+- **Pages:** a_new_regime_changepoint_was_detected_at_iter_5295_past_the_orig.md
+- **Summary:** created "A NEW regime changepoint was detected at iter 5295 (past the original run's 4999"
+
+## [2026-07-15T19:00:13.758977] add
+- **Pages:** value_function_loss_loss_value_function_and_cost_value_loss_loss.md
+- **Summary:** created 'Value function loss (Loss/value_function) and cost-value loss (Loss/cost_value) '
+
+## [2026-07-15T19:00:13.758977] add
+- **Pages:** encoder_remains_alive_and_healthy_no_material_change_z_std_stays.md
+- **Summary:** created 'Encoder remains alive and healthy, no material change — z_std stays well above t'
+
+## [2026-07-15T19:00:13.758977] add
+- **Pages:** the_binding_constraint_max_jc_dk_is_thruster_util_on_both_runs_e.md
+- **Summary:** created 'The binding constraint (max JC/dk) is `thruster_util` on both runs, essentially '
+
+## [2026-07-15T19:00:13.758977] add
+- **Pages:** barrier_penalty_max_spike_value_0_211_is_identical_on_both_runs_.md
+- **Summary:** created '`barrier_penalty` max spike value (0.211) is IDENTICAL on both runs — this spike'
+
+## [2026-07-15T19:00:13.758977] add
+- **Pages:** all_20_doraemon_params_reached_beta_1_00_1_00_perfectly_uniform_.md
+- **Summary:** created 'All 20 DORAEMON params reached Beta(1.00, 1.00) — perfectly uniform, full config'
+
+## [2026-07-15T19:00:13.758977] add
+- **Pages:** success_rate_settled_at_0_50_essentially_exactly_at_alpha_0_5_th.md
+- **Summary:** created 'success_rate settled at 0.50, essentially exactly at alpha=0.5 (the designed DOR'
+
+## [2026-07-15T19:00:35.530450] add
+- **Pages:** p_a8_perflb200_more_iters_5000_8000_closed_the_deployment_ood_dr.md
+- **Summary:** created 'P-A8 (perflb200 more-iters 5000->8000) closed the deployment-OOD DR gap exactly as predicted, at a quantified nominal-tracking cost offset by heavy-tail reduction'
+
