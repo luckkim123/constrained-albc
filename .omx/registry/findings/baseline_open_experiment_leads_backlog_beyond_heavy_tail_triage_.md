@@ -1,15 +1,15 @@
 ---
 title: "Baseline open experiment-leads backlog (beyond heavy-tail): triage by value x launchability with blockers"
-tags: ["backlog", "experiment-roster", "next-experiment", "heavy-tail", "doraemon-per-axis-gate", "command-box", "tam-dr", "sim-to-real", "triage", "teacher-baseline"]
+tags: ["backlog", "experiment-roster", "next-experiment", "heavy-tail", "doraemon-per-axis-gate", "command-box", "tam-dr", "sim-to-real", "triage", "teacher-baseline", "doraemon", "performance_lb", "exploration"]
 created: 2026-07-14T07:57:24.357274
-updated: 2026-07-14T09:56:26.815912
-sources: ["diagnose-20260713-081707"]
+updated: 2026-07-15T04:54:42.574431
+sources: ["diagnose-20260713-081707", "diagnose-20260715-133249"]
 links: []
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 70
-qualityReasons: ["no-source-marker", "generic-only-tags"]
+qualityScore: 80
+qualityReasons: ["no-source-marker"]
 status: needs-experiment
 ---
 
@@ -51,3 +51,15 @@ Of everything above, only two are both high-value and unblocked today: (1) comma
 ## Update (2026-07-14T09:56:26.815912)
 
 Flagged needs-experiment 2026-07-14: this is the open experiment-leads backlog (command-box eval, DORAEMON per-axis gate, latency-as-DR-dim, state_std z-cond, etc.). Soft actionable -- every next-experiment/summary pass must enumerate these leads (omx wiki list --status needs-experiment) and carry or explicitly defer them, so the heavy-tail-flatten drop cannot recur.
+
+---
+
+## Update (2026-07-15T04:54:42.574431)
+
+## Update (2026-07-15): two leads dispositioned + a NEW lead surfaced
+
+- **Eval command-box extension (Priority 1): DONE** this session (commit 8c07584 — ATT_AMP 15->30 deg, YAW_RATE 0.25->0.5; eval box now matches trained +-30 deg box). Lead closed.
+- **performance_lb recalibration (Priority 2): DONE** via probe trpo_perflb200_260715_023744 (analysis diagnose-20260715-133249). Result: lowering performance_lb 250->200 UN-STALLS the curriculum (mode -2->0, success 0.407->0.712, ess 0.414->0.754, DR widens) — confirms the 'lb sits on baseline return, so any return-costly intervention stalls' diagnosis. **DECISION: adopt performance_lb=200 as the standing setting.** Lead closed.
+- **NEW lead surfaced (was hidden behind the stall): exploration-machinery collapse.** The SAME probe proved the actor entropy/noise_std collapse (entropy ~-7.8, noise_std pinned near min_std=0.05 floor) is CAUSALLY INDEPENDENT of the DORAEMON gate — its trajectory is near-identical (max dev 0.18 entropy / 0.003 noise_std) whether the curriculum stalls or not. So neither performance_lb NOR the DORAEMON per-axis gate will fix exploration. The next exploration lever must target the actor noise/entropy machinery directly: min_std (0.05 floor), entropy_coef (0.003), or the noise parameterization / entropy schedule. See finding 'performance_lb (DORAEMON gate) is causally independent of the actor exploration collapse'.
+
+STILL OPEN (unchanged): DORAEMON per-axis success-gate (max structural lever, blocked on marinelab/algorithms/doraemon.py engine code) — note it addresses per-axis DR WIDENING, NOT the exploration collapse above; latency-as-DR-dim (engine code); TAM/max_thrust DR band (design-first, needs-apply-before-retrain); thruster nonlinear curve (measure-first); hydro nominal anchoring (measure-first); state_std z-conditioned (parked); constraint inert-2 (low).
