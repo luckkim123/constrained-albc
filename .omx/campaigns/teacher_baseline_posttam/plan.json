@@ -1,0 +1,13 @@
+{
+  "campaign_id": "teacher_baseline_posttam",
+  "created": "2026-07-14T17:00:30.518638+00:00",
+  "goal": "Corrected-TAM teacher baseline optimization: revive stalled training-side exploration (entropy collapse + DORAEMON mode -2) without re-opening the roll heavy-tail",
+  "baseline_run_id": "trpo_baseline_260714_192020",
+  "planned": [
+    {
+      "proposal_id": "next-20260715-015350",
+      "summary": "performance_lb 250->200: recalibrate DORAEMON return threshold to corrected-TAM plant p25 (revive stalled exploration)",
+      "added_at": "2026-07-14T17:00:30.895854+00:00"
+    }
+  ]
+}
