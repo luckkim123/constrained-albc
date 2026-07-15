@@ -402,7 +402,7 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # buffer [roll, pitch, yaw_rate] the reward.k_bias penalty already reads but the policy
     # cannot observe (non-Markov bias reward, R1). +3 obs dims when on; materialized by
     # apply_bias_ema_obs() below, called from ALBCEnv.__init__ before super().__init__().
-    use_bias_ema_obs: bool = False
+    use_bias_ema_obs: bool = True  # P-B1 exp/bias-ema-revalidate: single variable vs baseline-260715-biasema (69->72D)
     debug_vis: bool = False
 
     viewer: ViewerCfg = ViewerCfg(eye=(0.0, 0.0, 12.0), lookat=(0.0, 0.0, 4.5))
