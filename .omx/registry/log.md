@@ -2400,3 +2400,103 @@
 - **Pages:** bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema.md, buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md, doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md
 - **Summary:** query 'above absolute absorbs additive adopted adoption against agent' -> 5 of 86
 
+## [2026-07-16T06:36:01.268339] add
+- **Pages:** on_the_apples_to_apples_matched_15_box_both_tail_extremity_and_t.md
+- **Summary:** updated 'On the apples-to-apples MATCHED (+-15) box, both tail-extremity and tail-concent'
+
+## [2026-07-16T06:36:01.268339] add
+- **Pages:** the_collapse_is_not_a_like_for_like_hard_ood_delta_artifact_it_h.md
+- **Summary:** updated 'The collapse is not a like-for-like hard/ood delta artifact — it holds on the ON'
+
+## [2026-07-16T06:36:01.268339] add
+- **Pages:** the_transient_peaks_confirm_the_catastrophic_outlier_envs_are_go.md
+- **Summary:** updated 'The transient peaks confirm the catastrophic outlier envs are gone: worst per-en'
+
+## [2026-07-16T06:36:01.268339] add
+- **Pages:** the_cost_of_the_fix_the_typical_env_roll_floor_rose_the_distribu.md
+- **Summary:** updated 'The cost of the fix: the typical-env roll floor ROSE. The distribution shifted f'
+
+## [2026-07-16T06:36:01.268339] add
+- **Pages:** roll_post_tam_raises_the_nominal_floor_none_soft_but_tightens_di.md
+- **Summary:** updated 'Roll: post-TAM raises the nominal floor (none/soft) but tightens dispersion at m'
+
+## [2026-07-16T06:36:01.268339] add
+- **Pages:** pitch_tracks_well_and_stays_a_factor_2_tighter_than_roll_it_is_t.md
+- **Summary:** updated 'Pitch tracks well and stays a factor ~2 tighter than roll; it is the axis most s'
+
+## [2026-07-16T06:36:01.268339] add
+- **Pages:** yaw_rate_is_essentially_solved_on_all_runs_levels_ss_error_0_007.md
+- **Summary:** updated 'Yaw-rate is essentially solved on all runs/levels (ss_error <= 0.007, well insid'
+
+## [2026-07-16T06:36:01.268339] add
+- **Pages:** roll_error_is_dc_bias_dominated_ss_jitter_ss_error_pitch_carries.md
+- **Summary:** updated 'Roll error is DC-bias dominated (ss_jitter << ss_error); pitch carries a larger '
+
+## [2026-07-16T06:36:01.268339] add
+- **Pages:** graceful_degradation_none_ood_at_the_aggregate_level_the_summary.md
+- **Summary:** updated 'Graceful degradation none->ood at the aggregate level: the summary.json generali'
+
+## [2026-07-16T06:36:01.268339] add
+- **Pages:** heavy_tail_per_env_peak_concentration_and_sample_mean_divergence.md
+- **Summary:** updated 'Heavy-tail (per-env peak/concentration) and sample-mean divergence are DISTINCT '
+
+## [2026-07-16T06:36:01.268339] add
+- **Pages:** dual_box_single_variable_matched_15_vs_full_30_same_checkpoint_c.md
+- **Summary:** updated 'Dual-box, single-variable (MATCHED +-15 vs FULL +-30, SAME checkpoint = command-'
+
+## [2026-07-16T06:36:01.268339] add
+- **Pages:** pitch_is_the_box_sensitive_axis_to_watch_hard_pitch_ss_error_gro.md
+- **Summary:** updated 'Pitch is the box-sensitive axis to watch: hard-pitch ss_error grows ~80% (0.295 '
+
+## [2026-07-16T06:36:01.268339] add
+- **Pages:** the_plateau_is_a_genuine_converged_optimum_not_a_starved_term_th.md
+- **Summary:** updated 'The plateau is a genuine converged optimum, not a starved term: the two tracking'
+
+## [2026-07-16T06:36:01.268339] add
+- **Pages:** episode_cumulative_reward_plateaus_early_and_stays_stable_warmup.md
+- **Summary:** updated 'Episode-cumulative reward plateaus early and stays stable: warmup(1)->plateau(7)'
+
+## [2026-07-16T06:36:01.268339] add
+- **Pages:** the_single_real_weakness_exploration_is_dead_at_convergence_entr.md
+- **Summary:** updated 'The single real weakness: exploration is dead at convergence. Entropy has collap'
+
+## [2026-07-16T06:36:01.268339] add
+- **Pages:** the_picture_is_a_converged_trpo_run_riding_its_trust_region_kl_m.md
+- **Summary:** updated 'The picture is a converged TRPO run riding its trust region (kl==max_kl, ls_succ'
+
+## [2026-07-16T06:36:01.268339] add
+- **Pages:** both_critics_have_converged_to_low_stable_losses_cost_value_conv.md
+- **Summary:** updated 'Both critics have converged to low, stable losses; cost_value converging is the '
+
+## [2026-07-16T06:36:01.268339] add
+- **Pages:** the_encoder_is_alive_not_collapsed_and_unsaturated_z_std_well_ab.md
+- **Summary:** updated 'The encoder is alive, not collapsed, and unsaturated: z_std well above the 0.1 c'
+
+## [2026-07-16T06:36:01.268339] add
+- **Pages:** per_rule_03_tb_aggregates_prove_update_applied_not_meaningful_le.md
+- **Summary:** updated 'Per rule 03, TB aggregates prove "update applied", NOT "meaningful learning" — a'
+
+## [2026-07-16T06:36:01.268339] add
+- **Pages:** all_10_constraints_are_satisfied_viol_0_margin_0_the_active_set_.md
+- **Summary:** updated 'All 10 constraints are satisfied (viol<0, margin>0); the active set is thruster_'
+
+## [2026-07-16T06:36:01.268339] add
+- **Pages:** ipo_barrier_is_healthy_barrier_penalty_last_0_128_spikes_0_01_0_.md
+- **Summary:** updated 'IPO barrier is healthy: barrier_penalty last=-0.128, spikes(>0.01)=0, max=-0.027'
+
+## [2026-07-16T06:36:01.268339] add
+- **Pages:** the_curriculum_has_stalled_at_moderate_difficulty_success_is_stu.md
+- **Summary:** updated 'The curriculum has stalled at moderate difficulty: success is stuck at 0.40 with'
+
+## [2026-07-16T06:36:01.268339] add
+- **Pages:** this_ties_the_eval_and_training_stories_together_the_moderate_fi.md
+- **Summary:** updated 'This ties the eval and training stories together: the moderate final DR is exact'
+
+## [2026-07-16T06:36:48.431486] add
+- **Pages:** literature_map_how_rl_control_actually_handles_steady_state_erro.md
+- **Summary:** created "Literature map: how RL control actually handles steady-state error (cross-domain) -- nobody has eliminated it; our r_bias reward penalty is a single-paper idea, our encoder is the field's top-ranked mechanism with no UUV precedent"
+
+## [2026-07-16T06:36:48.834468] add
+- **Pages:** bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md
+- **Summary:** updated 'bias reward (bias_ema_penalty) theory review: conditionally sound; hidden-state-dependent non-Markov reward is the key flaw (expose _bias_ema as obs), squared form does not fill dead-zone, penalty is 175x smaller than tracking loss'
+
