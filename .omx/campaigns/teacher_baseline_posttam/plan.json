@@ -18,6 +18,11 @@
       "proposal_id": "next-20260716-144615",
       "summary": "shared-exam re-eval: grade P-B1 on the reference's learned DR (--doraemon-dr-from) to settle whether the hard-level roll regression is an exam artifact or a real transient trade; 1 eval, no training",
       "added_at": "2026-07-16T05:52:48.153731+00:00"
+    },
+    {
+      "proposal_id": "next-20260716-151204",
+      "summary": "budget-extension trade on the adopted config: max_iterations 5000->8000, kl_ub untouched (E1: kl_ub-up is known-bad); verdict = delta-of-deltas vs P-A8's +31% roll / -56% n_gt20 exchange rate; DGX pilot",
+      "added_at": "2026-07-16T06:24:46.329924+00:00"
     }
   ]
 }

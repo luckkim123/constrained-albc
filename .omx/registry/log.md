@@ -2388,3 +2388,15 @@
 - **Pages:** cross_run_dr_comparability_eval_py_doraemon_dr_from_already_prov.md
 - **Summary:** created 'Cross-run DR comparability: eval.py --doraemon-dr-from already provides a common test distribution; p7_tail knew and declined, judging a robustness campaign on nominal-only'
 
+## [2026-07-16T06:10:15.845053] query
+- **Pages:** sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, incident_post_mortem_teacher_baseline_opt_e1_e4_trained_on_a_tam.md, open_actionable_ledger_read_before_any_sim_plant_code_change_or_.md, reward_penalty_terms_thruster_smoothness_bias_block_3_temporal_b.md, constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md, tam_plant_correctness_fix_collapses_the_void_hard_dr_roll_heavy_.md, tam_columns_must_match_robot_firmware_esc_channel_order_reorder_.md, baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md
+- **Summary:** query 'TAM thruster allocation matrix' -> 8 of 112
+
+## [2026-07-16T06:10:30.346609] query
+- **Pages:** tam_columns_must_match_robot_firmware_esc_channel_order_reorder_.md
+- **Summary:** query '롤 진동 원인' -> 1 of 1
+
+## [2026-07-16T06:14:28.263633] query
+- **Pages:** bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema.md, buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md, doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md
+- **Summary:** query 'above absolute absorbs additive adopted adoption against agent' -> 5 of 86
+
