@@ -2376,3 +2376,15 @@
 - **Pages:** doraemon_is_trust_region_limited_not_feasibility_limited_kl_step.md
 - **Summary:** updated 'DORAEMON is trust-region-limited not feasibility-limited: kl_step is pinned AT kl_ub every update, so kl_ub x n_updates is one expansion budget'
 
+## [2026-07-16T05:58:47.795144] add
+- **Pages:** e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite.md
+- **Summary:** created "e3's '5000-iter budget' verdict is scope-limited, NOT a cap: max_iterations is a DR-EXPANSION knob (step_interval clock) and the real ceiling is the Beta a=b=1 config bound, not compute"
+
+## [2026-07-16T05:59:59.870186] add
+- **Pages:** the_doraemon_success_rate_peak_is_set_by_performance_lb_not_poli.md
+- **Summary:** created 'The DORAEMON success_rate PEAK is set by performance_lb, not policy quality: lb=250 peaks 0.63-0.67 and ends CONTRACTED; lb=200 peaks 0.97 and reaches the config ceiling'
+
+## [2026-07-16T06:00:00.285512] add
+- **Pages:** cross_run_dr_comparability_eval_py_doraemon_dr_from_already_prov.md
+- **Summary:** created 'Cross-run DR comparability: eval.py --doraemon-dr-from already provides a common test distribution; p7_tail knew and declined, judging a robustness campaign on nominal-only'
+

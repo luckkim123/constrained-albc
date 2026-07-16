@@ -1,0 +1,142 @@
+---
+title: "e3's '5000-iter budget' verdict is scope-limited, NOT a cap: max_iterations is a DR-EXPANSION knob (step_interval clock) and the real ceiling is the Beta a=b=1 config bound, not compute"
+tags: ["doraemon", "curriculum-budget", "max-iterations", "num-envs", "dgx", "scale-up", "e3", "config-ceiling", "p-a6", "user-decision"]
+created: 2026-07-16T05:58:47.795144
+updated: 2026-07-16T05:58:47.795144
+sources: ["diagnose-20260714-084409"]
+links: ["performance_lb_recon_needs_zero_new_rollouts_doraemon_state_pt_a.md"]
+category: decision
+confidence: high
+schemaVersion: 1
+qualityScore: 100
+qualityReasons: []
+status: needs-experiment
+---
+
+# e3's '5000-iter budget' verdict is scope-limited, NOT a cap: max_iterations is a DR-EXPANSION knob (step_interval clock) and the real ceiling is the Beta a=b=1 config bound, not compute
+
+# USER DECISION (2026-07-16): no iteration cap; DGX scale-up is planned
+
+The user rejects the `teacher_baseline_opt` campaign README's "budget 쟁점 종결 — 5000 iter 확정"
+and intends to train on an NVIDIA DGX with much larger `max_iterations` AND `num_envs`. This page
+records why the evidence never licensed a cap, and what actually bounds a scaled run.
+
+# Why e3 does NOT license a budget cap
+
+e3 (`trpo_e3_extend10k_260713_224822`) concluded "the campaign KEEPS the 5000-iter run budget /
+extending is net-harmful". That verdict is sound FOR WHAT e3 RAN, and over-generalized as a standing
+rule. Four scope limits, all from e3's own report:
+
+[FINDING] e3 was never a clean single-variable budget probe: DORAEMON's clock is ITERATIONS, so
+raising `max_iterations` mechanically raises the number of curriculum expansions
+(`n_expansions = max_iterations / step_interval`, step_interval=250). Budget was the KNOB; the
+TREATMENT was DR-width expansion. e3's own section 0 measures the result: its end-of-training DR is
+4.7x wider on ocean_current_strength (0.055 -> 0.261), plus wider on every other curriculum param.
+[EVIDENCE: doraemon.py:416 `if self._step_count % self.cfg.step_interval != 0: return` (gate);
+doraemon.py:43 step_interval="RL iterations between DORAEMON updates"; envs/main/config.py:544
+step_interval=250; e3 report diagnose-20260714-084409 section 0 DR-std table]
+[CONFIDENCE: HIGH]
+
+[FINDING] The campaign's comparability gate (README section 2) covers only the EVAL confound (each run
+graded on its own learned DR, so only `none` is a fair exam). It does NOT cover the TRAINING confound:
+e3's policy is the optimum of a DIFFERENT (much wider) training distribution, so even the "fair none"
+comparison is not "same config, different budget" -- it is "different final DR distribution". A
+nominal-physics regression is the expected robustness/nominal trade of a wider training distribution.
+[EVIDENCE: e3 report section 0 (DR 4.7x wider) vs README section 2 (handles eval confound only)]
+[CONFIDENCE: HIGH]
+
+[FINDING] Every subsystem that long training could plausibly break stayed healthy through iter 14998 --
+the ONLY failure was the curriculum. So e3 is evidence about DORAEMON, not about training length.
+[EVIDENCE: e3 report section 5 TRPO line_search 1.00 / KL on target; section 6 critic value 1.07,
+cost_val 0.89 converged; section 7 encoder z_std 0.37, softsign full range, non-collapsed; section 8
+all 10 IPO constraints satisfied; section 9 DORAEMON success 0.368 < alpha=0.5, oscillated then
+contracted = the sole pathology]
+[CONFIDENCE: HIGH]
+
+[FINDING] e3's starting condition was adversarial-by-construction and its budget was double the design:
+it RESUMED an already-converged teacher whose DORAEMON was already sitting at the alpha=0.5 floor
+(zero headroom), and a `--max_iterations 10000` under `--resume` is relative-not-absolute, so it ran
++10000 (iter 4999 -> 14998) instead of the designed +5000.
+[EVIDENCE: e3 report line 5 "BUDGET DEVIATION (disclosed)"; probe design = resume baseline model_4999.pt]
+[CONFIDENCE: HIGH]
+
+CORRECT SCOPE OF e3: "giving MORE budget to an already-converged teacher that is ALREADY at the alpha
+floor causes DORAEMON to over-widen, oscillate, and regress the policy." NOT "do not exceed 5000 iters."
+
+# SUPERSEDED: more-iters is the sanctioned primary lever, and the probe already ran
+
+[FINDING] `perflb200_final_dr_anatomy...` (2026-07-15, one day AFTER the campaign README) reverses the
+practical guidance: more-iters is the PRIMARY, safest lever (max_iterations 5000 -> ~8-10k), because
+success ended 0.71 >> alpha 0.5 with 3 params still feasibly climbing = headroom exists BEFORE the
+over-widen regime. The e3 backfire is reconciled, not contradicted: e3 had no headroom, perflb200 does.
+[EVIDENCE: wiki perflb200_final_dr_anatomy_17_bulk_params_at_config_ceiling_unif "Lever assessment":
+"more-iters is the PRIMARY, safest lever"]
+[CONFIDENCE: HIGH]
+
+[FINDING] The more-iters probe HAS ALREADY RUN and did not backfire:
+`teacher_baseline_posttam/trpo_perflb200-moreiters_260715_195227` (8000 iters) ended at success 0.4955
+= the DESIGNED alpha=0.5 equilibrium, NOT e3's sub-alpha over-widen (0.368 then contract).
+[EVIDENCE: wiki performance_lb_recon_needs_zero_new_rollouts... measured table, n=2000 buffer_returns
+per run: perflb200-moreiters(8000it) p25 134.8 / median 199.2 / lb 200 / success 0.4955]
+[CONFIDENCE: HIGH]
+
+# What actually bounds a DGX scale-up (it is NOT the budget)
+
+[FINDING] The real ceiling is the CONFIG BOUND, not compute. DR width is capped by the Beta
+concentration clamp `a,b in [1.0, 500.0]`; `a=b=1.0` = uniform = the full configured physical range,
+and the per-param physical span (`min_bound`/`max_bound` in `_PARAM_DEFS`) is what the unit-interval
+Beta draw maps onto. perflb200 already has 17 of 20 params AT that ceiling. Those 17 cannot be widened
+by ANY number of iterations -- only P-A6 (config HardDR bound widening) moves them. Compute buys only
+the 3 remaining TIME-limited params (ocean_current_strength, obs_noise_scale, payload_cog_offset_xy_u),
+which were still climbing at ~+0.08/1k and only 16-18% expanded at run end.
+[EVIDENCE: doraemon.py:86-87 _MIN_BETA_PARAM=1.0/_MAX_BETA_PARAM=500.0, clipped at set_flat_params
+:189-193 and SLSQP results :646,:725; BetaDistribution.sample :147-159 maps into [min_bound,max_bound];
+wiki perflb200_final_dr_anatomy: 17 bulk params near-uniform (1.6,1.6) at config ceiling, 3 params
+TIME-limited with positive last-1k slope]
+[CONFIDENCE: HIGH]
+
+[FINDING] `num_envs` is CURRICULUM-NEUTRAL and untested at scale: `step_interval` (an iteration
+counter) and `kl_ub` (per-update KL trust region) are both independent of `num_envs`, so raising
+num_envs changes neither curriculum cadence nor expansion step size. Its real effect is on the
+EpisodeBuffer: the 2000-slot ring fills and turns over faster, so the IS estimate is drawn from
+fresher episodes (closer to prev_dist = favourable for IS validity), and the `min_episodes=200`
+first-update gate stops being a meaningful floor. No run has ever tested a large num_envs, so this
+is reasoned from code, not measured.
+[EVIDENCE: doraemon.py:416 step_count is an iteration counter incremented per step() call regardless
+of num_envs; doraemon.py:44 buffer_size=2000, :399-404 min_episodes=200 early-return;
+albc_env.py:1425-1442 record_episodes batches whatever envs terminated; _estimate_success_rate
+doraemon.py:486-504 uses the whole buffer]
+[CONFIDENCE: MED]
+
+[FINDING] There is NO abort/guard for a prolonged sub-alpha regime -- a scaled DGX run needs an
+EXTERNAL monitor. The engine only reacts automatically (contract via the inverted problem, mode=-2
+keep-narrower, mode=-3 revert-to-prev, or an ESS-based revert) and emits nothing louder than a
+logger.warning. This has already burned one full run: e1 stayed pinned at mode=-2 with success 0.09
+vs alpha 0.5 for the ENTIRE run, silently, and needed a human config fix to un-stall.
+[EVIDENCE: no abort/early_stop/raise on success<alpha in doraemon.py/albc_env.py/runner;
+doraemon.py:430-467 reactive branches only (mode -2 :444-445, mode -3 :446-449, ESS revert :462-467);
+wiki the_curriculum_stalled_in_the_infeasible_branch_for_the_entire_r (e1 trpo_e1_latdr_260713_124923)]
+[CONFIDENCE: HIGH]
+
+# Decision / next experiment (lead)
+
+DECISION: the "5000-iter cap" is RETIRED as a standing rule (user, 2026-07-16). Treat
+`max_iterations` as a DR-EXPANSION knob, not a training-length knob -- the question is never "how long
+to train" but "does headroom exist above alpha at the current lb".
+
+Launch conditions for the DGX scale-up:
+- GO signal = success_rate comfortably above alpha at the current `performance_lb` with the
+  deployment-relevant params still climbing (the perflb200 signature), NOT the e3 signature
+  (already-at-floor, converged).
+- ABORT signature (from `doraemon_over_widens...`): success crosses below alpha 0.5 and STAYS, DR mean
+  reverses/contracts. Since no in-code guard exists, arm a wandb alert on `DORAEMON/success_rate` and
+  `DORAEMON/mode` BEFORE launching a long run.
+- Expect compute to buy only the 3 TIME-limited params. If the goal is the 17 ceiling'd ones, the
+  lever is P-A6 config-bound widening and NO amount of DGX time substitutes for it.
+- `num_envs` scale-up is curriculum-neutral by code reading but has never been measured; if it is
+  raised at the same time as max_iterations, the run is a 2-variable change and its DR outcome will
+  not be attributable. Prefer raising them in separate runs if the DR anatomy is what is being judged.
+- Recalibrate `performance_lb` to the corrected-plant p25 FIRST (P-A2) -- lb sets where the alpha
+  equilibrium lands, and it is free (see
+  [[performance_lb_recon_needs_zero_new_rollouts_doraemon_state_pt_a]]).
+
