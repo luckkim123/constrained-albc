@@ -1,8 +1,8 @@
 ---
 title: "DORAEMON is trust-region-limited not feasibility-limited: kl_step is pinned AT kl_ub every update, so kl_ub x n_updates is one expansion budget"
-tags: ["doraemon", "kl_ub", "curriculum", "expansion-budget", "p-a9", "dgx"]
+tags: ["doraemon", "kl_ub", "curriculum", "expansion-budget", "p-a9", "dgx", "correction", "dwell-time", "step_interval"]
 created: 2026-07-16T05:49:54.801488
-updated: 2026-07-16T05:49:54.801488
+updated: 2026-07-16T05:57:44.772031
 sources: []
 links: []
 category: pattern
@@ -60,4 +60,70 @@ Usable corollary: because expansion scales with n_updates x kl_ub, raising kl_ub
 count is a CHEAP PROXY for a much larger budget (20 x 0.24 = 4.8 exceeds the 3.12 that saturated the
 bias_ema-OFF config), so the endpoint question can be answered in one 5000-iter run before spending
 DGX time. Proposed as next-20260716-144338 (pending approval).
+
+---
+
+## Update (2026-07-16T05:57:44.772031)
+
+# CORRECTION 2026-07-16 (same day): "separable knobs, one effect" is WRONG — kl_ub and max_iterations are NOT interchangeable
+
+The section above concluded that because expansion scales with `n_updates x kl_ub`, the two knobs
+"multiply into one quantity" and therefore a kl_ub sweep at fixed budget "re-explores the axis P-A8
+already moved with the other knob". **That inference is refuted by evidence already in this wiki**,
+which the session that wrote it failed to consult. Correcting rather than deleting, per append-merge.
+
+[FINDING] The product model correctly describes WHERE the distribution goes, but NOT whether the
+policy keeps up — and the policy is what the metrics measure. The dr_harder orthogonal factorial:
+E1 (kl_ub 0.06->0.12) and E2 (ocean nominal 0.0->0.3) reached the SAME final ocean coverage (0.421
+vs 0.409) but OPPOSITE attitude outcomes — E1 roll/pitch hard +34%/+69% WORSE, E2 +8%/-17%
+(attitude kept). A deterministic E4 control made this causal, not seed. So the same reached
+difficulty, bought two different ways, gives opposite results: expansion bought with SPEED (kl_ub)
+is not the same good as expansion bought with TIME (max_iterations).
+[EVIDENCE: wiki kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md (decision, high) + dr_harder_campaign_synthesis_speed_kills_attitude_center_shift_o.md]
+[CONFIDENCE: HIGH]
+
+[FINDING] The mechanism is the missing third term the product model drops: `step_interval` owns
+dwell-time INDEPENDENTLY of kl_ub. Raising kl_ub makes each expansion a bigger jump within the SAME
+unchanged dwell window, so the policy is under-trained relative to the harder distribution. The
+invariant that matters is therefore expansion PER DWELL, not total expansion. Corollary with teeth:
+there is NO cheap way to buy more expansion inside a fixed iteration budget — raising kl_ub or
+shrinking step_interval both cut dwell per unit of difficulty. A large expansion budget genuinely
+requires a large iteration budget.
+[EVIDENCE: doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md (code-verified 3-lever breakdown); config.py:544 step_interval=250]
+[CONFIDENCE: HIGH]
+
+[FINDING] Second-order consequence for any endpoint measurement: `current_success_rate` (Ghat) is
+estimated from real rollout returns (doraemon.py:427) and compared to alpha (doraemon.py:430). An
+under-trained policy therefore reports DEPRESSED success — so a kl_ub-up probe would bias itself
+toward a false "the feasibility floor binds" reading. kl_ub-up does not just cost attitude; it
+corrupts the instrument that would measure the cost.
+[EVIDENCE: doraemon.py:427/430; E1 under-training mechanism above]
+[CONFIDENCE: MED]
+
+# What survives, and what the archive says to do instead
+
+SURVIVES (unchanged, directly measured): kl_step IS pinned at kl_ub on every update of all 4 runs;
+updates ARE rare (~18 per 5000 iters at step_interval=250); P-B1 DID stop at success 0.8825 far above
+the alpha=0.5 floor, so it ran out of expansion steps rather than hitting the gate — lb never bound.
+Measured expansion budgets, corrected to MEASURED update counts (the original section used nominal
+max_iterations/step_interval, which overstates): P-B1 = 18 x 0.12 = 2.16; P-A8 = 25 x 0.12 + 1 x
+0.0766 = 3.08 (not 3.12/3.84).
+
+RETRACTED: "a kl_ub sweep is not novel because P-A8 already moved that axis". The wiki treats the two
+levers as non-interchangeable, so they are different axes. The kl_ub lead is closed for a STRONGER
+reason instead: raising kl_ub at a fixed budget is known-bad (E1), not redundant.
+
+THE NAMED UNTESTED CELL (quoting kl_ub_up_and_per_difficulty_learning_are_antagonistic...): "raise the
+difficulty target (performance_lb, or DORAEMON variance from nominal=0) and/or extend max_iter, while
+keeping kl_ub LOW so per-difficulty dwell-time stays high. That combination was never run." That is
+also the direction the user committed to on 2026-07-16 (larger max_iterations + num_envs on an NVIDIA
+DGX). Proposed as next-20260716-145510 (pending approval), which supersedes the refuted
+next-20260716-144338.
+
+# Process lesson
+
+The refuted design queried the wiki by SYMPTOM (hard-level confound, DR width) and never by LEVER
+NAME (kl_ub). The contradicting page was category `decision`, confidence `high`, and titled with the
+lever — one `omx wiki query "kl_ub"` would have surfaced it before a GPU proposal was written. Query
+the wiki for the KNOB you intend to turn, not only for the symptom you intend to fix.
 

@@ -2360,3 +2360,19 @@
 - **Pages:** eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md
 - **Summary:** updated 'eval.py static --doraemon-dr grades each run on its OWN learned DR — cross-run hard/ood is non-comparable, only none is fair'
 
+## [2026-07-16T05:53:25.877328] query
+- **Pages:** constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, constraint_viol_trajectory_barrier_sign_metrics_4_10_starts_at_d.md, constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md, joint1_cumulative_rotation_constraint_never_binds_policy_parks_a.md, session_state_2026_07_12_constraint_deep_dive_q_a_covered_struct.md, reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md, arm_a_measured_angle_joint1_constraint_recovers_not_diverges_the.md, bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md, ee_leak_0_k_anchor_0_does_not_blow_up_joint1_settle_pade_ik_clam.md, joint1_anti_drift_constrain_the_command_cumulative_arm_b_not_the.md, joint_dr_params_kp_kd_effort_friction_need_no_dedicated_measurem.md, posttam_constraint_set_is_healthy_8_active_guards_exactly_2_dorm.md, reward_penalty_terms_thruster_smoothness_bias_block_3_temporal_b.md, constraint_health_index.md, constraint_threshold_budget_tuning_thresholds_split_into_hard_ph.md, constrainttrpo_faithful_norbc_modified_ipo_kim_2024_arxiv_2308_1.md, joint1_cumulative_ipo_constraint_generalizes_drift_bounded_at_oo.md, reward_cost_parallel_structure_mostly_mirroring_two_real_couplin.md, baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md
+- **Summary:** query 'constraint margin normalization J_C/d_k absolute misread binding' -> 20 of 249
+
+## [2026-07-16T05:55:47.479346] add
+- **Pages:** constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md
+- **Summary:** updated 'constraint margin must be normalized (J_C/d_k) -- absolute margin flips binding/slack'
+
+## [2026-07-16T05:57:11.190744] query
+- **Pages:** barrier_alpha_runtime_0_05_agent_cfg_injects_over_ctor_default_0.md, doraemon_over_widens_then_oscillates_when_a_converged_teacher_is.md, e5_alpha075_ood_per_axis_generalization_gap_universal_failure_ro.md, added_mass_scale_upper_half_is_inert_post_dr_0_95_i_clamp_caps_i.md, an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md
+- **Summary:** query 'above add adopted agent agents alone alpha already' -> 5 of 120
+
+## [2026-07-16T05:57:44.772031] add
+- **Pages:** doraemon_is_trust_region_limited_not_feasibility_limited_kl_step.md
+- **Summary:** updated 'DORAEMON is trust-region-limited not feasibility-limited: kl_step is pinned AT kl_ub every update, so kl_ub x n_updates is one expansion budget'
+
