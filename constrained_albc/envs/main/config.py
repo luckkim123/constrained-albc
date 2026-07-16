@@ -398,11 +398,11 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     integral_leak: float = 0.99  # Leaky integrator decay: I_{t+1} = leak * I_t + err * dt
     integral_clamp: float = 2.0  # Windup prevention: clamp |I| <= this value
     integral_gated: bool = True  # Error-gated integration: only accumulate when |err| < reward sigma
-    # bias-ema-obs experiment (off by default = byte-identical). Exposes the 3D _bias_ema
+    # bias-ema obs: ON by default since P-B1 (adopted 2026-07-16). Exposes the 3D _bias_ema
     # buffer [roll, pitch, yaw_rate] the reward.k_bias penalty already reads but the policy
-    # cannot observe (non-Markov bias reward, R1). +3 obs dims when on; materialized by
+    # cannot observe (non-Markov bias reward, R1). +3 obs dims, 69->72D; materialized by
     # apply_bias_ema_obs() below, called from ALBCEnv.__init__ before super().__init__().
-    use_bias_ema_obs: bool = True  # P-B1 exp/bias-ema-revalidate: single variable vs baseline-260715-biasema (69->72D)
+    use_bias_ema_obs: bool = True  # P-B1: -68% roll/-29% pitch at DR-fair none; hard-level caveat DR-confounded (wiki)
     debug_vis: bool = False
 
     viewer: ViewerCfg = ViewerCfg(eye=(0.0, 0.0, 12.0), lookat=(0.0, 0.0, 4.5))
