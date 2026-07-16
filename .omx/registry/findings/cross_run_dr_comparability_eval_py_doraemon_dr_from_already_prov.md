@@ -2,14 +2,14 @@
 title: "Cross-run DR comparability: eval.py --doraemon-dr-from already provides a common test distribution; p7_tail knew and declined, judging a robustness campaign on nominal-only"
 tags: ["eval", "comparability", "doraemon-dr-from", "common-exam", "confound", "methodology", "p7-tail", "e4"]
 created: 2026-07-16T06:00:00.285512
-updated: 2026-07-16T06:00:00.285512
+updated: 2026-07-16T06:54:18.179347
 sources: []
-links: ["sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md"]
+links: ["sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e.md"]
 category: convention
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 status: needs-experiment
 ---
 
@@ -93,4 +93,38 @@ on disk) and check whether e4's roll-tail win survives a common exam -- that is 
 proven tail lever and it was discarded on a `none`-only verdict.
 Sequencing note: do this BEFORE the post-TAM baseline retrain moves the natural anchor, or freeze the
 anchor spec first.
+
+---
+
+## Update (2026-07-16T06:54:18.179347)
+
+## Update (2026-07-16): the e4 re-eval probe is RETIRED (user closed the prune direction); the methodology lead survives
+
+[DECISION] User (2026-07-16) FULLY rejected e4 and the entire xy-offset prune direction, including the
+`_y`-only refinement — see [[xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e]].
+Rationale: the manufacturing tolerance those DR dims model is physically real on the hardware, so there
+is no reason to delete them; NDIMS economy does not justify un-modelling a real disturbance.
+[CONFIDENCE: HIGH — user domain judgment]
+
+CONSEQUENCE for this page: its "cheapest first probe" — re-eval the e4 (and e2) checkpoints on the
+baseline's DR to test whether e4's roll-tail win survives a common exam — is RETIRED **as an
+e4-motivated probe**. That probe existed to answer "was e4 mis-discarded on a `none`-only verdict?"; with
+the prune direction closed by decision, its answer cannot change what we do. Do not queue it as the
+methodology's first demonstration.
+
+WHAT REMAINS VALID AND UNCHANGED (do not let the e4 retirement take these with it):
+- The core defect this page identifies — anchoring a DR-ROBUSTNESS campaign's verdicts to `none` (fixed
+  nominal physics) judges the campaign on the one condition it does not deploy in — is INDEPENDENT of
+  e4. e4 was the illustration, not the argument.
+- The three durable-methodology requirements still stand: (1) FREEZE the reference DR as a static,
+  version-controlled spec rather than a live run-dir pointer; (2) the anchor should be a
+  deployment-realistic fixed DR, not any run's learned DR (still BLOCKED on a defensible DR band, see
+  [[sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an]]); (3) record the DR source as
+  provenance in the eval output.
+- The SCOPE LIMIT still stands: a common exam fixes the MEASUREMENT confound only, never the TRAINING
+  confound (compared policies remain optima of different training distributions).
+
+NEW FIRST DEMONSTRATION NEEDED: this lead now lacks a cheap, decision-relevant first probe. Whatever
+replaces it must be a comparison we would actually act on. Keep `status: needs-experiment`, but note the
+motivating probe changed — do not re-inherit the e4 framing when this lead is next picked up.
 

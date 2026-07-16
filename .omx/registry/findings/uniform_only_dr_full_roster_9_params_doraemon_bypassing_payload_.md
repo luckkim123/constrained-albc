@@ -2,14 +2,14 @@
 title: "uniform-only DR full roster (9 params, DORAEMON-bypassing) + payload XY-radius vs Z curriculum split"
 tags: ["payload", "doraemon", "dr", "ndims", "merge", "main"]
 created: 2026-07-07T06:52:51.038810
-updated: 2026-07-07T18:53:11.982150
+updated: 2026-07-16T06:55:59.320356
 sources: []
-links: []
+links: ["xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e.md"]
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 ---
 
 # uniform-only DR full roster (9 params, DORAEMON-bypassing) + payload XY-radius vs Z curriculum split
@@ -150,4 +150,59 @@ user reversed the hold decision and adopted the promotion into main.
   default behavior is unchanged until DORAEMON widens it. The GPU baseline verdict was NOT performed.
 - **Tree state**: constrained-albc is now a single main tree (payload-radius worktree/branch removed);
   main is UNPUSHED (push is user-gated). marinelab side of unrelated actuation-noise stays un-consolidated.
+
+---
+
+## Update (2026-07-16T06:55:59.320356)
+
+## Update (2026-07-16): the PRUNE TRAP — removing a key from `_PARAM_DEFS` alone does NOT pin the param; it silently DEMOTES it to this page's uniform-only class
+
+This page's decision rule ("DORAEMON-managed iff it routes through `_sample_or_uniform(<key>, sampled, ...)`
+AND `<key>` is registered in `_PARAM_DEFS`") has a corollary that is easy to get backwards when DESIGNING a
+DR-dim prune. Recording it explicitly because a prune proposal is exactly where the rule gets read.
+
+[FINDING] Deleting an entry from `_PARAM_DEFS` while LEAVING its `_sample_or_uniform` call site and its
+DR-cfg field intact does not pin the param at nominal. The key vanishes from the `sampled` dict, the
+`if sampled and key in sampled` test fails, and control falls to `_rand_uniform_range(shape, range_tuple,
+device)` over the **cfg field's full range** — i.e. the param becomes uniform-only per this page's own
+roster: always full-scale, no Beta curriculum, at full width from iteration 0. The intent ("stop
+randomizing this") produces the opposite ("randomize it maximally, forever, uncurriculumed").
+[EVIDENCE: events.py `_sample_or_uniform` else-branch -> `_rand_uniform_range`;
+`_apply_xyz_offset_with_doraemon` per-axis else-branch does the same]
+[CONFIDENCE: HIGH]
+
+To actually pin a param at nominal you must ALSO remove the cfg field (which forces the call site to
+change) or delete the randomize call. e4 xyprune did remove the cfg fields — verified: its
+`config/env.yaml` has no `cob_offset_x/y` or `cog_offset_x/y` keys at all, and `state_space: 24` vs the
+baseline's 28 — so e4 avoided this trap. It was avoided by construction, not by a guard: nothing in the
+code would have flagged the half-prune.
+
+[FINDING] SUB-TRAP — the `default_lo, default_hi` in each `_PARAM_DEFS` tuple are DEAD for training and
+must not be read as the live bounds. `build_param_specs` (marinelab/algorithms/doraemon.py:65-83)
+destructures `for param_name, field_name, _, _ in param_defs` — discarding both defaults — and takes
+`lo, hi = getattr(dr_cfg, field_name)`. Training always goes through this path
+(`albc_env.py:495: build_param_specs(self.cfg.randomization, _PARAM_DEFS, _NOMINAL_OVERRIDES)`); the
+module-level `PARAM_SPECS`, which DOES use the tuple defaults, is only for "callers without a DR cfg".
+So e.g. `("cog_offset_x", "cog_offset_x", -0.01, 0.01)` trains at the CFG range (-0.02, 0.02), not ±0.01.
+The in-file comment at the buoy entries already says this ("this is only the module-load default used
+when no DR cfg is supplied; the live cfg field default is (0.75, 1.25), see config.py") but it sits on
+two entries out of ~20 and reads as buoy-specific when it is universal.
+[EVIDENCE: doraemon.py:39 header comment "(doraemon_name, dr_config_field_name, default_lo, default_hi)";
+marinelab doraemon.py:79-82; albc_env.py:495; doraemon.py:89 "Default specs (base bounds) for callers
+without a DR cfg"]
+[CONFIDENCE: HIGH]
+
+CONSEQUENCE for the prune trap: because DORAEMON's live bound and the uniform fallback BOTH read the same
+cfg tuple, a half-prune does NOT widen the range — max width is identical. What is lost is the
+CURRICULUM: Beta annealing outward from nominal is replaced by full-range uniform from iter 0. Same
+ceiling, no ramp.
+
+STALENESS FIX: this page's rule text says "_PARAM_DEFS (doraemon.py:41-62, 16 entries)". As of 2026-07-16
+HEAD it is 20 entries (the p_t union merge and the buoy volume/mass decorrelation added dims since this
+page was written on 2026-07-07). `NDIMS = len(_PARAM_DEFS)` is dynamic, so no code hardcodes the count —
+only this page did.
+
+APPLICABILITY NOTE: the concrete prune this was investigated for (e4 xy-offset) is CLOSED by user
+decision 2026-07-16 — see [[xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e]]. The trap
+is recorded because it generalizes to any future `_PARAM_DEFS` prune, not because that prune is live.
 
