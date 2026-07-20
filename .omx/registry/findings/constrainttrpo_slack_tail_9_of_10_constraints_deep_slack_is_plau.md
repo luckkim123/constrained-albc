@@ -2,7 +2,7 @@
 title: "ConstraintTRPO slack tail: 9 of 10 constraints deep-slack is plausibly healthy complementary slackness (UNVERIFIED) -- confirm via training-time trajectory + loosening ablation before tuning budgets"
 tags: ["constraint", "CMDP", "complementary-slackness", "thruster_util", "slack-tail", "inertness", "loosening-ablation", "budget-tuning", "next-experiment", "ConstraintTRPO"]
 created: 2026-07-12T10:04:32.803449
-updated: 2026-07-13T05:31:34.247747
+updated: 2026-07-20T07:54:39.551806
 sources: ["diagnose-20260606-194621", "diagnose-20260607-113942"]
 links: ["constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md", "constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md"]
 category: pattern
@@ -10,6 +10,8 @@ confidence: high
 schemaVersion: 1
 qualityScore: 70
 qualityReasons: ["no-source-marker", "generic-only-tags"]
+status: needs-experiment
+blocked-on: "Parked under the 2026-07-20 batch-pass decision."
 ---
 
 # ConstraintTRPO slack tail: 9 of 10 constraints deep-slack is plausibly healthy complementary slackness (UNVERIFIED) -- confirm via training-time trajectory + loosening ablation before tuning budgets
@@ -47,3 +49,9 @@ SOURCE / VERIFICATION STATUS: OMC architect analysis (opus) + web research (KKT 
 ## Update (2026-07-13T05:31:34.247747)
 
 STEP 1 (free training-time trajectory check) DONE — 2026-07-13 post-p7_tail planning session, on baseline trpo_baseline_260713_031325 TB (5000 iters, EventAccumulator over Constraint/margin/*). Verdict: the deep slack at convergence is NOT 'never mattered' — 8/10 constraints were near-binding during early exploration and then relaxed (= 'shaped training then relaxed', healthy complementary slackness): attitude min 0.05@it4, joint1_pos 0.05@it498, cumul_yaw 0.05@it0, arm_joint_vel 0.10@it1, yaw_rate 0.50@it0, rp_rate 0.50@it1, arm_torque 0.40@it5, thruster_util 2.00@it14. Only TWO never came close at ANY point: rp_vel_settling (min 8.30@it3781) and manipulability (min 3.09@it153) — the genuinely-inert candidates. CONSEQUENCE: the loosening ablation (budgets x100 on the 9 non-thruster constraints) is DEPRIORITIZED — most budgets demonstrably shaped early training, so loosening is not a safe no-op and the 'inert' hypothesis is already largely refuted for 8/10 without a GPU run. If a loosening probe is ever wanted, scope it to rp_vel_settling + manipulability only. Data: margin trajectories at iters 0/50/100/200/400/800/1600/3200/4999 extracted this session (evidence in the p7_tail planning notes).
+
+---
+
+## Update (2026-07-20T07:54:39.551806)
+
+STATUS PROMOTION (2026-07-20 wiki sweep): the loosening ablation (rp_vel_settling + manipulability budgets x100, confirm they stay non-binding) is an unstarted training probe; promoted to needs-experiment.

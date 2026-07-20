@@ -4,7 +4,7 @@ tags: ["doraemon", "curriculum", "stall", "mode-infeasible", "performance_lb", "
 created: 2026-07-13T10:08:06.059795
 updated: 2026-07-13T10:08:06.059795
 sources: ["experiments/rsl_rl/albc_trpo_teacher/p7_tail/trpo_e1_latdr_260713_124923/analysis/diagnose-20260713-184751/report.md", "doraemon.py", "config.py"]
-links: ["teacher_dr_harder_doraemon_curriculum_froze_before_run_end.md", "doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever.md"]
+links: ["teacher_dr_harder_doraemon_curriculum_froze_before_run_end_unuse.md", "doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md"]
 category: pattern
 confidence: high
 schemaVersion: 1

@@ -2,14 +2,16 @@
 title: "reward-sigma / integral-obs-gate coupling (reward.md 7) theory review: conditionally sound; shared-sigma ALIASING is the defect (decouple gate threshold), gate is a settling-band accumulator not anti-windup, clamp is dead code in gated mode, Hwangbo-2017 citation is wrong (use Yu&Lee 2023)"
 tags: ["albc", "envs-main", "reward", "integral-obs", "error-gate", "leaky-integrator", "sigma-coupling", "anti-windup", "settling-band", "doe-confounding", "aliasing", "theory-review", "literature", "experiment-lead"]
 created: 2026-07-11T07:09:55.881613
-updated: 2026-07-11T07:09:55.881613
+updated: 2026-07-20T07:54:39.698724
 sources: []
 links: ["bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md", "leaky_integral_and_ema_bias_carry_over_the_mid_episode_command_r.md"]
 category: decision
-confidence: medium
+confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
+status: needs-experiment
+blocked-on: "R1 is a zero-GPU code change; R6 training probe parked under the 2026-07-20 batch-pass decision."
 ---
 
 # reward-sigma / integral-obs-gate coupling (reward.md 7) theory review: conditionally sound; shared-sigma ALIASING is the defect (decouple gate threshold), gate is a settling-band accumulator not anti-windup, clamp is dead code in gated mode, Hwangbo-2017 citation is wrong (use Yu&Lee 2023)
@@ -36,3 +38,8 @@ RECOMMENDATIONS (no code changed; each tagged prompt-worthy). R1 (highest, code,
 
 UNCERTAINTY (declarative): A/B-only — (a) whether decoupling the gate from sigma actually changes learned performance (may be behaviorally neutral); (b) whether the gated integral earns its 3 obs dims vs an ungated variant; (c) whether sigma=0.10 is the RIGHT settling band vs merely plausible. Intent-vs-accident of the gated/ungated role division is undocumented. Whether R7/R8 validated the integral obs under the GATED regime specifically is unknown (git blame lost under repo rename; see [[leaky_integral_and_ema_bias_carry_over_the_mid_episode_command_r]]). Not verified: Astrom & Hagglund anti-windup chapter text, Bohn & Atherton 1995 abstract, Ogata/Franklin primary PDFs (convention confirmed via secondary sources), any paper naming the exact sigma-reuse construction (none found).
 
+---
+
+## Update (2026-07-20T07:54:39.698724)
+
+STATUS PROMOTION (2026-07-20 wiki sweep): R1 (decouple integral_gate_threshold from reward sigma -- behavior-preserving code change) and the R6 training probe remain unstarted; promoted to needs-experiment.

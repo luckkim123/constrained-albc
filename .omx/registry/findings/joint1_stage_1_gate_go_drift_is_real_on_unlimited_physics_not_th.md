@@ -2,15 +2,16 @@
 title: "joint1 Stage-1 gate GO: drift is real on unlimited physics, not the +-360deg wall artifact"
 tags: ["joint1", "drift", "cumulative-rotation", "unlimited-physics", "stage-1-gate", "ee-action", "ttf-correction"]
 created: 2026-07-12T18:26:08.556497
-updated: 2026-07-20T03:15:55.375858
+updated: 2026-07-20T07:54:39.772474
 sources: ["diagnose-20260713-031533"]
 links: ["joint1_anti_drift_design_history.md", "engine_gap_flat_target_eval_records_joint1_trajectory_but_render.md"]
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
 status: needs-experiment
+blocked-on: "Stage 2 requires a station-keeping policy trained on unlimited joint1 physics; no such checkpoint exists yet."
 ---
 
 # joint1 Stage-1 gate GO: drift is real on unlimited physics, not the +-360deg wall artifact
@@ -67,3 +68,9 @@ full-DOF line.
 Do not read the Stage-1 drift magnitudes as Stage-2 numbers: Stage 1 used DIRECT joint-delta action
 (free `_joint_pos_targets` integrator) while Stage 2's ee-action base overwrites `_joint_pos_targets`
 with IK output wrapped to (-pi,pi] -- a different command signal that needs its own baseline.
+
+---
+
+## Update (2026-07-20T07:54:39.772474)
+
+BLOCKED-ON ANNOTATION (2026-07-20 wiki sweep): Stage 1 is finished. The only open scope is Stage 2: re-measure joint1 drift on a policy that station-keeps on unlimited-joint physics -- which requires a retrained (or curriculum-adapted) policy checkpoint; the current teacher was trained against the +-360 wall.

@@ -4,7 +4,7 @@ tags: ["literature", "steady-state-error", "integral-action", "bias-ema", "rewar
 created: 2026-07-16T06:36:48.431486
 updated: 2026-07-20T03:15:55.459870
 sources: []
-links: ["bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md", "penalty_vs_objective_exchange_rate_deg_of_attitude_error_bought.md"]
+links: ["bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md", "penalty_vs_objective_exchange_rate_deg_of_attitude_error_bought_.md"]
 category: reference
 confidence: high
 schemaVersion: 1
@@ -261,4 +261,4 @@ term), 3 (L1/Huber form for r_bias, arXiv:2402.09075, watch ss_jitter), and 4 (f
 
 Note the ordering argument this page itself makes: r_bias is 0.32% of total reward, so lead 2 (the
 dominant term) outranks leads 1/3 on expected value. Compare the objective-units framing in
-[[penalty_vs_objective_exchange_rate_deg_of_attitude_error_bought_]].
+[[penalty_vs_objective_exchange_rate_deg_of_attitude_error_bought__]].

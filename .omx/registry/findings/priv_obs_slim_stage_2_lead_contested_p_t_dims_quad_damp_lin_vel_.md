@@ -2,14 +2,16 @@
 title: "priv-obs slim Stage-2 lead: contested p_t dims (quad_damp, lin_vel) need WITH-vs-WITHOUT A/B; union kept them"
 tags: ["priv_obs", "encoder", "experiment_lead", "consolidation", "p_t_layout"]
 created: 2026-07-12T12:01:49.559370
-updated: 2026-07-12T12:01:49.559370
+updated: 2026-07-20T07:54:39.478862
 sources: []
 links: []
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 80
-qualityReasons: ["no-source-marker"]
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
+status: needs-experiment
+blocked-on: "Parked under the 2026-07-20 batch-pass decision."
 ---
 
 # priv-obs slim Stage-2 lead: contested p_t dims (quad_damp, lin_vel) need WITH-vs-WITHOUT A/B; union kept them
@@ -43,3 +45,8 @@ dropping it changes critic information, not just encoder input -- expect the eff
 explained-variance first. quad_damp removal also interacts with the hydro-DR sampling
 (quadratic_damping_scale stays a DR dim regardless; only the observation of it is at stake).
 
+---
+
+## Update (2026-07-20T07:54:39.478862)
+
+STATUS PROMOTION (2026-07-20 wiki sweep): the Stage-2 WITH-vs-WITHOUT A/B (drop quad_damp_roll + lin_vel from p_t, 28D -> 24D on the post-latency union layout) is an unstarted fresh-training probe; promoted to needs-experiment for backlog visibility.

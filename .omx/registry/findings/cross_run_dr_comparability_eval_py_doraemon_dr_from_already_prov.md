@@ -4,7 +4,7 @@ tags: ["eval", "comparability", "doraemon-dr-from", "common-exam", "confound", "
 created: 2026-07-16T06:00:00.285512
 updated: 2026-07-20T07:23:31.150740
 sources: ["diagnose-20260716-164016", "doraemon.py:817", "train.py:58"]
-links: ["sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e.md", "extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net.md", "step_interval_250_400_probe_separate_dr_width_from_optimisation.md"]
+links: ["sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e.md", "extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_.md", "step_interval_250_400_probe_separate_dr_width_from_optimisation_.md"]
 category: convention
 confidence: high
 schemaVersion: 1
@@ -184,7 +184,7 @@ policy is shaped by the widening as well as by the observation. This matters for
 number -- the single cell P-B1 LOST, `hard` roll `n_gt20` 8.667 vs 6.667. There is an independent
 measurement that a wider DR alone produces precisely that regression: extend8k widened the
 curriculum with NO observation change and its nominal roll transient overshoot rose 59%
-([[extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_]]). So the competing explanation
+([[extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net__]]). So the competing explanation
 for P-B1's only cost already has independent support, which is also the reason replay would mostly
 CONFIRM rather than discriminate -- and is part of why it is not worth a full training run now.
 
@@ -192,7 +192,7 @@ PRIORITY VERDICT: low. Reasons, in order: (1) for adoption the bundle is the cor
 bundle already won on every ss_error cell at all 4 DR levels; (2) the one cost has a competing
 explanation with independent evidence, so replay's expected information is small; (3) it costs a
 full training run. Revisit ONLY if the roll transient peak becomes the binding problem AND the
-`step_interval` probe ([[step_interval_250_400_probe_separate_dr_width_from_optimisation_]]) fails
+`step_interval` probe ([[step_interval_250_400_probe_separate_dr_width_from_optimisation__]]) fails
 to separate DR-width from optimisation-steps -- that probe is the cheaper instrument for the same
 question and is already reviewer-approved.
 

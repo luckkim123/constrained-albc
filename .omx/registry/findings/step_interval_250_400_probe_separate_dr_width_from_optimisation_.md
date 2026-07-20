@@ -4,7 +4,7 @@ tags: ["doraemon", "step_interval", "dr-width", "transient-overshoot", "thruster
 created: 2026-07-20T04:17:04.272956
 updated: 2026-07-20T04:19:54.445544
 sources: ["diagnose-20260720-124259", "next-20260720-131526"]
-links: ["extend8k_saturated_the_dr_config_box_at_iter_7000_all_20_params.md"]
+links: ["extend8k_saturated_the_dr_config_box_at_iter_7000_all_20_params_.md"]
 category: decision
 confidence: high
 schemaVersion: 1
@@ -80,7 +80,7 @@ many cheap runs to settle the configuration -- not a defect. The real training r
 later on an NVIDIA DGX with much larger `max_iterations` AND `num_envs`. So "extending did
 not help" is a finding about this plant's response at a fixed config, NOT an argument that
 the budget is wrong. What carries to the DGX is the saturation guard recorded in
-[[extend8k_saturated_the_dr_config_box_at_iter_7000_all_20_params_]]: bounds first, then
+[[extend8k_saturated_the_dr_config_box_at_iter_7000_all_20_params__]]: bounds first, then
 scale.
 
 # Status

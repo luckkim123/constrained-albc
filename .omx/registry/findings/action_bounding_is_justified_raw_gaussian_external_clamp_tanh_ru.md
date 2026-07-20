@@ -2,14 +2,16 @@
 title: "Action bounding is justified (raw Gaussian + external clamp) -- tanh ruled out, 3 experiment leads remain"
 tags: ["action-clamp", "tanh", "exploration", "noise", "clip-fraction", "raw-gaussian", "constraint-trpo", "experiment-lead", "max-std", "init-noise-std", "ipo-barrier", "entropy-collapse"]
 created: 2026-07-02T09:00:08.575699
-updated: 2026-07-13T06:37:50.097930
+updated: 2026-07-20T07:54:39.404966
 sources: []
 links: ["action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md"]
 category: convention
 confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
+status: needs-experiment
+blocked-on: "Leads 1-2 absorbed elsewhere; Lead 3 (entropy-IPO causal split training run) is the open item. Parked under the 2026-07-20 batch-pass decision."
 ---
 
 # Action bounding is justified (raw Gaussian + external clamp) -- tanh ruled out, 3 experiment leads remain
@@ -49,3 +51,8 @@ max_std/init_noise_std is therefore dissolved (there is almost no saturation to 
 re-propose Lead 2 as a probe; it matches the PROMPT_next_experiment_planning §3 rejection. Lead 3
 (entropy-IPO causal split) remains a separate open item; Lead 1 (clip_fraction logging) is done.
 
+---
+
+## Update (2026-07-20T07:54:39.404966)
+
+STATUS PROMOTION (2026-07-20 wiki sweep): Lead 3 (entropy-IPO causal split: comparison training run with entropy_coef_per_dim=0 vs shipped per-dim values, to isolate whether the IPO barrier causally drives entropy collapse) is a live training-run lead; page promoted to needs-experiment so it surfaces in the status backlog alongside the other exploration leads.

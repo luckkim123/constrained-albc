@@ -4,7 +4,7 @@ tags: ["doraemon", "curriculum", "confound", "experiment-design", "p7_tail", "co
 created: 2026-07-20T05:15:15.337690
 updated: 2026-07-20T05:16:10.114042
 sources: ["trpo_e1_latdr_260713_124923", "trpo_e3_extend10k_260713_224822", "trpo_e4_xyprune_260714_090201", "trpo_baseline_260713_031325"]
-links: ["eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md", "an_off_doraemon_channel_that_costs_return_stalls_the_curriculum.md", "doraemon_over_widens_then_oscillates_when_a_converged_teacher_is.md", "xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e.md", "doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever.md", "cross_run_dr_comparability_eval_py_doraemon_dr_from_already_prov.md", "page_0000b26e.md", "an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md", "doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md"]
+links: ["eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md", "an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md", "doraemon_over_widens_then_oscillates_when_a_converged_teacher_is.md", "xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e.md", "doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md", "cross_run_dr_comparability_eval_py_doraemon_dr_from_already_prov.md"]
 category: convention
 confidence: high
 schemaVersion: 1
@@ -38,10 +38,10 @@ the curriculum (e2 bias_ema obs, mode 0 / success 0.86) is also the one whose re
 adopted. That correlation is the point.
 
 Mechanisms are recorded individually and are NOT the same failure:
-[[an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_]] (contract/stall),
+[[an_off_doraemon_channel_that_costs_return_stalls_the_curriculum__]] (contract/stall),
 [[doraemon_over_widens_then_oscillates_when_a_converged_teacher_is]] (over-widen/oscillate),
 [[xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e]] (dim removal -> survivors
-over-widen). Root concept: [[doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever]].
+over-widen). Root concept: [[doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e]].
 
 ## Why the curriculum is this touchy: alpha and performance_lb are a tight operating point
 

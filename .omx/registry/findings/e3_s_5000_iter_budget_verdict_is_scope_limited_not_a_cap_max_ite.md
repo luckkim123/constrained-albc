@@ -4,7 +4,7 @@ tags: ["doraemon", "curriculum-budget", "max-iterations", "num-envs", "dgx", "sc
 created: 2026-07-16T05:58:47.795144
 updated: 2026-07-20T03:32:10.598463
 sources: ["diagnose-20260714-084409", "diagnose-20260720-115818", "diagnose-20260720-123142"]
-links: ["performance_lb_recon_needs_zero_new_rollouts_doraemon_state_pt_a.md", "decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema.md", "extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net.md", "eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md"]
+links: ["performance_lb_recon_needs_zero_new_rollouts_doraemon_state_pt_a.md", "decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema.md", "extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_.md", "eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md"]
 category: decision
 confidence: high
 schemaVersion: 1
@@ -171,7 +171,7 @@ RESULT RECORDED 2026-07-20 (extend8k, analysis diagnose-20260720-115818): the sa
 
 This page's core claim is CONFIRMED, not refuted: max_iterations really is a DR-expansion knob, and extend8k measured the expansion directly -- +12 curriculum expansions (3000 extra iters / step_interval=250, config.py:544), DORAEMON/entropy_before -22.70->-18.20, DR ocean_current 0.06->0.22 (3.7x). The success_rate drop 0.88->0.79 is the wider exam, not policy regression (ess_ratio 0.76->1.00). So 'extending' on this plant buys DR width at the cost of the objective.
 
-WHAT REMAINS OPEN (the only reason this stays needs-experiment): the DGX scale-up arm -- larger num_envs AND max_iterations together on different hardware. extend8k varied ONLY iterations at fixed num_envs, so it says nothing about whether more PARALLEL samples per expansion changes the trade. Do NOT re-run the same-plant iteration-only arm. Full detail: [[extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_]].
+WHAT REMAINS OPEN (the only reason this stays needs-experiment): the DGX scale-up arm -- larger num_envs AND max_iterations together on different hardware. extend8k varied ONLY iterations at fixed num_envs, so it says nothing about whether more PARALLEL samples per expansion changes the trade. Do NOT re-run the same-plant iteration-only arm. Full detail: [[extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net__]].
 
 ---
 

@@ -4,7 +4,7 @@ tags: ["doraemon", "dr-difficulty", "extend8k", "curriculum-saturation", "eval-f
 created: 2026-07-20T03:37:29.562304
 updated: 2026-07-20T06:27:47.261385
 sources: ["diagnose-20260720-124259"]
-links: ["doraemon_is_trust_region_limited_not_feasibility_limited_kl_step.md", "doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step.md", "decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema.md", "step_interval_250_400_probe_separate_dr_width_from_optimisation.md"]
+links: ["doraemon_is_trust_region_limited_not_feasibility_limited_kl_step.md", "doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md", "decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema.md", "step_interval_250_400_probe_separate_dr_width_from_optimisation_.md"]
 category: reference
 confidence: high
 schemaVersion: 1
@@ -150,14 +150,14 @@ after you widen the box. The moment the bounds move, all three knobs become live
    (doraemon.py:39), so a wider box lowers achievable return at fixed lb, pushing success down
    toward alpha and handing the binding role BACK to the feasibility gate. The tuning criterion is
    not the absolute value but "does `success_rate` settle at `alpha`=0.5 at convergence"
-   ([[doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_]]). Both failure directions
+   ([[doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step__]]). Both failure directions
    are already on record here: too low -> success ~0.99, feasibility inert, self-pacing gone (the
    lb=200 + bias_ema case, [[decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema]]);
    too high -> early stall at mode -2 (the posttam baseline).
 3. **step_interval trades reach for thoroughness at fixed budget.** Raising it lowers n_updates and
    therefore LOWERS final difficulty. The approved-but-unlaunched 250->400 probe is precisely the
    instrument for separating DR-width from optimisation-steps
-   ([[step_interval_250_400_probe_separate_dr_width_from_optimisation_]]).
+   ([[step_interval_250_400_probe_separate_dr_width_from_optimisation__]]).
 
 DESIGN TENSION to carry into the batch pass (this is the hard part, not a footnote): widening the
 box while holding the budget under-uses the new box; widening the box AND the budget re-runs the

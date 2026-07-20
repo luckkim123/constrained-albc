@@ -2,14 +2,16 @@
 title: "Tracking kernel exp-quad-tanh: dead-zone diagnosis correct but fix is on wrong axis (yaw not att_rp); the exp+L1+tanh stack has no literature precedent"
 tags: ["reward", "tracking", "kernel", "dead-zone", "att_rp", "literature", "exp-design"]
 created: 2026-07-08T23:49:37.492504
-updated: 2026-07-08T23:49:37.492504
+updated: 2026-07-20T07:54:39.625436
 sources: []
 links: []
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
+status: needs-experiment
+blocked-on: "Parked under the 2026-07-20 batch-pass decision."
 ---
 
 # Tracking kernel exp-quad-tanh: dead-zone diagnosis correct but fix is on wrong axis (yaw not att_rp); the exp+L1+tanh stack has no literature precedent
@@ -79,3 +81,8 @@ UNVERIFIED: termination MDP (tail-benign claim), whether att_rp tanh induces jit
 ScienceDirect flexible-link paper (403), ManiSkill2 exact reward. Cross-ref: yaw_command_is_rate_not_angle
 card, reward_penalty_terms card, action_bounding card.
 
+---
+
+## Update (2026-07-20T07:54:39.625436)
+
+STATUS PROMOTION (2026-07-20 wiki sweep): the discriminating probe among the 3 fix candidates (small yaw-axis tanh dead-zone / kernel simplification / no-op) measuring ss_error AND ss_jitter across all 4 DR levels is unstarted; promoted to needs-experiment.

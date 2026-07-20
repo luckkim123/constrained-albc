@@ -4,7 +4,7 @@ tags: ["eval", "doraemon-dr", "cross-run", "comparability", "confound", "none-le
 created: 2026-07-13T10:08:05.594876
 updated: 2026-07-16T05:51:09.548030
 sources: ["experiments/rsl_rl/albc_trpo_teacher/p7_tail/trpo_e1_latdr_260713_124923/analysis/diagnose-20260713-184751/report.md", "eval.py", "dr_config.py"]
-links: ["an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md", "cross_run_reference_values_must_be_re_extracted_fresh.md"]
+links: ["an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md", "cross_run_reference_values_must_be_re_extracted_fresh_never_carr.md"]
 category: convention
 confidence: high
 schemaVersion: 1

@@ -4,7 +4,7 @@ tags: ["albc", "envs-main", "reward", "bias-ema", "steady-state-error", "integra
 created: 2026-07-11T06:52:57.946013
 updated: 2026-07-16T06:36:48.834468
 sources: []
-links: ["leaky_integral_and_ema_bias_carry_over_the_mid_episode_command_r.md", "reward_penalty_terms_thruster_smoothness_bias_block_3_temporal_b.md", "yaw_command_is_rate_not_angle_inherited_design_defensible_only_i.md", "literature_map_how_rl_control_actually_handles_steady_state_err.md"]
+links: ["leaky_integral_and_ema_bias_carry_over_the_mid_episode_command_r.md", "reward_penalty_terms_thruster_smoothness_bias_block_3_temporal_b.md", "yaw_command_is_rate_not_angle_inherited_design_defensible_only_i.md", "literature_map_how_rl_control_actually_handles_steady_state_erro.md"]
 category: decision
 confidence: medium
 schemaVersion: 1
@@ -158,7 +158,7 @@ candidate among several, not consensus.
 
 ### 5. The bigger context this page could not see
 
-See [[literature_map_how_rl_control_actually_handles_steady_state_err]]: NOBODY has eliminated
+See [[literature_map_how_rl_control_actually_handles_steady_state_erro]]: NOBODY has eliminated
 steady-state error in any domain -- Bohn 2021 tried a PURE integrator, 0.999 decay, learned integration
 gains AND shaped rewards, and reports "none were successful in entirely eliminating it". That
 empirically refutes the intuitive "we lack a true integrator, hence the residual bias" story. Also,

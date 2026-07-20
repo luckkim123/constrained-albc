@@ -4,7 +4,7 @@ tags: ["e3", "curriculum-budget", "max-iterations", "doraemon", "transient-trade
 created: 2026-07-20T03:14:17.892347
 updated: 2026-07-20T03:32:10.505687
 sources: ["diagnose-20260720-115818", "diagnose-20260720-122425", "diagnose-20260720-123142"]
-links: ["e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite.md", "e3_extend10k_regressed_the_policy_training_budget_is_not_the_p7.md", "engine_gap_heavy_tail_json_pct_peak_gt_thresh_exceeds_100_at_ood.md", "eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md"]
+links: ["e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite.md", "e3_extend10k_regressed_the_policy_training_budget_is_not_the_p7_.md", "engine_gap_heavy_tail_json_pct_peak_gt_thresh_exceeds_100_at_ood.md", "eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md"]
 category: decision
 confidence: high
 schemaVersion: 1
@@ -14,7 +14,7 @@ qualityReasons: []
 
 # extend8k (8000-iter) confirms e3: extending past 5000 iters is net-negative on the FIXED-DR exam, an axis trade, and confounded by DR-width expansion
 
-A fresh from-scratch 8000-iter run of the adopted biasema config (trpo_biasema_extend8k_260716_162849) vs its 5000-iter sibling (trpo_biasema_260715_142543), graded on the SAME fixed none/soft/medium/hard exam (both plain static, neither --doraemon-dr-from), gives the e3 budget question real single-config data. See [[e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite]] and [[e3_extend10k_regressed_the_policy_training_budget_is_not_the_p7_]].
+A fresh from-scratch 8000-iter run of the adopted biasema config (trpo_biasema_extend8k_260716_162849) vs its 5000-iter sibling (trpo_biasema_260715_142543), graded on the SAME fixed none/soft/medium/hard exam (both plain static, neither --doraemon-dr-from), gives the e3 budget question real single-config data. See [[e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite]] and [[e3_extend10k_regressed_the_policy_training_budget_is_not_the_p7__]].
 
 CONCLUSION: extending 5000->8000 delivered NO net win. On the clean fixed-DR exam it is an AXIS TRADE: roll steady-state ss_error improved at all levels (none 0.215->0.171 -21%, soft -25%, medium -16%, hard -11%) but pitch regressed at all levels (+34% to +52%) and yaw regressed (+30% to +109%, tiny absolute). The load-bearing regression is roll TRANSIENT overshoot at low DR: roll n_gt20 (mean env count with peak>20deg) none 4.3->61.3 (14x), soft 7->45.3 -- floor down, spike up, the same signature as e2 (trpo_e2_biasobs_260713_173456). Survival saturated 100% both runs (non-discriminating). EVIDENCE: eval static_260717_005643 (8k) vs static_260715_192701 (5000) summary.json; analysis diagnose-20260720-115818 generalization section.
 

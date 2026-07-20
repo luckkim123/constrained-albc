@@ -4,7 +4,7 @@ tags: ["doraemon", "success-rate", "performance_lb", "alpha-floor", "curriculum-
 created: 2026-07-16T05:59:59.870186
 updated: 2026-07-20T03:15:54.941980
 sources: []
-links: ["performance_lb_recon_needs_zero_new_rollouts_doraemon_state_pt_a.md", "an_off_doraemon_channel_that_costs_return_stalls_the_curriculum.md", "p_a8_perflb200_more_iters_5000_8000_closed_the_deployment_ood_dr.md", "decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema.md"]
+links: ["performance_lb_recon_needs_zero_new_rollouts_doraemon_state_pt_a.md", "an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md", "p_a8_perflb200_more_iters_5000_8000_closed_the_deployment_ood_dr.md", "decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema.md"]
 category: decision
 confidence: high
 schemaVersion: 1
@@ -86,7 +86,7 @@ further teacher run: lb determines where the alpha equilibrium lands, hence the 
 anatomy. It is also free -- see [[performance_lb_recon_needs_zero_new_rollouts_doraemon_state_pt_a]].
 Also explains e1's whole-run stall from the same root: lb=250 vs baseline return ~247 is a razor-thin
 margin, so e1's ~10% return tax from action delay pushed it under the bar and pinned mode=-2 for the
-entire run -- see [[an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_]].
+entire run -- see [[an_off_doraemon_channel_that_costs_return_stalls_the_curriculum__]].
 Open: the p25 recon is taken under the DR the run REACHED, so it is not the paper's App A.1 no-DR
 rule; a no-DR rollout with TRAINING episode structure is still never-done (eval.py cannot supply it).
 

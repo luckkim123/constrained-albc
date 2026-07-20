@@ -4,7 +4,7 @@ tags: ["latency", "delay", "domain-randomization", "sim2real", "experiment-idea"
 created: 2026-07-08T02:50:39.246807
 updated: 2026-07-20T05:14:39.045842
 sources: ["trpo_e1_latdr_260713_124923", "diagnose-20260713-184751", "next-20260713-122215", "next-20260713-142602", "dr_config.py", "eval.py"]
-links: ["real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md", "eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md", "an_off_doraemon_channel_that_costs_return_stalls_the_curriculum.md", "baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage.md", "xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e.md", "cross_run_dr_comparability_eval_py_doraemon_dr_from_already_prov.md"]
+links: ["real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md", "eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md", "an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md", "baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md", "xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e.md", "cross_run_dr_comparability_eval_py_doraemon_dr_from_already_prov.md"]
 category: convention
 confidence: high
 schemaVersion: 1
@@ -108,7 +108,7 @@ reproduces e1's unanswerable design exactly.
 ### BLOCKER 2 (curriculum): delay is an off-DORAEMON channel that stalls the curriculum
 
 Mechanism and treatment are already recorded in
-[[an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_]]: delay is absent from
+[[an_off_doraemon_channel_that_costs_return_stalls_the_curriculum__]]: delay is absent from
 DORAEMON `_PARAM_DEFS` (20 dims) so the curriculum cannot ease it; the ~10% return tax pins
 mean return (~197) below `performance_lb` (config.py = 250, with baseline ~247 sitting just
 under it), so `doraemon_success_rate` never reaches alpha=0.5 and DORAEMON sits at mode -2 all
@@ -128,7 +128,7 @@ training — the real robot has transport delay, so a sim without it is a sim-to
 This settles the DIRECTION and flips this page from "idea" to "endorsed, gated". It does NOT
 authorise a launch: both blockers above stand, and per the 2026-07-20 parking decision every
 open lead is planned and executed in ONE later batch pass
-([[baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_]]).
+([[baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage__]]).
 
 Note the principle is the same one that KILLED the e4 xy-offset prune
 ([[xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e]]): a physically-real

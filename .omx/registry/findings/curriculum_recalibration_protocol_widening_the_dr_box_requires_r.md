@@ -4,7 +4,7 @@ tags: ["doraemon", "curriculum", "kl_ub", "performance_lb", "step_interval", "ma
 created: 2026-07-20T06:29:51.844146
 updated: 2026-07-20T06:29:51.844146
 sources: ["doraemon.py:38-49", "doraemon.py:416", "trpo_biasema_extend8k_260716_162849", "diagnose-20260716-035505"]
-links: ["doraemon_is_trust_region_limited_not_feasibility_limited_kl_step.md", "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md", "decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema.md", "cross_run_dr_comparability_eval_py_doraemon_dr_from_already_prov.md", "eval_command_box_was_half_the_trained_envelope_from_2026_04_06_t.md", "step_interval_250_400_probe_separate_dr_width_from_optimisation.md"]
+links: ["doraemon_is_trust_region_limited_not_feasibility_limited_kl_step.md", "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md", "decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema.md", "cross_run_dr_comparability_eval_py_doraemon_dr_from_already_prov.md", "eval_command_box_was_half_the_trained_envelope_from_2026_04_06_t.md", "step_interval_250_400_probe_separate_dr_width_from_optimisation_.md"]
 category: convention
 confidence: high
 schemaVersion: 1
@@ -101,7 +101,7 @@ otherwise the run reproduces a known trade under a new name.
 `max_iterations` LOWERS final difficulty (fewer expansions) in exchange for more training per
 difficulty. The approved-but-unlaunched 250->400 probe is the instrument for separating DR-width from
 optimisation-steps and should be read before this campaign is designed
-([[step_interval_250_400_probe_separate_dr_width_from_optimisation_]]).
+([[step_interval_250_400_probe_separate_dr_width_from_optimisation__]]).
 
 ## Status
 

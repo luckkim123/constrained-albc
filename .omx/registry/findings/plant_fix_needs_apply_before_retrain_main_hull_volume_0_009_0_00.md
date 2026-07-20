@@ -4,7 +4,7 @@ tags: ["buoyancy", "plant-fix", "sim-to-real", "net-buoyancy", "hull-volume", "p
 created: 2026-07-16T12:13:44.284365
 updated: 2026-07-16T12:16:54.623772
 sources: ["onboard_measured_2026_07_06", "albc.py:64", "paper-spec-table"]
-links: ["onboard_measured_2026_07_06_arm_step_response_valid_sim_zeta_0_7.md", "open_actionable_ledger_read_before_any_sim_plant_code_change_or.md"]
+links: ["onboard_measured_2026_07_06_arm_step_response_valid_sim_zeta_0_7.md", "open_actionable_ledger_read_before_any_sim_plant_code_change_or_.md"]
 category: decision
 confidence: high
 schemaVersion: 1
@@ -27,7 +27,7 @@ PLANT FIX registered for the next-experiment stack (handed off from another sess
 ## Code verification (this session, against CODE not manifest)
 - marinelab/marinelab/assets/albc/albc.py:64 `ALBCHydrodynamicsCfg.volume = 0.009` -- CONFIRMED present (the wrong value).
 - marinelab/marinelab/assets/albc/albc.py:120 `ALBCBuoyHydrodynamicsCfg.volume = 0.00268` -- CONFIRMED present (the correct value, keep).
-- Implication: every teacher_baseline_posttam run trained so far (incl. the currently-running trpo_biasema_extend8k_260716_162849) carries the +10.25 N wrong buoyancy. If that campaign is meant as the corrected-plant reference baseline, this repeats the 2026-07-14 teacher_baseline_opt known-wrong-plant incident. See [[open_actionable_ledger_read_before_any_sim_plant_code_change_or_]].
+- Implication: every teacher_baseline_posttam run trained so far (incl. the currently-running trpo_biasema_extend8k_260716_162849) carries the +10.25 N wrong buoyancy. If that campaign is meant as the corrected-plant reference baseline, this repeats the 2026-07-14 teacher_baseline_opt known-wrong-plant incident. See [[open_actionable_ledger_read_before_any_sim_plant_code_change_or__]].
 
 ## FIX (single variable, minimum-change)
 - File: marinelab/marinelab/assets/albc/albc.py

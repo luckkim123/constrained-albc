@@ -4,7 +4,7 @@ tags: ["eval-methodology", "command-box", "att-amp", "yaw-rate", "comparability"
 created: 2026-07-20T06:24:10.057411
 updated: 2026-07-20T06:24:10.057411
 sources: ["8c07584", "7f09681", "f4583fd", "11dcad64", "static_260713_075722", "static_260715_003649", "static_260715_004654"]
-links: ["pitch_is_the_box_sensitive_axis_to_watch_hard_pitch_ss_error_gro.md", "dual_box_single_variable_matched_15_vs_full_30_same_checkpoint_c.md", "april_2026_entropy_collapse_campaign_machinery_bug_solved_conver.md"]
+links: ["tam_plant_correctness_fix_collapses_the_void_hard_dr_roll_heavy_.md", "april_2026_entropy_collapse_campaign_machinery_bug_solved_conver.md"]
 category: convention
 confidence: high
 schemaVersion: 1
@@ -67,11 +67,11 @@ a pre-07-15 run against a post-07-15 FULL-box eval is NOT.
 3. The half-box bias is not uniform across axes: on the same checkpoint, doubling the box raises the
    roll floor ~15% but hard-pitch ss_error ~80% (0.295 -> 0.532 deg). Pitch is the axis whose
    historical numbers were most flattered. See
-   [[pitch_is_the_box_sensitive_axis_to_watch_hard_pitch_ss_error_gro]].
+   [[tam_plant_correctness_fix_collapses_the_void_hard_dr_roll_heavy_]].
 4. Structural robustness does generalise across the box: doubling it did NOT re-open a heavy-tail
    (hard roll max/median 7.49x -> 6.07x). So the half-box era's TAIL conclusions survive; it is the
    ACCURACY numbers that were flattered. See
-   [[dual_box_single_variable_matched_15_vs_full_30_same_checkpoint_c]].
+   [[tam_plant_correctness_fix_collapses_the_void_hard_dr_roll_heavy_]].
 
 ## Limitation
 

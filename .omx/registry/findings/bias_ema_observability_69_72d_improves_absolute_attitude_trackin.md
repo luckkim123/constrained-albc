@@ -4,7 +4,7 @@ tags: ["bias_ema", "observability", "use_bias_ema_obs", "heavy-tail", "authority
 created: 2026-07-13T13:47:17.565874
 updated: 2026-07-13T13:47:17.565874
 sources: ["experiments/rsl_rl/albc_trpo_teacher/p7_tail/trpo_e2_biasobs_260713_173456/analysis/diagnose-20260713-223534/report.md"]
-links: ["bias_reward_bias_ema_penalty_theory_review.md", "teacher_hard_dr_cv_explodes_without_heavy_tail.md", "eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md"]
+links: ["bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md", "teacher_hard_dr_cv_explodes_without_heavy_tail_dc_bias_dispersio.md", "eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md"]
 category: decision
 confidence: high
 schemaVersion: 1
