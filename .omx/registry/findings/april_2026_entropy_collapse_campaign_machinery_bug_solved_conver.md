@@ -2,14 +2,14 @@
 title: "April 2026 entropy-collapse campaign: machinery bug SOLVED, converged-sigma collapse NOT -- and min_std is the wrong lever"
 tags: ["entropy", "exploration", "noise_std", "min_std", "entropy_coef", "per-dim", "legacy-campaign", "april-2026", "erc-trpo", "limit-cycle", "backlog-correction", "rule03", "std_min", "posttam", "zero-gpu"]
 created: 2026-07-20T06:08:58.240967
-updated: 2026-07-20T07:10:35.387858
+updated: 2026-07-20T08:43:44.204679
 sources: ["docs/reference/experiments-archive.md", "docs/reference/experiments-index.json", "3132605", "d7c65c3", "885327a", "26b2f54", "constraint_encoder_runner.py:366-367", "TB Noise/std_min 5 posttam runs"]
 links: ["n_gt20_and_os_env_are_overshoot_percent_of_step_magnitude_not_de.md"]
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
 status: needs-experiment
 blocked-on: "Item 1 THRUSTER half CLOSED 2026-07-20 via Noise/std_min (biasema+extend8k clamped at 0.05; baseline/perflb/moreiters not clamped). ARM half still needs the per-dim log_std read from model_7999.pt -- zero-GPU, unblocked. Item 2 (training probe) parked under the 2026-07-20 batch-pass decision."
 ---
@@ -197,4 +197,10 @@ not the scalar. And the campaign-wide entropy collapse is still unexplained by t
 collapse to sigma ~0.096-0.099 with no clamp firing at all.
 
 Metric-naming caveat in the same family: [[n_gt20_and_os_env_are_overshoot_percent_of_step_magnitude_not_de]].
+
+---
+
+## Update (2026-07-20T08:43:44.204679)
+
+A2 probe design notes (2026-07-20 pass-2, literature + config check): (1) the planned entropy_coef_per_dim -> 0 probe is a REPLICATION of this campaign's own April result (04-09 vs 04-10: coef 0.003 vs 0 -> noise_std 0.55 vs 0.12) on the new per-dim/post-TAM stack -- frame it as confirmatory; a diverging outcome would itself be the finding. (2) Floor-censoring confound: the biasema-lineage anchor IS thruster-floor-clamped (Noise/std_min = 0.0500), so on thruster dims the probe can only reveal collapse pressure above the floor; the interpretable readout is the ARM dims (floor 0.10; Z1 reads whether they are clamped) plus the thruster margin. Read Noise/std_min on the launch anchor BEFORE launch. (3) Same-run kill-criterion: hard entropy interventions on this stack have precedent for abrupt reward collapse (the reverted EnTRPO episode), so pre-register an early-stop (sustained reward drop / constraint-violation spike) whose firing is itself an informative "abrupt-collapse mode" verdict. No external literature studies per-dim entropy coefficients or mid-training entropy removal inside a TRPO+log-barrier stack -- the design's justification is this project's own run data; label it as such in the write-up.
 

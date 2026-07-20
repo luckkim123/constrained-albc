@@ -2,16 +2,16 @@
 title: "sim hydro nominal is analytical (not measured); IMU+pressure can anchor rotation/heave but not surge/sway/TAM"
 tags: ["measurement", "system-id", "domain-randomization", "sim-to-real", "damping", "free-decay", "TAM", "sensors", "fault-tolerant-control", "thruster", "load-cell", "arm-step-response", "max_thrust", "systematic-bias", "user-decision", "batch-pass"]
 created: 2026-06-14T07:38:12.841674
-updated: 2026-07-20T07:25:41.320166
+updated: 2026-07-20T08:43:44.130723
 sources: ["envs/main/config.py:139", "envs/main/mdp/events.py"]
 links: ["curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md", "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md"]
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
 status: needs-apply-before-retrain
-blocked-on: "DIRECTION APPROVED by user 2026-07-20: add a DR band to TAM moment-arm + max_thrust (band, not measurement). Remaining work = SOURCE a defensible physical span (per-thruster gain/voltage/mounting tolerance, T200 spec) -- shared prerequisite with the curriculum-recalibration Step 1; source once, unblock both. Then add to the randomisation roster and retrain as a rule-02 comparison experiment."
+blocked-on: "max_thrust band SOURCED (~+/-15%: T200 voltage window 14-18V + 5% lab curve-matching) and ready to roster as its own attributable step (campaign B0c); TAM moment-arm band still blocked on a real geometric-tolerance source (CAD stack-up / bracket spec). Remaining: confirm our battery's actual voltage window, write the Z6 memo, then roster + rule-02 comparison retrain."
 ---
 
 # sim hydro nominal is analytical (not measured); IMU+pressure can anchor rotation/heave but not surge/sway/TAM
@@ -113,4 +113,10 @@ Adjacent but distinct, do not conflate: the vertical-pair wiring finding
 ([[tam_vertical_single_motor_dual_esc_measured_2026_07_05]]) is a STRUCTURAL mismatch (two vertical
 thrusters are physically one motor on a dual-ESC harness), not a magnitude uncertainty, and a DR
 band does not address it.
+
+---
+
+## Update (2026-07-20T08:43:44.130723)
+
+2026-07-20 pass-2 sourcing result (Z6 half-done): a defensible max_thrust DR band CAN be composed from citable evidence -- ~14% from a realistic on-vehicle voltage window (14-18 V interpolated on the BlueRobotics T200 published 12/16/20 V thrust curves) + ~5% independent-lab thrust-curve-matching uncertainty (published T200 characterizations matched the vendor curve within 5%), composing to ~ +/-15% around nominal 50 N (42.5-57.5 N), comfortably inside the 20-30% actuator-gain DR magnitudes common in legged sim-to-real work. The TAM moment-arm band has NO underwater-specific mounting-tolerance source (searched 2026-07-20) -- per this page's own no-invented-bounds standard, max_thrust DR is ready-to-roster while TAM-arm DR stays blocked-on-source (CAD tolerance stack-up or vendor bracket spec needed); do not back-fill the arm band from the thrust evidence (irrelevant to geometry).
 

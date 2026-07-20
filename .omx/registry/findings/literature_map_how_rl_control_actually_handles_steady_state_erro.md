@@ -2,15 +2,15 @@
 title: "Literature map: how RL control actually handles steady-state error (cross-domain) -- nobody has eliminated it; our r_bias reward penalty is a single-paper idea, our encoder is the field's top-ranked mechanism with no UUV precedent"
 tags: ["literature", "steady-state-error", "integral-action", "bias-ema", "reward-shaping", "policy-invariance", "rma", "encoder", "cross-domain", "citations"]
 created: 2026-07-16T06:36:48.431486
-updated: 2026-07-20T03:15:55.459870
+updated: 2026-07-20T08:43:44.057030
 sources: []
 links: ["bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md", "penalty_vs_objective_exchange_rate_deg_of_attitude_error_bought_.md"]
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
-status: needs-experiment
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
+status: resolved
 ---
 
 # Literature map: how RL control actually handles steady-state error (cross-domain) -- nobody has eliminated it; our r_bias reward penalty is a single-paper idea, our encoder is the field's top-ranked mechanism with no UUV precedent
@@ -262,3 +262,10 @@ term), 3 (L1/Huber form for r_bias, arXiv:2402.09075, watch ss_jitter), and 4 (f
 Note the ordering argument this page itself makes: r_bias is 0.32% of total reward, so lead 2 (the
 dominant term) outranks leads 1/3 on expected value. Compare the objective-units framing in
 [[penalty_vs_objective_exchange_rate_deg_of_attitude_error_bought__]].
+
+---
+
+## Update (2026-07-20T08:43:44.057030)
+
+2026-07-20 pass-2 web corroboration: fresh searches found no superseding or contradicting work; the map stands. Additions: (1) R1 (integral-gate decoupling) and the tracking-kernel lever remain literature-matched (Bohn 2021 arXiv:2111.04153; Zhang/Mattsson/Wigren ACC 2023 arXiv:2304.10277; two-scale kernel single precedent arXiv:2606.16621). (2) One mainstream lever absent from our plan, now recorded as considered-and-deferred: an L1-adaptive / disturbance-observer module wrapping the FROZEN trained policy (Zhang/Hovakimyan RA-L 2022 arXiv:2112.01953; dimension-decomposed SE(3) identifier arXiv:2510.03100) -- acts on the action output, needs no retraining, demonstrated quadrotor robustness against persistent offsets; deferred because it has no UUV thruster-driven precedent and adds a second control loop plus its own tuning/stability burden. (3) Soften (not reverse) the "no RMA-for-UUV precedent" claim: SCRMA (underwater snake robot, Springer 2022) is a second underwater RMA instance, though undulatory rather than thruster-driven and unverifiable past the paywall. STATUS -> resolved: the map is current and its actionable outputs (R1, tracking-kernel probe) are carried as items in the 2026-07-20 final campaign plan.
+

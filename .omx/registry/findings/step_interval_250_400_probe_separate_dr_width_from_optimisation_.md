@@ -2,14 +2,14 @@
 title: "step_interval 250->400 probe: separate DR-WIDTH from OPTIMISATION-STEPS as the cause of extend8k's nominal roll transient regression (pending approval, not launched)"
 tags: ["doraemon", "step_interval", "dr-width", "transient-overshoot", "thruster-util", "probe", "teacher_baseline_posttam", "pending-approval", "correction"]
 created: 2026-07-20T04:17:04.272956
-updated: 2026-07-20T04:19:54.445544
-sources: ["diagnose-20260720-124259", "next-20260720-131526"]
+updated: 2026-07-20T08:43:43.909618
+sources: ["diagnose-20260720-124259", "next-20260720-131526", "marinelab/marinelab/algorithms/doraemon.py"]
 links: ["extend8k_saturated_the_dr_config_box_at_iter_7000_all_20_params_.md"]
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 status: needs-experiment
 blocked-on: "PENDING HUMAN APPROVAL -- reviewer-approved 2026-07-20; user deferred launching to batch-plan accumulated leads later; nothing else blocks it"
 ---
@@ -122,4 +122,10 @@ Remaining minor items in `next-20260720-131526` (none blocks a launch):
 - The measured "+8 achieved expansions" supersedes the source report's TL;DR "+12
   curriculum expansions" (which is the SCHEDULED delta, 3000/250). The proposal's number is
   the accurate one; a reader cross-checking the report will hit that conflict.
+
+---
+
+## Update (2026-07-20T08:43:43.909618)
+
+Literature + code check (2026-07-20 pass-2): neither DORAEMON (Tiboni et al., ICLR 2024) nor ADR/AutoDR treats the update interval as an independent tunable -- both GATE distribution updates on measured performance (DORAEMON: train_until_performance_lb; ADR: buffered success threshold). No published ablation varies a fixed clock interval at constant budget, so this probe has no literature precedent to confirm or refute. Code verification: our doraemon.py:416 fires updates on a pure clock (step_count % step_interval); the performance guard lives INSIDE the update as the hard_performance_constraint inversion (mode -2), not as an update gate -- a deliberate approximation of the reference's train-until-converged cadence (comment at doraemon.py:43). FRAMING RULE for the probe write-up: the result characterizes THIS repo's clock-based approximation, not a literature-known sensitivity; do not cite the papers as predicting a direction.
 
