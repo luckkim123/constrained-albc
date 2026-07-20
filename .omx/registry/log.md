@@ -3696,3 +3696,27 @@
 - **Pages:** step_interval_250_400_probe_separate_dr_width_from_optimisation_.md
 - **Summary:** updated "step_interval 250->400 probe: separate DR-WIDTH from OPTIMISATION-STEPS as the cause of extend8k's nominal roll transient regression (pending approval, not launched)"
 
+## [2026-07-20T04:39:02.855161] query
+- **Pages:** action_bounding_is_justified_raw_gaussian_external_clamp_tanh_ru.md, performance_lb_doraemon_gate_is_causally_independent_of_the_acto.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md, ocean_nominal_shift_collapses_actor_entropy_e2_dr_harder.md, policy_head_design_rationale_and_literature_standing_encoder_inp.md, exploration_is_dead_entropy_collapsed_and_noise_std_sits_just_ab.md, entropy_and_noise_std_are_collapsed_on_both_runs_the_standing_we.md, entropy_and_noise_std_remain_collapsed_on_both_runs_standing_wea.md, engine_generic_flags_entropy_collapse_barrier_spike_reward_plate.md, exploration_is_dead_on_both_runs_policy_entropy_collapsed_and_po.md, doraemon_optimize_entropy_accept_can_leak_the_success_floor_late.md, doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md, doraemon_over_widens_then_oscillates_when_a_converged_teacher_is.md, posttam_encoder_is_alive_and_specialized_z_sweep_exploration_col.md, actor_noise_std_decays_along_a_near_identical_path_in_both_runs_.md, literature_map_how_rl_control_actually_handles_steady_state_erro.md, our_doraemon_original_both_entropy_max_center_can_move_kl_ub_is_.md, the_encoder_is_alive_not_collapsed_and_unsaturated_z_std_well_ab.md, engine_gap_eval_npz_saves_no_raw_obs_std_privileged_blocks_exact.md
+- **Summary:** query 'policy entropy collapse noise_std floor min_std' -> 20 of 231
+
+## [2026-07-20T04:39:43.249585] query
+- **Pages:** leaky_integral_and_ema_bias_carry_over_the_mid_episode_command_r.md, bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md, real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md, literature_map_how_rl_control_actually_handles_steady_state_erro.md, arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, plant_fix_needs_apply_before_retrain_main_hull_volume_0_009_0_00.md, reward_penalty_terms_thruster_smoothness_bias_block_3_temporal_b.md, baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md, onboard_measured_2026_07_06_arm_step_response_valid_sim_zeta_0_7.md, stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e.md, p_b1_shared_exam_on_reference_dr_hard_roll_floor_was_exam_artifa.md, reward_cost_parallel_structure_mostly_mirroring_two_real_couplin.md, a_common_exam_removes_the_measurement_confound_only_it_does_not_.md, at_the_only_dr_fair_comparison_point_none_both_roll_and_pitch_dc.md, bias_ema_observability_p_b1_confirmed_at_the_fair_none_point_68_.md, cross_run_dr_comparability_eval_py_doraemon_dr_from_already_prov.md
+- **Summary:** query 'bias_ema observation deployable real robot privileged sim-only' -> 20 of 232
+
+## [2026-07-20T04:40:39.671033] add
+- **Pages:** bias_ema_obs_is_deployment_safe_computed_from_command_minus_meas.md
+- **Summary:** created 'bias_ema obs is deployment-safe: computed from command minus measured attitude, no privileged state'
+
+## [2026-07-20T04:48:10.764929] add
+- **Pages:** baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md
+- **Summary:** updated 'Baseline open experiment-leads backlog (beyond heavy-tail): triage by value x launchability with blockers'
+
+## [2026-07-20T04:48:46.103705] add
+- **Pages:** baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md
+- **Summary:** updated 'Baseline open experiment-leads backlog (beyond heavy-tail): triage by value x launchability with blockers'
+
+## [2026-07-20T04:50:14.529097] add
+- **Pages:** baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md
+- **Summary:** updated 'Baseline open experiment-leads backlog (beyond heavy-tail): triage by value x launchability with blockers'
+

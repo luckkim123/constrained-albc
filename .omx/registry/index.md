@@ -1,6 +1,6 @@
 # Wiki Index
 
-> 328 pages | Last updated: 2026-07-20T04:19:54.445544
+> 329 pages | Last updated: 2026-07-20T04:50:14.529097
 
 ## convention
 
@@ -117,6 +117,7 @@
 - [baseline (consolidated main) reference: trpo_baseline_260713_031325](baseline_consolidated_main_reference_trpo_baseline_260713_031325.md) - # baseline (consolidated main) reference: trpo_baseline_260713_031325
 - [Baseline open experiment-leads backlog (beyond heavy-tail): triage by value x launchability with blockers](baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md) - # Baseline open experiment-leads backlog (beyond heavy-tail): triage by value...
 - [baseline-repro reproduces teacher deterministically (E4 control)](baseline_repro_reproduces_teacher_deterministically_e4_control.md) - # baseline-repro reproduces teacher deterministically (E4 control)
+- [bias_ema obs is deployment-safe: computed from command minus measured attitude, no privileged state](bias_ema_obs_is_deployment_safe_computed_from_command_minus_meas.md) - # bias_ema obs is deployment-safe: computed from command minus measured attit...
 - [buoyancy/gravity/restoring apply SEPARATELY to main body vs buoy(link3); gravity HAS DR (body_mass_scale+payload_mass); DR is body-shared not independent](buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md) - # buoyancy/gravity/restoring apply SEPARATELY to main body vs buoy(link3); gr...
 - [command is NOT domain randomization; command range scale is inert residue (unwired 2026-04-06, stale comment)](command_is_not_domain_randomization_command_range_scale_is_inert.md) - # command is NOT domain randomization; command range scale is inert residue (...
 - [constraint health index](constraint_health_index.md) - # constraint health index
