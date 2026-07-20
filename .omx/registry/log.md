@@ -3416,3 +3416,91 @@
 - **Pages:** open_actionable_ledger_read_before_any_sim_plant_code_change_or_.md, actuator_hardware_identification_arm_xw540_t260_board_measured_p.md, baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md, eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md, plant_fix_needs_apply_before_retrain_main_hull_volume_0_009_0_00.md
 - **Summary:** query 'against already also approximately are back because before' -> 5 of 188
 
+## [2026-07-20T03:32:10.505687] add
+- **Pages:** extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_.md
+- **Summary:** updated 'extend8k (8000-iter) confirms e3: extending past 5000 iters is net-negative on the FIXED-DR exam, an axis trade, and confounded by DR-width expansion'
+
+## [2026-07-20T03:32:10.598463] add
+- **Pages:** e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite.md
+- **Summary:** updated "e3's '5000-iter budget' verdict is scope-limited, NOT a cap: max_iterations is a DR-EXPANSION knob (step_interval clock) and the real ceiling is the Beta a=b=1 config bound, not compute"
+
+## [2026-07-20T03:32:33.028251] query
+- **Pages:** doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md, kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md, our_doraemon_original_both_entropy_max_center_can_move_kl_ub_is_.md, reward_md_6_error_buffers_reward_call_site_dt_scaling_theory_rev.md, baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md, doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md, kl_ub_0_12_trades_attitude_for_translation_e1_dr_harder.md, performance_lb_doraemon_gate_is_causally_independent_of_the_acto.md, uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload_.md, dr_harder_campaign_synthesis_speed_kills_attitude_center_shift_o.md, teacher_dr_harder_doraemon_curriculum_froze_before_run_end_unuse.md, doraemon_is_trust_region_limited_not_feasibility_limited_kl_step.md, an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md, eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md, safety_rail_constraints_fire_hard_at_init_go_quiet_and_re_fire_a.md, dr_harder_reward_decomposition_confirms_eval_trades_on_the_train.md, extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_.md, perflb200_final_dr_anatomy_17_bulk_params_at_config_ceiling_unif.md, the_doraemon_success_rate_peak_is_set_by_performance_lb_not_poli.md, decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema.md
+- **Summary:** query 'DORAEMON performance_lb kl_ub DR width easy environment' -> 20 of 315
+
+## [2026-07-20T03:33:47.068832] query
+- **Pages:** open_actionable_ledger_read_before_any_sim_plant_code_change_or_.md, actuator_hardware_identification_arm_xw540_t260_board_measured_p.md, baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md, eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md, plant_fix_needs_apply_before_retrain_main_hull_volume_0_009_0_00.md
+- **Summary:** query 'against already also approximately are back because before' -> 5 of 188
+
+## [2026-07-20T03:34:12.618363] query
+- **Pages:** open_actionable_ledger_read_before_any_sim_plant_code_change_or_.md, actuator_hardware_identification_arm_xw540_t260_board_measured_p.md, baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md, eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md, plant_fix_needs_apply_before_retrain_main_hull_volume_0_009_0_00.md
+- **Summary:** query 'against already also approximately are back because before' -> 5 of 188
+
+## [2026-07-20T03:34:26.111024] add
+- **Pages:** extend8k_tracks_all_three_axes_with_100_survival_roll_error_risi.md
+- **Summary:** updated 'extend8k tracks all three axes with 100% survival, roll error rising monotonical'
+
+## [2026-07-20T03:34:26.111024] add
+- **Pages:** roll_steady_state_is_heavy_tailed_at_hard_cv_246_a_minority_of_e.md
+- **Summary:** updated 'Roll steady-state is heavy-tailed at hard (CV = 246%): a minority of envs domina'
+
+## [2026-07-20T03:34:26.111024] add
+- **Pages:** at_the_one_fair_point_none_the_extension_is_an_axis_trade_roll_s.md
+- **Summary:** created 'At the ONE fair point (`none`), the extension is an axis TRADE: roll steady-stat'
+
+## [2026-07-20T03:34:26.111024] add
+- **Pages:** the_load_bearing_regression_is_roll_transient_overshoot_and_it_l.md
+- **Summary:** created 'The load-bearing regression is roll TRANSIENT OVERSHOOT, and it lands on the FAI'
+
+## [2026-07-20T03:34:26.111024] add
+- **Pages:** the_threshold_count_corroborates_the_same_regression_the_number_.md
+- **Summary:** updated 'The threshold count corroborates the same regression: the number of envs whose r'
+
+## [2026-07-20T03:34:26.111024] add
+- **Pages:** survival_is_saturated_on_both_runs_so_it_does_not_discriminate_t.md
+- **Summary:** updated 'Survival is saturated on both runs, so it does not discriminate — the trade is e'
+
+## [2026-07-20T03:34:26.111024] add
+- **Pages:** reward_is_tracking_dominated_and_healthy_att_rp_yaw_vel_supply_e.md
+- **Summary:** updated 'Reward is tracking-dominated and healthy: att_rp + yaw_vel supply essentially al'
+
+## [2026-07-20T03:34:26.111024] add
+- **Pages:** episode_cumulative_reward_did_not_improve_with_the_extension_and.md
+- **Summary:** updated 'Episode-cumulative reward did NOT improve with the extension and plateaued early'
+
+## [2026-07-20T03:34:26.111024] add
+- **Pages:** trpo_mechanics_are_healthy_line_search_never_fails_kl_lands_on_t.md
+- **Summary:** updated 'TRPO mechanics are healthy: line search never fails, KL lands on the max_kl targ'
+
+## [2026-07-20T03:34:26.111024] add
+- **Pages:** exploration_is_dead_entropy_collapsed_and_noise_std_sits_just_ab.md
+- **Summary:** updated 'Exploration is dead — entropy collapsed and noise_std sits just above the min_st'
+
+## [2026-07-20T03:34:26.111024] add
+- **Pages:** both_critic_heads_converged_the_extension_left_them_marginally_h.md
+- **Summary:** updated 'Both critic heads converged; the extension left them marginally higher (consiste'
+
+## [2026-07-20T03:34:26.111024] add
+- **Pages:** the_encoder_latent_is_healthy_and_unsaturated_still_receiving_gr.md
+- **Summary:** updated 'The encoder latent is healthy and unsaturated, still receiving gradient — no col'
+
+## [2026-07-20T03:34:26.111024] add
+- **Pages:** every_constraint_is_satisfied_all_margins_positive_viol_negative.md
+- **Summary:** updated 'Every constraint is satisfied (all margins positive / viol negative); thruster_u'
+
+## [2026-07-20T03:34:26.111024] add
+- **Pages:** the_ipo_barrier_is_healthy_no_spikes_small_magnitude_so_the_cons.md
+- **Summary:** updated 'The IPO barrier is healthy — no spikes, small magnitude — so the constraint adva'
+
+## [2026-07-20T03:34:26.111024] add
+- **Pages:** the_extension_widened_the_dr_curriculum_the_mechanism_behind_the.md
+- **Summary:** updated 'The extension WIDENED the DR curriculum — the mechanism behind the whole trade. '
+
+## [2026-07-20T03:34:26.111024] add
+- **Pages:** the_dr_expansion_continues_to_the_very_end_of_training_iter_8000.md
+- **Summary:** updated 'The DR expansion continues to the very end of training (iter 8000) — the curricu'
+
+## [2026-07-20T03:34:26.111024] add
+- **Pages:** doraemon_kl_step_reads_0_0000_at_the_final_step_but_this_is_a_sp.md
+- **Summary:** updated '`DORAEMON/kl_step` reads 0.0000 at the final step but this is a sparse-logging a'
+

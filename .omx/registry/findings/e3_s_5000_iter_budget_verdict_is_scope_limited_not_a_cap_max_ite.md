@@ -1,17 +1,17 @@
 ---
 title: "e3's '5000-iter budget' verdict is scope-limited, NOT a cap: max_iterations is a DR-EXPANSION knob (step_interval clock) and the real ceiling is the Beta a=b=1 config bound, not compute"
-tags: ["doraemon", "curriculum-budget", "max-iterations", "num-envs", "dgx", "scale-up", "e3", "config-ceiling", "p-a6", "user-decision", "extend8k", "result-recorded"]
+tags: ["doraemon", "curriculum-budget", "max-iterations", "num-envs", "dgx", "scale-up", "e3", "config-ceiling", "p-a6", "user-decision", "extend8k", "result-recorded", "exam-comparability", "correction"]
 created: 2026-07-16T05:58:47.795144
-updated: 2026-07-20T03:19:56.704000
-sources: ["diagnose-20260714-084409", "diagnose-20260720-115818"]
-links: ["performance_lb_recon_needs_zero_new_rollouts_doraemon_state_pt_a.md", "decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema.md", "extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net.md"]
+updated: 2026-07-20T03:32:10.598463
+sources: ["diagnose-20260714-084409", "diagnose-20260720-115818", "diagnose-20260720-123142"]
+links: ["performance_lb_recon_needs_zero_new_rollouts_doraemon_state_pt_a.md", "decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema.md", "extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net.md", "eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md"]
 category: decision
 confidence: high
 schemaVersion: 1
 qualityScore: 100
 qualityReasons: []
 status: needs-experiment
-blocked-on: "REMAINING SCOPE ONLY: DGX scale-up (larger num_envs AND max_iterations on different hardware). The same-plant 'does extending past 5000 help' half is now ANSWERED by extend8k -- do not re-run that arm."
+blocked-on: "REMAINING SCOPE ONLY: DGX scale-up (larger num_envs AND max_iterations). The same-plant 'does extending past 5000 help' half is ANSWERED (verdict rests on the fair none level) -- do not re-run that arm."
 ---
 
 # e3's '5000-iter budget' verdict is scope-limited, NOT a cap: max_iterations is a DR-EXPANSION knob (step_interval clock) and the real ceiling is the Beta a=b=1 config bound, not compute
@@ -172,3 +172,15 @@ RESULT RECORDED 2026-07-20 (extend8k, analysis diagnose-20260720-115818): the sa
 This page's core claim is CONFIRMED, not refuted: max_iterations really is a DR-expansion knob, and extend8k measured the expansion directly -- +12 curriculum expansions (3000 extra iters / step_interval=250, config.py:544), DORAEMON/entropy_before -22.70->-18.20, DR ocean_current 0.06->0.22 (3.7x). The success_rate drop 0.88->0.79 is the wider exam, not policy regression (ess_ratio 0.76->1.00). So 'extending' on this plant buys DR width at the cost of the objective.
 
 WHAT REMAINS OPEN (the only reason this stays needs-experiment): the DGX scale-up arm -- larger num_envs AND max_iterations together on different hardware. extend8k varied ONLY iterations at fixed num_envs, so it says nothing about whether more PARALLEL samples per expansion changes the trade. Do NOT re-run the same-plant iteration-only arm. Full detail: [[extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_]].
+
+---
+
+## Update (2026-07-20T03:32:10.598463)
+
+EXAM-COMPARABILITY CORRECTION (2026-07-20, analysis diagnose-20260720-123142 supersedes diagnose-20260720-122425/115818). The earlier wording claimed both runs were 'graded on the SAME fixed none/soft/medium/hard exam because neither used --doraemon-dr-from'. That is WRONG. eval.py static defaults --doraemon-dr to True (eval.py:118 BooleanOptionalAction; eval.py:1131-1135 -> load_doraemon_dr(run_dir); dr_config.py:206 'hard range = learned mean +/- 2*std'), so EACH run was graded on ITS OWN final learned DORAEMON distribution. Not passing --doraemon-dr-from only means no THIRD run's DR was used; it does NOT make the exam common. Per [[eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr]], only the none level (fixed nominal physics) is a fair cross-run comparison; soft/medium/hard are run-relative.
+
+WHAT SURVIVES (all of the verdict): every headline number sits on the FAIR none level -- roll ss_error 0.215->0.171 (-21%), pitch 0.195->0.296 (+52%), roll os_env_mean 17.02->26.99 (+59%), roll n_gt20 4.3->61.3. The axis trade and the transient-overshoot regression are therefore established on identical nominal physics and stand unchanged.
+
+WHAT CHANGES: the soft/medium/hard rows are no longer evidence. The bias is one-sided and computable: extend8k's curriculum ended WIDER (entropy_before -18.20 vs -22.70), so it sat the HARDER exam there -- its roll improvement at those levels is UNDERSTATED and its pitch/yaw regression OVERSTATED. In particular the 'overshoot damage is monotone-largest at nominal (+59% none -> +29% hard)' gradient must NOT be cited as evidence that damage concentrates at nominal: the gradient is confounded by exam difficulty.
+
+REUSABLE LESSON: 'both plain static / neither used --doraemon-dr-from' is NOT a comparability argument. To get a common exam you must pass --doraemon-dr-from <ref run> (shared exam) or --no-doraemon-dr (static DR cfg). Otherwise restrict cross-run claims to none.
