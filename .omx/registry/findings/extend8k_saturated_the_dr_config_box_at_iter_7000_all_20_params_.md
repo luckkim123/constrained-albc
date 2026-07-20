@@ -1,16 +1,17 @@
 ---
 title: "extend8k SATURATED the DR config box at iter 7000 (all 20 params Beta(1,1) = uniform): performance_lb/kl_ub were never the limit, so its `hard` exam IS absolute -- but the 5000-run's is not"
-tags: ["doraemon", "dr-difficulty", "extend8k", "curriculum-saturation", "eval-fairness"]
+tags: ["doraemon", "dr-difficulty", "extend8k", "curriculum-saturation", "eval-fairness", "saturation", "reproduced", "Z2"]
 created: 2026-07-20T03:37:29.562304
-updated: 2026-07-20T06:27:47.261385
-sources: ["diagnose-20260720-124259"]
+updated: 2026-07-20T17:22:48.995601
+sources: ["diagnose-20260720-124259", "diagnose-20260721-020253", "doraemon_state.pt"]
 links: ["doraemon_is_trust_region_limited_not_feasibility_limited_kl_step.md", "doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md", "decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema.md", "step_interval_250_400_probe_separate_dr_width_from_optimisation_.md"]
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
-status: needs-experiment
+qualityScore: 100
+qualityReasons: []
+status: resolved
+blocked-on: ""
 ---
 
 # extend8k SATURATED the DR config box at iter 7000 (all 20 params Beta(1,1) = uniform): performance_lb/kl_ub were never the limit, so its `hard` exam IS absolute -- but the 5000-run's is not
@@ -166,3 +167,8 @@ but pitch +52%, roll overshoot +59%). So "widen the DR bounds" is a NECESSARY, n
 condition, and it cannot be executed as a clean single-variable probe without deciding in advance
 which of the three knobs is held fixed and why. State that choice in the DESIGN.md before launch.
 
+---
+
+## Update (2026-07-20T17:22:48.995601)
+
+[UPDATE 2026-07-21 -- REPRODUCED, and the claim generalizes] extend8k is not the only run that saturated. A Z2 sweep of all 6 posttam runs' doraemon_state.pt found that trpo_perflb200-moreiters_260715_195227 ALSO ended with all 20 params at exactly Beta(1,1), with the same terminal entropy_before (-18.201) and the same achieved expansion count (26). Saturation is therefore a property of the SCHEDULE (8000 iters at step_interval 250 = 32 scheduled / 26 achieved expansions), not a quirk of one run, and the ceiling is an ABSORBING state -- once reached, more iterations cannot widen the box further. Corollary confirmed from the other side by A1 (trpo_stepint400_260720_180208): 8000 iters at step_interval 400 gives only 19 achieved expansions and does NOT saturate (b min/med/max = 1.47/1.66/5.64). So the 'its hard exam IS absolute' property extends to perflb200-moreiters as well, and any cross-run soft/medium/hard comparison must check saturation per run before assuming comparability. [EVIDENCE: dist_a/dist_b from each run's train/doraemon_state.pt -- 20/20 dims at Beta(1,1) for extend8k AND perflb200-moreiters, 0/20 for baseline, perflb200, biasema, stepint400] [CONFIDENCE: HIGH]

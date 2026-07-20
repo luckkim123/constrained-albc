@@ -1,17 +1,17 @@
 ---
 title: "Curriculum recalibration protocol: widening the DR box requires re-tuning budget (kl_ub x n_updates) AND performance_lb together -- not a single-variable probe"
-tags: ["doraemon", "curriculum", "kl_ub", "performance_lb", "step_interval", "max_iterations", "dr-box", "protocol", "experiment-design", "batch-planning"]
+tags: ["doraemon", "curriculum", "kl_ub", "performance_lb", "step_interval", "max_iterations", "dr-box", "protocol", "experiment-design", "batch-planning", "beta", "saturation", "Z2", "zero-gpu", "posttam"]
 created: 2026-07-20T06:29:51.844146
-updated: 2026-07-20T08:43:43.982875
-sources: ["doraemon.py:38-49", "doraemon.py:416", "trpo_biasema_extend8k_260716_162849", "diagnose-20260716-035505"]
+updated: 2026-07-20T17:22:24.901463
+sources: ["doraemon.py:38-49", "doraemon.py:416", "trpo_biasema_extend8k_260716_162849", "diagnose-20260716-035505", "diagnose-20260721-020253", "doraemon_state.pt"]
 links: ["doraemon_is_trust_region_limited_not_feasibility_limited_kl_step.md", "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md", "decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema.md", "cross_run_dr_comparability_eval_py_doraemon_dr_from_already_prov.md", "eval_command_box_was_half_the_trained_envelope_from_2026_04_06_t.md", "step_interval_250_400_probe_separate_dr_width_from_optimisation_.md"]
 category: convention
 confidence: high
 schemaVersion: 1
-qualityScore: 70
-qualityReasons: ["no-source-marker", "generic-only-tags"]
+qualityScore: 100
+qualityReasons: []
 status: needs-experiment
-blocked-on: "Step 0 (state check on existing TB) is zero-GPU and unblocked (campaign Z2). Step 1 bounds review: user-approved band-not-measurement direction; max_thrust span SOURCED 2026-07-20 (see sim_hydro page); TAM-arm span still unsourced. Whole lead parked under the 2026-07-20 batch-pass decision (campaign B0b)."
+blocked-on: "Step 0 (state check) DONE 2026-07-21 -- see the Z2 table on this page; saturation is reproducible and 8k-at-si250 runs are box-exhausted, so bounds-widening is the only lever for them. Step 1 bounds review remains: max_thrust span SOURCED (see sim_hydro page, campaign B0c); TAM-arm span still unsourced. Retrain arm parked under the 2026-07-20 batch-pass decision (campaign B0b)."
 ---
 
 # Curriculum recalibration protocol: widening the DR box requires re-tuning budget (kl_ub x n_updates) AND performance_lb together -- not a single-variable probe
@@ -115,3 +115,47 @@ zero-GPU and can be executed at any time on existing TB data.
 
 performance_lb recalibration target rule (2026-07-20 pass-2 literature check): the DORAEMON paper's guidance sets the performance lower bound at ~80% of a no-DR policy's nominal-parameter return. Ours is calibrated at ~101% (lb=250 vs baseline nominal return ~247) -- the tight-calibration trap this wiki already records, now corroborated by the paper's own rule. Empirical cross-check: perflb200 (lb=200 = ~81% of 247) matched the guidance and un-stalled the curriculum (mode 0 vs baseline late re-stall). Step-1/2 recalibration after bounds widening should therefore target lb ~= 0.8 x MEASURED nominal return of the anchor config, not ~=100%.
 
+---
+
+## Update (2026-07-20T17:22:24.901463)
+
+[FINDING] Z2 (Step 0 state check) is DONE, zero-GPU, over all 6 posttam runs. Terminal
+Beta shapes read straight from `doraemon_state.pt` (`dist_a`/`dist_b`, 20 dims):
+
+| run | iters | a max | b min | b med | b max | dims at Beta(1,1) | final success |
+|---|---|---|---|---|---|---|---|
+| trpo_baseline_260714_192020 | 5000 | 5.29 | 2.09 | 3.68 | 18.39 | 0 | 0.396 |
+| trpo_perflb200_260715_023744 | 5000 | 1.64 | 1.42 | 1.62 | 5.37 | 0 | 0.706 |
+| trpo_perflb200-moreiters_260715_195227 | 8000 | 1.00 | 1.00 | 1.00 | 1.00 | **20** | 0.496 |
+| trpo_biasema_260715_142543 | 5000 | 1.88 | 1.57 | 1.78 | 6.59 | 0 | 0.883 |
+| trpo_biasema_extend8k_260716_162849 | 8000 | 1.00 | 1.00 | 1.00 | 1.00 | **20** | 0.789 |
+| trpo_stepint400_260720_180208 | 8000 | 1.72 | 1.47 | 1.66 | 5.64 | 0 | 0.855 |
+
+[EVIDENCE: torch.load of each run's train/doraemon_state.pt, dist_a/dist_b; DORAEMON/success_rate final from TB; read 2026-07-21]
+[CONFIDENCE: HIGH]
+
+[FINDING] Saturation is REPRODUCIBLE and is a property of "8000 iters at step_interval
+250", not a one-off: TWO runs (perflb200-moreiters and extend8k) independently ended with
+ALL 20 params at exactly Beta(1,1), with identical terminal `entropy_before` (-18.201) and
+identical achieved expansion count (26). The config ceiling is an ABSORBING state -- once
+reached, further iterations cannot change the DR width at all.
+[EVIDENCE: dist_a/dist_b all 1.00 for both runs; TB DORAEMON/entropy_before -18.201 both; DORAEMON/kl_step nonzero 26 both]
+[CONFIDENCE: HIGH]
+
+[FINDING] Consequence for this protocol: for any 8000-iter run at step_interval 250,
+re-tuning `kl_ub x n_updates` or `performance_lb` CANNOT make the exam harder, because the
+box is already exhausted -- only widening the CONFIG BOUNDS can. For 5000-iter runs the
+box is NOT exhausted (b med 1.62-3.68) and the budget knobs still bite. So the protocol
+must branch on whether the run's schedule reaches saturation, and "bounds first, then
+scale" is the correct order for the DGX arm.
+[EVIDENCE: table above -- 8k runs at Beta(1,1) vs 5k runs at b med 1.62/1.78/3.68]
+[CONFIDENCE: HIGH]
+
+[FINDING] Only ONE posttam run was ever gated by feasibility: trpo_baseline_260714_192020
+ended at success 0.396, BELOW alpha=0.5, and correspondingly has the narrowest box
+(b med 3.68, b max 18.39). Every other run stayed well above alpha, so for them the
+`step_interval` clock -- not `performance_lb` -- was the binding limit on widening. Any
+recalibration that assumes performance_lb is the active constraint is mis-targeted for 5
+of the 6 runs.
+[EVIDENCE: TB DORAEMON/success_rate final -- 0.396 (baseline) vs 0.706 / 0.883 / 0.855 / 0.789 / 0.496; alpha=0.5 from config]
+[CONFIDENCE: HIGH]

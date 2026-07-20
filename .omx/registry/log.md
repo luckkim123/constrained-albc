@@ -4948,3 +4948,15 @@
 - **Pages:** e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite.md
 - **Summary:** updated "e3's '5000-iter budget' verdict is scope-limited, NOT a cap: max_iterations is a DR-EXPANSION knob (step_interval clock) and the real ceiling is the Beta a=b=1 config bound, not compute"
 
+## [2026-07-20T17:22:24.901463] add
+- **Pages:** curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md
+- **Summary:** updated 'Curriculum recalibration protocol: widening the DR box requires re-tuning budget (kl_ub x n_updates) AND performance_lb together -- not a single-variable probe'
+
+## [2026-07-20T17:22:48.995601] add
+- **Pages:** extend8k_saturated_the_dr_config_box_at_iter_7000_all_20_params_.md
+- **Summary:** updated "extend8k SATURATED the DR config box at iter 7000 (all 20 params Beta(1,1) = uniform): performance_lb/kl_ub were never the limit, so its `hard` exam IS absolute -- but the 5000-run's is not"
+
+## [2026-07-20T17:22:49.093810] add
+- **Pages:** doraemon_mean_and_doraemon_std_tb_tags_are_raw_physical_units_no.md
+- **Summary:** created 'DORAEMON/mean and DORAEMON/std TB tags are RAW PHYSICAL UNITS, not normalized xi -- Beta(a,b) inversion from them is valid for only 3 of the 20 params'
+
