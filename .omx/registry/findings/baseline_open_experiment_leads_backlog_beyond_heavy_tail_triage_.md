@@ -2,14 +2,14 @@
 title: "Baseline open experiment-leads backlog (beyond heavy-tail): triage by value x launchability with blockers"
 tags: ["backlog", "experiment-roster", "next-experiment", "heavy-tail", "doraemon-per-axis-gate", "command-box", "tam-dr", "sim-to-real", "triage", "teacher-baseline", "doraemon", "performance_lb", "exploration", "batch-planning", "needs-apply-before-retrain", "plant-fidelity", "dgx", "correction", "joint1"]
 created: 2026-07-14T07:57:24.357274
-updated: 2026-07-20T04:50:14.529097
+updated: 2026-07-20T06:09:23.834087
 sources: ["diagnose-20260713-081707", "diagnose-20260715-133249", "diagnose-20260720-124259", "diagnose-20260713-031533"]
-links: ["decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema.md"]
+links: ["decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema.md", "april_2026_entropy_collapse_campaign_machinery_bug_solved_conver.md"]
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 status: needs-experiment
 blocked-on: "PARKED BY USER DECISION 2026-07-20: all open leads (roster A + B) are to be planned and executed in ONE later batch pass; nothing is to be launched before that pass"
 ---
@@ -228,4 +228,33 @@ pays off once its ablation is actually run.
 open lead terminates in a training run, so the batch pass is mainly an ORDERING problem over
 training runs under a one-variable-at-a-time constraint -- not a "clear the cheap ones first" sweep.
 Budget accordingly.
+
+---
+
+## Update (2026-07-20T06:09:23.834087)
+
+## CORRECTION to item 10 (actor exploration-machinery collapse), 2026-07-20
+
+Item 10 above names `min_std` (0.05) as a candidate config probe. That lever is INVALID and must
+not be queued as written:
+
+1. The scalar `min_std` is dead code here -- `constraint_trpo.py:507-511` takes the per-dim branch
+   whenever `min_std_per_dim` is set, and it is set (`rsl_rl_ppo_cfg.py:246` = arm 0.10 /
+   thruster 0.05). Raising the scalar would be a no-op and would return a meaningless null.
+2. min_std was already shown not to bind: commit `26b2f54` (04-21) states "thruster std 0.22-0.34
+   (4-6x above min_std floor 0.05) ... min_std was NOT binding; per-dim entropy IS". A dedicated
+   probe run also exists in the legacy tree (`r10_thr_minstd`, 04-19).
+
+Item 10 also treats the collapse as an un-investigated new lead. It is not: a 49-run campaign
+(2026-03-27~04-22) fixed the machinery bug (log_std outside the trust region, `3132605`) and
+shipped per-dim entropy_coef / per-dim min_std, then closed with "universal entropy collapse"
+still recorded as unresolved. Adaptive entropy and ERC-TRPO were tried and reverted; raising
+entropy_coef to fight collapse was tried pre-campaign and worsened roll. Read
+[[april_2026_entropy_collapse_campaign_machinery_bug_solved_conver]] BEFORE designing any
+exploration probe -- the only live single variable is `entropy_coef_per_dim` (thruster leg), and
+it must be weighed against the documented opposite failure (roll limit cycle).
+
+Cheapest next step for this item is zero-GPU: read PER-DIM log_std from an extend8k checkpoint to
+establish which dims are actually floor-bound. `Policy/mean_noise_std` is an 8-dim mean and cannot
+answer that. Park status unchanged.
 

@@ -1,17 +1,17 @@
 ---
 title: "sim hydro nominal is analytical (not measured); IMU+pressure can anchor rotation/heave but not surge/sway/TAM"
-tags: ["measurement", "system-id", "domain-randomization", "sim-to-real", "damping", "free-decay", "TAM", "sensors", "fault-tolerant-control", "thruster", "load-cell", "arm-step-response"]
+tags: ["measurement", "system-id", "domain-randomization", "sim-to-real", "damping", "free-decay", "TAM", "sensors", "fault-tolerant-control", "thruster", "load-cell", "arm-step-response", "max_thrust", "systematic-bias", "user-decision", "batch-pass"]
 created: 2026-06-14T07:38:12.841674
-updated: 2026-07-14T09:55:54.109606
-sources: []
-links: []
+updated: 2026-07-20T07:25:41.320166
+sources: ["envs/main/config.py:139", "envs/main/mdp/events.py"]
+links: ["curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md", "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md"]
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 70
-qualityReasons: ["no-source-marker", "generic-only-tags"]
+qualityScore: 100
+qualityReasons: []
 status: needs-apply-before-retrain
-blocked-on: "source a defensible TAM moment-arm / max_thrust DR band (no load cell to measure)"
+blocked-on: "DIRECTION APPROVED by user 2026-07-20: add a DR band to TAM moment-arm + max_thrust (band, not measurement). Remaining work = SOURCE a defensible physical span (per-thruster gain/voltage/mounting tolerance, T200 spec) -- shared prerequisite with the curriculum-recalibration Step 1; source once, unblock both. Then add to the randomisation roster and retrain as a rule-02 comparison experiment."
 ---
 
 # sim hydro nominal is analytical (not measured); IMU+pressure can anchor rotation/heave but not surge/sway/TAM
@@ -69,3 +69,48 @@ Cross-links: actuator_hardware_identification_arm_xw540_t260_board_measured_p.md
 ## Update (2026-07-14T09:55:54.109606)
 
 Flagged needs-apply-before-retrain 2026-07-14 for the ledger item "TAM moment-arm + max_thrust DR band". Verified NOT applied: envs/main/config.py has NO DR range for allocation_matrix or max_thrust (max_thrust=50.0 fixed, line 139); the DR fields present are joint_damping/payload_mass/ocean_current/thruster_health only. TAM/max_thrust is the only systematic-bias axis with no DR. Add a physically-defensible band before a reference retrain, or record pre-TAM-DR.
+
+---
+
+## Update (2026-07-20T07:25:41.320166)
+
+## DECISION (2026-07-20, user): ADD a DR band to TAM / max_thrust -- direction approved
+
+The user approved the "band, not measurement" strategy for this item. It is now a decided
+direction awaiting only a defensible number, not an open question about approach.
+
+Why this one is worth doing even though it cannot be measured: TAM (`allocation_matrix`, roll
+moment-arm 0.007 m) and `max_thrust` (50.0 N fixed, `envs/main/config.py:139`) are the ONLY
+physics parameters with NO DR band at all. Every other channel -- added mass, linear/quadratic
+damping, yaw damping, volume, water density, CoB/CoG offsets, inertia, body mass, payload, thruster
+coefficient and time constant -- is randomised in `envs/main/mdp/events.py`. A parameter WITH a
+band converts an estimation error into something the policy is trained to tolerate. A parameter
+WITHOUT one converts the same error into a systematic bias applied identically to every env, which
+the policy then learns as if it were physics. That is the single silent sim-to-real bias axis left
+in this plant.
+
+Measurement is impossible with the current sensor suite (IMU + pressure, no load cell, no
+force/torque sensor): a single thruster's angular acceleration gives `M = (I + A) * omega_dot`,
+underdetermined in inertia and added mass, and with six thrusters firing the individual forces do
+not separate at all. So the band must be SOURCED, not measured.
+
+REMAINING WORK is now narrow and non-experimental: produce a physically-defensible band from
+per-thruster gain/voltage variation, mounting tolerance, and T200 spec/literature -- explicitly NOT
+a round-number multiplier -- then add `allocation_matrix` (roll/pitch moment-arm) and `max_thrust`
+to the randomisation roster and retrain as a comparison experiment under the rule-02 baseline-tag /
+exp-branch discipline, checking that heavy-tail and OOD do not regress.
+
+PLANNING NOTE: this shares its blocker with the curriculum-recalibration protocol's Step 1
+([[curriculum_recalibration_protocol_widening_the_dr_box_requires_r]]) -- both need sourced
+physical spans and neither can proceed on a measurement. Sourcing the spans ONCE unblocks both, so
+the batch pass should treat "source defensible physical spans for TAM / max_thrust" as a single
+shared prerequisite task rather than duplicating it per lead. Note the difference in what each
+does with the span: the recalibration protocol WIDENS an existing DORAEMON dimension, whereas this
+item CREATES a band where none exists. The second is strictly additive and does not disturb the
+curriculum's expansion budget.
+
+Adjacent but distinct, do not conflate: the vertical-pair wiring finding
+([[tam_vertical_single_motor_dual_esc_measured_2026_07_05]]) is a STRUCTURAL mismatch (two vertical
+thrusters are physically one motor on a dual-ESC harness), not a magnitude uncertainty, and a DR
+band does not address it.
+

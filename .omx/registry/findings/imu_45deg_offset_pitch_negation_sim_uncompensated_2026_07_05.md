@@ -1,17 +1,17 @@
 ---
 title: "IMU 45deg mounting offset + pitch negation is sim-uncompensated (2026-07-05)"
-tags: []
+tags: ["imu", "3dm-gx5", "mounting-offset", "sim-to-real", "deployment-prep", "deferred", "user-decision"]
 created: 2026-07-05T15:24:24
-updated: 2026-07-14T09:55:53.590020
-sources: []
+updated: 2026-07-20T07:24:09.722345
+sources: ["control_law.h", "build_proprio.py"]
 links: ["tam_columns_must_match_robot_firmware_esc_channel_order_reorder_.md"]
 category: reference
-confidence: medium
+confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
+qualityScore: 100
+qualityReasons: []
 status: needs-apply-before-retrain
-blocked-on: "3DM-GX5 datasheet decision (FLU/NED vs chip quirk); firmware downstream sign already reconciled to sim"
+blocked-on: "DEFERRED by user decision 2026-07-20: will be applied to sim AFTER a real-robot measurement settles the pitch-negation convention (measurement preferred over datasheet interpretation). Zero sim-side impact meanwhile; firmware already reconciles the signs reaching control. NOT part of the batch experiment pass -- deployment prep, sequenced with robot bring-up."
 ---
 
 # IMU 45deg mounting offset + pitch negation is sim-uncompensated (2026-07-05)
@@ -33,3 +33,34 @@ STATUS: unverified (confidence=medium). The 45-degree offset and pitch-negation 
 ## Update (2026-07-14T09:55:53.590020)
 
 Flagged needs-apply-before-retrain 2026-07-14. Verified sim-UNCOMPENSATED: grep of envs/main/ finds no IMU mounting-offset frame correction in the observation pipeline (constraints.py:166 is an attitude COMMAND +-45deg range, unrelated). The 45deg mount offset + pitch negation is not applied in obs. Decide + (maybe) apply frame correction before a reference retrain, or record pre-IMU-frame.
+
+---
+
+## Update (2026-07-20T07:24:09.722345)
+
+## DECISION (2026-07-20, user): DEFERRED pending real-robot measurement -- NOT rejected
+
+Explicit user position: the frame correction WILL be applied to sim; it is simply not being decided
+now. The intended sequence is **measure on the real robot first, then apply**, which is later but
+not too late -- nothing downstream is blocked by waiting.
+
+The reasoning that makes deferral safe (verified, not assumed):
+
+- **Zero effect on sim-side results.** Sim consumes Isaac Lab ground-truth attitude and applies no
+  mounting rotation and no axis negation, so no training curve, no eval number, and no verdict in
+  any campaign to date is contaminated by this. This is a sim-to-real ALIGNMENT item, not a
+  performance item. Do not let it appear in a results-regression discussion.
+- **The signs that reach control are already reconciled.** Firmware `control_law.h` and sim
+  `build_proprio.py` were checked byte-identical for the roll/pitch SIGN CONVENTION arriving at the
+  controller/policy, so the raw-level 45deg offset + pitch negation is corrected downstream in
+  firmware. Nothing is actively broken today.
+- **The open question cannot be closed from code.** Whether the pitch-only negation is a body-frame
+  handedness correction (NED vs FLU) or a 3DM-GX5 chip-native convention needs the datasheet, or --
+  the user's preferred route -- a direct measurement on the robot, which settles it empirically
+  without needing to interpret the datasheet at all.
+
+CONSEQUENCE for planning: this item does NOT belong in the batch experiment pass. It is deployment
+prep, sequenced with real-robot bring-up, and its cost is one retrain whenever it lands. Keep the
+`needs-apply-before-retrain` flag so a reference retrain cannot silently skip it, but do not treat
+it as a blocker on any sim-side campaign.
+

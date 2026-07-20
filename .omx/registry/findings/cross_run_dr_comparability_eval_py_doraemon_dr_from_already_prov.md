@@ -1,16 +1,17 @@
 ---
 title: "Cross-run DR comparability: eval.py --doraemon-dr-from already provides a common test distribution; p7_tail knew and declined, judging a robustness campaign on nominal-only"
-tags: ["eval", "comparability", "doraemon-dr-from", "common-exam", "confound", "methodology", "p7-tail", "e4", "demonstrated"]
+tags: ["eval", "comparability", "doraemon-dr-from", "common-exam", "confound", "methodology", "p7-tail", "e4", "demonstrated", "curriculum-replay", "doraemon", "causal-attribution", "biasema", "adoption-vs-mechanism", "priority-demotion", "user-decision"]
 created: 2026-07-16T06:00:00.285512
-updated: 2026-07-20T03:15:55.206233
-sources: ["diagnose-20260716-164016"]
-links: ["sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e.md"]
+updated: 2026-07-20T07:23:31.150740
+sources: ["diagnose-20260716-164016", "doraemon.py:817", "train.py:58"]
+links: ["sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e.md", "extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net.md", "step_interval_250_400_probe_separate_dr_width_from_optimisation.md"]
 category: convention
 confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
+qualityScore: 100
+qualityReasons: []
 status: needs-experiment
+blocked-on: "ORIGINAL ask DONE (shared-exam demonstrated). Remaining curriculum-replay arm DEMOTED to low priority by user decision 2026-07-20 (widening is downstream of the improvement; bundle is the right unit for adoption). Revisit only if roll transient peak becomes binding AND the step_interval probe fails to separate DR-width from optimisation-steps."
 ---
 
 # Cross-run DR comparability: eval.py --doraemon-dr-from already provides a common test distribution; p7_tail knew and declined, judging a robustness campaign on nominal-only
@@ -160,3 +161,42 @@ training-confound. The tooling already exists and is unused for this purpose: `C
 
 WATCH: this page's own warning still stands -- a post-TAM baseline retrain moves the DR anchor and
 silently re-breaks comparability.
+
+---
+
+## Update (2026-07-20T07:23:31.150740)
+
+## DECISION (2026-07-20, user): the curriculum-replay arm is DEMOTED to low priority, not deleted
+
+User argument, and it is largely correct: **the DR widening is DOWNSTREAM of the improvement, not a
+parallel treatment.** P-B1's curriculum widened because its `success_rate` rose (0.8825 vs REF
+0.3955), and `success_rate` rose because the policy tracked better. So "wider DR" is not an
+independent variable that happened to co-occur -- it is a CONSEQUENCE of the observation change,
+inside one causal chain that bias-EMA initiated. On that reading the honest unit of comparison is
+the whole bundle, exactly as the P-B1 report's own attribution note already says ("the compared
+entity is the ADOPTED CONFIG bundle ... not the `bias_ema` observation in isolation"), and for an
+ADOPTION decision the bundle IS the right unit. Splitting it is mechanism curiosity, not a
+prerequisite to adopting.
+
+What the argument does NOT cover, kept on record so it is not silently lost: the chain has a
+FEEDBACK leg. Once DORAEMON widens, the policy then TRAINS on the wider distribution, so the final
+policy is shaped by the widening as well as by the observation. This matters for exactly one
+number -- the single cell P-B1 LOST, `hard` roll `n_gt20` 8.667 vs 6.667. There is an independent
+measurement that a wider DR alone produces precisely that regression: extend8k widened the
+curriculum with NO observation change and its nominal roll transient overshoot rose 59%
+([[extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_]]). So the competing explanation
+for P-B1's only cost already has independent support, which is also the reason replay would mostly
+CONFIRM rather than discriminate -- and is part of why it is not worth a full training run now.
+
+PRIORITY VERDICT: low. Reasons, in order: (1) for adoption the bundle is the correct unit and the
+bundle already won on every ss_error cell at all 4 DR levels; (2) the one cost has a competing
+explanation with independent evidence, so replay's expected information is small; (3) it costs a
+full training run. Revisit ONLY if the roll transient peak becomes the binding problem AND the
+`step_interval` probe ([[step_interval_250_400_probe_separate_dr_width_from_optimisation_]]) fails
+to separate DR-width from optimisation-steps -- that probe is the cheaper instrument for the same
+question and is already reviewer-approved.
+
+Tooling status unchanged and still unused for this purpose: `CurriculumReplayer`
+(`marinelab/algorithms/doraemon.py:817`) + `--replay_curriculum` (`constrained-albc/scripts/train.py:58`),
+verified present at HEAD 2026-07-20. No code work is needed if this is ever revived.
+
