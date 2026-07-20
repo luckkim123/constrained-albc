@@ -2,8 +2,8 @@
 title: "`DORAEMON/kl_step` reads 0.0000 at the final step but this is a sparse-logging a"
 tags: ["auto-captured", "trpo_biasema_extend8k_260716_162849"]
 created: 2026-07-20T03:13:39.392281
-updated: 2026-07-20T03:13:39.392281
-sources: ["experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_biasema_extend8k_260716_162849/analysis/diagnose-20260720-115818/report.md"]
+updated: 2026-07-20T03:25:41.244717
+sources: ["experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_biasema_extend8k_260716_162849/analysis/diagnose-20260720-115818/report.md", "experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_biasema_extend8k_260716_162849/analysis/diagnose-20260720-122425/report.md"]
 links: []
 category: session-log
 confidence: low
@@ -20,3 +20,14 @@ qualityReasons: []
 [CONFIDENCE: HIGH]
 
 source report: experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_biasema_extend8k_260716_162849/analysis/diagnose-20260720-115818/report.md
+
+---
+
+## Update (2026-07-20T03:25:41.244717)
+
+`DORAEMON/kl_step` reads 0.0000 at the final step but this is a sparse-logging artifact, NOT a frozen curriculum — 26 of 8000 samples are non-zero, all at the 0.12 target. Sanity gate PASSES.
+
+[EVIDENCE: TB DORAEMON/kl_step — n=8000, nonzero=26, values ∈ {0.1086, 0.12}; entropy_before==entropy_after (−18.20) i.e. final logged step applied no further widening]
+[CONFIDENCE: HIGH]
+
+source report: experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_biasema_extend8k_260716_162849/analysis/diagnose-20260720-122425/report.md

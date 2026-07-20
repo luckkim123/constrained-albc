@@ -3320,3 +3320,87 @@
 - **Pages:** e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite.md
 - **Summary:** updated "e3's '5000-iter budget' verdict is scope-limited, NOT a cap: max_iterations is a DR-EXPANSION knob (step_interval clock) and the real ceiling is the Beta a=b=1 config bound, not compute"
 
+## [2026-07-20T03:20:43.334209] query
+- **Pages:** extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_.md, tam_plant_correctness_fix_collapses_the_void_hard_dr_roll_heavy_.md, p_b1_shared_exam_on_reference_dr_hard_roll_floor_was_exam_artifa.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, engine_gap_eval_adapter_heavy_tail_lacks_median_based_tail_ratio.md, engine_gap_heavy_tail_json_pct_peak_gt_thresh_exceeds_100_at_ood.md, eval_analysis_core_does_stats_adapter_does_heavy_tail.md, xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e.md, e3_extend10k_regressed_the_policy_training_budget_is_not_the_p7_.md, e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite.md, bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md, p_a8_perflb200_more_iters_5000_8000_closed_the_deployment_ood_dr.md, arm_a_measured_angle_joint1_constraint_recovers_not_diverges_the.md, engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md, kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md, performance_lb_doraemon_gate_is_causally_independent_of_the_acto.md, yaw_command_is_rate_not_angle_inherited_design_defensible_only_i.md, dr_harder_campaign_synthesis_speed_kills_attitude_center_shift_o.md, dr_harder_ood_verdict_e2_best_survives_ood_the_harder_curriculum.md
+- **Summary:** query 'roll transient overshoot n_gt20 heavy tail axis trade decorrelation' -> 20 of 39
+
+## [2026-07-20T03:20:43.422316] query
+- **Pages:** attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md, teacher_cross_axis_correlation_collapses_none_hard_axis_decorrel.md, teacher_segmented_post_switch_roll_transient_jumps_under_hard_dr.md, teacher_dr_harder_yaw_is_the_only_heavy_tail_axis_roll_is_dc_bia.md, an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md, doraemon_over_widens_then_oscillates_when_a_converged_teacher_is.md, student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md, joint1_cumulative_ipo_constraint_generalizes_drift_bounded_at_oo.md, constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md, teacher_hard_dr_cv_explodes_without_heavy_tail_dc_bias_dispersio.md, engine_generic_flags_entropy_collapse_barrier_spike_reward_plate.md, doraemon_is_trust_region_limited_not_feasibility_limited_kl_step.md, teacher_dr_harder_doraemon_curriculum_froze_before_run_end_unuse.md, teacher_encoder_0_dead_latent_dims_keys_on_lateral_cog_cob_offse.md, constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md, dr_harder_reward_decomposition_confirms_eval_trades_on_the_train.md, joint1_cumulative_rotation_constraint_never_binds_policy_parks_a.md, posttam_encoder_is_alive_and_specialized_z_sweep_exploration_col.md, sequential_overnight_campaign_wall_clock_budget_not_crashes_kill.md
+- **Summary:** query 'roll transient overshoot peak axis decorrelation floor vs spike' -> 19 of 19
+
+## [2026-07-20T03:20:43.500443] query
+- **Pages:** engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md, engine_gap_analyze_training_py_needs_the_logs_run_dir_not_the_ex.md, engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md, engine_gap_heavy_tail_json_pct_peak_gt_thresh_exceeds_100_at_ood.md, engine_gap_m1_critic_side_encoder_gradient_is_not_logged_policy_.md, engine_gap_omx_cli_gaps_found_re_analyzing_teacher_2026_06_06_ro.md, engine_gap_eval_adapter_heavy_tail_lacks_median_based_tail_ratio.md, engine_gap_flat_target_eval_records_joint1_trajectory_but_render.md, engine_gap_eval_npz_saves_no_raw_obs_std_privileged_blocks_exact.md, eval_analysis_core_does_stats_adapter_does_heavy_tail.md, exp_analyze_must_run_analyze_training_py_for_training_side_diagn.md, p_a8_perflb200_more_iters_5000_8000_closed_the_deployment_ood_dr.md, joint1_stage_1_gate_go_drift_is_real_on_unlimited_physics_not_th.md, performance_lb_doraemon_gate_is_causally_independent_of_the_acto.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, arm_a_measured_angle_joint1_constraint_recovers_not_diverges_the.md, bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, dr_harder_ood_verdict_e2_best_survives_ood_the_harder_curriculum.md, e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite.md, extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_.md
+- **Summary:** query 'engine-gap' -> 20 of 26
+
+## [2026-07-20T03:25:22.063639] add
+- **Pages:** extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_.md
+- **Summary:** updated 'extend8k (8000-iter) confirms e3: extending past 5000 iters is net-negative on the FIXED-DR exam, an axis trade, and confounded by DR-width expansion'
+
+## [2026-07-20T03:25:41.244717] add
+- **Pages:** extend8k_tracks_all_three_axes_with_100_survival_roll_error_risi.md
+- **Summary:** updated 'extend8k tracks all three axes with 100% survival, roll error rising monotonical'
+
+## [2026-07-20T03:25:41.244717] add
+- **Pages:** roll_steady_state_is_heavy_tailed_at_hard_cv_246_a_minority_of_e.md
+- **Summary:** updated 'Roll steady-state is heavy-tailed at hard (CV = 246%): a minority of envs domina'
+
+## [2026-07-20T03:25:41.244717] add
+- **Pages:** the_extension_is_an_axis_trade_roll_steady_state_improved_at_eve.md
+- **Summary:** updated 'The extension is an axis TRADE: roll steady-state improved at every DR level, bu'
+
+## [2026-07-20T03:25:41.244717] add
+- **Pages:** the_load_bearing_regression_is_roll_transient_overshoot_at_low_d.md
+- **Summary:** updated 'The load-bearing regression is roll TRANSIENT OVERSHOOT at low DR: mean roll ove'
+
+## [2026-07-20T03:25:41.244717] add
+- **Pages:** the_threshold_count_corroborates_the_same_regression_the_number_.md
+- **Summary:** created 'The threshold count corroborates the same regression: the number of envs whose r'
+
+## [2026-07-20T03:25:41.244717] add
+- **Pages:** survival_is_saturated_on_both_runs_so_it_does_not_discriminate_t.md
+- **Summary:** updated 'Survival is saturated on both runs, so it does not discriminate — the trade is e'
+
+## [2026-07-20T03:25:41.244717] add
+- **Pages:** reward_is_tracking_dominated_and_healthy_att_rp_yaw_vel_supply_e.md
+- **Summary:** updated 'Reward is tracking-dominated and healthy: att_rp + yaw_vel supply essentially al'
+
+## [2026-07-20T03:25:41.244717] add
+- **Pages:** episode_cumulative_reward_did_not_improve_with_the_extension_and.md
+- **Summary:** updated 'Episode-cumulative reward did NOT improve with the extension and plateaued early'
+
+## [2026-07-20T03:25:41.244717] add
+- **Pages:** trpo_mechanics_are_healthy_line_search_never_fails_kl_lands_on_t.md
+- **Summary:** updated 'TRPO mechanics are healthy: line search never fails, KL lands on the max_kl targ'
+
+## [2026-07-20T03:25:41.244717] add
+- **Pages:** exploration_is_dead_entropy_collapsed_and_noise_std_sits_just_ab.md
+- **Summary:** updated 'Exploration is dead — entropy collapsed and noise_std sits just above the min_st'
+
+## [2026-07-20T03:25:41.244717] add
+- **Pages:** both_critic_heads_converged_the_extension_left_them_marginally_h.md
+- **Summary:** updated 'Both critic heads converged; the extension left them marginally higher (consiste'
+
+## [2026-07-20T03:25:41.244717] add
+- **Pages:** the_encoder_latent_is_healthy_and_unsaturated_still_receiving_gr.md
+- **Summary:** updated 'The encoder latent is healthy and unsaturated, still receiving gradient — no col'
+
+## [2026-07-20T03:25:41.244717] add
+- **Pages:** every_constraint_is_satisfied_all_margins_positive_viol_negative.md
+- **Summary:** updated 'Every constraint is satisfied (all margins positive / viol negative); thruster_u'
+
+## [2026-07-20T03:25:41.244717] add
+- **Pages:** the_ipo_barrier_is_healthy_no_spikes_small_magnitude_so_the_cons.md
+- **Summary:** updated 'The IPO barrier is healthy — no spikes, small magnitude — so the constraint adva'
+
+## [2026-07-20T03:25:41.244717] add
+- **Pages:** the_extension_widened_the_dr_curriculum_the_mechanism_behind_the.md
+- **Summary:** updated 'The extension WIDENED the DR curriculum — the mechanism behind the whole trade. '
+
+## [2026-07-20T03:25:41.244717] add
+- **Pages:** the_dr_expansion_continues_to_the_very_end_of_training_iter_8000.md
+- **Summary:** updated 'The DR expansion continues to the very end of training (iter 8000) — the curricu'
+
+## [2026-07-20T03:25:41.244717] add
+- **Pages:** doraemon_kl_step_reads_0_0000_at_the_final_step_but_this_is_a_sp.md
+- **Summary:** updated '`DORAEMON/kl_step` reads 0.0000 at the final step but this is a sparse-logging a'
+

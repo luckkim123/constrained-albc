@@ -2,8 +2,8 @@
 title: "The load-bearing regression is roll TRANSIENT overshoot at low DR: the count of "
 tags: ["auto-captured", "trpo_biasema_extend8k_260716_162849"]
 created: 2026-07-20T03:13:39.392281
-updated: 2026-07-20T03:13:39.392281
-sources: ["experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_biasema_extend8k_260716_162849/analysis/diagnose-20260720-115818/report.md"]
+updated: 2026-07-20T03:25:41.244717
+sources: ["experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_biasema_extend8k_260716_162849/analysis/diagnose-20260720-115818/report.md", "experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_biasema_extend8k_260716_162849/analysis/diagnose-20260720-122425/report.md"]
 links: []
 category: session-log
 confidence: low
@@ -20,3 +20,14 @@ The load-bearing regression is roll TRANSIENT overshoot at low DR: the count of 
 [CONFIDENCE: HIGH]
 
 source report: experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_biasema_extend8k_260716_162849/analysis/diagnose-20260720-115818/report.md
+
+---
+
+## Update (2026-07-20T03:25:41.244717)
+
+The load-bearing regression is roll TRANSIENT OVERSHOOT at low DR: mean roll overshoot rose at every level and most at `none` (+59%), while roll steady-state FELL — floor down, spike up.
+
+[EVIDENCE: summary.json roll/os_env_mean (overshoot, % of target step) — 8k static_260717_005643 vs 5000 static_260715_192701]
+[CONFIDENCE: HIGH]
+
+source report: experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_biasema_extend8k_260716_162849/analysis/diagnose-20260720-122425/report.md

@@ -2,8 +2,8 @@
 title: "Both critic heads converged; the extension left them marginally higher (consiste"
 tags: ["auto-captured", "trpo_biasema_extend8k_260716_162849"]
 created: 2026-07-20T03:13:39.392281
-updated: 2026-07-20T03:13:39.392281
-sources: ["experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_biasema_extend8k_260716_162849/analysis/diagnose-20260720-115818/report.md"]
+updated: 2026-07-20T03:25:41.244717
+sources: ["experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_biasema_extend8k_260716_162849/analysis/diagnose-20260720-115818/report.md", "experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_biasema_extend8k_260716_162849/analysis/diagnose-20260720-122425/report.md"]
 links: []
 category: session-log
 confidence: low
@@ -20,3 +20,14 @@ Both critic heads converged; the extension left them marginally higher (consiste
 [CONFIDENCE: HIGH]
 
 source report: experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_biasema_extend8k_260716_162849/analysis/diagnose-20260720-115818/report.md
+
+---
+
+## Update (2026-07-20T03:25:41.244717)
+
+Both critic heads converged; the extension left them marginally higher (consistent with the wider DR it trained on).
+
+[EVIDENCE: analyze_training.py [TIER 3] Losses]
+[CONFIDENCE: HIGH]
+
+source report: experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_biasema_extend8k_260716_162849/analysis/diagnose-20260720-122425/report.md
