@@ -3676,3 +3676,23 @@
 - **Pages:** extend8k_saturated_the_dr_config_box_at_iter_7000_all_20_params_.md
 - **Summary:** updated "extend8k SATURATED the DR config box at iter 7000 (all 20 params Beta(1,1) = uniform): performance_lb/kl_ub were never the limit, so its `hard` exam IS absolute -- but the 5000-run's is not"
 
+## [2026-07-20T04:07:46.798663] query
+- **Pages:** arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md, joint_dr_params_kp_kd_effort_friction_need_no_dedicated_measurem.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md
+- **Summary:** query 'achieved adapt adaptation admitted against albc_env already also' -> 5 of 312
+
+## [2026-07-20T04:07:51.792736] query
+- **Pages:** e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite.md, doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md, extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_.md, reward_md_6_error_buffers_reward_call_site_dt_scaling_theory_rev.md, doraemon_is_trust_region_limited_not_feasibility_limited_kl_step.md, doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md, uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload_.md, extend8k_saturated_the_dr_config_box_at_iter_7000_all_20_params_.md, hmm_regime_count_separates_dr_harder_runs_overfit_vs_healthy.md, joint1_centering_reward_is_removed_on_main_6_term_but_alive_on_e.md, joint_dr_params_kp_kd_effort_friction_need_no_dedicated_measurem.md, kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md, real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md, eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md, safety_rail_constraints_fire_hard_at_init_go_quiet_and_re_fire_a.md, teacher_dr_harder_doraemon_curriculum_froze_before_run_end_unuse.md, reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md, cross_run_dr_comparability_eval_py_doraemon_dr_from_already_prov.md, doraemon_kl_step_final_value_0_0000_is_a_sparse_logging_artifact.md, hydro_dr_train_eval_sampling_mismatch_is_real_but_left_as_is_opt.md
+- **Summary:** query 'step_interval expansion count DR width vs optimisation steps probe' -> 20 of 278
+
+## [2026-07-20T04:16:30.171982] query
+- **Pages:** state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, joint_dr_params_kp_kd_effort_friction_need_no_dedicated_measurem.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md, real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md
+- **Summary:** query 'achieved actually adapt adaptation admitted against albc_env already' -> 5 of 308
+
+## [2026-07-20T04:17:04.272956] add
+- **Pages:** step_interval_250_400_probe_separate_dr_width_from_optimisation_.md
+- **Summary:** created "step_interval 250->400 probe: separate DR-WIDTH from OPTIMISATION-STEPS as the cause of extend8k's nominal roll transient regression (pending approval, not launched)"
+
+## [2026-07-20T04:19:54.445544] add
+- **Pages:** step_interval_250_400_probe_separate_dr_width_from_optimisation_.md
+- **Summary:** updated "step_interval 250->400 probe: separate DR-WIDTH from OPTIMISATION-STEPS as the cause of extend8k's nominal roll transient regression (pending approval, not launched)"
+
