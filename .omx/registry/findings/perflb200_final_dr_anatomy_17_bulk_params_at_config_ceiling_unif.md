@@ -2,15 +2,15 @@
 title: "perflb200 final DR anatomy: 17 bulk params at config ceiling (uniform), 3 deployment-relevant params (ocean_current/obs_noise/payload_cog) are TIME-limited not feasibility-limited"
 tags: ["doraemon", "dr-difficulty", "perflb200", "deployment-ood", "curriculum-budget"]
 created: 2026-07-15T05:54:12.790886
-updated: 2026-07-15T05:54:12.790886
+updated: 2026-07-20T03:15:55.039202
 sources: []
-links: []
+links: ["decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema.md", "p_a8_perflb200_more_iters_5000_8000_closed_the_deployment_ood_dr.md"]
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
-status: needs-experiment
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
+status: resolved
 ---
 
 # perflb200 final DR anatomy: 17 bulk params at config ceiling (uniform), 3 deployment-relevant params (ocean_current/obs_noise/payload_cog) are TIME-limited not feasibility-limited
@@ -84,3 +84,28 @@ tracking floor improve or degrade? If they climb and the floor holds/improves =>
 budget; if success crosses below alpha and DR contracts => over-widen regime, revert (budget-conditional
 per kl_ub_up...budget_conditional).
 
+---
+
+## Update (2026-07-20T03:15:55.039202)
+
+## Audit close-out + PREMISE CORRECTION (2026-07-20, backlog audit)
+
+CORRECTION FIRST -- this page's opening DECISION line ("performance_lb=200 CONFIRMED as standing
+setting") is SUPERSEDED and must not be acted on. On 2026-07-16
+[[decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema]] reversed it on the adopted
+bias_ema-ON config: lb=200 drives success to 0.989 and renders the feasibility constraint inert. The
+standing value is lb=250, verified live at `constrained_albc/envs/main/config.py:544`. Anyone reading
+this page for a launch config must take 250, not 200.
+
+CLOSED on the ask itself. The PRIMARY lever this page proposed -- more-iters continuation, single
+variable `max_iterations` 5000 -> 8-10k -- was executed as `trpo_perflb200-moreiters_260715_195227`
+(8000 iters) the same day. Result in [[p_a8_perflb200_more_iters_5000_8000_closed_the_deployment_ood_dr]]
+(resolved): all 20 DORAEMON params including the 3 TIME-limited ones reached Beta(1.00,1.00) = full
+config ceiling by iter 8000, deployment-OOD gap closed as predicted, no over-widen backfire (success
+settled at the designed alpha=0.50, not below). Cost: none-level tracking precision -31%/-61%
+(roll/pitch), partly offset by heavy-tail n_gt20 roll -56%.
+
+STILL OPEN, but as a SEPARATE lead, not this one: (a) P-A6 -- physical-span review + widening the
+HardDR config bounds for the 17 ceiling'd params, which iters/kl_ub cannot reach; (b) whether the
+none-precision cost is an acceptable price for adopting max_iterations=8000 as standing config
+(explicitly deferred in P-A8's own Decision section).

@@ -2,7 +2,7 @@
 title: "The single real weakness: exploration is dead at convergence. Entropy has collap"
 tags: ["auto-captured", "trpo_baseline_260714_192020"]
 created: 2026-07-14T16:41:28.339995
-updated: 2026-07-16T06:36:01.268339
+updated: 2026-07-16T07:19:42.517477
 sources: ["experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_baseline_260714_192020/analysis/diagnose-20260715-011113/report.md", "/workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_baseline_260714_192020/analysis/diagnose-20260715-011113/report.md"]
 links: []
 category: session-log
@@ -24,6 +24,28 @@ source report: experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trp
 ---
 
 ## Update (2026-07-16T06:36:01.268339)
+
+The single real weakness: exploration is dead at convergence. Entropy has collapsed and noise_std sits on its floor, so DORAEMON cannot ratchet difficulty further.
+
+[EVIDENCE: engine TIER 1 + TB final-window means; DIAGNOSIS "Entropy collapse + low noise -> exploration dead"]
+[CONFIDENCE: HIGH]
+
+source report: /workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_baseline_260714_192020/analysis/diagnose-20260715-011113/report.md
+
+---
+
+## Update (2026-07-16T07:19:04.274555)
+
+The single real weakness: exploration is dead at convergence. Entropy has collapsed and noise_std sits on its floor, so DORAEMON cannot ratchet difficulty further.
+
+[EVIDENCE: engine TIER 1 + TB final-window means; DIAGNOSIS "Entropy collapse + low noise -> exploration dead"]
+[CONFIDENCE: HIGH]
+
+source report: /workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_baseline_260714_192020/analysis/diagnose-20260715-011113/report.md
+
+---
+
+## Update (2026-07-16T07:19:42.517477)
 
 The single real weakness: exploration is dead at convergence. Entropy has collapsed and noise_std sits on its floor, so DORAEMON cannot ratchet difficulty further.
 

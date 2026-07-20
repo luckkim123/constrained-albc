@@ -1,16 +1,17 @@
 ---
 title: "e3's '5000-iter budget' verdict is scope-limited, NOT a cap: max_iterations is a DR-EXPANSION knob (step_interval clock) and the real ceiling is the Beta a=b=1 config bound, not compute"
-tags: ["doraemon", "curriculum-budget", "max-iterations", "num-envs", "dgx", "scale-up", "e3", "config-ceiling", "p-a6", "user-decision"]
+tags: ["doraemon", "curriculum-budget", "max-iterations", "num-envs", "dgx", "scale-up", "e3", "config-ceiling", "p-a6", "user-decision", "extend8k", "result-recorded"]
 created: 2026-07-16T05:58:47.795144
-updated: 2026-07-16T05:58:47.795144
-sources: ["diagnose-20260714-084409"]
-links: ["performance_lb_recon_needs_zero_new_rollouts_doraemon_state_pt_a.md"]
+updated: 2026-07-20T03:19:56.704000
+sources: ["diagnose-20260714-084409", "diagnose-20260720-115818"]
+links: ["performance_lb_recon_needs_zero_new_rollouts_doraemon_state_pt_a.md", "decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema.md", "extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net.md"]
 category: decision
 confidence: high
 schemaVersion: 1
 qualityScore: 100
 qualityReasons: []
 status: needs-experiment
+blocked-on: "REMAINING SCOPE ONLY: DGX scale-up (larger num_envs AND max_iterations on different hardware). The same-plant 'does extending past 5000 help' half is now ANSWERED by extend8k -- do not re-run that arm."
 ---
 
 # e3's '5000-iter budget' verdict is scope-limited, NOT a cap: max_iterations is a DR-EXPANSION knob (step_interval clock) and the real ceiling is the Beta a=b=1 config bound, not compute
@@ -140,3 +141,34 @@ Launch conditions for the DGX scale-up:
   equilibrium lands, and it is free (see
   [[performance_lb_recon_needs_zero_new_rollouts_doraemon_state_pt_a]]).
 
+---
+
+## Update (2026-07-20T03:15:55.292239)
+
+## Audit re-scope (2026-07-20, backlog audit)
+
+The RETROSPECTIVE half of this page is settled: the "5000-iter cap" is retired, and the validating probe
+it names (`trpo_perflb200-moreiters_260715_195227`, 8000 iters, success 0.4955 = the designed alpha
+equilibrium) has run without backfire. A second 8k run has since happened as well
+(`trpo_biasema_extend8k_260716_162849`).
+
+Its listed PREREQUISITE is also satisfied: P-A2 (performance_lb recalibration) resolved on 2026-07-16 --
+p25 computed from the `doraemon_state.pt` buffer with zero new rollouts, verdict "keep lb=250"
+([[decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema]], `config.py:544`). Caveat: the
+proper no-DR App A.1 measurement remains never-done.
+
+REMAINING SCOPE -- this page stays open ONLY for the forward-looking ask: launch the DGX scale-up under
+the stated GO/ABORT conditions. Verified not done: no DGX-scale run exists anywhere in the experiments
+tree (largest is 8000 iters at standard `num_envs`), and P-A6 (HardDR config-bound widening) has no run
+at all. Keep the two variables separate -- raising `num_envs` and `max_iterations` in one run makes the
+DR outcome unattributable.
+
+---
+
+## Update (2026-07-20T03:19:56.704000)
+
+RESULT RECORDED 2026-07-20 (extend8k, analysis diagnose-20260720-115818): the same-plant half of this lead is ANSWERED. A fresh from-scratch 8000-iter run (trpo_biasema_extend8k_260716_162849) vs its 5000-iter sibling (trpo_biasema_260715_142543), both graded on the SAME fixed none/soft/medium/hard exam, shows extending is NET-NEGATIVE: an axis trade, not an improvement. roll ss_error improved at all levels (-11% to -25%) but pitch regressed +34% to +52%, yaw +30% to +109%, and roll transient overshoot blew up 14x at low DR (n_gt20 none 4.3->61.3). Reward plateaued at iter ~400 and final Train/mean_reward FELL 272.46->265.36 (-2.6%).
+
+This page's core claim is CONFIRMED, not refuted: max_iterations really is a DR-expansion knob, and extend8k measured the expansion directly -- +12 curriculum expansions (3000 extra iters / step_interval=250, config.py:544), DORAEMON/entropy_before -22.70->-18.20, DR ocean_current 0.06->0.22 (3.7x). The success_rate drop 0.88->0.79 is the wider exam, not policy regression (ess_ratio 0.76->1.00). So 'extending' on this plant buys DR width at the cost of the objective.
+
+WHAT REMAINS OPEN (the only reason this stays needs-experiment): the DGX scale-up arm -- larger num_envs AND max_iterations together on different hardware. extend8k varied ONLY iterations at fixed num_envs, so it says nothing about whether more PARALLEL samples per expansion changes the trade. Do NOT re-run the same-plant iteration-only arm. Full detail: [[extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_]].

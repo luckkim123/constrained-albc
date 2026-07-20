@@ -2,14 +2,14 @@
 title: "Baseline open experiment-leads backlog (beyond heavy-tail): triage by value x launchability with blockers"
 tags: ["backlog", "experiment-roster", "next-experiment", "heavy-tail", "doraemon-per-axis-gate", "command-box", "tam-dr", "sim-to-real", "triage", "teacher-baseline", "doraemon", "performance_lb", "exploration"]
 created: 2026-07-14T07:57:24.357274
-updated: 2026-07-15T04:54:42.574431
+updated: 2026-07-20T03:15:55.121613
 sources: ["diagnose-20260713-081707", "diagnose-20260715-133249"]
-links: []
+links: ["decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema.md"]
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 80
-qualityReasons: ["no-source-marker"]
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 status: needs-experiment
 ---
 
@@ -63,3 +63,21 @@ Flagged needs-experiment 2026-07-14: this is the open experiment-leads backlog (
 - **NEW lead surfaced (was hidden behind the stall): exploration-machinery collapse.** The SAME probe proved the actor entropy/noise_std collapse (entropy ~-7.8, noise_std pinned near min_std=0.05 floor) is CAUSALLY INDEPENDENT of the DORAEMON gate — its trajectory is near-identical (max dev 0.18 entropy / 0.003 noise_std) whether the curriculum stalls or not. So neither performance_lb NOR the DORAEMON per-axis gate will fix exploration. The next exploration lever must target the actor noise/entropy machinery directly: min_std (0.05 floor), entropy_coef (0.003), or the noise parameterization / entropy schedule. See finding 'performance_lb (DORAEMON gate) is causally independent of the actor exploration collapse'.
 
 STILL OPEN (unchanged): DORAEMON per-axis success-gate (max structural lever, blocked on marinelab/algorithms/doraemon.py engine code) — note it addresses per-axis DR WIDENING, NOT the exploration collapse above; latency-as-DR-dim (engine code); TAM/max_thrust DR band (design-first, needs-apply-before-retrain); thruster nonlinear curve (measure-first); hydro nominal anchoring (measure-first); state_std z-conditioned (parked); constraint inert-2 (low).
+
+---
+
+## Update (2026-07-20T03:15:55.121613)
+
+## Audit re-scope (2026-07-20, backlog audit)
+
+STILL OPEN as a live index -- this is a real backlog, not a stale page. Verified state: 2 of 9 sub-leads
+are closed (command-box eval extension shipped, commit 8c07584; performance_lb probe run
+`trpo_perflb200_260715_023744` -- but note its verdict was later reversed to lb=250, see
+[[decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema]]). The other 7 were independently
+re-verified as genuinely unimplemented: no per-axis DORAEMON gate in
+`marinelab/algorithms/doraemon.py`, and no run or page exists for latency-as-DR-dim, TAM/max_thrust DR
+band sourcing, thruster-curve bench measurement, or hydro free-decay measurement.
+
+HOUSEKEEPING: the exploration/entropy-collapse lead recorded in this page's own 2026-07-15 update
+(min_std=0.05 floor, entropy_coef=0.003, shown causally independent of the DORAEMON gate) is not yet
+folded into the triage table -- add it as item 10 when this page is next touched.

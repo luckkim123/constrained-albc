@@ -1,9 +1,9 @@
 ---
 title: "Cross-run DR comparability: eval.py --doraemon-dr-from already provides a common test distribution; p7_tail knew and declined, judging a robustness campaign on nominal-only"
-tags: ["eval", "comparability", "doraemon-dr-from", "common-exam", "confound", "methodology", "p7-tail", "e4"]
+tags: ["eval", "comparability", "doraemon-dr-from", "common-exam", "confound", "methodology", "p7-tail", "e4", "demonstrated"]
 created: 2026-07-16T06:00:00.285512
-updated: 2026-07-16T06:54:18.179347
-sources: []
+updated: 2026-07-20T03:15:55.206233
+sources: ["diagnose-20260716-164016"]
 links: ["sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e.md"]
 category: convention
 confidence: high
@@ -128,3 +128,35 @@ NEW FIRST DEMONSTRATION NEEDED: this lead now lacks a cheap, decision-relevant f
 replaces it must be a comparison we would actually act on. Keep `status: needs-experiment`, but note the
 motivating probe changed — do not re-inherit the e4 framing when this lead is next picked up.
 
+---
+
+## Update (2026-07-16T07:48:29.230002)
+
+## Update (diagnose-20260716-164016): the NEW FIRST DEMONSTRATION this lead needed now EXISTS.
+
+P-B1 (trpo_biasema_260715_142543) was graded on the REFERENCE trpo_baseline_260714_192020 learned DR via --doraemon-dr-from (eval static_260716_160156) -- the first shared-exam eval in the workspace. Anchor verified directly: data_hard.npz dr_* box matches the reference eval exactly (mismatch 0.00000) and differs from the self-DR eval (7.90261) -- proving the anchor moved, which the none sanity gate alone (anchor-invariant) cannot.
+
+RESULT: P-B1's self-exam hard-roll regression (0.717->0.928) was a MEASUREMENT artifact -- on the common exam P-B1 scores 0.5950 vs REF 0.7167 (17% better). Only the transient peak survives (hard roll n_gt20 8.667 vs 6.667). This demonstrates exactly the defect this page names: a self-anchored hard number can invert under a fair exam.
+
+SCOPE LIMIT re-confirmed empirically: the training confound is REAL and large -- P-B1's learned DR is wider on 20/20 params (variance ratio mean 2.23x). So the common exam fixed measurement, not training-distribution difference, exactly as this page states. Full detail: page p_b1_shared_exam_on_reference_dr_hard_roll_floor_was_exam_artifa and report diagnose-20260716-164016. status stays needs-experiment: the curriculum-replay arm (hold training DR fixed, move only observation) is the remaining probe to assign causation.
+
+---
+
+## Update (2026-07-20T03:15:55.206233)
+
+## Audit re-scope (2026-07-20, backlog audit)
+
+The ORIGINAL ask is DONE: the shared-exam methodology was demonstrated. P-B1
+(`trpo_biasema_260715_142543`) was evaluated on the reference run's learned DR via `--doraemon-dr-from`
+(eval `static_260716_160156`, report `diagnose-20260716-164016`), showing a self-anchored hard-number
+can INVERT under a fair exam (P-B1 hard-roll 0.5950 vs REF 0.7167 on the common exam, against a
+0.717->0.928 self-exam reading).
+
+REMAINING SCOPE -- this page stays open ONLY for the narrower follow-on: the curriculum-replay arm
+(hold training DR fixed, move only the observation) to assign causation between measurement-confound and
+training-confound. The tooling already exists and is unused for this purpose: `CurriculumReplayer` +
+`--replay_curriculum_path` in `marinelab/algorithms/doraemon.py` (commits ecc5c88/ff7c0bc/b1b76db,
+2026-06-05, built for an earlier purpose); no run dir or report uses it for this discrimination.
+
+WATCH: this page's own warning still stands -- a post-TAM baseline retrain moves the DR anchor and
+silently re-breaks comparability.

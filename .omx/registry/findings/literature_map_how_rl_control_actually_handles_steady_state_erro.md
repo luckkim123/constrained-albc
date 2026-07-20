@@ -2,14 +2,14 @@
 title: "Literature map: how RL control actually handles steady-state error (cross-domain) -- nobody has eliminated it; our r_bias reward penalty is a single-paper idea, our encoder is the field's top-ranked mechanism with no UUV precedent"
 tags: ["literature", "steady-state-error", "integral-action", "bias-ema", "reward-shaping", "policy-invariance", "rma", "encoder", "cross-domain", "citations"]
 created: 2026-07-16T06:36:48.431486
-updated: 2026-07-16T06:36:48.431486
+updated: 2026-07-20T03:15:55.459870
 sources: []
-links: ["bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md"]
+links: ["bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md", "penalty_vs_objective_exchange_rate_deg_of_attitude_error_bought.md"]
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 status: needs-experiment
 ---
 
@@ -240,3 +240,25 @@ use_bias_ema_obs=True with k_bias=0). Leads:
    [[bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h]]). Closest real match is Bohn 2021
    (arXiv:2111.04153) -- same recurrence, same domain family -- or IASA (arXiv:2201.13331).
 
+---
+
+## Update (2026-07-20T03:15:55.459870)
+
+## Audit re-scope (2026-07-20, backlog audit)
+
+SUB-ACTION DONE: the doc-fix directive on this page (correct the non-literature terminology used in
+[[bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h]]) was carried out in the same
+session that created this page -- that sibling now cites Baisero & Amato AAMAS 2022 Thm 4.1 as the
+formal grounding and flags "dead zone" as our own coinage.
+
+STILL OPEN, and this page is NOT merely a reference doc: its "Decision / next experiment (lead)"
+section carries 4 concrete, unstarted actions. Re-verified today for lead 1 -- decoupling the `_bias_ema`
+update from `k_bias` has NOT been done: `constrained_albc/envs/main/config.py:626` still raises when
+`use_bias_ema_obs=True` with `k_bias == 0.0`, so the clean k_bias=0 vs -2.0 single-variable ablation
+remains impossible. Leads 2 (two-scale att_rp kernel, arXiv:2606.16621 -- targets the DOMINANT reward
+term), 3 (L1/Huber form for r_bias, arXiv:2402.09075, watch ss_jitter), and 4 (fix the refuted
+"Hwangbo 2017" attribution to Bohn 2021 / IASA) are likewise unstarted.
+
+Note the ordering argument this page itself makes: r_bias is 0.32% of total reward, so lead 2 (the
+dominant term) outranks leads 1/3 on expected value. Compare the objective-units framing in
+[[penalty_vs_objective_exchange_rate_deg_of_attitude_error_bought_]].

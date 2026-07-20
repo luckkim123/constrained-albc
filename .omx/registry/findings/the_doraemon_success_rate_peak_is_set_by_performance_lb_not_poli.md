@@ -2,15 +2,15 @@
 title: "The DORAEMON success_rate PEAK is set by performance_lb, not policy quality: lb=250 peaks 0.63-0.67 and ends CONTRACTED; lb=200 peaks 0.97 and reaches the config ceiling"
 tags: ["doraemon", "success-rate", "performance_lb", "alpha-floor", "curriculum-starvation", "p-a2", "baseline"]
 created: 2026-07-16T05:59:59.870186
-updated: 2026-07-16T05:59:59.870186
+updated: 2026-07-20T03:15:54.941980
 sources: []
-links: ["performance_lb_recon_needs_zero_new_rollouts_doraemon_state_pt_a.md", "an_off_doraemon_channel_that_costs_return_stalls_the_curriculum.md"]
+links: ["performance_lb_recon_needs_zero_new_rollouts_doraemon_state_pt_a.md", "an_off_doraemon_channel_that_costs_return_stalls_the_curriculum.md", "p_a8_perflb200_more_iters_5000_8000_closed_the_deployment_ood_dr.md", "decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema.md"]
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
-status: needs-experiment
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
+status: resolved
 ---
 
 # The DORAEMON success_rate PEAK is set by performance_lb, not policy quality: lb=250 peaks 0.63-0.67 and ends CONTRACTED; lb=200 peaks 0.97 and reaches the config ceiling
@@ -90,3 +90,26 @@ entire run -- see [[an_off_doraemon_channel_that_costs_return_stalls_the_curricu
 Open: the p25 recon is taken under the DR the run REACHED, so it is not the paper's App A.1 no-DR
 rule; a no-DR rollout with TRAINING episode structure is still never-done (eval.py cannot supply it).
 
+---
+
+## Update (2026-07-20T03:15:54.941980)
+
+## Audit close-out (2026-07-20, backlog audit)
+
+CLOSED. This lead's ask -- "prioritise P-A2 (performance_lb recalibration) BEFORE any further teacher
+run" -- was already satisfied when the lead was written; the lead post-dates its own answer by 9 minutes.
+
+- P-A2 was EXECUTED: probe run `trpo_perflb200_260715_023744`, extended by P-A8
+  `trpo_perflb200-moreiters_260715_195227` (see [[p_a8_perflb200_more_iters_5000_8000_closed_the_deployment_ood_dr]]).
+- It was then RE-ADJUDICATED against the now-adopted bias_ema-ON config in
+  [[decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema]] (2026-07-16T05:50, resolved):
+  lb=200 makes success 0.989 (feasibility constraint inert -- the historic lb=68 failure class),
+  measured-p25 rule gives 261.8, current lb=250 -> success 0.882 sits inside the live self-pacing band,
+  so "no change is FORCED".
+- Verified in code: `constrained_albc/envs/main/config.py:544` -> `performance_lb=250.0`, matching that
+  decision. Nothing is pending.
+
+CARRIED CAVEAT (does not reopen this lead): the p25 numbers came from reading the `doraemon_state.pt`
+buffer, not from a proper no-DR App A.1 measurement, which per
+[[performance_lb_recon_needs_zero_new_rollouts_doraemon_state_pt_a]] "remains never-done". The DECISION
+is settled; the ideal measurement is not. If lb is ever revisited, do the App A.1 measurement first.

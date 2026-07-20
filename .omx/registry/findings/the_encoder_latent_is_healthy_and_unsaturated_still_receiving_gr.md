@@ -1,0 +1,22 @@
+---
+title: "The encoder latent is healthy and unsaturated, still receiving gradient — no col"
+tags: ["auto-captured", "trpo_biasema_extend8k_260716_162849"]
+created: 2026-07-20T03:13:39.392281
+updated: 2026-07-20T03:13:39.392281
+sources: ["experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_biasema_extend8k_260716_162849/analysis/diagnose-20260720-115818/report.md"]
+links: []
+category: session-log
+confidence: low
+schemaVersion: 1
+qualityScore: 100
+qualityReasons: []
+---
+
+# The encoder latent is healthy and unsaturated, still receiving gradient — no col
+
+The encoder latent is healthy and unsaturated, still receiving gradient — no collapse, no softsign clipping. Nothing about the encoder distinguishes the extension.
+
+[EVIDENCE: analyze_training.py [TIER 1] + TB final]
+[CONFIDENCE: HIGH]
+
+source report: experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_biasema_extend8k_260716_162849/analysis/diagnose-20260720-115818/report.md

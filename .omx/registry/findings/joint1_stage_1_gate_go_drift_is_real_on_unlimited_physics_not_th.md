@@ -2,14 +2,14 @@
 title: "joint1 Stage-1 gate GO: drift is real on unlimited physics, not the +-360deg wall artifact"
 tags: ["joint1", "drift", "cumulative-rotation", "unlimited-physics", "stage-1-gate", "ee-action", "ttf-correction"]
 created: 2026-07-12T18:26:08.556497
-updated: 2026-07-14T12:07:34.730666
+updated: 2026-07-20T03:15:55.375858
 sources: ["diagnose-20260713-031533"]
 links: ["joint1_anti_drift_design_history.md", "engine_gap_flat_target_eval_records_joint1_trajectory_but_render.md"]
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 70
-qualityReasons: ["no-source-marker", "generic-only-tags"]
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 status: needs-experiment
 ---
 
@@ -45,3 +45,25 @@ CORRECTION (post-review, report-reviewer catch): the fast-fail metric is 'failin
 ## Update (2026-07-14T12:07:34.730666)
 
 Backlog tag (Phase 0): open lead — Stage 2 (re-measure drift on station-keeping / ee-action baseline) not yet run; do NOT auto-proceed. Soft, not run-invalidating.
+
+---
+
+## Update (2026-07-20T03:15:55.375858)
+
+## Audit re-scope (2026-07-20, backlog audit)
+
+STAGE 1 IS CONCLUDED -- the gate verdict (drift is real on unlimited physics, Lane-3 wall-artifact
+refuted) is this page's title and needs no further work.
+
+REMAINING SCOPE -- this page stays open ONLY for Stage 2, exactly as its own 2026-07-14 update says:
+re-measure joint1 drift on a policy that actually STATION-KEEPS on unlimited physics, using the
+ee-action baseline. Independently re-verified as not done: every ee-action / joint1-constraint run in
+`experiments/legacy/rsl_rl/albc_trpo_teacher/{ee_action,joint1_centering,joint1_integrated,joint1_constraint}/`
+dates 2026-06-26..06-29 and thus PREDATES this gate (those runs motivated it, they do not answer it);
+no run after 2026-07-14 combines ee-action with flat-target/station-keeping evaluation; the
+`teacher_baseline_{opt,posttam}` runs are the attitude-only `envs/main` task and are unrelated to this
+full-DOF line.
+
+Do not read the Stage-1 drift magnitudes as Stage-2 numbers: Stage 1 used DIRECT joint-delta action
+(free `_joint_pos_targets` integrator) while Stage 2's ee-action base overwrites `_joint_pos_targets`
+with IK output wrapped to (-pi,pi] -- a different command signal that needs its own baseline.
