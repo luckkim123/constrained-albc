@@ -1,17 +1,17 @@
 ---
 title: "Cross-run DR comparability: eval.py --doraemon-dr-from already provides a common test distribution; p7_tail knew and declined, judging a robustness campaign on nominal-only"
-tags: ["eval", "comparability", "doraemon-dr-from", "common-exam", "confound", "methodology", "p7-tail", "e4", "demonstrated", "curriculum-replay", "doraemon", "causal-attribution", "biasema", "adoption-vs-mechanism", "priority-demotion", "user-decision"]
+tags: ["eval", "comparability", "doraemon-dr-from", "common-exam", "confound", "methodology", "p7-tail", "e4", "demonstrated", "curriculum-replay", "doraemon", "causal-attribution", "biasema", "adoption-vs-mechanism", "priority-demotion", "user-decision", "demotion-confirmed"]
 created: 2026-07-16T06:00:00.285512
-updated: 2026-07-20T08:43:43.834636
-sources: ["diagnose-20260716-164016", "doraemon.py:817", "train.py:58", "experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_biasema_260715_142543/analysis/diagnose-20260716-164016/report.md"]
-links: ["sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e.md", "extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_.md", "step_interval_250_400_probe_separate_dr_width_from_optimisation_.md"]
+updated: 2026-07-20T17:14:28.513097
+sources: ["diagnose-20260716-164016", "doraemon.py:817", "train.py:58", "experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_biasema_260715_142543/analysis/diagnose-20260716-164016/report.md", "diagnose-20260721-020253"]
+links: ["sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e.md", "extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_.md", "step_interval_250_400_probe_separate_dr_width_from_optimisation_.md", "step_interval_250_400_probe_separate_dr_width_from_optimisation.md"]
 category: convention
 confidence: high
 schemaVersion: 1
-qualityScore: 70
-qualityReasons: ["no-source-marker", "generic-only-tags"]
-status: needs-experiment
-blocked-on: "ORIGINAL ask DONE (shared-exam demonstrated). Remaining curriculum-replay arm DEMOTED to low priority by user decision 2026-07-20 (widening is downstream of the improvement; bundle is the right unit for adoption). Revisit only if roll transient peak becomes binding AND the step_interval probe fails to separate DR-width from optimisation-steps."
+qualityScore: 100
+qualityReasons: []
+status: resolved
+blocked-on: ""
 ---
 
 # Cross-run DR comparability: eval.py --doraemon-dr-from already provides a common test distribution; p7_tail knew and declined, judging a robustness campaign on nominal-only
@@ -206,3 +206,8 @@ verified present at HEAD 2026-07-20. No code work is needed if this is ever revi
 
 Anchor-run gotcha (2026-07-20 pass-2 audit, from diagnose-20260716-164016 ANOMALY finding): the reference baseline run trpo_baseline_260714_192020 (eval static_260715_004654) has a NON-MONOTONIC roll heavy-tail on its own-DR exam: n_gt20 = 14.333 at none vs 6.667 at hard -- its hard row is its BEST tail level, not its worst (P-B1's doubles 4.333 -> 8.667 on the same exam). Any comparison quoting this baseline's hard-level tail therefore rests on the baseline's best level ("beats baseline at hard" is weaker than it reads). This is a second, concrete reason the none-only / shared-anchor rule exists. The deleted session stub that recorded it (anomaly_the_reference_s_roll_heavy_tail...) is folded here because the run remains in active use as a comparison anchor.
 
+---
+
+## Update (2026-07-20T17:14:28.513097)
+
+[UPDATE 2026-07-21] The curriculum-replay arm's REVISIT condition is now settled and does NOT fire. It was worded 'revisit only if the roll transient peak becomes binding AND the step_interval probe FAILS to separate DR-width from optimisation-steps'. The probe ran (trpo_stepint400_260720_180208) and SUCCEEDED at separating them: iterations dominate (+13.52 pts of roll os_env_mean) while width protects (-3.56 pts). So --replay_curriculum stays demoted; it is not needed as the fallback control. See [[step_interval_250_400_probe_separate_dr_width_from_optimisation_]]. [EVIDENCE: summary.json none/roll/os_env_mean -- ref5k static_260716_160156 17.022, A1 static_260721_014808 30.546, extend8k static_260717_005643 26.991] [CONFIDENCE: MED -- single seed per cell]

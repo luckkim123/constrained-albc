@@ -1,16 +1,16 @@
 ---
 title: "step_interval 250->400 probe: separate DR-WIDTH from OPTIMISATION-STEPS as the cause of extend8k's nominal roll transient regression (pending approval, not launched)"
-tags: ["doraemon", "step_interval", "dr-width", "transient-overshoot", "thruster-util", "probe", "teacher_baseline_posttam", "pending-approval", "correction"]
+tags: ["doraemon", "step_interval", "dr-width", "transient-overshoot", "thruster-util", "probe", "teacher_baseline_posttam", "pending-approval", "correction", "result", "h1-refuted"]
 created: 2026-07-20T04:17:04.272956
-updated: 2026-07-20T08:43:43.909618
-sources: ["diagnose-20260720-124259", "next-20260720-131526", "marinelab/marinelab/algorithms/doraemon.py"]
+updated: 2026-07-20T17:14:00.313630
+sources: ["diagnose-20260720-124259", "next-20260720-131526", "marinelab/marinelab/algorithms/doraemon.py", "diagnose-20260721-020253", "static_260721_014808"]
 links: ["extend8k_saturated_the_dr_config_box_at_iter_7000_all_20_params_.md"]
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
-status: needs-experiment
+qualityScore: 100
+qualityReasons: []
+status: resolved
 blocked-on: "PENDING HUMAN APPROVAL -- reviewer-approved 2026-07-20; user deferred launching to batch-plan accumulated leads later; nothing else blocks it"
 ---
 
@@ -129,3 +129,61 @@ Remaining minor items in `next-20260720-131526` (none blocks a launch):
 
 Literature + code check (2026-07-20 pass-2): neither DORAEMON (Tiboni et al., ICLR 2024) nor ADR/AutoDR treats the update interval as an independent tunable -- both GATE distribution updates on measured performance (DORAEMON: train_until_performance_lb; ADR: buffered success threshold). No published ablation varies a fixed clock interval at constant budget, so this probe has no literature precedent to confirm or refute. Code verification: our doraemon.py:416 fires updates on a pure clock (step_count % step_interval); the performance guard lives INSIDE the update as the hard_performance_constraint inversion (mode -2), not as an update gate -- a deliberate approximation of the reference's train-until-converged cadence (comment at doraemon.py:43). FRAMING RULE for the probe write-up: the result characterizes THIS repo's clock-based approximation, not a literature-known sensitivity; do not cite the papers as predicting a direction.
 
+---
+
+## Update (2026-07-20T17:14:00.313630)
+
+# RESULT 2026-07-21 -- probe RAN, H1 REFUTED
+
+Run `trpo_stepint400_260720_180208` (8000 iters, step_interval 400, branch
+exp/step-interval-400 @ 81d7c61). Full report: analysis `diagnose-20260721-020253`.
+
+[FINDING] H1 is REFUTED and H2 is not confirmed either -- the run landed OUTSIDE both
+pre-registered poles. Holding the achieved DR width at the 5k endpoint while running 8000
+iterations gave roll `os_env_mean` 30.5% at `none`, WORSE than extend8k's 27.0%, where H1
+predicted a return to ~17.0%. Narrowing the width did not recover the transient; it
+degraded it further.
+[EVIDENCE: eval/static_260721_014808/summary.json none/roll/os_env_mean = 30.546 vs ref5k static_260716_160156 = 17.022 vs extend8k static_260717_005643 = 26.991]
+[CONFIDENCE: HIGH]
+
+[FINDING] Decomposition over the 3 populated cells of the (iterations x width) 2x2 --
+the 4th cell (5000 iters x saturated width) was never run: iterations 5k->8k at
+held-narrow width costs +13.52 pts of overshoot, while width narrow->saturated at held-8k
+BUYS BACK -3.56 pts. The wider DR box is therefore a weak PROTECTIVE factor, the opposite
+sign to the hypothesis under test. Both signs are robust; the magnitudes are single-seed
+point estimates and the iteration edge carries the residual row-1 leak.
+[EVIDENCE: same three summary.json none/roll/os_env_mean values; 17.022 -> 30.546 = +13.524, 30.546 -> 26.991 = -3.555]
+[CONFIDENCE: MED]
+
+[FINDING] `step_interval` 400 is NOT adoptable: A1 is worse than extend8k on BOTH axes of
+the trade-off extend8k established -- it pays the transient AND gives back the
+steady-state gain (roll ss_error 0.261 vs extend8k 0.171, and even worse than ref5k's
+0.215).
+[EVIDENCE: summary.json none/roll/ss_error -- A1 0.261, ref5k 0.215, extend8k 0.171]
+[CONFIDENCE: HIGH]
+
+[FINDING] REUSABLE WARNING -- the two pre-registered readouts DECOUPLED, so
+`thruster_util` J_C/d_k must NOT be used as a proxy for transient quality. It tracked the
+DR width (A1 0.843 ~ ref5k 0.846, extend8k 0.932) while the roll transient tracked the
+iteration budget. Any future probe that pre-registers an actuator-constraint margin and a
+transient metric as if they co-move is mis-specified.
+[EVIDENCE: engine [TIER 2] Constraints binding row across the three runs -- thruster_util J_C/d_k 0.843 (A1) / 0.846 (ref5k) / 0.932 (extend8k); margin m= 6.28 / 6.14 / 2.74]
+[CONFIDENCE: HIGH]
+
+[FINDING] Manipulation-check outcome for the record: 2 of 3 rows passed. Row 2 (Beta b
+5.635/5.401/5.502 >= ~5) and row 3 (19 achieved expansions, in 17-20) PASSED; row 1
+FAILED marginally -- terminal `entropy_before` -22.043 vs the -22.70 +/- 0.5 band, over by
+0.157 nats. The leak is ~15% of the 4.5-nat H1/H2 separation and the outcome landed
+outside both poles, so it does not carry the verdict, but any re-use of this run as a
+width-held control must carry that caveat.
+[EVIDENCE: TB DORAEMON/entropy_before final -22.043 (A1) / -22.702 (ref5k) / -18.201 (extend8k); DORAEMON/kl_step nonzero 19 / 18 / 26]
+[CONFIDENCE: HIGH]
+
+[FINDING] Downstream consequence for the curriculum-replay arm: the demotion condition
+recorded on the cross-run comparability page ("revisit only if the roll transient peak
+becomes binding AND the step_interval probe fails to separate DR-width from
+optimisation-steps") is NOT triggered. The probe DID separate them -- it produced a clean
+directional answer (iterations dominate, width protects), so `--replay_curriculum` stays
+demoted rather than being escalated as the fallback.
+[EVIDENCE: this page's decomposition finding; cross_run_dr_comparability page's demotion condition]
+[CONFIDENCE: MED]

@@ -1,9 +1,9 @@
 ---
 title: "e3's '5000-iter budget' verdict is scope-limited, NOT a cap: max_iterations is a DR-EXPANSION knob (step_interval clock) and the real ceiling is the Beta a=b=1 config bound, not compute"
-tags: ["doraemon", "curriculum-budget", "max-iterations", "num-envs", "dgx", "scale-up", "e3", "config-ceiling", "p-a6", "user-decision", "extend8k", "result-recorded", "exam-comparability", "correction"]
+tags: ["doraemon", "curriculum-budget", "max-iterations", "num-envs", "dgx", "scale-up", "e3", "config-ceiling", "p-a6", "user-decision", "extend8k", "result-recorded", "exam-comparability", "correction", "step_interval", "mechanism-isolated"]
 created: 2026-07-16T05:58:47.795144
-updated: 2026-07-20T03:32:10.598463
-sources: ["diagnose-20260714-084409", "diagnose-20260720-115818", "diagnose-20260720-123142"]
+updated: 2026-07-20T17:14:28.603345
+sources: ["diagnose-20260714-084409", "diagnose-20260720-115818", "diagnose-20260720-123142", "diagnose-20260721-020253"]
 links: ["performance_lb_recon_needs_zero_new_rollouts_doraemon_state_pt_a.md", "decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema.md", "extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_.md", "eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md"]
 category: decision
 confidence: high
@@ -184,3 +184,9 @@ WHAT SURVIVES (all of the verdict): every headline number sits on the FAIR none 
 WHAT CHANGES: the soft/medium/hard rows are no longer evidence. The bias is one-sided and computable: extend8k's curriculum ended WIDER (entropy_before -18.20 vs -22.70), so it sat the HARDER exam there -- its roll improvement at those levels is UNDERSTATED and its pitch/yaw regression OVERSTATED. In particular the 'overshoot damage is monotone-largest at nominal (+59% none -> +29% hard)' gradient must NOT be cited as evidence that damage concentrates at nominal: the gradient is confounded by exam difficulty.
 
 REUSABLE LESSON: 'both plain static / neither used --doraemon-dr-from' is NOT a comparability argument. To get a common exam you must pass --doraemon-dr-from <ref run> (shared exam) or --no-doraemon-dr (static DR cfg). Otherwise restrict cross-run claims to none.
+
+---
+
+## Update (2026-07-20T17:14:28.603345)
+
+[UPDATE 2026-07-21 -- the two roles of max_iterations are now SEPARATED experimentally] This page argued max_iterations is a DR-expansion knob because the expansion clock counts iterations. A1 (trpo_stepint400_260720_180208) held the width endpoint while keeping 8000 iterations, and the result splits the two roles cleanly: the OPTIMISATION-STEPS role is what hurts the nominal roll transient (+13.52 pts of os_env_mean going 5k->8k at held-narrow width), while the DR-EXPANSION role is mildly PROTECTIVE (-3.56 pts going narrow->saturated at held-8k). So 'extending past 5000 is net negative on this plant' survives, but the mechanism is optimisation pressure against the binding thruster_util constraint, NOT the wider DR box. The DGX scale-up arm (larger num_envs AND max_iterations) remains the only open scope here and now carries a concrete risk to watch: more iterations at fixed plant made the transient worse, so a DGX run must re-measure the transient, not assume more compute is monotonically better. [EVIDENCE: summary.json none/roll/os_env_mean -- 17.022 (ref5k 5k) / 30.546 (A1 8k narrow) / 26.991 (extend8k 8k saturated); thruster_util J_C/d_k 0.846 / 0.843 / 0.932] [CONFIDENCE: MED -- single seed per cell]

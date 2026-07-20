@@ -1,0 +1,7 @@
+# OMX Decision Log
+
+## Iteration 8000 — discard
+
+- Description: A1 probe, step_interval 250->400 at 8000 iters. H1 REFUTED: holding DR width at the 5k endpoint made the nominal roll transient WORSE (os_env_mean 30.5% vs extend8k 27.0% vs ref5k 17.0%), and steady-state was given back too (ss_error 0.261 vs 0.171). Iterations dominate (+13.5 pts), wider DR is a weak mitigator (-3.6 pts). Not adoptable; knowledge value is the refutation plus the thruster_util/transient decoupling warning. Report: diagnose-20260721-020253.
+- Reason: manual record
+

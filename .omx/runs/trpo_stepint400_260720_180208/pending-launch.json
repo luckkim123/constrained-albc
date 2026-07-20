@@ -1,0 +1,37 @@
+{
+  "acknowledged_gates": [
+    "imu_45deg_offset_pitch_negation_sim_uncompensated_2026_07_05.md",
+    "plant_fix_needs_apply_before_retrain_main_hull_volume_0_009_0_00.md",
+    "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md",
+    "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md"
+  ],
+  "actual_run_id": "trpo_stepint400_260720_180208",
+  "gpu_gate": "RTX 4070 idle (nvidia-smi shows no other training process) AND repo checked out on exp/step-interval-400; expected ~16-22 h",
+  "launch_delta": "config.py:544 DoraemonCfg step_interval 250->400 on branch exp/step-interval-400 (commit 81d7c61); single variable vs trpo_biasema_extend8k_260716_162849; max_iterations 8000; run_group=log_project=teacher_baseline_posttam; agent.run_name=stepint400",
+  "launched_at": "2026-07-20T09:02:08+00:00",
+  "open_leads": [
+    "action_bounding_is_justified_raw_gaussian_external_clamp_tanh_ru.md",
+    "april_2026_entropy_collapse_campaign_machinery_bug_solved_conver.md",
+    "baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md",
+    "constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md",
+    "cross_run_dr_comparability_eval_py_doraemon_dr_from_already_prov.md",
+    "curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md",
+    "e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite.md",
+    "experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md",
+    "extend8k_saturated_the_dr_config_box_at_iter_7000_all_20_params_.md",
+    "joint1_stage_1_gate_go_drift_is_real_on_unlimited_physics_not_th.md",
+    "penalty_vs_objective_exchange_rate_deg_of_attitude_error_bought_.md",
+    "priv_obs_slim_stage_2_lead_contested_p_t_dims_quad_damp_lin_vel_.md",
+    "reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md",
+    "step_interval_250_400_probe_separate_dr_width_from_optimisation_.md",
+    "stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md",
+    "thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md",
+    "tracking_kernel_exp_quad_tanh_dead_zone_diagnosis_correct_but_fi.md"
+  ],
+  "proposal_id": "next-20260720-131526",
+  "queued_at": "2026-07-20T08:57:05.053056+00:00",
+  "queued_commit": "81d7c61f4417833d334b9febd806511365f1be8b",
+  "queued_run_id_note": "run_id is minted by make_run_id at train time; the queued id (\u2026_175705) was a pre-mint placeholder",
+  "schema_version": 1,
+  "status": "launched"
+}

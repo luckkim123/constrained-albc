@@ -4788,3 +4788,163 @@
 - **Pages:** group_folder_name_equals_wandb_project_name_equals_experiment_pu.md
 - **Summary:** updated 'Group folder name equals wandb project name equals experiment purpose (unified naming, 2026-07-14 revision)'
 
+## [2026-07-20T17:00:58.089875] query
+- **Pages:** step_interval_250_400_probe_separate_dr_width_from_optimisation_.md, n_gt20_and_os_env_are_overshoot_percent_of_step_magnitude_not_de.md, teacher_segmented_post_switch_roll_transient_jumps_under_hard_dr.md, extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_.md, e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, cross_run_dr_comparability_eval_py_doraemon_dr_from_already_prov.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md, doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md, eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md, extend8k_saturated_the_dr_config_box_at_iter_7000_all_20_params_.md, joint1_cumulative_ipo_constraint_generalizes_drift_bounded_at_oo.md, p_b1_shared_exam_on_reference_dr_hard_roll_floor_was_exam_artifa.md, joint_dr_params_kp_kd_effort_friction_need_no_dedicated_measurem.md, tam_plant_correctness_fix_collapses_the_void_hard_dr_roll_heavy_.md, teacher_hard_dr_cv_explodes_without_heavy_tail_dc_bias_dispersio.md, uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload_.md, real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md, incident_post_mortem_teacher_baseline_opt_e1_e4_trained_on_a_tam.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md
+- **Summary:** query 'roll transient overshoot os_env_mean DR width step_interval' -> 20 of 155
+
+## [2026-07-20T17:11:34.476643] add
+- **Pages:** april_2026_entropy_collapse_campaign_machinery_bug_solved_conver.md
+- **Summary:** updated 'April 2026 entropy-collapse campaign: machinery bug SOLVED, converged-sigma collapse NOT -- and min_std is the wrong lever'
+
+## [2026-07-20T17:11:51.027037] add
+- **Pages:** april_2026_entropy_collapse_campaign_machinery_bug_solved_conver.md
+- **Summary:** updated 'April 2026 entropy-collapse campaign: machinery bug SOLVED, converged-sigma collapse NOT -- and min_std is the wrong lever'
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** the_manipulation_is_2_3_row_1_fails_marginally_rows_2_and_3_pass.md
+- **Summary:** created 'The manipulation is 2/3 — row 1 fails marginally, rows 2 and 3 pass; the run sti'
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** row_2_holds_with_margin_a1_s_three_deployment_params_end_near_th.md
+- **Summary:** created "Row 2 holds with margin: A1's three deployment params end near the 5k reference'"
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** the_row_1_leak_is_quantifiable_and_does_not_change_the_verdict_a.md
+- **Summary:** created "The row-1 leak is quantifiable and does not change the verdict: A1's terminal wi"
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** iteration_count_not_dr_width_drives_the_nominal_roll_transient_t.md
+- **Summary:** created 'Iteration count, not DR width, drives the nominal roll transient; the wider DR b'
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** against_the_pre_registered_bands_the_run_is_a_double_miss_which_.md
+- **Summary:** created 'Against the pre-registered bands the run is a double miss, which is itself the r'
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** the_two_pre_registered_readouts_decoupled_thruster_util_j_c_d_k_.md
+- **Summary:** created 'The two pre-registered readouts decoupled — `thruster_util` J_C/d_k tracked the '
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** a1_is_worse_than_extend8k_on_both_axes_of_the_trade_off_extend8k.md
+- **Summary:** created 'A1 is worse than extend8k on BOTH axes of the trade-off extend8k established (ex'
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** env_to_env_spread_rises_with_the_transient_but_the_distribution_.md
+- **Summary:** created 'Env-to-env spread rises with the transient but the distribution stays DC-bias-li'
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** n_gt20_corroborates_the_same_distribution_rather_than_adding_ind.md
+- **Summary:** created '`n_gt20` corroborates the same distribution rather than adding independent evide'
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** all_four_dr_levels_behave_consistently_and_survival_is_100_every.md
+- **Summary:** created 'All four DR levels behave consistently and survival is 100% everywhere, so the t'
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** vx_vy_vz_are_nan_at_every_dr_level_by_construction_the_main_task.md
+- **Summary:** created '`vx/vy/vz` are NaN at every DR level by construction — the main task is attitude'
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** no_out_of_distribution_level_was_run_for_this_probe_so_generaliz.md
+- **Summary:** created 'No out-of-distribution level was run for this probe, so generalization is read f'
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** a1_generalizes_across_its_own_dr_ladder_without_degradation_in_a.md
+- **Summary:** created 'A1 generalizes across its own DR ladder without degradation in attitude overshoo'
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** the_hard_row_s_error_bar_4_8_on_a_4_3_mean_is_where_the_env_to_e.md
+- **Summary:** created "The `hard` row's error bar (+/- 4.8 on a 4.3 mean) is where the env-to-env sprea"
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** the_reward_decomposition_is_essentially_unchanged_across_the_thr.md
+- **Summary:** created 'The reward decomposition is essentially unchanged across the three runs; A1 sits'
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** episode_return_and_length_are_also_flat_across_the_lineage_a1_re.md
+- **Summary:** created 'Episode return and length are also flat across the lineage (A1 reward 272.26, ep'
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** the_trpo_machinery_is_healthy_and_identical_in_configuration_to_.md
+- **Summary:** created 'The TRPO machinery is healthy and identical in configuration to the lineage — li'
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** the_policy_update_internals_are_quantitatively_indistinguishable.md
+- **Summary:** created 'The policy-update internals are quantitatively indistinguishable from the two re'
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** grad_sigma_step_is_three_orders_of_magnitude_below_grad_actor_st.md
+- **Summary:** created '`Grad/sigma_step` is three orders of magnitude below `Grad/actor_step` in every '
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** exploration_is_dead_in_a1_exactly_as_in_both_references_so_entro.md
+- **Summary:** created 'Exploration is dead in A1 exactly as in both references, so entropy collapse is '
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** the_reward_trajectory_is_a_warmup_then_plateau_shape_with_platea.md
+- **Summary:** created 'The reward trajectory is a warmup-then-plateau shape with plateau onset at ~5% o'
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** both_critics_are_healthy_and_a1_s_cost_critic_loss_sits_between_.md
+- **Summary:** created "Both critics are healthy and A1's cost-critic loss sits between the references, "
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** both_critic_losses_order_the_runs_by_exam_difficulty_not_by_iter.md
+- **Summary:** created 'Both critic losses order the runs by exam difficulty, not by iteration budget: A'
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** the_encoder_did_not_collapse_a_post_run_per_parameter_z_sweep_sh.md
+- **Summary:** created 'The encoder did not collapse: a post-run per-parameter z-sweep shows 8-9 of 9 la'
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** three_sweep_parameters_drive_almost_no_latent_response_and_are_t.md
+- **Summary:** created 'Three sweep parameters drive almost no latent response and are the weak dims to '
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** aggregate_latent_statistics_are_indistinguishable_across_the_thr.md
+- **Summary:** created 'Aggregate latent statistics are indistinguishable across the three runs, so the '
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** the_encoder_was_still_receiving_and_applying_gradient_at_the_end.md
+- **Summary:** created 'The encoder was still receiving and applying gradient at the end of training in '
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** exactly_one_constraint_is_binding_thruster_util_and_its_margin_b.md
+- **Summary:** created 'Exactly one constraint is binding (`thruster_util`) and its margin behaves like '
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** nine_of_ten_constraints_remain_deeply_slack_with_zero_violations.md
+- **Summary:** created 'Nine of ten constraints remain deeply slack with zero violations and a smooth ba'
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** thruster_util_s_margin_separates_the_runs_the_same_way_its_j_c_d.md
+- **Summary:** created "`thruster_util`'s margin separates the runs the same way its J_C/d_k does: A1 6."
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** the_curriculum_stayed_feasible_and_never_gated_success_rate_rema.md
+- **Summary:** created 'The curriculum stayed feasible and never gated: success rate remained far above '
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** the_probe_did_what_it_was_configured_to_do_at_the_schedule_level.md
+- **Summary:** created 'The probe did what it was configured to do at the schedule level: 20 scheduled e'
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** a_cross_metric_changepoint_at_iter_5654_pairs_a_success_rate_dro.md
+- **Summary:** created 'A cross-metric changepoint at iter 5654 pairs a success-rate drop with an entrop'
+
+## [2026-07-20T17:13:19.523263] add
+- **Pages:** the_terminal_dr_state_is_far_from_the_config_ceiling_unlike_exte.md
+- **Summary:** created 'The terminal DR state is far from the config ceiling, unlike extend8k which satu'
+
+## [2026-07-20T17:14:00.313630] add
+- **Pages:** step_interval_250_400_probe_separate_dr_width_from_optimisation_.md
+- **Summary:** updated "step_interval 250->400 probe: separate DR-WIDTH from OPTIMISATION-STEPS as the cause of extend8k's nominal roll transient regression (pending approval, not launched)"
+
+## [2026-07-20T17:14:28.513097] add
+- **Pages:** cross_run_dr_comparability_eval_py_doraemon_dr_from_already_prov.md
+- **Summary:** updated 'Cross-run DR comparability: eval.py --doraemon-dr-from already provides a common test distribution; p7_tail knew and declined, judging a robustness campaign on nominal-only'
+
+## [2026-07-20T17:14:28.603345] add
+- **Pages:** e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite.md
+- **Summary:** updated "e3's '5000-iter budget' verdict is scope-limited, NOT a cap: max_iterations is a DR-EXPANSION knob (step_interval clock) and the real ceiling is the Beta a=b=1 config bound, not compute"
+

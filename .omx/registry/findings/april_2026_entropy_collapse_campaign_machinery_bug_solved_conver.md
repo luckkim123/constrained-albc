@@ -1,17 +1,17 @@
 ---
 title: "April 2026 entropy-collapse campaign: machinery bug SOLVED, converged-sigma collapse NOT -- and min_std is the wrong lever"
-tags: ["entropy", "exploration", "noise_std", "min_std", "entropy_coef", "per-dim", "legacy-campaign", "april-2026", "erc-trpo", "limit-cycle", "backlog-correction", "rule03", "std_min", "posttam", "zero-gpu"]
+tags: ["entropy", "exploration", "noise_std", "min_std", "entropy_coef", "per-dim", "legacy-campaign", "april-2026", "erc-trpo", "limit-cycle", "backlog-correction", "rule03", "std_min", "posttam", "zero-gpu", "log_std", "Z1", "Z1-closed"]
 created: 2026-07-20T06:08:58.240967
-updated: 2026-07-20T08:43:44.204679
-sources: ["docs/reference/experiments-archive.md", "docs/reference/experiments-index.json", "3132605", "d7c65c3", "885327a", "26b2f54", "constraint_encoder_runner.py:366-367", "TB Noise/std_min 5 posttam runs"]
+updated: 2026-07-20T17:11:51.027037
+sources: ["docs/reference/experiments-archive.md", "docs/reference/experiments-index.json", "3132605", "d7c65c3", "885327a", "26b2f54", "constraint_encoder_runner.py:366-367", "TB Noise/std_min 5 posttam runs", "diagnose-20260721-020253", "model_7999.pt", "model_4999.pt"]
 links: ["n_gt20_and_os_env_are_overshoot_percent_of_step_magnitude_not_de.md"]
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 70
-qualityReasons: ["no-source-marker", "generic-only-tags"]
+qualityScore: 80
+qualityReasons: ["no-source-marker"]
 status: needs-experiment
-blocked-on: "Item 1 THRUSTER half CLOSED 2026-07-20 via Noise/std_min (biasema+extend8k clamped at 0.05; baseline/perflb/moreiters not clamped). ARM half still needs the per-dim log_std read from model_7999.pt -- zero-GPU, unblocked. Item 2 (training probe) parked under the 2026-07-20 batch-pass decision."
+blocked-on: "Item 1 FULLY CLOSED 2026-07-21: THRUSTER half closed 2026-07-20 via Noise/std_min; ARM half closed by the Z1 per-dim log_std read (arm0 AT FLOOR 0.10000, arm1 free at ~0.131 across the whole lineage; 5 of 8 dims floored, free set = {arm1, thr0, thr3}). Item 2 (training probe) is now the A2 run trpo_entcoefzero_260721_014731, launched 2026-07-21 -- verdict reads ONLY the 3 free dims."
 ---
 
 # April 2026 entropy-collapse campaign: machinery bug SOLVED, converged-sigma collapse NOT -- and min_std is the wrong lever
@@ -204,3 +204,56 @@ Metric-naming caveat in the same family: [[n_gt20_and_os_env_are_overshoot_perce
 
 A2 probe design notes (2026-07-20 pass-2, literature + config check): (1) the planned entropy_coef_per_dim -> 0 probe is a REPLICATION of this campaign's own April result (04-09 vs 04-10: coef 0.003 vs 0 -> noise_std 0.55 vs 0.12) on the new per-dim/post-TAM stack -- frame it as confirmatory; a diverging outcome would itself be the finding. (2) Floor-censoring confound: the biasema-lineage anchor IS thruster-floor-clamped (Noise/std_min = 0.0500), so on thruster dims the probe can only reveal collapse pressure above the floor; the interpretable readout is the ARM dims (floor 0.10; Z1 reads whether they are clamped) plus the thruster margin. Read Noise/std_min on the launch anchor BEFORE launch. (3) Same-run kill-criterion: hard entropy interventions on this stack have precedent for abrupt reward collapse (the reverted EnTRPO episode), so pre-register an early-stop (sustained reward drop / constraint-violation spike) whose firing is itself an informative "abrupt-collapse mode" verdict. No external literature studies per-dim entropy coefficients or mid-training entropy removal inside a TRPO+log-barrier stack -- the design's justification is this project's own run data; label it as such in the write-up.
 
+---
+
+## Update (2026-07-20T17:11:34.476643)
+
+[FINDING] Z1 CLOSES the ARM half of this lead. A direct per-dim read of the final
+checkpoint `log_std` shows the 8 action dims split into a FIXED clamp pattern that is
+IDENTICAL across the whole posttam lineage: 5 of 8 dims sit exactly on their
+`min_std_per_dim` floor and 3 are free. So "entropy collapsed" is not a uniform collapse
+-- it is 5 floored dims plus 3 dims that settled on their own well above the floor.
+
+| dim | floor | A1 stepint400 (m7999) | ref5k biasema (m4999) | extend8k (m7999) | state |
+|---|---|---|---|---|---|
+| arm0 | 0.10 | 0.10000 | 0.10000 | 0.10001 | AT FLOOR |
+| arm1 | 0.10 | 0.13150 | 0.13034 | 0.13571 | free |
+| thr0 | 0.05 | 0.11569 | 0.12714 | 0.11599 | free |
+| thr1 | 0.05 | 0.05000 | 0.05000 | 0.05000 | AT FLOOR |
+| thr2 | 0.05 | 0.05000 | 0.05000 | 0.05000 | AT FLOOR |
+| thr3 | 0.05 | 0.12374 | 0.13062 | 0.11906 | free |
+| thr4 | 0.05 | 0.05000 | 0.05000 | 0.05000 | AT FLOOR |
+| thr5 | 0.05 | 0.05000 | 0.05000 | 0.05001 | AT FLOOR |
+
+[EVIDENCE: torch.load of model_7999.pt / model_4999.pt, `model_state_dict['log_std']`, exp(log_std) per dim; floors from rsl_rl_ppo_cfg.py:246 min_std_per_dim=(0.10,0.10,0.05x6); read 2026-07-20/21 during the A1 analysis]
+[CONFIDENCE: HIGH]
+
+[FINDING] Consequence for the A2 probe (entropy_coef_per_dim -> all-zero): the ONLY
+interpretable dims are the 3 free ones -- arm1, thr0, thr3. The 5 floored dims are
+censored by the clamp and CANNOT show downward pressure, so a null result on them is
+uninformative by construction. A2's pre-registered rule ("an UNCLAMPED dim's sigma
+departs >=10% below the anchor path sustained >=500 iters") therefore resolves to these
+anchor values from ref5k: arm1 0.13034, thr0 0.12714, thr3 0.13062 -- a >=10% departure
+means falling below 0.1173 / 0.1144 / 0.1176 respectively.
+[EVIDENCE: same checkpoint read; A2 verdict band in the 2026-07-20 campaign plan "Pre-registered verdict criteria" block]
+[CONFIDENCE: HIGH]
+
+[FINDING] The clamp pattern is invariant to the DORAEMON step_interval change (A1 vs
+extend8k differ by <2% on every free dim and are bit-identical at the floors), so sigma
+structure is a lineage constant rather than something the curriculum pace moves. Any
+future exploration lever must be judged on the 3 free dims.
+[EVIDENCE: per-dim table above -- arm1 0.13150 (A1) vs 0.13571 (extend8k) = -3.1%; thr0 0.11569 vs 0.11599 = -0.3%; thr3 0.12374 vs 0.11906 = +3.9%]
+[CONFIDENCE: HIGH]
+
+[FINDING] D1 input: the "raise the thruster leg 0.05 -> 0.08" option in the campaign plan
+would lift 4 currently-floored thruster dims (thr1/2/4/5) while leaving thr0/thr3
+untouched, and the "raise the arm leg" option would lift only arm0 (arm1 is already free
+at ~0.13). This makes the thruster-leg option the higher-leverage one by dim count.
+[EVIDENCE: per-dim table above -- floored set {arm0, thr1, thr2, thr4, thr5}; free set {arm1, thr0, thr3}]
+[CONFIDENCE: MED]
+
+---
+
+## Update (2026-07-20T17:11:51.027037)
+
+[STATUS UPDATE 2026-07-21] Item 1 is fully closed by the Z1 per-dim checkpoint read recorded above. The remaining open item is Item 2, now in flight as A2 (trpo_entcoefzero_260721_014731, entropy_coef_per_dim -> all-zero, 5000 iters, branch exp/entropy-coef-zero @ 15d7d2d, baseline tag baseline-260720-entropycoef).
