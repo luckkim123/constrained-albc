@@ -1,17 +1,17 @@
 ---
 title: "Action bounding is justified (raw Gaussian + external clamp) -- tanh ruled out, 3 experiment leads remain"
-tags: ["action-clamp", "tanh", "exploration", "noise", "clip-fraction", "raw-gaussian", "constraint-trpo", "experiment-lead", "max-std", "init-noise-std", "ipo-barrier", "entropy-collapse"]
+tags: ["action-clamp", "tanh", "exploration", "noise", "clip-fraction", "raw-gaussian", "constraint-trpo", "experiment-lead", "max-std", "init-noise-std", "ipo-barrier", "entropy-collapse", "entropy", "sigma", "A2", "D1", "lead3-closed"]
 created: 2026-07-02T09:00:08.575699
-updated: 2026-07-20T07:54:39.404966
-sources: []
+updated: 2026-07-20T21:40:49.535452
+sources: ["trpo_entcoefzero_260721_014731"]
 links: ["action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md"]
 category: convention
 confidence: high
 schemaVersion: 1
-qualityScore: 70
-qualityReasons: ["no-source-marker", "generic-only-tags"]
-status: needs-experiment
-blocked-on: "Leads 1-2 absorbed elsewhere; Lead 3 (entropy-IPO causal split training run) is the open item. Parked under the 2026-07-20 batch-pass decision."
+qualityScore: 100
+qualityReasons: []
+status: resolved
+blocked-on: ""
 ---
 
 # Action bounding is justified (raw Gaussian + external clamp) -- tanh ruled out, 3 experiment leads remain
@@ -56,3 +56,68 @@ re-propose Lead 2 as a probe; it matches the PROMPT_next_experiment_planning §3
 ## Update (2026-07-20T07:54:39.404966)
 
 STATUS PROMOTION (2026-07-20 wiki sweep): Lead 3 (entropy-IPO causal split: comparison training run with entropy_coef_per_dim=0 vs shipped per-dim values, to isolate whether the IPO barrier causally drives entropy collapse) is a live training-run lead; page promoted to needs-experiment so it surfaces in the status backlog alongside the other exploration leads.
+
+---
+
+## Update (2026-07-20T21:40:49.535452)
+
+# D1 RECORD (2026-07-21) -- A2 result and A3's pre-registered band
+
+[FINDING] A2 ANSWERS the lead: the ENTROPY BONUS -- not the IPO barrier -- is what holds
+sigma. With `entropy_coef_per_dim` set to all-zero, all THREE unclamped dims departed
+>=10% below the anchor path from iter 500 and stayed there for the whole run (4500 iters
+sustained, vs the >=500 required). arm1, which never floors in any prior posttam run,
+was pinned to its 0.10 floor by iter 1000.
+
+| iter | arm1 A2/anchor (dev) | thr0 A2/anchor (dev) | thr3 A2/anchor (dev) |
+|---|---|---|---|
+| 500 | 0.1014 / 0.1896 (-46.5%) | 0.1868 / 0.2221 (-15.9%) | 0.2199 / 0.2554 (-13.9%) |
+| 1000 | 0.1000 / 0.1632 (-38.7%) | 0.1558 / 0.1789 (-12.9%) | 0.1671 / 0.1890 (-11.6%) |
+| 2500 | 0.1000 / 0.1357 (-26.3%) | 0.1217 / 0.1453 (-16.2%) | 0.1299 / 0.1524 (-14.8%) |
+| 4999 | 0.1000 / 0.1303 (-23.3%) | 0.1036 / 0.1271 (-18.5%) | 0.1080 / 0.1306 (-17.3%) |
+
+[EVIDENCE: exp(log_std) per dim from model_<it>.pt of trpo_entcoefzero_260721_014731 vs trpo_biasema_260715_142543 at matched iterations; free-dim set {arm1, thr0, thr3} established by Z1]
+[CONFIDENCE: HIGH]
+
+[FINDING] The kill-criterion did NOT fire and the April 2026 result does NOT replicate in
+its consequence. April 04-10 (coef=0) was recorded as a collapse to noise_std 0.12 vs
+0.55; here removing the bonus costs sigma but NOT return -- A2's reward is slightly HIGHER
+than the anchor. So on this plant, with per-dim floors in place, the entropy bonus buys
+exploration that the objective does not need at 5000 iters. The divergence from April is
+itself the finding: the April campaign's dramatic collapse was on a configuration without
+today's per-dim floor structure.
+[EVIDENCE: TB reward last-200-iter mean -- A2 276.82 vs anchor 272.08 (+1.7%); final 277.68 vs 272.46; kill-criterion was 'sustained >=200-iter drop >15% below the anchor band']
+[CONFIDENCE: HIGH]
+
+[FINDING] D1 DECISION -- A3 = raise `min_std_per_dim` THRUSTER leg 0.05 -> 0.08. The
+plan's D1 rule branches on whether A2 showed IPO-barrier causality; it did NOT (it showed
+bonus causality), so the 'otherwise' branch applies, which offers the arm leg or the
+thruster leg. The thruster leg is chosen because Z1 shows it lifts FOUR currently-floored
+dims (thr1/thr2/thr4/thr5) while the arm leg would lift only arm0 (arm1 is already free
+at ~0.13 under the normal bonus). One run, no sweep, 5000 iters, vs the biasema 5k anchor.
+[EVIDENCE: Z1 per-dim table -- floored set {arm0, thr1, thr2, thr4, thr5}, free set {arm1, thr0, thr3}; campaign plan D1 rule]
+[CONFIDENCE: HIGH]
+
+# A3 PRE-REGISTERED VERDICT BAND (declared BEFORE launch, revisable only before results)
+
+- MANIPULATION CHECK (precondition): at iter 5000 the four lifted dims must read exactly
+  0.0800 (the clamp still binds at the new floor, proving the intervention is active), and
+  the three free dims {arm1, thr0, thr3} must be within +/-10% of the anchor path (proving
+  the change did not act through them). FAIL on either -> the run does not isolate the
+  floor lever and must not be read as evidence.
+- PRIMARY (benefit): `none`-level roll `os_env_mean` vs the anchor's 17.022. Adopt-worthy
+  = a reduction of >=10% (i.e. <=15.3) OR a >=10% reduction in `hard`-level AttErr vs the
+  anchor, with no cost breach below.
+- GUARD (cost): `none`-level roll AND pitch `ss_error` must not worsen by more than 5%
+  (anchor roll 0.215 -> ceiling 0.226; pitch 0.195 -> ceiling 0.205). A breach means the
+  extra exploration bought robustness by paying tracking -> do not adopt.
+- NULL is a real outcome: within +/-5% on both primary and guard = the floor is not the
+  binding constraint on exploration, and the exploration lead resolves as 'floors are not
+  the lever' rather than staying open.
+- KILL: sustained >=200-iter reward drop >15% below the anchor band, or a constraint
+  violation spike -> stop early and report.
+- DORAEMON health reported as a first-class outcome (mode, success vs alpha=0.5, achieved
+  expansion count, terminal Beta b), per the campaign convention.
+
+[EVIDENCE: anchor values from trpo_biasema_260715_142543/eval/static_260716_160156/summary.json none/roll and none/pitch]
+[CONFIDENCE: HIGH]

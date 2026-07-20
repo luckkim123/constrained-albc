@@ -4960,3 +4960,7 @@
 - **Pages:** doraemon_mean_and_doraemon_std_tb_tags_are_raw_physical_units_no.md
 - **Summary:** created 'DORAEMON/mean and DORAEMON/std TB tags are RAW PHYSICAL UNITS, not normalized xi -- Beta(a,b) inversion from them is valid for only 3 of the 20 params'
 
+## [2026-07-20T21:40:49.535452] add
+- **Pages:** action_bounding_is_justified_raw_gaussian_external_clamp_tanh_ru.md
+- **Summary:** updated 'Action bounding is justified (raw Gaussian + external clamp); tanh rule'
+
