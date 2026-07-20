@@ -3404,3 +3404,15 @@
 - **Pages:** doraemon_kl_step_reads_0_0000_at_the_final_step_but_this_is_a_sp.md
 - **Summary:** updated '`DORAEMON/kl_step` reads 0.0000 at the final step but this is a sparse-logging a'
 
+## [2026-07-20T03:27:11.701599] add
+- **Pages:** constraint_margin_is_in_per_constraint_discounted_budget_units_d.md
+- **Summary:** created "Constraint/margin is in per-constraint discounted-budget units (d_k = D_k/(1-gamma)) -- rank by J_C/d_k, never by raw margin; the baseline report's 'binding trio' is exactly inverted"
+
+## [2026-07-20T03:27:41.707105] add
+- **Pages:** safety_rail_constraints_fire_hard_at_init_go_quiet_and_re_fire_a.md
+- **Summary:** created 'Safety-rail constraints fire hard at init, go quiet, and RE-FIRE as DORAEMON widens DR -- 0% at the final window is working insurance, not dead weight; thruster_util is the one trending into binding (93.2% at extend8k)'
+
+## [2026-07-20T03:28:00.612607] query
+- **Pages:** open_actionable_ledger_read_before_any_sim_plant_code_change_or_.md, actuator_hardware_identification_arm_xw540_t260_board_measured_p.md, baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md, eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md, plant_fix_needs_apply_before_retrain_main_hull_volume_0_009_0_00.md
+- **Summary:** query 'against already also approximately are back because before' -> 5 of 188
+
