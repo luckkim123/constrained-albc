@@ -3592,3 +3592,87 @@
 - **Pages:** doraemon_kl_step_reads_0_0000_at_the_final_step_but_this_is_a_sp.md
 - **Summary:** updated '`DORAEMON/kl_step` reads 0.0000 at the final step but this is a sparse-logging a'
 
+## [2026-07-20T03:58:45.859914] add
+- **Pages:** extend8k_tracks_all_three_axes_with_100_survival_roll_error_risi.md
+- **Summary:** updated 'extend8k tracks all three axes with 100% survival, roll error rising monotonical'
+
+## [2026-07-20T03:58:45.859914] add
+- **Pages:** roll_steady_state_is_heavy_tailed_at_hard_cv_246_a_minority_of_e.md
+- **Summary:** updated 'Roll steady-state is heavy-tailed at hard (CV = 246%): a minority of envs domina'
+
+## [2026-07-20T03:58:45.859914] add
+- **Pages:** the_hard_level_heavy_tail_is_not_a_small_scale_ratio_artifact_th.md
+- **Summary:** updated 'The hard-level heavy tail is NOT a small-scale ratio artifact — the absolute spr'
+
+## [2026-07-20T03:58:45.859914] add
+- **Pages:** the_exam_asymmetry_is_now_quantified_and_it_is_absolute_vs_relat.md
+- **Summary:** updated 'The exam asymmetry is now quantified, and it is absolute-vs-relative, not merely'
+
+## [2026-07-20T03:58:45.859914] add
+- **Pages:** at_the_one_fair_point_none_the_extension_is_an_axis_trade_roll_s.md
+- **Summary:** updated 'At the ONE fair point (`none`), the extension is an axis TRADE: roll steady-stat'
+
+## [2026-07-20T03:58:45.859914] add
+- **Pages:** the_load_bearing_regression_is_roll_transient_overshoot_and_it_l.md
+- **Summary:** updated 'The load-bearing regression is roll TRANSIENT OVERSHOOT, and it lands on the FAI'
+
+## [2026-07-20T03:58:45.859914] add
+- **Pages:** the_threshold_count_corroborates_the_same_regression_the_number_.md
+- **Summary:** updated 'The threshold count corroborates the same regression: the number of envs whose r'
+
+## [2026-07-20T03:58:45.859914] add
+- **Pages:** survival_is_saturated_on_both_runs_so_it_does_not_discriminate_t.md
+- **Summary:** updated 'Survival is saturated on both runs, so it does not discriminate — the trade is e'
+
+## [2026-07-20T03:58:45.859914] add
+- **Pages:** reward_is_tracking_dominated_and_healthy_att_rp_yaw_vel_supply_e.md
+- **Summary:** updated 'Reward is tracking-dominated and healthy: att_rp + yaw_vel supply essentially al'
+
+## [2026-07-20T03:58:45.859914] add
+- **Pages:** episode_cumulative_reward_did_not_improve_with_the_extension_and.md
+- **Summary:** updated 'Episode-cumulative reward did NOT improve with the extension and plateaued early'
+
+## [2026-07-20T03:58:45.859914] add
+- **Pages:** trpo_mechanics_are_healthy_line_search_never_fails_kl_lands_on_t.md
+- **Summary:** updated 'TRPO mechanics are healthy: line search never fails, KL lands on the max_kl targ'
+
+## [2026-07-20T03:58:45.859914] add
+- **Pages:** exploration_is_dead_entropy_collapsed_and_noise_std_sits_just_ab.md
+- **Summary:** updated 'Exploration is dead — entropy collapsed and noise_std sits just above the min_st'
+
+## [2026-07-20T03:58:45.859914] add
+- **Pages:** both_critic_heads_converged_the_extension_left_them_marginally_h.md
+- **Summary:** updated 'Both critic heads converged; the extension left them marginally higher (consiste'
+
+## [2026-07-20T03:58:45.859914] add
+- **Pages:** the_encoder_latent_is_healthy_and_unsaturated_still_receiving_gr.md
+- **Summary:** updated 'The encoder latent is healthy and unsaturated, still receiving gradient — no col'
+
+## [2026-07-20T03:58:45.859914] add
+- **Pages:** every_constraint_is_satisfied_all_margins_positive_viol_negative.md
+- **Summary:** updated 'Every constraint is satisfied (all margins positive / viol negative); thruster_u'
+
+## [2026-07-20T03:58:45.859914] add
+- **Pages:** the_ipo_barrier_is_healthy_no_spikes_small_magnitude_so_the_cons.md
+- **Summary:** updated 'The IPO barrier is healthy — no spikes, small magnitude — so the constraint adva'
+
+## [2026-07-20T03:58:45.859914] add
+- **Pages:** the_extension_widened_the_dr_curriculum_the_mechanism_behind_the.md
+- **Summary:** updated 'The extension WIDENED the DR curriculum — the mechanism behind the whole trade. '
+
+## [2026-07-20T03:58:45.859914] add
+- **Pages:** the_expansion_did_not_continue_to_the_end_of_training_it_saturat.md
+- **Summary:** updated 'The expansion did NOT continue to the end of training — it SATURATED the config '
+
+## [2026-07-20T03:58:45.859914] add
+- **Pages:** therefore_neither_performance_lb_nor_kl_ub_was_the_limiting_fact.md
+- **Summary:** updated 'Therefore neither `performance_lb` nor `kl_ub` was the limiting factor on this c'
+
+## [2026-07-20T03:58:45.859914] add
+- **Pages:** doraemon_kl_step_reads_0_0000_at_the_final_step_but_this_is_a_sp.md
+- **Summary:** updated '`DORAEMON/kl_step` reads 0.0000 at the final step but this is a sparse-logging a'
+
+## [2026-07-20T04:00:52.022048] add
+- **Pages:** extend8k_saturated_the_dr_config_box_at_iter_7000_all_20_params_.md
+- **Summary:** updated "extend8k SATURATED the DR config box at iter 7000 (all 20 params Beta(1,1) = uniform): performance_lb/kl_ub were never the limit, so its `hard` exam IS absolute -- but the 5000-run's is not"
+

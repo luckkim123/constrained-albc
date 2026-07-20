@@ -2,14 +2,14 @@
 title: "extend8k SATURATED the DR config box at iter 7000 (all 20 params Beta(1,1) = uniform): performance_lb/kl_ub were never the limit, so its `hard` exam IS absolute -- but the 5000-run's is not"
 tags: ["doraemon", "dr-difficulty", "extend8k", "curriculum-saturation", "eval-fairness"]
 created: 2026-07-20T03:37:29.562304
-updated: 2026-07-20T03:37:29.562304
-sources: []
+updated: 2026-07-20T04:00:52.022048
+sources: ["diagnose-20260720-124259"]
 links: []
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 status: needs-experiment
 ---
 
@@ -84,4 +84,45 @@ a fixed max-width DR" -- and it still did not raise reward (-2.6%).
 Open guard for any DGX scale-up: with the box already saturated at 7000 iters on 4096 envs, a
 larger iteration budget alone will add only frozen-DR iterations unless the config bounds are
 widened first.
+
+---
+
+## Update (2026-07-20T04:00:52.022048)
+
+# UPDATE 2026-07-20: the report itself has been corrected
+
+The refuted "DR expansion continues to iter 8000" finding is no longer only flagged here -- the
+experiments-tree report (the results SSOT) has been corrected through the exp-analyze RE-analysis
+path. Current analysis: `diagnose-20260720-124259` (supersedes 123142 / 122425 / 115818).
+
+[FINDING] The correction is landed and gated, not just recorded in the wiki. The new report replaces
+the single MED-confidence plot-based finding with three HIGH-confidence code-verified ones
+(saturation at iter 7000; performance_lb/kl_ub non-binding; exam absolute-for-extend8k vs
+relative-for-the-5000-run), plus a tracking-section finding that the hard-level heavy tail is not a
+small-scale ratio artifact.
+[EVIDENCE: analysis/diagnose-20260720-124259 -- `omx report-coverage --min-coverage 0.5 --baseline
+auto --cross-run-refs` returned ok:true with no depth regression (words 2526 -> 3302, findings
+17 -> 20, tables 70 -> 87) and cross_run_refs ok (20 cells re-verified against the 5000-run's
+summary.json); `omx report-review` approve; independent report-reviewer agent approve after one
+revise cycle]
+[CONFIDENCE: HIGH]
+
+[FINDING] Two review-driven corrections worth carrying forward as habits. First, the heavy-tail
+claim originally cited transient-overshoot columns (os_env_median / os_env_q90 / n_gt40) as support
+for a STEADY-STATE ss_error tail -- exactly the conflation rule 03 forbids; the table now carries
+ss_error / ss_error_std / CV only. Second, "DR ocean_current (end) = 0.22" and "ocean_current mean =
+0.500" are NOT contradictory: the first is the physical magnitude (`DR/ocean_current_mag_mean`), the
+second the normalized Beta-xi mean (`DORAEMON/mean/ocean_current_strength`). The report now carries
+a unit note saying so.
+[EVIDENCE: report-reviewer verdict on diagnose-20260720-124259 (revise -> both applied -> approve);
+manifest.json `corrections` list]
+[CONFIDENCE: HIGH]
+
+[FINDING] Saturation timing must NOT be attributed to `num_envs`. The verdict originally said "at
+4096 envs the box saturates by iter 7000"; the expansion clock is `step_interval`, measured in
+iterations, and no evidence in this campaign ties saturation timing to env count. The DGX scale-up
+guard is therefore "widen the config bounds first", stated without an env-count claim.
+[EVIDENCE: train/params/env.yaml step_interval=250 (iterations); reviewer finding 4 on
+diagnose-20260720-124259]
+[CONFIDENCE: HIGH]
 
