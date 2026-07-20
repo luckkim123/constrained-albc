@@ -3504,3 +3504,7 @@
 - **Pages:** doraemon_kl_step_reads_0_0000_at_the_final_step_but_this_is_a_sp.md
 - **Summary:** updated '`DORAEMON/kl_step` reads 0.0000 at the final step but this is a sparse-logging a'
 
+## [2026-07-20T03:37:29.562304] add
+- **Pages:** extend8k_saturated_the_dr_config_box_at_iter_7000_all_20_params_.md
+- **Summary:** created "extend8k SATURATED the DR config box at iter 7000 (all 20 params Beta(1,1) = uniform): performance_lb/kl_ub were never the limit, so its `hard` exam IS absolute -- but the 5000-run's is not"
+
