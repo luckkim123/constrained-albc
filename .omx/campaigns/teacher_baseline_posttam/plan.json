@@ -23,6 +23,11 @@
       "proposal_id": "next-20260716-151204",
       "summary": "budget-extension trade on the adopted config: max_iterations 5000->8000, kl_ub untouched (E1: kl_ub-up is known-bad); verdict = delta-of-deltas vs P-A8's +31% roll / -56% n_gt20 exchange rate; DGX pilot",
       "added_at": "2026-07-16T06:24:46.329924+00:00"
+    },
+    {
+      "proposal_id": "next-20260720-125352",
+      "summary": "step_interval 250->400 @8000 iter: match the 5000-run's 20 DORAEMON expansions to separate DR-width from optimisation-steps as the cause of the nominal roll transient-overshoot regression (manipulation check on achieved width required)",
+      "added_at": "2026-07-20T03:53:52.306644+00:00"
     }
   ]
 }
