@@ -4780,3 +4780,11 @@
 - **Pages:** april_2026_entropy_collapse_campaign_machinery_bug_solved_conver.md
 - **Summary:** updated 'April 2026 entropy-collapse campaign: machinery bug SOLVED, converged-sigma collapse NOT -- and min_std is the wrong lever'
 
+## [2026-07-20T08:54:08.865434] query
+- **Pages:** open_actionable_ledger_read_before_any_sim_plant_code_change_or_.md, reward_md_deep_dive_session_2026_07_11_4_review_fix_prompts_queu.md, step_interval_250_400_probe_separate_dr_width_from_optimisation_.md, experiment_launch_checklist_run_id_wandb_latest_alias_naming.md, baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md, plant_fix_needs_apply_before_retrain_main_hull_volume_0_009_0_00.md, sequential_overnight_campaign_wall_clock_budget_not_crashes_kill.md, reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md, incident_post_mortem_teacher_baseline_opt_e1_e4_trained_on_a_tam.md, train_py_max_iterations_under_resume_is_iters_from_resume_not_an.md, cross_run_reference_values_must_be_re_extracted_fresh_never_carr.md, joint1_stage_1_gate_go_drift_is_real_on_unlimited_physics_not_th.md, performance_lb_doraemon_gate_is_causally_independent_of_the_acto.md, priv_obs_slim_stage_2_lead_contested_p_t_dims_quad_damp_lin_vel_.md, session_state_2026_07_12_constraint_deep_dive_q_a_covered_struct.md, e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite.md, gpu_memory_4096_env_albc_training_needs_11_3_gb_rtx_4060_8gb_can.md, analysis_engine_map_what_is_grow_able_vs_off_limits.md, april_2026_entropy_collapse_campaign_machinery_bug_solved_conver.md, baseline_consolidated_main_reference_trpo_baseline_260713_031325.md
+- **Summary:** query 'queue-launch pending launch human gate' -> 20 of 92
+
+## [2026-07-20T08:57:49.384443] add
+- **Pages:** group_folder_name_equals_wandb_project_name_equals_experiment_pu.md
+- **Summary:** updated 'Group folder name equals wandb project name equals experiment purpose (unified naming, 2026-07-14 revision)'
+

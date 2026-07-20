@@ -2,14 +2,14 @@
 title: "Group folder name equals wandb project name equals experiment purpose (unified naming, 2026-07-14 revision)"
 tags: ["naming", "convention", "group", "run_group", "wandb", "project", "tree"]
 created: 2026-07-14T06:07:26.744195
-updated: 2026-07-14T06:07:26.744195
+updated: 2026-07-20T08:57:49.384443
 sources: ["user-decision-2026-07-14"]
 links: []
 category: convention
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
 ---
 
 # Group folder name equals wandb project name equals experiment purpose (unified naming, 2026-07-14 revision)
@@ -27,4 +27,10 @@ WHAT THIS SUPERSEDES: the 2026-07-13 decision kept wandb project COARSE (= "phas
 ANTI-SCATTER LESSON PRESERVED (why this does NOT reintroduce the 17-project scatter of 2026-07-13): scatter came from making projects TOO GRANULAR (a new project per small campaign) so related runs spread across many uncomparable wandb projects. The new rule avoids that by defining PURPOSE broadly: `teacher_baseline_opt` spans the baseline reference AND all its tail-shrink probes (e1-e4), so all those runs land in ONE group = ONE project and stay comparable in one wandb workspace. Scatter is prevented by keeping the purpose broad, not by splitting project from group.
 
 APPLIED 2026-07-14: merged the former `baseline/` and `p7_tail/` groups into a single `teacher_baseline_opt/` group (both logs+experiments trees; 5 runs; train symlinks re-pointed; DESIGN.md of each preserved as DESIGN.baseline.md / DESIGN.p7_tail.md; `latest` -> e4). joint1_constraint (Arm-B) had already been retired to legacy/ the same day. See experiments/INDEX.md. The .omx campaign ledger keeps `baseline`/`p7_tail` as historical campaign ids; go-forward campaigns use the unified purpose name.
+
+---
+
+## Update (2026-07-20T08:57:49.384443)
+
+2026-07-20 user confirmation (D0 of the teacher batch campaign): the Stage-A mechanism probes (A1 step_interval, A2-A5) CONTINUE the open purpose teacher_baseline_posttam -- same plant, same anchors, so no genuinely new purpose exists yet; the A1 launch (run trpo_stepint400_260720_175705) uses --run_group teacher_baseline_posttam --log_project_name teacher_baseline_posttam agent.run_name=stepint400. A genuinely new purpose opens ONLY at Stage B (hull-volume plant change): teacher_v2_plant. User also vetoed "final" in any purpose/run name (more experiments may follow) -- do not propose names containing "final".
 
