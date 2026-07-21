@@ -16,7 +16,52 @@ The division of labour is by CAMPAIGN STAGE, not by convenience:
 | Where | What runs there | Why |
 |---|---|---|
 | local workstation | Stage A — cheap single-variable mechanism probes at `num_envs=4096`, 5000-8000 iters | one run ≈ 4.5 h; the sequential run → eval → analyze cycle keeps both GPUs busy |
-| DGX | Stage B (plant refresh + curriculum recalibration chain), the scale-up arm, and the joint1 arm | Stage B re-anchors its own baseline, and the scale-up arm NEEDS more GPU than the workstation has |
+| DGX | the scale-up arm first; other stages only if the benchmark below justifies it | its advantage is MEMORY, not parallelism — see the hardware note |
+
+### Hardware note — know what this machine actually is (added 2026-07-21)
+
+The DGX in question reports `GPU 0: NVIDIA GB10` and `nproc = 20`. That is a
+**single-GPU, 20-core Grace-Blackwell desktop machine, not a multi-GPU DGX server**, and
+two consequences follow that invalidate the obvious assumptions:
+
+- **No run-level parallelism.** One GPU means one training run at a time, the same as the
+  workstation. Any plan that plays several arms concurrently does not apply here.
+- **It may be SLOWER per run, not faster.** The workstation has 28 available cores against
+  this machine's 20, and Isaac Sim's `num_envs=4096` physics stepping is CPU-heavy. Do not
+  assume a speedup — measure it (Step 0 below). The workstation reference is **3.3 s/iter
+  at 4096 envs**.
+
+The genuine advantage is the large unified memory, which is what a `num_envs` scale-up
+needs. So this machine earns its place on the scale-up arm; for ordinary 5000-iter probes,
+whether it is worth using at all is an empirical question the benchmark answers.
+
+## Step 0 — verify this machine can run the stack AT ALL, then benchmark it
+
+Do this before any campaign work. The Grace CPU is ARM (`aarch64`), and Isaac Sim's
+platform support there is not something to assume:
+
+```bash
+uname -m                                    # expect aarch64
+ls -d /isaac-sim && /isaac-sim/python.sh -c "import isaacsim, torch; print(torch.cuda.is_available())"
+free -g                                     # unified memory actually available
+```
+
+If the import or the CUDA check fails, **stop** — training cannot run here and the campaign
+stays on the workstation. Report the failure rather than working around it.
+
+If it passes, measure throughput before planning anything around this machine:
+
+```bash
+cd <path>/constrained-albc
+CUDA_VISIBLE_DEVICES=0 /isaac-sim/python.sh scripts/train.py \
+    --task Isaac-ConstrainedALBC-TRPO-v0 \
+    --num_envs 4096 --max_iterations 200 \
+    --run_group bench_spark --log_project_name bench_spark \
+    --headless agent.run_name=bench 2>&1 | tail -5
+```
+
+Report the s/iter against the workstation's 3.3 s/iter at the same `num_envs`. That number,
+not an assumption about the hardware tier, decides what this machine is given.
 
 **The split is methodologically safe only because Stage B re-anchors.** A policy trained
 on one GPU does not reproduce bit-for-bit on another (floating-point nondeterminism
@@ -177,6 +222,10 @@ STATE YOU ARE GIVEN:
   pre-registered band   : [primary metric + adopt threshold + cost guard + kill criterion]
 
 DO:
+  0. FIRST, runbook Step 0: confirm the stack runs on this machine at all (aarch64 +
+     Isaac Sim import + CUDA), then run the 200-iteration benchmark and report s/iter
+     against the workstation's 3.3 s/iter at 4096 envs. If Step 0 fails, STOP and report
+     -- do not work around it, and do not launch a campaign run.
   1. Sync all three repos and re-run the editable installs (runbook Step 1), then verify
      7 tasks register (Step 2). Report the versions you ended up on.
   2. Create the baseline tag and the exp/<topic> branch, make the single-variable change,
