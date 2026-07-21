@@ -1,10 +1,10 @@
 ---
 title: "DORAEMON difficulty has 3 separable levers: kl_ub (step size), step_interval (dwell-time), max_iterations (number of expansions)"
-tags: ["doraemon", "kl_ub", "step_interval", "max_iterations", "performance_lb", "alpha", "curriculum", "dwell-time", "lever", "mechanism", "calibration", "correction", "schedule-bound", "fair-comparison"]
+tags: ["doraemon", "kl_ub", "step_interval", "max_iterations", "performance_lb", "alpha", "curriculum", "dwell-time", "lever", "mechanism", "calibration", "correction", "schedule-bound", "fair-comparison", "success-gate"]
 created: 2026-06-14T04:21:12.692273
-updated: 2026-07-21T07:57:55.617078
-sources: ["diagnose-20260721-164331"]
-links: ["kl_ub_0_12_trades_attitude_for_translation_e1_dr_harder.md", "kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md", "curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md"]
+updated: 2026-07-21T10:03:08.771183
+sources: ["diagnose-20260721-164331", "diagnose-20260721-190151"]
+links: ["kl_ub_0_12_trades_attitude_for_translation_e1_dr_harder.md", "kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md", "curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md", "eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md"]
 category: reference
 confidence: high
 schemaVersion: 1
@@ -119,5 +119,40 @@ DORAEMON health as a first-class per-run outcome is uninformative here.
 phenomenon, not a 5000-iter one.
 [EVIDENCE: doraemon_state.pt per-parameter Beta(a,b), both runs; cf the Z2 saturation table on
 [[curriculum_recalibration_protocol_widening_the_dr_box_requires_r]]]
+[CONFIDENCE: HIGH]
+
+---
+
+## Update (2026-07-21T10:03:08.771183)
+
+
+## CORRECTION 2026-07-21 (A4) — "schedule-bound, not success-bound" was TOO STRONG
+
+[FINDING] The 2026-07-21 A3 entry above concluded "expansion is SCHEDULE-bound, not
+success-bound". A4 refutes the general form. The accurate statement separates two things:
+- expansion STEP SIZE is cap-bound — every expansion in every posttam run observed so far
+  lands exactly on kl_ub = 0.1200, in all three runs compared (A3, A4, anchor);
+- the NUMBER of expansions is SUCCESS-GATED — the gate decides WHETHER an expansion happens
+  at a given step_interval boundary, and it can and does differ between runs.
+[EVIDENCE: TB DORAEMON/kl_step nonzero steps — anchor trpo_biasema_260715_142543: 18 updates
+at iters 500..4750; trpo_minstdthr008_260721_064149 (A3): 18 updates at the SAME iters;
+trpo_privslim24d_260721_114717 (A4): 19 updates at 250..4750, all three all-at-0.12]
+[CONFIDENCE: HIGH]
+
+[FINDING] CONSEQUENCE — do NOT assume two runs share a DR box. The A3-vs-anchor terminal Beta
+match (max diff 5e-06 / 4.7e-05) was a COINCIDENCE of identical early gating, not a structural
+guarantee. A4's terminal Beta differs from the anchor's by max 3.44e-01 (dist_a) / 1.29e+00
+(dist_b) because of that ONE extra expansion at iter 250. Check `DORAEMON/kl_step` step lists
+before claiming curriculum parity in any cross-run comparison.
+[EVIDENCE: doraemon_state.pt dist_a/dist_b elementwise comparison for all three runs; analysis
+diagnose-20260721-190151 §generalization]
+[CONFIDENCE: HIGH]
+
+[FINDING] READING RULE that follows: since `eval.py static` grades each run on its OWN learned
+DR box, a run with more expansions faces a HARDER soft/medium/hard exam. Only the `none` level
+is free of this confound. Cross-run verdicts must therefore be read at `none` — which is
+independently why the campaign bands are written there.
+[EVIDENCE: A4 19 expansions vs anchor 18 -> A4's graded box is wider; see
+[[eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr]]]
 [CONFIDENCE: HIGH]
 

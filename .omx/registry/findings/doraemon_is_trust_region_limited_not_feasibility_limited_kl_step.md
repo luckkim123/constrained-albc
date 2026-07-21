@@ -1,10 +1,10 @@
 ---
 title: "DORAEMON is trust-region-limited not feasibility-limited: kl_step is pinned AT kl_ub every update, so kl_ub x n_updates is one expansion budget"
-tags: ["doraemon", "kl_ub", "curriculum", "expansion-budget", "p-a9", "dgx", "correction", "dwell-time", "step_interval"]
+tags: ["doraemon", "kl_ub", "curriculum", "expansion-budget", "p-a9", "dgx", "correction", "dwell-time", "step_interval", "success-gate"]
 created: 2026-07-16T05:49:54.801488
-updated: 2026-07-16T05:57:44.772031
-sources: []
-links: []
+updated: 2026-07-21T10:05:34.382940
+sources: ["diagnose-20260721-190151"]
+links: ["doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step.md"]
 category: pattern
 confidence: high
 schemaVersion: 1
@@ -126,4 +126,31 @@ The refuted design queried the wiki by SYMPTOM (hard-level confound, DR width) a
 NAME (kl_ub). The contradicting page was category `decision`, confidence `high`, and titled with the
 lever — one `omx wiki query "kl_ub"` would have surfaced it before a GPU proposal was written. Query
 the wiki for the KNOB you intend to turn, not only for the symptom you intend to fix.
+
+---
+
+## Update (2026-07-21T10:05:34.382940)
+
+
+## 2026-07-21 EXTENSION (A3 + A4) — the second half of the budget formula is success-gated
+
+[FINDING] This page's "kl_ub x n_updates is one expansion budget" is CONFIRMED on three more
+runs: every expansion in trpo_biasema_260715_142543, trpo_minstdthr008_260721_064149 and
+trpo_privslim24d_260721_114717 lands exactly on kl_ub = 0.1200. The extension is that
+`n_updates` is NOT a constant of the schedule — it is success-GATED and varies per run:
+anchor 18, A3 18 (identical iters 500..4750), A4 19 (250..4750, one extra early expansion).
+So two runs with the same kl_ub, step_interval and max_iterations can still finish with
+DIFFERENT DR boxes.
+[EVIDENCE: TB DORAEMON/kl_step nonzero step lists for the three runs; doraemon_state.pt
+terminal Beta -- A3 vs anchor max diff 5e-06/4.7e-05 (identical), A4 vs anchor 3.44e-01/1.29e+00]
+[CONFIDENCE: HIGH]
+
+[FINDING] RETRIEVAL NOTE for future sessions: this page already carried the "pinned at kl_ub"
+half on 2026-07-21, but the A3 analysis re-derived it independently and wrote it to
+[[doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_]] instead, because that
+analysis queried the wiki by its own topic (sigma floors) and never by DORAEMON. When an
+analysis produces an INCIDENTAL finding outside its probe's topic, query the wiki for THAT
+topic too before writing it as new.
+[EVIDENCE: analysis diagnose-20260721-164331 (A3) wiki-capture step; this page's pre-existing title]
+[CONFIDENCE: HIGH]
 

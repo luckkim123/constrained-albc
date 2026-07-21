@@ -5211,3 +5211,51 @@
 - **Pages:** roll_transient_is_worst_at_none_dr_and_improves_monotonically_as.md
 - **Summary:** created 'roll transient is WORST at none DR and improves monotonically as DR hardens (inverted, both runs)'
 
+## [2026-07-21T09:58:34.307991] query
+- **Pages:** student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md, encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md, analysis_engine_map_what_is_grow_able_vs_off_limits.md, april_2026_entropy_collapse_campaign_machinery_bug_solved_conver.md, encoder_priv_obs_normalization_bounds_must_be_dr_derived_not_har.md, engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md, experiment_launch_checklist_run_id_wandb_latest_alias_naming.md, experiment_output_directory_standard_logs_vs_experiments_index_t.md, group_folder_name_equals_wandb_project_name_equals_experiment_pu.md, policy_head_design_rationale_and_literature_standing_encoder_inp.md, train_py_run_group_creates_the_group_layer_no_more_manual_post_m.md, experiment_idea_feed_o_t_into_the_encoder_alongside_p_t_state_co.md, literature_map_how_rl_control_actually_handles_steady_state_erro.md
+- **Summary:** query 'student' -> 14 of 14
+
+## [2026-07-21T09:58:34.402118] query
+- **Pages:** doraemon_optimize_entropy_accept_can_leak_the_success_floor_late.md, encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md, teacher_encoder_0_dead_latent_dims_keys_on_lateral_cog_cob_offse.md, reward_md_6_error_buffers_reward_call_site_dt_scaling_theory_rev.md, aggregate_latent_statistics_are_indistinguishable_across_the_thr.md, three_sweep_parameters_drive_almost_no_latent_response_and_are_t.md, experiment_idea_feed_o_t_into_the_encoder_alongside_p_t_state_co.md, analysis_engine_map_what_is_grow_able_vs_off_limits.md, april_2026_entropy_collapse_campaign_machinery_bug_solved_conver.md, baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md, constrained_albc_experiment_conventions.md, constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md, joint1_stage_1_gate_go_drift_is_real_on_unlimited_physics_not_th.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, posttam_encoder_is_alive_and_specialized_z_sweep_exploration_col.md, reward_md_deep_dive_session_2026_07_11_4_review_fix_prompts_queu.md, reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, training_anomaly_thresholds_tb_tag_alert_table.md, uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload_.md
+- **Summary:** query 'latent' -> 20 of 25
+
+## [2026-07-21T09:58:34.485433] query
+- **Pages:** student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md, encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md, experiment_launch_checklist_run_id_wandb_latest_alias_naming.md, group_folder_name_equals_wandb_project_name_equals_experiment_pu.md, policy_head_design_rationale_and_literature_standing_encoder_inp.md, experiment_idea_feed_o_t_into_the_encoder_alongside_p_t_state_co.md, literature_map_how_rl_control_actually_handles_steady_state_erro.md
+- **Summary:** query 'distillation' -> 7 of 7
+
+## [2026-07-21T10:03:08.771183] add
+- **Pages:** doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md
+- **Summary:** updated 'DORAEMON difficulty has 3 separable levers: kl_ub (step size), step_interval (dwell-time), max_iterations (number of expansions)'
+
+## [2026-07-21T10:03:15.840005] add
+- **Pages:** student_distillation_converges_to_a_residual_that_rules_out_late.md
+- **Summary:** created 'Student distillation converges to a residual that rules out latent multimodality (teacher-visited distribution only)'
+
+## [2026-07-21T10:03:20.346113] add
+- **Pages:** albc_stage_2_is_teacher_driven_off_policy_bc_with_mixed_latent_a.md
+- **Summary:** created 'ALBC stage 2 is teacher-driven off-policy BC with mixed latent+action labels (differs from RMA/HORA on both axes)'
+
+## [2026-07-21T10:03:29.000311] add
+- **Pages:** closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md
+- **Summary:** created 'Closed-loop latent collapse suspicion: legacy student measured 11-17x worse in-loop, deployed student unverified'
+
+## [2026-07-21T10:03:35.439470] add
+- **Pages:** priv_obs_slim_stage_2_lead_contested_p_t_dims_quad_damp_lin_vel_.md
+- **Summary:** updated 'priv-obs slim Stage-2 lead: contested p_t dims (quad_damp, lin_vel) need WITH-vs-WITHOUT A/B; union kept them'
+
+## [2026-07-21T10:04:57.511551] add
+- **Pages:** priv_obs_slim_stage_2_lead_contested_p_t_dims_quad_damp_lin_vel_.md
+- **Summary:** updated 'priv-obs slim Stage-2 lead: contested p_t dims (quad_damp, lin_vel) need WITH-vs-WITHOUT A/B; union kept them'
+
+## [2026-07-21T10:05:13.097666] add
+- **Pages:** priv_obs_slim_stage_2_lead_contested_p_t_dims_quad_damp_lin_vel_.md
+- **Summary:** updated 'priv-obs slim Stage-2 lead: contested p_t dims (quad_damp, lin_vel) need WITH-vs-WITHOUT A/B; union kept them'
+
+## [2026-07-21T10:05:34.382940] add
+- **Pages:** doraemon_is_trust_region_limited_not_feasibility_limited_kl_step.md
+- **Summary:** updated 'DORAEMON is trust-region-limited not feasibility-limited: kl_step is pinned AT kl_ub every update, so kl_ub x n_updates is one expansion budget'
+
+## [2026-07-21T10:16:52.443487] add
+- **Pages:** closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md
+- **Summary:** updated 'Closed-loop latent collapse suspicion: legacy student measured 11-17x worse in-loop, deployed student unverified'
+
