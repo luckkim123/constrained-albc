@@ -1,9 +1,9 @@
 ---
 title: "Action bounding is justified (raw Gaussian + external clamp) -- tanh ruled out, 3 experiment leads remain"
-tags: ["action-clamp", "tanh", "exploration", "noise", "clip-fraction", "raw-gaussian", "constraint-trpo", "experiment-lead", "max-std", "init-noise-std", "ipo-barrier", "entropy-collapse", "entropy", "sigma", "A2", "D1", "lead3-closed"]
+tags: ["action-clamp", "tanh", "exploration", "noise", "clip-fraction", "raw-gaussian", "constraint-trpo", "experiment-lead", "max-std", "init-noise-std", "ipo-barrier", "entropy-collapse", "entropy", "sigma", "A2", "D1", "lead3-closed", "min_std", "action_bounding"]
 created: 2026-07-02T09:00:08.575699
-updated: 2026-07-20T21:40:49.535452
-sources: ["trpo_entcoefzero_260721_014731"]
+updated: 2026-07-21T07:57:12.504932
+sources: ["trpo_entcoefzero_260721_014731", "diagnose-20260721-164331"]
 links: ["action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md"]
 category: convention
 confidence: high
@@ -11,7 +11,6 @@ schemaVersion: 1
 qualityScore: 100
 qualityReasons: []
 status: resolved
-blocked-on: ""
 ---
 
 # Action bounding is justified (raw Gaussian + external clamp) -- tanh ruled out, 3 experiment leads remain
@@ -121,3 +120,53 @@ at ~0.13 under the normal bonus). One run, no sweep, 5000 iters, vs the biasema 
 
 [EVIDENCE: anchor values from trpo_biasema_260715_142543/eval/static_260716_160156/summary.json none/roll and none/pitch]
 [CONFIDENCE: HIGH]
+
+---
+
+## Update (2026-07-21T07:57:12.504932)
+
+
+# A3 RESULT (2026-07-21) — DISCARD, and it CLOSES the exploration lead
+
+[FINDING] A3 (`trpo_minstdthr008_260721_064149`, min_std_per_dim thruster leg 0.05 -> 0.08,
+5000 iters) FAILS the pre-registered primary in the ADVERSE direction: `none`-level roll
+`os_env_mean` = 21.4858 against the anchor's 17.0215 (+26.2%), where adoption required
+<= 15.3. The alternative `hard`-AttErr branch also failed (att_norm ss_error -1.5%, needed
+-10%). Manipulation check PASSED (thr1/thr2/thr4/thr5 exactly 0.08000; free dims arm1 +3.8%,
+thr0 -0.7%, thr3 -6.1%, all inside +/-10%), so the verdict is attributable to the floor lever.
+[EVIDENCE: summary.json none/roll/os_env_mean, A3 eval static_260721_113503 vs anchor
+trpo_biasema_260715_142543 eval static_260716_160156; per-dim exp(log_std) from model_4999.pt
+of both runs; analysis diagnose-20260721-164331 §verdict]
+[CONFIDENCE: HIGH]
+
+[FINDING] The lead resolves STRONGER than a NULL: the per-dim sigma floor is not an
+under-exploration bottleneck — raising it ACTIVELY DEGRADES the nominal plant. The lever
+engaged exactly as designed (Noise/std_min 0.05 -> 0.08, mean sigma +16.8%, entropy +20.4%),
+so the failure is not "the knob did nothing".
+[EVIDENCE: TB last-200-iter means both runs; analysis diagnose-20260721-164331 §trpo]
+[CONFIDENCE: HIGH]
+
+[FINDING] REUSABLE TRADE: raising the action sigma floor buys steady-state DC accuracy and
+pays transient overshoot plus per-env spread. ss_error improved on roll AND pitch at every DR
+level (pitch -47% at `none`) while roll os_env_mean degraded at every level and pitch CV
+roughly doubled at every level (none 10->21, soft 18->43, medium 35->92, hard 116->197).
+Expect this shape from any future sigma/dither-side intervention.
+[EVIDENCE: summary.json all 4 DR levels x roll/pitch; analysis diagnose-20260721-164331 §tracking]
+[CONFIDENCE: HIGH]
+
+[FINDING] The cost of added action noise scales INVERSELY with DR: roll os_env_mean penalty
+decays monotonically +26.2% (none) -> +13.1% (soft) -> +8.2% (medium) -> +3.9% (hard). Dither
+is pure disturbance against a known plant and only becomes comparatively cheap once model
+uncertainty already dominates. Corollary: an exploration-side intervention must be judged at
+`none`, where it is most expensive — judging it at `hard` would have looked nearly free.
+[EVIDENCE: summary.json roll os_env_mean across 4 levels, both runs; analysis
+diagnose-20260721-164331 §generalization]
+[CONFIDENCE: HIGH]
+
+[FINDING] BAND-DESIGN LESSON: the A3 guard did NOT catch the regression. Both guarded
+quantities (`none` roll/pitch ss_error) IMPROVED (-5.8%, -47.2%) while the damage landed in
+os_env_mean and n_gt20. A band for a sigma/exploration-side intervention MUST guard the
+transient (os_env_mean) and the tail (n_gt20), not only the DC error.
+[EVIDENCE: A3 band on this page vs measured guard values; analysis diagnose-20260721-164331 §verdict]
+[CONFIDENCE: HIGH]
+

@@ -1,17 +1,17 @@
 ---
 title: "PLANT FIX (needs-apply-before-retrain): main hull volume 0.009 -> 0.00790 recenters sim net buoyancy +10.25 N -> neutral, matching 2026-07-06 onboard measurement"
-tags: ["buoyancy", "plant-fix", "sim-to-real", "net-buoyancy", "hull-volume", "pre-retrain-gate", "marinelab", "teacher-baseline", "user-decision", "partial-correction", "launch-gate"]
+tags: ["buoyancy", "plant-fix", "sim-to-real", "net-buoyancy", "hull-volume", "pre-retrain-gate", "marinelab", "teacher-baseline", "user-decision", "partial-correction", "launch-gate", "measured"]
 created: 2026-07-16T12:13:44.284365
-updated: 2026-07-16T12:16:54.623772
+updated: 2026-07-21T03:37:54.802930
 sources: ["onboard_measured_2026_07_06", "albc.py:64", "paper-spec-table"]
 links: ["onboard_measured_2026_07_06_arm_step_response_valid_sim_zeta_0_7.md", "open_actionable_ledger_read_before_any_sim_plant_code_change_or_.md"]
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 80
-qualityReasons: ["no-source-marker"]
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
 status: needs-apply-before-retrain
-blocked-on: "user must (1) confirm paper ||F_bu||=1.835 kgf is buoy-net vs total-displacement interpretation, (2) decide run_group naming; DEFERRED to next-gen plant refresh -- does NOT block posttam continuation (user decision 2026-07-16)"
+blocked-on: "UNBLOCKED 2026-07-21: both user questions closed (buoy-net reading settled via URDF geometry; operated dry mass MEASURED 10.592 kg with buoy attached, no ballast -> mass model correct within 0.22%, so the fix is volume-only as scoped). Remaining is SEQUENCING, not information: apply only AFTER the last Stage-A eval (A4, then A5), because marinelab is a shared editable install and a mid-Stage-A swap would eval old-plant policies on the new plant. Still to decide: new run_group/wandb purpose vs teacher_baseline_posttam."
 ---
 
 # PLANT FIX (needs-apply-before-retrain): main hull volume 0.009 -> 0.00790 recenters sim net buoyancy +10.25 N -> neutral, matching 2026-07-06 onboard measurement
@@ -63,3 +63,63 @@ PLANT FIX registered for the next-experiment stack (handed off from another sess
 
 CONSEQUENCE for the launch gate: a running/continuing teacher_baseline_posttam launch WITH this buoyancy lead still open is EXPECTED and user-approved -- it is a DOCUMENTED partial-correction posture, NOT the 2026-07-14 silent-wrong-plant incident. Do not treat posttam continuation as a gate violation. The buoyancy fix (and the same-posture TAM/IMU/sim_hydro gates) apply to a DELIBERATE next-generation plant refresh, not to the in-flight posttam series. The within-plant comparison is valid because the buoyancy error is common-mode across every posttam run.
 
+---
+
+## Update (2026-07-21T03:36:25.873280)
+
+## RESOLVED 2026-07-21: user measurement confirms the volume-only fix; both open user questions are now closed
+
+[FINDING] The real vehicle's operated dry mass is 10.592 kg, measured by the user 2026-07-21
+with the buoy ATTACHED (weighed in the as-deployed configuration) and with NO ballast fitted.
+[EVIDENCE: user measurement 2026-07-21, compared against this page's own sim weight budget]
+- sim total weight = main 90.06 N + buoy 9.12 N + arm 4.92 N = 104.10 N = 10.615 kg
+- measured                                                              = 10.592 kg
+- delta = -0.023 kg = **-0.22%**
+[CONFIDENCE: HIGH -- single arithmetic comparison of a measured scalar against code-sourced weights]
+
+[FINDING] The sim's MASS model is therefore correct, and the +10.25 N (+1.045 kgf) positive
+net buoyancy is attributable ENTIRELY to hull volume -- the fix scoped on this page stands
+unchanged.
+[EVIDENCE: the two candidate branches were designed to be far apart, and the measurement
+lands cleanly on one of them]
+- volume-error branch (mass correct): predicted total 10.615 kg -- measured is 0.22% off it
+- mass-error branch (neutrality from extra mass): would have required ~11.5-12 kg, i.e. the
+  measurement would have had to sit ~+9% above the sim's main+arm figure
+[CONFIDENCE: HIGH]
+
+### Both blockers on this page are now closed
+
+1. `||F_bu|| = 1.835 kgf` interpretation -- SETTLED 2026-07-21 as the BUOY net-buoyancy
+   reading, on URDF geometry (the modelled R=0.085 / H=0.118 cylinder = 0.00268 m^3 matches
+   NET's 0.00277 and contradicts TOTAL's 0.00184). So the error is the hull's.
+2. Operated dry mass -- MEASURED, this update. 10.592 kg, buoy included, no ballast.
+
+Ballast: the user confirms **none is fitted**, so the "unmodelled ballast" concern raised
+when this page was written does not apply. Nothing is missing from the mass budget.
+
+### The fix, unchanged from the original scope
+
+- `marinelab/marinelab/assets/albc/albc.py:64` -- `ALBCHydrodynamicsCfg.volume` 0.009 -> 0.00790
+- `albc.py:120` -- `ALBCBuoyHydrodynamicsCfg.volume` stays 0.00268 (buoy already correct)
+- `constrained-albc envs/main/config.py` volume_scale 0.75~1.25 DR range -- unchanged
+- constrained-albc needs no code change; this is marinelab-only
+
+### SEQUENCING HAZARD -- do not apply while Stage A is still being evaluated
+
+marinelab is an editable install shared by every run on this machine. Applying the volume
+change to the working tree while Stage-A runs are still awaiting eval would make those evals
+execute on the NEW plant while the policies were TRAINED on the OLD one, silently invalidating
+their verdicts. The change therefore lands only AFTER the last Stage-A run has been evaluated
+(A4 `trpo_privslim24d_260721_114717`, then A5). Prepare it on `exp/buoyancy-recenter` off tag
+`baseline-260716-buoyancy`, and leave the working tree on main until then.
+
+Still-open decision before the first Stage-B launch: whether the refreshed plant runs under
+the existing `teacher_baseline_posttam` purpose or a NEW run_group/wandb-project name. The
+plant change breaks `none`-level comparability with the posttam series, which argues for a
+new purpose.
+
+---
+
+## Update (2026-07-21T03:37:54.802930)
+
+(status refresh only -- the measurement, the arithmetic, and the sequencing hazard are in the 2026-07-21 RESOLVED section above)

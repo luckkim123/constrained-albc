@@ -1,16 +1,16 @@
 ---
 title: "Tracking kernel exp-quad-tanh: dead-zone diagnosis correct but fix is on wrong axis (yaw not att_rp); the exp+L1+tanh stack has no literature precedent"
-tags: ["reward", "tracking", "kernel", "dead-zone", "att_rp", "literature", "exp-design"]
+tags: ["reward", "tracking", "kernel", "dead-zone", "att_rp", "literature", "exp-design", "rule-03-gate"]
 created: 2026-07-08T23:49:37.492504
-updated: 2026-07-20T07:54:39.625436
+updated: 2026-07-21T03:34:32.487023
 sources: []
 links: []
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 70
-qualityReasons: ["no-source-marker", "generic-only-tags"]
-status: needs-experiment
+qualityScore: 100
+qualityReasons: []
+status: resolved
 blocked-on: "Parked under the 2026-07-20 batch-pass decision."
 ---
 
@@ -86,3 +86,80 @@ card, reward_penalty_terms card, action_bounding card.
 ## Update (2026-07-20T07:54:39.625436)
 
 STATUS PROMOTION (2026-07-20 wiki sweep): the discriminating probe among the 3 fix candidates (small yaw-axis tanh dead-zone / kernel simplification / no-op) measuring ss_error AND ss_jitter across all 4 DR levels is unstarted; promoted to needs-experiment.
+
+---
+
+## Update (2026-07-21T03:34:32.487023)
+
+## CLOSED 2026-07-21 by the rule-03 measured-deficiency gate (campaign item Z9)
+
+[DECISION] Z9 asked whether this lead becomes a launchable probe (campaign A7). Verdict:
+NO PROBE. The lead is closed as resolved-by-gate; A7 is dropped from the optional tier.
+The dead-zone diagnosis on this page stays CORRECT -- what fails is the case for spending
+4.7 GPU-hours on it.
+[CONFIDENCE: HIGH -- decided on this workspace's own eval data + code, no new run]
+
+### Why the fix does not clear the bar
+
+1. The dead zone is ASYMPTOTIC; at the achieved operating point the gradient is not small.
+   Differentiating the real shipped expression (`rewards.py:141-158`, k=9, sigma=0.10,
+   quad_ratio=0.833, roll weight 1.5) at the reference run's `none`-level roll ss_error of
+   0.215 deg = 3.75e-3 rad gives about -5.14 reward/rad. Adding `tanh_coef=0.15` would add
+   about -2.02/rad -- it RAISES an existing restoring gradient by ~39%, it does not restore
+   a vanished one. New equilibrium approx 0.13 deg, i.e. a predicted improvement of ~0.085 deg.
+
+2. That improvement is far below the sensor floor the policy trains against. `config.py:271-287`
+   sets the euler observation-noise std to 0.02 rad = 1.15 deg, plus a per-episode bias of
+   the same magnitude. The 0.215 deg residual is already ~5x BELOW one noise sigma, and the
+   predicted 0.085 deg gain is ~1/13 of a sigma. It is visible only because `eval.py:964-965`
+   nulls `observation_noise_model` for the exam. Under rule 03 that is an artifact of the
+   noise-free harness, not a measured deployable deficiency.
+
+3. The probe cannot discriminate against ordinary run-to-run movement on the metric it would
+   move. `none`-level att_norm ss_error across posttam runs that never touched the tracking
+   kernel spans 0.250-0.426 deg (a ~25% band); `minstdthr008`, a `min_std` change, moved
+   att_norm 0.319 -> 0.250 (-22%) as a SIDE EFFECT -- larger than the kernel model predicts
+   for the tanh fix.
+
+4. The axis that already carries the tanh shows no deficiency to generalize from: yaw
+   ss_error 0.0052 rad/s, ss_jitter 4.4e-5, CV 2.4%.
+
+Steelman considered and rejected: SS error is exactly what `k_bias=-2.0` (`config.py:493`)
+was added to punish, so the project has already spent a reward term here. It still fails,
+because the residual DC-bias tail was concluded AUTHORITY-limited (not gradient-limited) on
+the bias_ema observability page, and the `none`-level residual is sub-noise-floor anyway.
+
+### Reopen triggers (any ONE, read at DR `none` in the run's experiments/ eval tree)
+
+- roll or pitch `ss_error` >= 1.0 deg (approaching the 1.15 deg euler noise std) with
+  `ss_jitter` staying low -- a DC offset the policy is not being pushed out of.
+- a sub-noise-floor attitude residual becomes the binding constraint on a real deliverable
+  (e.g. hardware / Stonefish transfer where end-effector error traces to attitude DC bias
+  rather than estimator error).
+- attitude-triggered early termination gets wired up (`termination_penalty=0.0`,
+  `rewards.py:112`): the unbounded `exp - 0.833 e^2` far field reaches about -8.2 at 180 deg
+  and becomes a give-up incentive. That reopens the kernel as a BOUNDING question (a
+  `.clamp(min=-1)` code change at `rewards.py:158`), which is not what A7 was scoped as.
+- `ss_jitter` climbing above `ss_error` on the attitude axes (oscillation rather than offset).
+  Currently roll jitter 0.094 < ss 0.215, so no.
+
+### Campaign-plan errors found while deciding this
+
+- The plan (`.sp/plans/2026-07-20-final-teacher-batch-campaign.md:130,164`) names candidate
+  (a) as the "yaw-axis tanh dead-zone" and A7's question as "yaw dead-zone / kernel fix".
+  That is BACKWARDS and code-verified so: `config.py:488` gives `yaw_vel` the only live
+  `tanh_coef=0.3`, while `att_rp` (`rewards.py:106`) leaves it at the 0.0 default. This
+  page's candidate (a) was always "enable a small tanh on att_rp". A7 as the plan worded it
+  would have asked to add a tanh to the one axis that already has one.
+- The plan compressed this page's FOUR options into three by folding the structural one --
+  "migrate the anti-drift signal to a constraint (IPO/CMDP)" -- into "no-op". That is a
+  different and cheaper question (ConstraintTRPO+IPO is already wired) and is NOT closed by
+  this decision; it should be carried as its own zero-GPU lead.
+- A schedule-conditional probe anchored to the `biasema` comparator is stale before launch
+  if Stage A adopts a config that moves that comparator (`minstdthr008` already moved
+  att_norm at `none`). Any late-tier probe must declare its band against the ADOPTED config,
+  not the current anchor.
+
+Also inert in every shipped config: `lin_ratio` is 0 everywhere, so the L1 leg of the stack
+this page names does not actually run.
+

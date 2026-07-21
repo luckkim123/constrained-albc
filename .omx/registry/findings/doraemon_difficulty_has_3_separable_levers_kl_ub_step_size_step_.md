@@ -1,10 +1,10 @@
 ---
 title: "DORAEMON difficulty has 3 separable levers: kl_ub (step size), step_interval (dwell-time), max_iterations (number of expansions)"
-tags: ["doraemon", "kl_ub", "step_interval", "max_iterations", "performance_lb", "alpha", "curriculum", "dwell-time", "lever", "mechanism", "calibration", "correction"]
+tags: ["doraemon", "kl_ub", "step_interval", "max_iterations", "performance_lb", "alpha", "curriculum", "dwell-time", "lever", "mechanism", "calibration", "correction", "schedule-bound", "fair-comparison"]
 created: 2026-06-14T04:21:12.692273
-updated: 2026-07-07T18:59:50.923421
-sources: []
-links: ["kl_ub_0_12_trades_attitude_for_translation_e1_dr_harder.md", "kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md"]
+updated: 2026-07-21T07:57:55.617078
+sources: ["diagnose-20260721-164331"]
+links: ["kl_ub_0_12_trades_attitude_for_translation_e1_dr_harder.md", "kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md", "curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md"]
 category: reference
 confidence: high
 schemaVersion: 1
@@ -82,4 +82,42 @@ only the numeric calibration baseline (90 -> 68) and the p25 provenance are corr
 VERIFIED: config.py:486-499 (live DoraemonCfg override + calibration comment with the full
 return-distribution percentiles); doraemon.py:39 (engine default 80.0, stale for ALBC). The
 code comment is the primary source for the 250 provenance.
+
+---
+
+## Update (2026-07-21T07:57:55.617078)
+
+
+## EMPIRICAL CONFIRMATION 2026-07-21 (A3 vs anchor) — expansion is SCHEDULE-bound, not success-bound
+
+[FINDING] In the `teacher_baseline_posttam` config every DORAEMON update SATURATES the kl_ub
+trust region, so the three levers reduce to a fixed schedule in practice: 18 updates at iters
+500..4750 in steps of 250, each with `DORAEMON/kl_step` == 0.1200 exactly (== kl_ub). The
+success rate does NOT modulate the step once it clears the alpha floor.
+[EVIDENCE: TB DORAEMON/kl_step nonzero at 18 identical iterations, value 0.12 at every one, in
+BOTH trpo_minstdthr008_260721_064149 and trpo_biasema_260715_142543, despite terminal
+success_rate 0.8138 vs 0.8773; analysis diagnose-20260721-164331 §doraemon]
+[CONFIDENCE: HIGH]
+
+[FINDING] Consequence 1 (USE THIS): runs in this campaign train in a BIT-FOR-BIT IDENTICAL DR
+box, so cross-run eval deltas are attributable to the policy, never to a different curriculum.
+Terminal Beta compared elementwise: max abs diff dist_a 5.0e-06, dist_b 4.7e-05 (np.allclose
+True). This was independently reproduced by diffing the two runs' curriculum_trajectory.json.
+[EVIDENCE: doraemon_state.pt dist_a/dist_b of both runs; analysis diagnose-20260721-164331 §doraemon]
+[CONFIDENCE: HIGH]
+
+[FINDING] Consequence 2 (STOP DOING THIS): "DORAEMON health" cannot discriminate runs in this
+config. success_rate, ess_ratio and mode are READOUTS of an identical curriculum, not
+per-run outcomes — a 7.2% success-rate gap changed nothing about the DR box. Reporting
+DORAEMON health as a first-class per-run outcome is uninformative here.
+[EVIDENCE: success_rate 0.8138 vs 0.8773 with identical terminal Beta; DORAEMON/entropy_before
+== entropy_after == -22.7017 in both runs (static readout, not a per-update measurement)]
+[CONFIDENCE: HIGH]
+
+[FINDING] At 5000 iterations the box is NOT exhausted: 0 of 20 params at the Beta(1,1) ceiling
+(17 params ~a=b=1.7-1.9, 3 params at a=1.0/b~6.2-6.6). Box exhaustion is an 8000-iter
+phenomenon, not a 5000-iter one.
+[EVIDENCE: doraemon_state.pt per-parameter Beta(a,b), both runs; cf the Z2 saturation table on
+[[curriculum_recalibration_protocol_widening_the_dr_box_requires_r]]]
+[CONFIDENCE: HIGH]
 
