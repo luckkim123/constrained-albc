@@ -79,6 +79,23 @@ class StudentRunner:
         configure_env_for_student(env)
 
         self.teacher = FrozenTeacher(cfg, device=device)
+
+        # FrozenTeacher builds itself from its checkpoint's geometry, which can differ
+        # from StudentCfg's fixed defaults (69D attitude-only vs 72D with
+        # use_bias_ema_obs). Sync cfg to what was ACTUALLY built before the student,
+        # collector, and buffer are sized from it, or they disagree with the
+        # observations the teacher consumes.
+        cfg.policy_obs_dim = self.teacher.obs_dim
+        cfg.privileged_dim = self.teacher.privileged_dim
+        cfg.latent_dim = self.teacher.latent_dim
+
+        env_obs_dim = getattr(env.unwrapped.cfg, "observation_space", None)
+        if env_obs_dim is not None and env_obs_dim != cfg.policy_obs_dim:
+            raise ValueError(
+                f"teacher was trained on {cfg.policy_obs_dim}D observations but this env "
+                f"emits {env_obs_dim}D -- distilling across an obs-layout change is invalid."
+            )
+
         self.student = make_student_encoder(cfg).to(device)
 
         # Reuse teacher's frozen actor_obs_normalizer as student's input normalizer.

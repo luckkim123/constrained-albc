@@ -38,6 +38,24 @@ def _infer_num_constraints(state_dict: dict, default: int = 10) -> int:
     return state_dict[output_key].shape[0]
 
 
+def infer_teacher_geometry(state_dict: dict) -> dict:
+    """Read the teacher's obs / privileged / latent widths off the checkpoint tensors.
+
+    Same reasoning as _infer_num_constraints, extended to the dims that also vary
+    across campaigns: the attitude-only teacher is 69D, and the same env with
+    `use_bias_ema_obs` is 72D, while StudentCfg's defaults are fixed. Building the
+    teacher from those defaults instead of the checkpoint raises a shape mismatch on
+    load (actor.0.weight 256x78 vs 256x81, normalizer 1x69 vs 1x72), which is how
+    distillation against a 72D teacher failed. The checkpoint is the single source
+    of truth -- read the dims straight from its tensor shapes.
+    """
+    return {
+        "policy_obs_dim": state_dict["actor_obs_normalizer._mean"].shape[1],  # (1, obs)
+        "privileged_dim": state_dict["encoder.0.weight"].shape[1],            # (256, priv)
+        "latent_dim": state_dict["_encoder_output_norm.weight"].shape[0],     # (latent,)
+    }
+
+
 class FrozenTeacher(nn.Module):
     """Wraps r13_A's ActorCriticEncoder; exposes encode(), normalize_obs(), actor_forward().
 
@@ -78,11 +96,17 @@ class FrozenTeacher(nn.Module):
         ckpt_path = os.path.join(cfg.teacher_run_dir, cfg.teacher_checkpoint)
         ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
         num_constraints = _infer_num_constraints(ckpt["model_state_dict"], default=10)
+        geom = infer_teacher_geometry(ckpt["model_state_dict"])
+        if geom["policy_obs_dim"] != cfg.policy_obs_dim:
+            logger.info(
+                "Teacher geometry from checkpoint overrides cfg: policy_obs_dim %d -> %d",
+                cfg.policy_obs_dim, geom["policy_obs_dim"],
+            )
 
         dummy_obs = TensorDict(
             {
-                "policy": torch.zeros(1, cfg.policy_obs_dim),
-                "privileged": torch.zeros(1, cfg.privileged_dim),
+                "policy": torch.zeros(1, geom["policy_obs_dim"]),
+                "privileged": torch.zeros(1, geom["privileged_dim"]),
             },
             batch_size=[1],
         )
@@ -91,10 +115,10 @@ class FrozenTeacher(nn.Module):
             obs=dummy_obs,
             obs_groups=obs_groups,
             num_actions=8,
-            policy_obs_dim=cfg.policy_obs_dim,
-            privileged_dim=cfg.privileged_dim,
+            policy_obs_dim=geom["policy_obs_dim"],
+            privileged_dim=geom["privileged_dim"],
             encoder_hidden_dims=(256, 128, 64),
-            encoder_latent_dim=cfg.latent_dim,
+            encoder_latent_dim=geom["latent_dim"],
             encoder_activation="elu",
             encoder_obs_normalization=False,
             encoder_obs_lower=_PRIV_OBS_LOWER,
@@ -136,9 +160,11 @@ class FrozenTeacher(nn.Module):
             p.requires_grad_(False)
         self.policy.eval()
 
-        self.latent_dim = cfg.latent_dim
-        self.obs_dim = cfg.policy_obs_dim
-        self.privileged_dim = cfg.privileged_dim
+        # Expose the geometry actually built (checkpoint-derived), not the cfg
+        # defaults -- StudentRunner reads these back to size the student.
+        self.latent_dim = geom["latent_dim"]
+        self.obs_dim = geom["policy_obs_dim"]
+        self.privileged_dim = geom["privileged_dim"]
 
     @torch.no_grad()
     def encode_privileged(self, privileged: torch.Tensor) -> torch.Tensor:
