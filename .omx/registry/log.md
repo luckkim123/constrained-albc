@@ -5259,3 +5259,635 @@
 - **Pages:** closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md
 - **Summary:** updated 'Closed-loop latent collapse suspicion: legacy student measured 11-17x worse in-loop, deployed student unverified'
 
+## [2026-07-21T10:26:07.882082] query
+- **Pages:** reward_md_6_error_buffers_reward_call_site_dt_scaling_theory_rev.md, eval_command_box_was_half_the_trained_envelope_from_2026_04_06_t.md, an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md, obs_noise_model_history_channels_are_re_noised_every_step_sim_pa.md, sequential_overnight_campaign_wall_clock_budget_not_crashes_kill.md, train_py_run_group_creates_the_group_layer_no_more_manual_post_m.md, barrier_alpha_runtime_0_05_agent_cfg_injects_over_ctor_default_0.md, cross_run_reference_values_must_be_re_extracted_fresh_never_carr.md, eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md, reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md, xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e.md, experiment_launch_checklist_run_id_wandb_latest_alias_naming.md, experiment_output_directory_standard_logs_vs_experiments_index_t.md, real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md, doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md, performance_lb_doraemon_gate_is_causally_independent_of_the_acto.md, tam_plant_correctness_fix_collapses_the_void_hard_dr_roll_heavy_.md, cross_run_dr_comparability_eval_py_doraemon_dr_from_already_prov.md, april_2026_entropy_collapse_campaign_machinery_bug_solved_conver.md, arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md
+- **Summary:** query 'seed noise floor run-to-run variance adoption band 5%' -> 20 of 194
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_manipulation_is_2_3_row_1_fails_marginally_rows_2_and_3_pass.md
+- **Summary:** updated 'The manipulation is 2/3 — row 1 fails marginally, rows 2 and 3 pass; the run sti'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** row_2_holds_with_margin_a1_s_three_deployment_params_end_near_th.md
+- **Summary:** updated "Row 2 holds with margin: A1's three deployment params end near the 5k reference'"
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_row_1_leak_is_quantifiable_and_does_not_change_the_verdict_a.md
+- **Summary:** updated "The row-1 leak is quantifiable and does not change the verdict: A1's terminal wi"
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** iteration_count_not_dr_width_drives_the_nominal_roll_transient_t.md
+- **Summary:** updated 'Iteration count, not DR width, drives the nominal roll transient; the wider DR b'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** against_the_pre_registered_bands_the_run_is_a_double_miss_which_.md
+- **Summary:** updated 'Against the pre-registered bands the run is a double miss, which is itself the r'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_two_pre_registered_readouts_decoupled_thruster_util_j_c_d_k_.md
+- **Summary:** updated 'The two pre-registered readouts decoupled — `thruster_util` J_C/d_k tracked the '
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** a1_is_worse_than_extend8k_on_both_axes_of_the_trade_off_extend8k.md
+- **Summary:** updated 'A1 is worse than extend8k on BOTH axes of the trade-off extend8k established (ex'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** env_to_env_spread_rises_with_the_transient_but_the_distribution_.md
+- **Summary:** updated 'Env-to-env spread rises with the transient but the distribution stays DC-bias-li'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** n_gt20_corroborates_the_same_distribution_rather_than_adding_ind.md
+- **Summary:** updated '`n_gt20` corroborates the same distribution rather than adding independent evide'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** all_four_dr_levels_behave_consistently_and_survival_is_100_every.md
+- **Summary:** updated 'All four DR levels behave consistently and survival is 100% everywhere, so the t'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** vx_vy_vz_are_nan_at_every_dr_level_by_construction_the_main_task.md
+- **Summary:** updated '`vx/vy/vz` are NaN at every DR level by construction — the main task is attitude'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** no_out_of_distribution_level_was_run_for_this_probe_so_generaliz.md
+- **Summary:** updated 'No out-of-distribution level was run for this probe, so generalization is read f'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** a1_generalizes_across_its_own_dr_ladder_without_degradation_in_a.md
+- **Summary:** updated 'A1 generalizes across its own DR ladder without degradation in attitude overshoo'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_hard_row_s_error_bar_4_8_on_a_4_3_mean_is_where_the_env_to_e.md
+- **Summary:** updated "The `hard` row's error bar (+/- 4.8 on a 4.3 mean) is where the env-to-env sprea"
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_reward_decomposition_is_essentially_unchanged_across_the_thr.md
+- **Summary:** updated 'The reward decomposition is essentially unchanged across the three runs; A1 sits'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** episode_return_and_length_are_also_flat_across_the_lineage_a1_re.md
+- **Summary:** updated 'Episode return and length are also flat across the lineage (A1 reward 272.26, ep'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_trpo_machinery_is_healthy_and_identical_in_configuration_to_.md
+- **Summary:** updated 'The TRPO machinery is healthy and identical in configuration to the lineage — li'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_policy_update_internals_are_quantitatively_indistinguishable.md
+- **Summary:** updated 'The policy-update internals are quantitatively indistinguishable from the two re'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** grad_sigma_step_is_three_orders_of_magnitude_below_grad_actor_st.md
+- **Summary:** updated '`Grad/sigma_step` is three orders of magnitude below `Grad/actor_step` in every '
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** exploration_is_dead_in_a1_exactly_as_in_both_references_so_entro.md
+- **Summary:** updated 'Exploration is dead in A1 exactly as in both references, so entropy collapse is '
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_reward_trajectory_is_a_warmup_then_plateau_shape_with_platea.md
+- **Summary:** updated 'The reward trajectory is a warmup-then-plateau shape with plateau onset at ~5% o'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** both_critics_are_healthy_and_a1_s_cost_critic_loss_sits_between_.md
+- **Summary:** updated "Both critics are healthy and A1's cost-critic loss sits between the references, "
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** both_critic_losses_order_the_runs_by_exam_difficulty_not_by_iter.md
+- **Summary:** updated 'Both critic losses order the runs by exam difficulty, not by iteration budget: A'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_encoder_did_not_collapse_a_post_run_per_parameter_z_sweep_sh.md
+- **Summary:** updated 'The encoder did not collapse: a post-run per-parameter z-sweep shows 8-9 of 9 la'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** three_sweep_parameters_drive_almost_no_latent_response_and_are_t.md
+- **Summary:** updated 'Three sweep parameters drive almost no latent response and are the weak dims to '
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** aggregate_latent_statistics_are_indistinguishable_across_the_thr.md
+- **Summary:** updated 'Aggregate latent statistics are indistinguishable across the three runs, so the '
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_encoder_was_still_receiving_and_applying_gradient_at_the_end.md
+- **Summary:** updated 'The encoder was still receiving and applying gradient at the end of training in '
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** exactly_one_constraint_is_binding_thruster_util_and_its_margin_b.md
+- **Summary:** updated 'Exactly one constraint is binding (`thruster_util`) and its margin behaves like '
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** nine_of_ten_constraints_remain_deeply_slack_with_zero_violations.md
+- **Summary:** updated 'Nine of ten constraints remain deeply slack with zero violations and a smooth ba'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** thruster_util_s_margin_separates_the_runs_the_same_way_its_j_c_d.md
+- **Summary:** updated "`thruster_util`'s margin separates the runs the same way its J_C/d_k does: A1 6."
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_curriculum_stayed_feasible_and_never_gated_success_rate_rema.md
+- **Summary:** updated 'The curriculum stayed feasible and never gated: success rate remained far above '
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_probe_did_what_it_was_configured_to_do_at_the_schedule_level.md
+- **Summary:** updated 'The probe did what it was configured to do at the schedule level: 20 scheduled e'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** a_cross_metric_changepoint_at_iter_5654_pairs_a_success_rate_dro.md
+- **Summary:** updated 'A cross-metric changepoint at iter 5654 pairs a success-rate drop with an entrop'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_terminal_dr_state_is_far_from_the_config_ceiling_unlike_exte.md
+- **Summary:** updated 'The terminal DR state is far from the config ceiling, unlike extend8k which satu'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_manipulation_is_3_3_the_per_dim_coefficient_vector_is_all_ze.md
+- **Summary:** created "The manipulation is 3/3 — the per-dim coefficient vector is all-zero in the run'"
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_scalar_entropy_coef_is_genuinely_dead_rather_than_merely_ove.md
+- **Summary:** created 'The scalar `entropy_coef` is genuinely dead rather than merely overridden in spi'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** one_downstream_difference_is_not_held_and_must_be_carried_as_a_c.md
+- **Summary:** created "One downstream difference is NOT held and must be carried as a caveat: A2's term"
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_rule_fires_on_all_three_unclamped_dims_from_the_first_checkp.md
+- **Summary:** created 'The rule fires on all three unclamped dims from the first checkpoint after warmu'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** arm1_is_the_sharpest_single_result_it_reaches_its_0_10_floor_by_.md
+- **Summary:** created '`arm1` is the sharpest single result: it reaches its 0.10 floor by iter 1000 and'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_kill_criterion_did_not_fire_the_april_2026_record_of_entropy.md
+- **Summary:** created 'The kill criterion did not fire: the April 2026 record of `entropy_coef=0` colla'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_likeliest_reason_the_two_diverge_is_that_april_s_configurati.md
+- **Summary:** created "The likeliest reason the two diverge is that April's configuration predates toda"
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** a2_pays_for_the_lost_exploration_in_the_nominal_roll_transient_o.md
+- **Summary:** created 'A2 pays for the lost exploration in the nominal roll transient: overshoot rises '
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_none_level_distribution_stays_dc_bias_like_rather_than_heavy.md
+- **Summary:** created 'The `none`-level distribution stays DC-bias-like rather than heavy-tailed — the '
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** under_the_hardest_exam_the_picture_inverts_and_becomes_heavy_tai.md
+- **Summary:** created "Under the hardest exam the picture inverts and becomes heavy-tailed: A2's roll `"
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** a2_is_the_first_run_of_this_lineage_to_lose_an_env_survival_fall.md
+- **Summary:** created 'A2 is the first run of this lineage to lose an env: survival falls to 98.4% at `'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** ss_jitter_rises_with_ss_error_at_every_level_rather_than_moving_.md
+- **Summary:** created '`ss_jitter` rises with `ss_error` at every level rather than moving against it, '
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** vx_vy_vz_are_nan_at_every_dr_level_by_construction_the_main_task.md
+- **Summary:** updated '`vx/vy/vz` are NaN at every DR level by construction — the main task is attitude'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** no_out_of_distribution_level_was_run_for_this_probe_so_generaliz.md
+- **Summary:** updated 'No out-of-distribution level was run for this probe, so generalization is read f'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** across_its_own_ladder_a2_shows_the_lineage_s_usual_falling_overs.md
+- **Summary:** created "Across its own ladder A2 shows the lineage's usual falling-overshoot / rising-er"
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_hard_row_is_a_within_run_property_and_the_cross_run_comparis.md
+- **Summary:** created 'The `hard` row is a within-run property and the cross-run comparison against the'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_reward_decomposition_shows_a2_slightly_ahead_of_the_anchor_o.md
+- **Summary:** created 'The reward decomposition shows A2 slightly AHEAD of the anchor on every term, wi'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_reward_yaw_vel_gain_is_corroborated_by_the_eval_s_yaw_axis_s.md
+- **Summary:** created "The `Reward/yaw_vel` gain is corroborated by the eval's yaw axis, so on that axi"
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** episode_return_and_length_are_healthy_and_slightly_better_than_t.md
+- **Summary:** created "Episode return and length are healthy and slightly better than the anchor's, whi"
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_trpo_machinery_is_healthy_and_configured_identically_to_the_.md
+- **Summary:** created 'The TRPO machinery is healthy and configured identically to the anchor: the line'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_update_internals_move_in_the_direction_the_manipulation_pred.md
+- **Summary:** created 'The update internals move in the direction the manipulation predicts: with the b'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** exploration_is_dead_in_a2_as_it_is_everywhere_in_this_lineage_bu.md
+- **Summary:** created 'Exploration is dead in A2 as it is everywhere in this lineage, but A2 is measura'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_engine_s_diagnosis_items_1_3_entropy_collapse_reward_plateau.md
+- **Summary:** created "The engine's `[DIAGNOSIS]` items 1-3 (entropy collapse, reward plateau, early co"
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_reward_trajectory_is_the_lineage_s_warmup_then_plateau_shape.md
+- **Summary:** created "The reward trajectory is the lineage's warmup-then-plateau shape with an almost "
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** both_critics_are_healthy_and_a2_s_are_better_fit_than_the_anchor.md
+- **Summary:** created "Both critics are healthy and A2's are BETTER-fit than the anchor's, with the cos"
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_24_8_drop_in_loss_cost_value_is_the_clearest_training_side_f.md
+- **Summary:** created 'The 24.8% drop in `Loss/cost_value` is the clearest training-side fingerprint of'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_encoder_did_not_collapse_and_is_if_anything_sharper_than_the.md
+- **Summary:** created 'The encoder did not collapse and is if anything sharper than the lineage: a post'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_weak_dims_are_the_lineage_s_usual_weak_dims_rather_than_new_.md
+- **Summary:** created "The weak dims are the lineage's usual weak dims rather than new casualties of th"
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** aggregate_latent_statistics_are_effectively_identical_between_th.md
+- **Summary:** created 'Aggregate latent statistics are effectively identical between the two runs, so t'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_encoder_was_still_receiving_and_applying_gradient_at_the_end.md
+- **Summary:** updated 'The encoder was still receiving and applying gradient at the end of training, so'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** exactly_one_constraint_is_binding_thruster_util_and_a2_binds_it_.md
+- **Summary:** created 'Exactly one constraint is binding (`thruster_util`) and A2 binds it LESS than th'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** all_ten_constraints_are_satisfied_with_negative_constraint_viol_.md
+- **Summary:** created 'All ten constraints are satisfied with negative `Constraint/viol/*` at every row'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_one_genuinely_new_signal_in_this_run_is_a_single_iteration_p.md
+- **Summary:** created 'The one genuinely new signal in this run is a SINGLE-iteration positive `barrier'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_spike_is_not_a_state_of_the_accepted_policy_reconstructing_t.md
+- **Summary:** created 'The spike is NOT a state of the accepted policy: reconstructing the barrier from'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_mechanism_is_the_logging_point_rather_than_a_constraint_even.md
+- **Summary:** created 'The mechanism is the logging point rather than a constraint event: `_last_barrie'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** why_it_appears_in_a2_and_nowhere_else_follows_from_the_manipulat.md
+- **Summary:** created 'Why it appears in A2 and nowhere else follows from the manipulation: a smaller s'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** engine_diagnosis_item_4_barrier_gradient_overwhelms_reward_at_sm.md
+- **Summary:** created 'Engine `[DIAGNOSIS]` item 4 ("barrier gradient overwhelms reward at small margin'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_curriculum_stayed_feasible_and_never_gated_in_either_run_and.md
+- **Summary:** created 'The curriculum stayed feasible and never gated in either run, and A2 sits ABOVE '
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** higher_success_with_one_more_achieved_widening_but_a_narrower_te.md
+- **Summary:** created 'Higher success with one more achieved widening but a NARROWER terminal box is th'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** three_cross_metric_changepoints_structure_the_run_and_the_two_la.md
+- **Summary:** created 'Three cross-metric changepoints structure the run, and the two late ones coincid'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_earliest_changepoint_at_iter_382_is_the_manipulation_taking_.md
+- **Summary:** created 'The earliest changepoint at iter 382 is the manipulation taking effect, pairing '
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** a3_fails_the_pre_registered_primary_in_the_wrong_direction_and_i.md
+- **Summary:** created 'A3 fails the pre-registered primary in the wrong direction and is therefore a DI'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_null_outcome_does_not_apply_the_band_defined_null_as_within_.md
+- **Summary:** created 'The NULL outcome does not apply — the band defined NULL as within +/-5% on both '
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_intervention_separates_cleanly_into_a_dc_win_and_an_ac_trans.md
+- **Summary:** created 'The intervention separates cleanly into a DC win and an AC/transient loss: `ss_e'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** env_to_env_spread_worsened_even_where_the_mean_improved_pitch_cv.md
+- **Summary:** created 'Env-to-env spread worsened even where the mean improved — pitch CV roughly doubl'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** yaw_is_the_one_axis_where_the_trade_runs_the_other_way_at_low_dr.md
+- **Summary:** created 'Yaw is the one axis where the trade runs the other way at low DR — `os_env_mean`'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_two_tail_metrics_disagree_and_they_disagree_because_they_mea.md
+- **Summary:** created 'The two tail metrics disagree, and they disagree because they measure different '
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_anchor_s_hard_advantage_in_mean_atterr_is_partly_carried_by_.md
+- **Summary:** created "The anchor's `hard` advantage in mean AttErr is partly carried by a single patho"
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** a3_s_none_level_roll_sample_env_sits_at_rank_8_near_the_best_env.md
+- **Summary:** created "A3's `none`-level roll sample env sits at rank 8% (near the best env), so the sa"
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_strong_negative_roll_yaw_coupling_at_none_rho_0_56_for_a3_0_.md
+- **Summary:** created 'The strong negative roll/yaw coupling at `none` (rho -0.56 for A3, -0.95 for the'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_entire_training_side_reward_loss_is_the_yaw_channel_reward_y.md
+- **Summary:** created 'The entire training-side reward loss is the yaw channel — `Reward/yaw_vel` -13.2'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_three_action_quality_penalties_all_deepened_smoothness_25_2_.md
+- **Summary:** created 'The three action-quality penalties all deepened (smoothness -25.2%, bias -22.3%,'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_lever_engaged_exactly_as_designed_and_the_optimizer_stayed_h.md
+- **Summary:** created 'The lever engaged exactly as designed and the optimizer stayed healthy — `Noise/'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** policy_updates_were_substantially_larger_under_the_raised_floor_.md
+- **Summary:** created 'Policy updates were substantially larger under the raised floor (actor step +33.'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_engine_flags_entropy_collapsed_noise_std_low_for_both_runs_s.md
+- **Summary:** created 'The engine flags `entropy COLLAPSED / noise_std LOW` for BOTH runs, so that diag'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** both_critics_are_healthy_and_essentially_unchanged_the_cost_crit.md
+- **Summary:** created 'Both critics are healthy and essentially unchanged; the cost critic fits 8.5% be'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_encoder_is_unaffected_by_the_intervention_z_statistics_match.md
+- **Summary:** created 'The encoder is unaffected by the intervention — z statistics match the anchor to'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** encoder_z_std_reading_exactly_0_4000_in_both_runs_is_a_saturatio.md
+- **Summary:** created '`Encoder/z_std` reading exactly 0.4000 in both runs is a saturation signature of'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** zero_constraint_violations_in_either_run_and_the_binding_constra.md
+- **Summary:** created 'Zero constraint violations in either run and the binding constraint is unchanged'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** thruster_util_margin_widened_under_a3_7_51_vs_6_14_22_despite_hi.md
+- **Summary:** created '`thruster_util` margin WIDENED under A3 (7.51 vs 6.14, +22%) despite higher acti'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** a3_shows_3_barrier_penalty_spikes_max_0_505_against_the_anchor_s.md
+- **Summary:** created "A3 shows 3 `barrier_penalty` spikes (max 0.505) against the anchor's 0, but thes"
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_dr_curriculum_was_identical_in_the_two_runs_18_updates_at_it.md
+- **Summary:** created 'The DR curriculum was IDENTICAL in the two runs — 18 updates at iters 500..4750 '
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** doraemon_entropy_before_and_doraemon_entropy_after_are_identical.md
+- **Summary:** created '`DORAEMON/entropy_before` and `DORAEMON/entropy_after` are identical to each oth'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** because_every_doraemon_step_saturates_the_kl_trust_region_curric.md
+- **Summary:** created 'Because every DORAEMON step saturates the KL trust region, curriculum expansion '
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** terminal_beta_shows_0_of_20_parameters_at_the_beta_1_1_saturatio.md
+- **Summary:** created 'Terminal Beta shows 0 of 20 parameters at the Beta(1,1) saturation ceiling, with'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_roll_overshoot_penalty_decays_monotonically_as_dr_hardens_26.md
+- **Summary:** created 'The roll overshoot penalty decays monotonically as DR hardens (+26 -> +13 -> +8 '
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** a3_is_the_first_teacher_baseline_posttam_run_since_a2_to_drop_be.md
+- **Summary:** created 'A3 is the first `teacher_baseline_posttam` run since A2 to drop below 100% survi'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** roll_overshoot_is_inverted_against_dr_level_in_both_runs_a3_21_5.md
+- **Summary:** created 'Roll overshoot is inverted against DR level in BOTH runs (A3 21.5 -> 14.7, ancho'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** a4_fails_every_eval_clause_of_its_pre_registered_band_by_a_wide_.md
+- **Summary:** created 'A4 fails every eval clause of its pre-registered band by a wide margin, so the l'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_z_sweep_clause_passed_while_the_eval_clauses_failed_which_ru.md
+- **Summary:** created 'The z_sweep clause PASSED while the eval clauses failed, which rules out the obv'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** lin_vel_is_not_a_redundant_privileged_dim_in_envs_main_the_polic.md
+- **Summary:** created '`lin_vel` is NOT a redundant privileged dim in `envs/main`. The policy observati'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_anchor_s_encoder_was_using_the_dropped_dims_heavily_so_this_.md
+- **Summary:** created "The anchor's encoder was using the dropped dims heavily, so this was live signal"
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_encoder_reorganised_rather_than_degraded_the_anchor_s_only_d.md
+- **Summary:** created "The encoder REORGANISED rather than degraded: the anchor's only dead parameter, "
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_regression_is_broad_not_axis_specific_ss_error_worsened_on_r.md
+- **Summary:** created 'The regression is broad, not axis-specific: `ss_error` worsened on roll, pitch A'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** env_to_env_consistency_collapsed_hardest_hard_level_roll_cv_reac.md
+- **Summary:** created 'Env-to-env consistency collapsed hardest: `hard`-level roll CV reaches 328% and '
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** two_metrics_moved_the_other_way_and_must_be_reported_pitch_os_en.md
+- **Summary:** created 'Two metrics moved the OTHER way and must be reported: pitch `os_env_mean` improv'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** hard_level_jitter_is_the_single_most_extreme_delta_in_the_run_ro.md
+- **Summary:** created '`hard`-level jitter is the single most extreme delta in the run (roll +225%, pit'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** a4_s_doraemon_took_one_more_expansion_than_the_anchor_19_vs_18_b.md
+- **Summary:** created "A4's DORAEMON took ONE MORE expansion than the anchor (19 vs 18): both runs take"
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** consequence_for_reading_this_report_because_eval_py_static_grade.md
+- **Summary:** created 'CONSEQUENCE for reading this report: because `eval.py static` grades each run on'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** refinement_of_the_a3_conclusion_analysis_diagnose_20260721_16433.md
+- **Summary:** created 'REFINEMENT of the A3 conclusion (analysis diagnose-20260721-164331): expansion S'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_training_side_return_loss_5_0_is_modest_relative_to_the_eval.md
+- **Summary:** created 'The training-side return loss (-5.0%) is modest relative to the eval collapse, a'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** reward_att_rp_fell_only_2_6_while_none_level_attitude_ss_error_r.md
+- **Summary:** created '`Reward/att_rp` fell only 2.6% while `none`-level attitude ss_error rose 74-95%,'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_optimizer_machinery_is_indistinguishable_from_the_anchor_ent.md
+- **Summary:** created 'The optimizer MACHINERY is indistinguishable from the anchor — entropy, sigma, f'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_actor_s_behaviour_did_change_however_policy_clip_fraction_ne.md
+- **Summary:** created "The actor's BEHAVIOUR did change, however: `Policy/clip_fraction` nearly doubled"
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** ranking_caveat_policy_clip_fraction_is_not_the_largest_relative_.md
+- **Summary:** created 'Ranking caveat: `Policy/clip_fraction` is NOT the largest relative training-side'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_engine_s_entropy_collapsed_noise_std_low_flags_fire_for_a4_e.md
+- **Summary:** created "The engine's `entropy COLLAPSED / noise_std LOW` flags fire for A4 exactly as fo"
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_value_critic_degraded_substantially_39_7_which_matters_becau.md
+- **Summary:** created 'The value critic degraded substantially (+39.7%), which matters because the crit'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_critic_hit_is_not_larger_than_every_actor_side_move_policy_c.md
+- **Summary:** created 'The critic hit is NOT larger than every actor-side move — `Policy/clip_fraction`'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_cost_critic_degraded_too_16_8_but_less_than_the_value_critic.md
+- **Summary:** created 'The cost critic degraded too (+16.8%) but less than the value critic, consistent'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** the_latent_statistics_are_unchanged_z_std_z_min_z_max_all_within.md
+- **Summary:** created 'The latent statistics are unchanged (z_std/z_min/z_max all within 1.5%), so the '
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** encoder_gradient_flow_dropped_sharply_grad_norm_29_4_step_39_8_m.md
+- **Summary:** created 'Encoder gradient flow dropped sharply (grad norm -29.4%, step -39.8%), meaning t'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** zero_constraint_violations_in_either_run_but_the_binding_constra.md
+- **Summary:** created 'Zero constraint violations in either run, but the binding constraint tightened s'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** rp_rate_also_moved_toward_binding_margin_5_91_4_88_j_c_d_k_0_409.md
+- **Summary:** created '`rp_rate` also moved toward binding (margin 5.91 -> 4.88, J_C/d_k 0.409 -> 0.512'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** no_barrier_artifacts_in_a4_0_spikes_max_0_030_so_unlike_a3_there.md
+- **Summary:** created 'No barrier artifacts in A4 — 0 spikes, max -0.030, so unlike A3 there is no reje'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** doraemon_success_fell_20_8_0_6947_vs_0_8773_and_its_minimum_afte.md
+- **Summary:** created 'DORAEMON success fell 20.8% (0.6947 vs 0.8773) and its minimum after warmup reac'
+
+## [2026-07-21T10:26:11.609658] add
+- **Pages:** despite_the_weaker_policy_a4_expanded_more_19_vs_18_because_its_.md
+- **Summary:** created 'Despite the weaker policy, A4 expanded MORE (19 vs 18) because its gate fired at'
+
+## [2026-07-21T10:26:17.776666] query
+- **Pages:** imu_45deg_offset_pitch_negation_sim_uncompensated_2026_07_05.md, a4_fails_every_eval_clause_of_its_pre_registered_band_by_a_wide_.md, actuator_hardware_identification_arm_xw540_t260_board_measured_p.md, doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md, plant_fix_needs_apply_before_retrain_main_hull_volume_0_009_0_00.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, reward_penalty_terms_thruster_smoothness_bias_block_3_temporal_b.md, april_2026_entropy_collapse_campaign_machinery_bug_solved_conver.md, kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md, penalty_vs_objective_exchange_rate_deg_of_attitude_error_bought_.md, reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md, p_a8_perflb200_more_iters_5000_8000_closed_the_deployment_ood_dr.md, step_interval_250_400_probe_separate_dr_width_from_optimisation_.md, against_the_pre_registered_bands_the_run_is_a_double_miss_which_.md, constrainttrpo_faithful_norbc_modified_ipo_kim_2024_arxiv_2308_1.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, e3_extend10k_regressed_the_policy_training_budget_is_not_the_p7_.md, e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite.md, e5_alpha075_ood_per_axis_generalization_gap_universal_failure_ro.md, n_gt20_and_os_env_are_overshoot_percent_of_step_magnitude_not_de.md
+- **Summary:** query 'adoption criterion within 5 percent of anchor verdict band pre-registered' -> 20 of 282
+
+## [2026-07-22T01:35:08.264101] query
+- **Pages:** posttam_constraint_set_is_healthy_8_active_guards_exactly_2_dorm.md, constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md, constraint_threshold_budget_tuning_thresholds_split_into_hard_ph.md, constraint_margin_is_in_per_constraint_discounted_budget_units_d.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, constrainttrpo_faithful_norbc_modified_ipo_kim_2024_arxiv_2308_1.md, arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md, reward_cost_parallel_structure_mostly_mirroring_two_real_couplin.md, constraint_viol_trajectory_barrier_sign_metrics_4_10_starts_at_d.md, reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md, constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md, joint1_cumulative_rotation_constraint_never_binds_policy_parks_a.md, reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md, constraint_health_index.md, safety_rail_constraints_fire_hard_at_init_go_quiet_and_re_fire_a.md, session_state_2026_07_12_constraint_deep_dive_q_a_covered_struct.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, e3_extend10k_regressed_the_policy_training_budget_is_not_the_p7_.md
+- **Summary:** query 'budget slack rp_vel_settling manipulability x100 constraint anchor band' -> 20 of 278
+
+## [2026-07-22T01:43:28.698167] query
+- **Pages:** posttam_constraint_set_is_healthy_8_active_guards_exactly_2_dorm.md, constrainttrpo_faithful_norbc_modified_ipo_kim_2024_arxiv_2308_1.md, constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md, reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md, arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md, constraint_viol_trajectory_barrier_sign_metrics_4_10_starts_at_d.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md, reward_cost_parallel_structure_mostly_mirroring_two_real_couplin.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, constraint_threshold_budget_tuning_thresholds_split_into_hard_ph.md, all_four_dr_levels_behave_consistently_and_survival_is_100_every.md, no_out_of_distribution_level_was_run_for_this_probe_so_generaliz.md, reward_att_rp_fell_only_2_6_while_none_level_attitude_ss_error_r.md, the_policy_update_internals_are_quantitatively_indistinguishable.md, the_probe_did_what_it_was_configured_to_do_at_the_schedule_level.md, vx_vy_vz_are_nan_at_every_dr_level_by_construction_the_main_task.md, priv_obs_slim_stage_2_lead_contested_p_t_dims_quad_damp_lin_vel_.md, tracking_kernel_exp_quad_tanh_dead_zone_diagnosis_correct_but_fi.md, the_trpo_machinery_is_healthy_and_identical_in_configuration_to_.md
+- **Summary:** query 'rp_vel_settling dormant' -> 20 of 269
+
+## [2026-07-22T01:44:18.484553] query
+- **Pages:** an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md, performance_lb_doraemon_gate_is_causally_independent_of_the_acto.md, doraemon_optimize_entropy_accept_can_leak_the_success_floor_late.md, obs_noise_model_history_channels_are_re_noised_every_step_sim_pa.md, real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md, april_2026_entropy_collapse_campaign_machinery_bug_solved_conver.md, constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md, doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md, e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite.md, p_b1_shared_exam_on_reference_dr_hard_roll_floor_was_exam_artifa.md, tam_plant_correctness_fix_collapses_the_void_hard_dr_roll_heavy_.md, the_engine_flags_entropy_collapsed_noise_std_low_for_both_runs_s.md, the_lever_engaged_exactly_as_designed_and_the_optimizer_stayed_h.md, baseline_repro_reproduces_teacher_deterministically_e4_control.md, coverage_lint_ok_is_a_floor_not_a_quality_gate_re_analysis_uses_.md, doraemon_over_widens_then_oscillates_when_a_converged_teacher_is.md, doraemon_reactivity_makes_every_single_variable_probe_two_variab.md, experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, sequential_overnight_campaign_wall_clock_budget_not_crashes_kill.md
+- **Summary:** query 'seed floor seed noise' -> 20 of 92
+
+## [2026-07-22T01:55:21.087810] query
+- **Pages:** constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, constraint_margin_is_in_per_constraint_discounted_budget_units_d.md, constraint_viol_trajectory_barrier_sign_metrics_4_10_starts_at_d.md, constraint_health_index.md, constrainttrpo_faithful_norbc_modified_ipo_kim_2024_arxiv_2308_1.md, constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md, constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md, posttam_constraint_set_is_healthy_8_active_guards_exactly_2_dorm.md, reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md, reward_cost_parallel_structure_mostly_mirroring_two_real_couplin.md, safety_rail_constraints_fire_hard_at_init_go_quiet_and_re_fire_a.md, session_state_2026_07_12_constraint_deep_dive_q_a_covered_struct.md, arm_a_measured_angle_joint1_constraint_recovers_not_diverges_the.md, arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md, constraint_threshold_budget_tuning_thresholds_split_into_hard_ph.md, joint1_cumulative_rotation_constraint_never_binds_policy_parks_a.md, exactly_one_constraint_is_binding_thruster_util_and_its_margin_b.md, barrier_alpha_runtime_0_05_agent_cfg_injects_over_ctor_default_0.md, engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md, joint1_anti_drift_constrain_the_command_cumulative_arm_b_not_the.md
+- **Summary:** query 'constraint margin normalized' -> 20 of 113
+
+## [2026-07-22T01:57:47.552177] add
+- **Pages:** a5_budgetslack_rp_vel_settling_manipulability_budgets_x100_learn.md
+- **Summary:** created "A5 budgetslack (rp_vel_settling + manipulability budgets x100): learner is anchor's twin, verdict CONTINGENT on seed floor"
+
+## [2026-07-22T01:58:00.458681] add
+- **Pages:** posttam_constraint_set_is_healthy_8_active_guards_exactly_2_dorm.md
+- **Summary:** updated 'Posttam constraint set is healthy: 8 active guards + exactly 2 dormant (rp_vel_settling, manipulability)'
+
+## [2026-07-22T01:58:11.799085] add
+- **Pages:** at_none_the_tracking_moved_well_outside_the_pre_registered_5_ban.md
+- **Summary:** created 'At `none` the tracking moved well outside the pre-registered +/-5% band on every'
+
+## [2026-07-22T01:58:11.799085] add
+- **Pages:** the_move_is_a_directional_trade_not_a_uniform_regression_roll_st.md
+- **Summary:** created 'The move is a directional TRADE, not a uniform regression: roll steady-state deg'
+
+## [2026-07-22T01:58:11.799085] add
+- **Pages:** yaw_os_env_mean_377_is_a_small_base_artifact_not_a_real_overshoo.md
+- **Summary:** created 'yaw `os_env_mean` +377% is a small-base artifact, not a real overshoot regressio'
+
+## [2026-07-22T01:58:11.799085] add
+- **Pages:** across_the_full_dr_ladder_the_per_env_spread_widens_sharply_with.md
+- **Summary:** created 'Across the full DR ladder the per-env spread widens sharply with DR, the familia'
+
+## [2026-07-22T01:58:11.799085] add
+- **Pages:** every_reward_term_is_within_seed_scale_of_the_anchor_the_policy_.md
+- **Summary:** created 'Every reward term is within seed-scale of the anchor -- the policy is being paid'
+
+## [2026-07-22T01:58:11.799085] add
+- **Pages:** the_optimizer_machinery_is_indistinguishable_from_the_anchor_ent.md
+- **Summary:** updated 'The optimizer machinery is indistinguishable from the anchor: entropy, sigma flo'
+
+## [2026-07-22T01:58:11.799085] add
+- **Pages:** an_exhaustive_scan_of_all_policy_grad_noise_loss_actor_side_tags.md
+- **Summary:** created 'An exhaustive scan of all Policy/Grad/Noise/Loss actor-side tags common to both '
+
+## [2026-07-22T01:58:11.799085] add
+- **Pages:** the_surrogate_loss_doubling_is_not_a_health_flag_att_rp_total_re.md
+- **Summary:** created 'The surrogate-loss doubling is not a health flag: att_rp/total reward are flat ('
+
+## [2026-07-22T01:58:11.799085] add
+- **Pages:** the_value_critic_improved_9_0_and_the_cost_critic_too_8_9_releas.md
+- **Summary:** created 'The value critic IMPROVED (-9.0%) and the cost critic too (-8.9%): releasing the'
+
+## [2026-07-22T01:58:11.799085] add
+- **Pages:** the_encoder_is_healthy_and_slightly_more_active_latent_std_uncha.md
+- **Summary:** created 'The encoder is healthy and slightly more active: latent std unchanged, grad flow'
+
+## [2026-07-22T01:58:11.799085] add
+- **Pages:** encoder_z_mean_42_3_is_a_near_zero_base_artifact_both_means_0_02.md
+- **Summary:** created '`Encoder/z_mean` -42.3% is a near-zero-base artifact (both means ~-0.02 to -0.03'
+
+## [2026-07-22T01:58:11.799085] add
+- **Pages:** the_intervention_did_what_it_was_designed_to_do_and_more_than_th.md
+- **Summary:** created 'The intervention did what it was designed to do AND more than the "both dormant"'
+
+## [2026-07-22T01:58:11.799085] add
+- **Pages:** the_band_s_constraint_clause_is_satisfied_both_relaxed_guards_st.md
+- **Summary:** created "The band's constraint clause is SATISFIED: both relaxed guards stay satisfied (n"
+
+## [2026-07-22T01:58:11.799085] add
+- **Pages:** no_barrier_artifacts_0_spikes_max_0_125_so_the_constraint_accoun.md
+- **Summary:** created 'No barrier artifacts: 0 spikes, max -0.125, so the constraint accounting carries'
+
+## [2026-07-22T01:58:11.799085] add
+- **Pages:** a5_took_19_doraemon_expansions_vs_the_anchor_s_18_the_same_extra.md
+- **Summary:** created "A5 took 19 DORAEMON expansions vs the anchor's 18 -- the SAME extra-expansion pa"
+
+## [2026-07-22T01:58:11.799085] add
+- **Pages:** curriculum_health_matches_the_anchor_success_0_895_vs_0_877_ess_.md
+- **Summary:** created 'Curriculum health matches the anchor: success 0.895 vs 0.877, ess_ratio 0.75, mo'
+
+## [2026-07-22T01:58:11.799085] add
+- **Pages:** the_extra_expansion_lands_at_the_kl_cap_like_every_other_kl_step.md
+- **Summary:** created 'The extra expansion lands at the KL cap like every other (kl_step=0.12 at all 19'
+
+## [2026-07-22T01:58:11.799085] add
+- **Pages:** a5_generalizes_across_its_own_dr_ladder_the_same_way_the_anchor_.md
+- **Summary:** created 'A5 generalizes across its own DR ladder the same way the anchor family does: ste'
+
+## [2026-07-22T01:58:11.799085] add
+- **Pages:** the_soft_medium_hard_columns_are_graded_on_a5_s_own_wider_dr_box.md
+- **Summary:** created "The soft/medium/hard columns are graded on A5's OWN wider DR box (19 DORAEMON ex"
+
+## [2026-07-22T01:58:11.799085] add
+- **Pages:** the_hard_level_heavy_tail_roll_cv_257_pitch_280_is_the_dominant_.md
+- **Summary:** created 'The hard-level heavy tail (roll CV 257%, pitch 280%) is the dominant per-env fai'
+
