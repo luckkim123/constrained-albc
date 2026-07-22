@@ -5891,3 +5891,7 @@
 - **Pages:** the_hard_level_heavy_tail_roll_cv_257_pitch_280_is_the_dominant_.md
 - **Summary:** created 'The hard-level heavy tail (roll CV 257%, pitch 280%) is the dominant per-env fai'
 
+## [2026-07-22T04:04:07.570011] add
+- **Pages:** seed_noise_floor_on_none_level_attitude_is_huge_75_peak_to_peak_.md
+- **Summary:** created 'Seed-noise floor on none-level attitude is HUGE (~75% peak-to-peak on roll ss_error): the +/-5% adoption band is undecidable at n=1'
+
