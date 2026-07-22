@@ -9,8 +9,19 @@ import torch.nn as nn
 
 from constrained_albc.deploy.spec import ExportContractError, ExportSpec, ShapeSpec
 
-_CONTRACT = {
-    "channel_transform.0.weight": ShapeSpec((32, 69)),
+
+def _contract(obs_dim: int) -> dict[str, ShapeSpec]:
+    """Contract for one obs geometry. The obs width is campaign-dependent (see
+    teacher_actor._contract); the batch export passes the TEACHER's width, so a
+    student distilled against a different-width teacher fails here instead of
+    shipping a mispaired pack."""
+    return {
+        "channel_transform.0.weight": ShapeSpec((32, obs_dim)),
+        **_FIXED,
+    }
+
+
+_FIXED = {
     "channel_transform.0.bias": ShapeSpec((32,)),
     "conv.0.weight": ShapeSpec((64, 32, 3)),
     "conv.0.bias": ShapeSpec((64,)),
@@ -26,11 +37,16 @@ _CONTRACT = {
     "head.3.bias": ShapeSpec((9,)),
 }
 
+_CONTRACT = _contract(69)
+
 
 class StudentTCNSpec(ExportSpec):
     name = "student_tcn"
     npz_filename = "weights_tcn.npz"
     key_contract = _CONTRACT
+
+    def __init__(self, obs_dim: int = 69) -> None:
+        self.key_contract = _contract(obs_dim)
 
     def build_model(self, ckpt: dict, device) -> nn.Module:
         """Build StudentEncoderTCN and load student_state_dict.

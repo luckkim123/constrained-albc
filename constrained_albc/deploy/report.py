@@ -24,10 +24,24 @@ def build_report(
     lines.append("")
     lines.append("## Verified dimensions")
     lines.append("")
-    lines.append("- policy obs dim: 69 (channel_transform.0.weight input)")
-    lines.append("- action dim: 8 (actor.6.weight output)")
-    lines.append("- latent dim: 9 (head.3.weight output)")
-    lines.append("- teacher actor input: 78 (actor.0.weight input = obs69 + latent9)")
+    # Read off the round-tripped .npz entries -- these are the shapes the board will
+    # actually load. Hardcoding them made this section lie whenever the campaign's
+    # obs width changed (69 attitude-only vs 72 with use_bias_ema_obs).
+    shapes = {key: shape for rep in reports.values() for key, shape, _ in rep.entries}
+
+    def _dim(key: str, idx: int) -> str:
+        """'?' when the key is absent -- a partial report must not crash the render."""
+        return str(shapes[key][idx]) if key in shapes else "?"
+
+    obs_dim = _dim("channel_transform.0.weight", 1)
+    latent_dim = _dim("head.3.weight", 0)
+    lines.append(f"- policy obs dim: {obs_dim} (channel_transform.0.weight input)")
+    lines.append(f"- action dim: {_dim('actor.6.weight', 0)} (actor.6.weight output)")
+    lines.append(f"- latent dim: {latent_dim} (head.3.weight output)")
+    lines.append(
+        f"- teacher actor input: {_dim('actor.0.weight', 1)} "
+        f"(actor.0.weight input = obs{obs_dim} + latent{latent_dim})"
+    )
     lines.append("")
     for name, rep in reports.items():
         lines.append(f"## {name}: {rep.path}")

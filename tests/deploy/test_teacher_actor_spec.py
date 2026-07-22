@@ -52,6 +52,15 @@ def test_normalizer_shape_is_1x69():
     assert spec.key_contract["normalizer._std"].shape == (1, 69)
 
 
+def test_contract_follows_the_checkpoint_obs_width():
+    """The obs width is campaign-dependent (72 with use_bias_ema_obs). A fixed 69
+    made the batch export fail its own contract gate before writing a pack."""
+    spec = TeacherActorSpec(obs_dim=72, latent_dim=9)
+    assert spec.key_contract["normalizer._mean"].shape == (1, 72)
+    assert spec.key_contract["actor.0.weight"].shape == (256, 81)
+    assert spec.key_contract["actor.6.weight"].shape == (8, 64)  # fixed dims unchanged
+
+
 def test_map_filters_and_renames():
     spec = TeacherActorSpec()
     mapped = spec.map_state_dict(_FakeTeacher())

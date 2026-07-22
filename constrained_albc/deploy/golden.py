@@ -33,9 +33,15 @@ _INPUT_SCALE_LATENT = 0.3
 
 
 def export_golden_tcn(model: nn.Module, out_dir: str,
-                      *, history: int = 9, obs_dim: int = 69) -> dict[str, np.ndarray]:
+                      *, history: int = 9, obs_dim: int | None = None) -> dict[str, np.ndarray]:
     """Run StudentEncoderTCN forward, capturing every intermediate the numpy
-    engine reproduces. Layer path mirrors models.py:54-65 exactly."""
+    engine reproduces. Layer path mirrors models.py:54-65 exactly.
+
+    obs_dim defaults to the model's own input width -- it is campaign-dependent
+    (69 attitude-only, 72 with use_bias_ema_obs), so a fixed default silently
+    mis-shapes the probe input."""
+    if obs_dim is None:
+        obs_dim = model.channel_transform[0].weight.shape[1]
     os.makedirs(os.path.join(out_dir, "golden"), exist_ok=True)
     rng = np.random.RandomState(_TCN_SEED)
     win_np = (rng.randn(1, history, obs_dim) * _INPUT_SCALE_TCN).astype(np.float32)
@@ -79,12 +85,18 @@ def export_golden_tcn(model: nn.Module, out_dir: str,
 
 
 def export_golden_teacher(model: nn.Module, out_dir: str,
-                          *, obs_dim: int = 69, latent_dim: int = 9) -> dict[str, np.ndarray]:
+                          *, obs_dim: int | None = None,
+                          latent_dim: int | None = None) -> dict[str, np.ndarray]:
     """Run the teacher's normalizer + actor MLP on fixed-seed obs/latent, capturing
     the contract points. action is the RAW actor output (no clip).
 
     obs and latent are drawn from ONE RandomState(1) in order (obs first, latent
-    next), matching Mac test_npforward.py / the doc contract."""
+    next), matching Mac test_npforward.py / the doc contract. Both dims default to
+    the model's own geometry (see export_golden_tcn)."""
+    if obs_dim is None:
+        obs_dim = model.actor_obs_normalizer._mean.shape[1]
+    if latent_dim is None:
+        latent_dim = model.actor[0].weight.shape[1] - obs_dim
     os.makedirs(os.path.join(out_dir, "golden"), exist_ok=True)
     rng = np.random.RandomState(_TEACHER_SEED)
     obs_np = (rng.randn(1, obs_dim) * _INPUT_SCALE_OBS).astype(np.float32)
@@ -96,7 +108,7 @@ def export_golden_teacher(model: nn.Module, out_dir: str,
 
     with torch.no_grad():
         obs_normed = model.actor_obs_normalizer(obs)          # eps-free (x-mean)/std in effect
-        actor_input = torch.cat([obs_normed, latent], dim=-1)  # (1, obs+latent) = (1, 78)
+        actor_input = torch.cat([obs_normed, latent], dim=-1)  # (1, obs+latent)
         action = model.actor(actor_input)                     # raw MLP output, no clip
 
     g = {

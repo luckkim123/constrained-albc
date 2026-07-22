@@ -40,6 +40,14 @@ def test_contract_latent_dim_is_9():
     assert spec.key_contract["head.3.weight"].shape == (9, 128)
 
 
+def test_contract_follows_the_teacher_obs_width():
+    """The batch export passes the TEACHER's obs width here, so a student distilled
+    against a different-width teacher is rejected instead of shipping mispaired."""
+    spec = StudentTCNSpec(obs_dim=72)
+    assert spec.key_contract["channel_transform.0.weight"].shape == (32, 72)
+    assert spec.key_contract["head.3.weight"].shape == (9, 128)  # fixed dims unchanged
+
+
 def test_map_is_identity_and_fp32():
     spec = StudentTCNSpec()
     mapped = spec.map_state_dict(_FakeStudent())

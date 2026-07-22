@@ -23,24 +23,37 @@ _RENAME = {
     "actor.6.bias": "actor.6.bias",
 }
 
-_CONTRACT = {
-    "normalizer._mean": ShapeSpec((1, 69)),
-    "normalizer._std": ShapeSpec((1, 69)),
-    "actor.0.weight": ShapeSpec((256, 78)),
-    "actor.0.bias": ShapeSpec((256,)),
-    "actor.2.weight": ShapeSpec((128, 256)),
-    "actor.2.bias": ShapeSpec((128,)),
-    "actor.4.weight": ShapeSpec((64, 128)),
-    "actor.4.bias": ShapeSpec((64,)),
-    "actor.6.weight": ShapeSpec((8, 64)),
-    "actor.6.bias": ShapeSpec((8,)),
-}
+def _contract(obs_dim: int, latent_dim: int) -> dict[str, ShapeSpec]:
+    """Contract for one obs/latent geometry. The obs width is campaign-dependent
+    (attitude-only teacher = 69; +3 with use_bias_ema_obs = 72), so the caller
+    passes the width read off the checkpoint. Everything else is fixed
+    architecture and stays a hard assertion."""
+    return {
+        "normalizer._mean": ShapeSpec((1, obs_dim)),
+        "normalizer._std": ShapeSpec((1, obs_dim)),
+        "actor.0.weight": ShapeSpec((256, obs_dim + latent_dim)),
+        "actor.0.bias": ShapeSpec((256,)),
+        "actor.2.weight": ShapeSpec((128, 256)),
+        "actor.2.bias": ShapeSpec((128,)),
+        "actor.4.weight": ShapeSpec((64, 128)),
+        "actor.4.bias": ShapeSpec((64,)),
+        "actor.6.weight": ShapeSpec((8, 64)),
+        "actor.6.bias": ShapeSpec((8,)),
+    }
+
+
+_CONTRACT = _contract(69, 9)
 
 
 class TeacherActorSpec(ExportSpec):
     name = "teacher_actor"
     npz_filename = "weights_teacher.npz"
     key_contract = _CONTRACT
+
+    def __init__(self, obs_dim: int = 69, latent_dim: int = 9) -> None:
+        # Instance contract shadows the class default; the batch export passes the
+        # dims inferred from the teacher checkpoint.
+        self.key_contract = _contract(obs_dim, latent_dim)
 
     def build_model(self, ckpt: dict, device) -> nn.Module:
         """Not used: the teacher is built by the engine (Task 5) from the checkpoint

@@ -95,10 +95,16 @@ def main(argv: list[str] | None = None) -> int:
         assert args.student_ckpt and args.teacher_ckpt, \
             "--batch needs --student-ckpt and --teacher-ckpt"
         out_dir = resolve_out_dir(args)
-        s_spec, t_spec = StudentTCNSpec(), TeacherActorSpec()
+        # Build the teacher first: it is the authority on the pack's obs/latent
+        # geometry (campaign-dependent), and the student contract is checked against
+        # the SAME width so a mispaired student fails here instead of shipping.
+        t_model = build_teacher_model(args.teacher_ckpt, args.device)
+        obs_dim = t_model.actor_obs_normalizer._mean.shape[1]
+        latent_dim = t_model.actor[0].weight.shape[1] - obs_dim
+        s_spec = StudentTCNSpec(obs_dim=obs_dim)
+        t_spec = TeacherActorSpec(obs_dim=obs_dim, latent_dim=latent_dim)
         s_model = build_student_model(s_spec, args.student_ckpt, args.device)
         s_rep = export_from_state_dict(s_spec, s_model, out_dir)
-        t_model = build_teacher_model(args.teacher_ckpt, args.device)
         t_rep = export_from_state_dict(t_spec, t_model, out_dir)
         if args.report:
             from constrained_albc.deploy.report import build_report
@@ -112,7 +118,7 @@ def main(argv: list[str] | None = None) -> int:
                                   "rationale": "final teacher checkpoint"},
             }
             golden_status = (
-                "Skipped: the 69D observation assembly lives in albc_env.py (the "
+                f"Skipped: the {obs_dim}D observation assembly lives in albc_env.py (the "
                 "simulation environment), not in the student code, so it cannot be "
                 "lifted byte-identically on an export host. The exported weights are "
                 "independently verified value-for-value against the source checkpoints "
