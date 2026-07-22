@@ -74,6 +74,27 @@ from constrained_albc.envs.main.student.runner import StudentRunner
 logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger("train_student")
 
+# simplified: cuDNN is disabled because this container's cuDNN is MISMATCHED --
+# nvidia_cudnn_cu13 9.20.0.48 + nvidia_cuda_runtime 13.0.96 are installed against
+# torch 2.7.0+cu128 (CUDA 12.8). cuDNN then fails to initialise against torch's
+# 12.8 context: any conv1d raises CUDNN_STATUS_NOT_INITIALIZED even on an idle GPU
+# with a 21 MB tensor, and CUDNN_LOGERR_DBG names the cause exactly --
+# "cudnnCreate(): cudaGetDeviceCount(&count) != cudaSuccess". Plain CUDA matmul and
+# the native (cudnn-off) conv both work, so only conv is affected. The student TCN
+# is this repo's only conv (teachers are pure MLP), which is why 5000-iteration
+# teacher runs are unaffected and this went unnoticed since the cu13 packages
+# landed 2026-07-12 -- the last working distillation is 2026-06-29.
+#
+# Correctness is unaffected: native conv is what the deployed numpy runtime mirrors
+# (deploy/golden.py generates goldens on CPU precisely because cuDNN conv differs
+# by ~1e-4). Cost is SPEED: time_train goes 0.243s -> ~17s per iteration (~70x), so
+# a 1000-iteration distillation takes ~4.9h instead of ~13min.
+#
+# Upgrade path: replace nvidia-cudnn-cu13 with the cu12 build matching torch's
+# CUDA 12.8, verify `python -c "import torch,torch.nn as nn;
+# nn.Conv1d(32,64,3).cuda()(torch.randn(64,32,9,device='cuda'))"`, then delete this.
+torch.backends.cudnn.enabled = False
+
 
 @hydra_task_config(args_cli.task, "rsl_rl_cfg_entry_point")
 def main(env_cfg: DirectRLEnvCfg, _agent_cfg) -> None:
