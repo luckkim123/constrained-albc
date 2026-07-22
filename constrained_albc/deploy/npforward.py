@@ -88,7 +88,7 @@ def _sigmoid(x):
 
 # ---------------------------------------------------------------- modules
 class TeacherActor:
-    """obs_normalizer + actor MLP (78 -> 256 -> 128 -> 64 -> 8, ELU between).
+    """obs_normalizer + actor MLP (obs+latent -> 256 -> 128 -> 64 -> 8, ELU between).
 
     Normalization mirrors rsl_rl EmpiricalNormalization.forward EXACTLY:
         (x - mean) / (std + eps),  eps = 0.01
@@ -100,8 +100,8 @@ class TeacherActor:
     NORM_EPS = 0.01
 
     def __init__(self, w):
-        self.mean = w["normalizer._mean"]   # (1, 69)
-        self.std = w["normalizer._std"]     # (1, 69)  -- sqrt(var), eps NOT folded in
+        self.mean = w["normalizer._mean"]   # (1, obs)
+        self.std = w["normalizer._std"]     # (1, obs)  -- sqrt(var), eps NOT folded in
         self.layers = [
             (w["actor.0.weight"], w["actor.0.bias"]),
             (w["actor.2.weight"], w["actor.2.bias"]),
@@ -113,7 +113,7 @@ class TeacherActor:
         return (obs - self.mean) / (self.std + self.NORM_EPS)
 
     def act(self, obs_normalized, latent):
-        x = np.concatenate([obs_normalized, latent], axis=-1)  # (b, 78)
+        x = np.concatenate([obs_normalized, latent], axis=-1)  # (b, obs+latent)
         for i, (wt, b) in enumerate(self.layers):
             x = linear(x, wt, b)
             if i < len(self.layers) - 1:   # ELU between, none after last
@@ -125,7 +125,7 @@ class StudentTCN:
     """channel_transform -> 3x(Conv1d+ELU) -> head(Linear+ELU+LN+Linear) -> softsign."""
 
     def __init__(self, w):
-        self.ct_w = w["channel_transform.0.weight"]   # (32, 69)
+        self.ct_w = w["channel_transform.0.weight"]   # (32, obs)
         self.ct_b = w["channel_transform.0.bias"]
         self.convs = [
             (w["conv.0.weight"], w["conv.0.bias"]),
@@ -137,7 +137,11 @@ class StudentTCN:
         self.h3_w, self.h3_b = w["head.3.weight"], w["head.3.bias"]
 
     def forward(self, win):
-        """win: (batch, H, 69) -> latent (batch, 9)."""
+        """win: (batch, H, obs) -> latent (batch, latent).
+
+        The window must ALREADY BE NORMALIZED with the teacher's normalizer -- the
+        student is distilled on normalized input and carries no normalizer of its own.
+        """
         b, h, d = win.shape
         x = elu(linear(win.reshape(b * h, d), self.ct_w, self.ct_b)).reshape(b, h, -1)
         x = np.transpose(x, (0, 2, 1))          # (b, 32, H)
@@ -154,7 +158,7 @@ class StudentGRU:
     """stateful GRU -> head(Linear+ELU+LN+Linear) -> softsign. Carry hidden across calls."""
 
     def __init__(self, w):
-        self.w_ih = w["gru.weight_ih_l0"]   # (384, 69)
+        self.w_ih = w["gru.weight_ih_l0"]   # (384, obs)
         self.w_hh = w["gru.weight_hh_l0"]   # (384, 128)
         self.b_ih = w["gru.bias_ih_l0"]
         self.b_hh = w["gru.bias_hh_l0"]
@@ -167,7 +171,7 @@ class StudentGRU:
         return np.zeros((batch, self.hidden_size), dtype=np.float32)
 
     def step(self, x_t, hidden):
-        """x_t: (batch, 69), hidden: (batch, 128). Returns (latent (batch,9), new hidden)."""
+        """x_t: (batch, obs) NORMALIZED, hidden: (batch, 128). Returns (latent, new hidden)."""
         hidden = gru_cell(x_t, hidden, self.w_ih, self.w_hh, self.b_ih, self.b_hh)
         x = elu(linear(hidden, self.h0_w, self.h0_b))
         x = layer_norm(x, self.ln_g, self.ln_b)
