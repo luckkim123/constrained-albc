@@ -1,16 +1,16 @@
 ---
 title: "PLANT FIX (needs-apply-before-retrain): main hull volume 0.009 -> 0.00790 recenters sim net buoyancy +10.25 N -> neutral, matching 2026-07-06 onboard measurement"
-tags: ["buoyancy", "plant-fix", "sim-to-real", "net-buoyancy", "hull-volume", "pre-retrain-gate", "marinelab", "teacher-baseline", "user-decision", "partial-correction", "launch-gate", "measured"]
+tags: ["buoyancy", "plant-fix", "sim-to-real", "net-buoyancy", "hull-volume", "pre-retrain-gate", "marinelab", "teacher-baseline", "user-decision", "partial-correction", "launch-gate", "measured", "applied", "buoyfix"]
 created: 2026-07-16T12:13:44.284365
-updated: 2026-07-21T03:37:54.802930
+updated: 2026-07-22T04:52:11.692425
 sources: ["onboard_measured_2026_07_06", "albc.py:64", "paper-spec-table"]
 links: ["onboard_measured_2026_07_06_arm_step_response_valid_sim_zeta_0_7.md", "open_actionable_ledger_read_before_any_sim_plant_code_change_or_.md"]
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 70
-qualityReasons: ["no-source-marker", "generic-only-tags"]
-status: needs-apply-before-retrain
+qualityScore: 100
+qualityReasons: []
+status: resolved
 blocked-on: "UNBLOCKED 2026-07-21: both user questions closed (buoy-net reading settled via URDF geometry; operated dry mass MEASURED 10.592 kg with buoy attached, no ballast -> mass model correct within 0.22%, so the fix is volume-only as scoped). Remaining is SEQUENCING, not information: apply only AFTER the last Stage-A eval (A4, then A5), because marinelab is a shared editable install and a mid-Stage-A swap would eval old-plant policies on the new plant. Still to decide: new run_group/wandb purpose vs teacher_baseline_posttam."
 ---
 
@@ -123,3 +123,29 @@ new purpose.
 ## Update (2026-07-21T03:37:54.802930)
 
 (status refresh only -- the measurement, the arithmetic, and the sequencing hazard are in the 2026-07-21 RESOLVED section above)
+
+---
+
+## Update (2026-07-22T04:52:11.692425)
+
+
+## APPLIED 2026-07-22 (apply-gate CLOSED, status -> resolved)
+
+Applied after ALL Stage-A evals completed (A1-A5 done, seed floor done). Change:
+`marinelab/marinelab/assets/albc/albc.py` `ALBCHydrodynamicsCfg.volume` 0.009 -> 0.00790.
+- marinelab branch `exp/buoyancy-recenter`, commit **7d45c2c**; pre-fix baseline tag
+  `baseline-260716-buoyancy` (rule-02 isolation, main untouched).
+- Verified: net-neutral hull 0.00790 + buoy 0.00268 = 0.01058 m^3 -> 103.6 N ~= weight
+  104.10 N; live-run `DR/buoyancy_force_mean` reads ~78 N (was ~88).
+- Corrected-plant campaign LAUNCHED under wandb purpose **`teacher_baseline_buoyfix`**
+  (user decision 2026-07-22: NEW name, since the plant change breaks none-level
+  comparability with the `teacher_baseline_posttam` series). 3-seed paired-seed anchor
+  (seeds 30/31/32) started on the workstation.
+- DGX must HAND-REPLICATE the one-line fix (workstation<->DGX transfer is artifacts-only);
+  see `/workspace/.sp/plans/2026-07-22-DGX-handoff-e3-scaleup.md`.
+
+PHYSICAL NOTE (open sub-thread): 0.00790 < the earlier geometric "pure cylinder 0.00827"
+estimate, so that geometric figure is suspect (likely over-estimated). This value is
+EMPIRICAL (measurement-matched net buoyancy), not derived. Upgrade path: a real hull
+displacement measurement to reconcile the geometric estimate.
+
