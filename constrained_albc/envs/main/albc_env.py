@@ -1571,6 +1571,7 @@ class ALBCEnv(DirectRLEnv):
                 env_ids=env_ids,
                 thrust_coeff_scale=rand_cfg.thrust_coefficient_scale,
                 time_constant_scale=rand_cfg.time_constant_scale,
+                max_thrust_scale=rand_cfg.max_thrust_scale,
             )
 
         # Thruster fault: resample per-env per-thruster health for the reset envs.
@@ -1673,6 +1674,7 @@ class ALBCEnv(DirectRLEnv):
                 env_ids=env_ids,
                 thrust_coeff_scale=rand_cfg.thrust_coefficient_scale,
                 time_constant_scale=rand_cfg.time_constant_scale,
+                max_thrust_scale=rand_cfg.max_thrust_scale,
             )
 
     def get_eval_snapshot(self) -> dict[str, float]:

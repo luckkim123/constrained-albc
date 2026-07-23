@@ -145,3 +145,26 @@ def test_obs_noise_scale_range_sweeps_with_dr_level():
     lo1, hi1 = dr_config.build_dr_config(1.0).obs_noise_scale_range
     assert (lo0, hi0) == (0.0, 0.0)      # nominal: no extra noise
     assert lo1 == pytest.approx(0.0) and hi1 > 0.9  # hard: sweeps toward full extra std
+
+
+def test_max_thrust_scale_collapses_to_nominal_at_none():
+    """B0c: the saturation-ceiling band MUST collapse to (1.0, 1.0) at the none level.
+
+    This is the guard for the defect found while designing B0c. `build_dr_config`
+    only touches fields listed in `_DR_TUPLE_FIELDS`; had `max_thrust_scale` been
+    added to the env cfg without being registered there and in
+    `_TRUE_NOMINAL_PHYSICS`, it would have kept its training range (0.85, 1.15) at
+    EVERY level. The B0c policy would then have been graded with its band live while
+    the anchor was graded at a fixed 50.0 N -- a different-exam comparison, which is
+    exactly what a paired verdict must not be.
+    """
+    lo0, hi0 = dr_config.build_dr_config(0.0).max_thrust_scale
+    lo1, hi1 = dr_config.build_dr_config(1.0).max_thrust_scale
+
+    # Nominal (scale=0.0): band collapses -> fixed 50.0 N ceiling, same exam as the anchor
+    assert lo0 == pytest.approx(1.0)
+    assert hi0 == pytest.approx(1.0)
+
+    # Hard (scale=1.0): the full sourced +/-15% band (42.5-57.5 N)
+    assert lo1 == pytest.approx(0.85)
+    assert hi1 == pytest.approx(1.15)

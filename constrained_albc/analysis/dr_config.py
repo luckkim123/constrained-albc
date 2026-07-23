@@ -87,6 +87,11 @@ _DR_TUPLE_FIELDS = [
     "payload_cog_offset_z",
     "thrust_coefficient_scale",
     "time_constant_scale",
+    # Saturation-ceiling band (campaign B0c). MUST be listed here: the interpolation
+    # loop below only touches fields in this list, so an unlisted field keeps its
+    # training range at EVERY level -- including none, which would grade a B0c policy
+    # with its band live against an anchor graded at a fixed 50.0 N (different exams).
+    "max_thrust_scale",
     # r13: ocean current strength is DORAEMON-managed during training. Eval must
     # also scale this range with DR level so none/soft/medium/hard match training
     # curriculum stages. Nominal=(0,0) (no current), hard=(0,1) (full range).
@@ -126,6 +131,9 @@ _TRUE_NOMINAL_PHYSICS: dict[str, float] = {
     "joint_effort_limit_range": 1.0,
     "thrust_coefficient_scale": 1.0,
     "time_constant_scale": 1.0,
+    # B0c: nominal ceiling = the unscaled cfg.max_thrust (50.0 N), so none collapses
+    # the band to (1.0, 1.0) and the B0c policy sits the same exam as the anchor.
+    "max_thrust_scale": 1.0,
     # Offset fields (centered)
     "cob_offset_x": 0.0,
     "cob_offset_y": 0.0,

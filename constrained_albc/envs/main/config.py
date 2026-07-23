@@ -229,6 +229,20 @@ class DomainRandomizationCfg:
     # -- Thruster --
     thrust_coefficient_scale: tuple[float, float] = (0.7, 1.3)
     time_constant_scale: tuple[float, float] = (0.7, 1.3)
+    # Saturation-ceiling band (campaign B0c). DISTINCT from thrust_coefficient_scale:
+    # the coefficient is a gain applied BEFORE the clamp, so scaling it moves where in
+    # the command range saturation starts but leaves every env saturating at the same
+    # force; this scales the clamp bound itself (max_thrust, 50.0 N), i.e. the
+    # achievable wrench. Until B0c this was the ONLY physics parameter in the plant
+    # with no DR band at all, which turned any estimation error in it into a
+    # systematic bias applied identically to every env.
+    # Band SOURCED, not a round number: ~14% from the on-vehicle voltage window
+    # (14-18 V interpolated on the BlueRobotics T200 published 12/16/20 V curves) plus
+    # ~5% independent-lab curve-matching uncertainty -> +/-15% = 42.5-57.5 N. The real
+    # pack is a 4S LiPo (~14-16.8 V working window), NARROWER than the source window,
+    # so the band is conservative. See omx wiki `sim_hydro_nominal...`.
+    # (1.0, 1.0) = OFF and numerically identical to the pre-B0c fixed ceiling.
+    max_thrust_scale: tuple[float, float] = (0.85, 1.15)
 
     # Control-action transport delay (discrete N-step lag on the applied
     # action) as integer control steps; 1 step = 20 ms @ 50 Hz.
