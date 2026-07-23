@@ -13,11 +13,19 @@
 > [`observation-space.md`](observation-space.md) — this page only gives the
 > top-level numbers.
 
-## Registered tasks (7)
+## Registered tasks (11)
+
+`envs/main` obs is **72D**, not the 69D its cfg source declares: `use_bias_ema_obs` has been
+ON since 2026-07-16 and appends the 3D bias-EMA at cfg-construction time. Runners resolve
+this through `sync_policy_obs_dim`; a hardcoded 69 in an agent cfg aborts the run.
 
 | Task ID | Env package | Obs dim (policy / privileged / action) | Purpose / status | Typical entry command |
 |---|---|---|---|---|
-| `Isaac-ConstrainedALBC-TRPO-v0` | `envs/main` | 69D / 28D / 8D | **Default.** Attitude-only ALBC (roll/pitch attitude + yaw-rate, no lin_vel tracking). ConstraintTRPO + IPO + asymmetric encoder. | `python scripts/train.py --task Isaac-ConstrainedALBC-TRPO-v0 --num_envs 4096 --max_iterations 5000 --logger wandb --log_project_name albc_trpo` |
+| `Isaac-ConstrainedALBC-TRPO-v0` | `envs/main` | 72D / 28D / 8D | **Default.** Attitude-only ALBC (roll/pitch attitude + yaw-rate, no lin_vel tracking). ConstraintTRPO + IPO + asymmetric encoder. | `python scripts/train.py --task Isaac-ConstrainedALBC-TRPO-v0 --num_envs 4096 --max_iterations 5000 --logger wandb --log_project_name albc_trpo` |
+| `Isaac-ConstrainedALBC-NoEncoder-v0` | `envs/main` | 72D / 28D / 8D | Ablation baseline 1 — TRPO + IPO, encoder removed (DR/reward/constraints unchanged). | `python scripts/train.py --task Isaac-ConstrainedALBC-NoEncoder-v0 --num_envs 4096 --logger wandb --log_project_name albc_ablation` |
+| `Isaac-ConstrainedALBC-PPO-v0` | `envs/main` | 72D / 28D / 8D | Ablation baseline 2 — standard PPO + asymmetric critic, no encoder, no IPO constraint. | `python scripts/train.py --task Isaac-ConstrainedALBC-PPO-v0 --num_envs 4096 --logger wandb --log_project_name albc_ablation` |
+| `Isaac-ConstrainedALBC-TRPO-NoIPO-v0` | `envs/main` | 72D / 28D / 8D | Ablation variant 3 — encoder + TRPO with the IPO barrier disabled (empty constraint list). | `python scripts/train.py --task Isaac-ConstrainedALBC-TRPO-NoIPO-v0 --num_envs 4096 --logger wandb --log_project_name albc_ablation` |
+| `Isaac-ConstrainedALBC-PPO-Enc-v0` | `envs/main` | 72D / 28D / 8D | Ablation variant 4 — encoder + standard PPO, no IPO. | `python scripts/train.py --task Isaac-ConstrainedALBC-PPO-Enc-v0 --num_envs 4096 --logger wandb --log_project_name albc_ablation` |
 | `Isaac-ConstrainedALBC-Full-TRPO-v0` | `envs/full_dof` | 87D / 24D / 8D | Legacy. Full 6-DOF (velocity + attitude) tracking, same algorithm as the default (production reference for full-DOF experiments). | `python scripts/train.py --task Isaac-ConstrainedALBC-Full-TRPO-v0 --num_envs 4096 --max_iterations 5000 --logger wandb --log_project_name albc_trpo` |
 | `Isaac-ConstrainedALBC-Full-NoEncoder-v0` | `envs/full_dof` | 87D / 24D / 8D | Legacy ablation baseline 1 — TRPO + IPO, encoder removed (DR/reward/constraints unchanged). | `python scripts/train.py --task Isaac-ConstrainedALBC-Full-NoEncoder-v0 --num_envs 4096 --logger wandb --log_project_name albc_ablation` |
 | `Isaac-ConstrainedALBC-Full-PPO-v0` | `envs/full_dof` | 87D / 24D / 8D | Legacy ablation baseline 2 — standard PPO + asymmetric critic, no encoder, no IPO constraint. | `python scripts/train.py --task Isaac-ConstrainedALBC-Full-PPO-v0 --num_envs 4096 --logger wandb --log_project_name albc_ablation` |

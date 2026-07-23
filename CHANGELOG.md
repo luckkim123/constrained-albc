@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The 4 attitude-only ablation arms are registered (2026-07-23):
+  `Isaac-ConstrainedALBC-{NoEncoder,PPO,TRPO-NoIPO,PPO-Enc}-v0` under `envs/main`,
+  mirroring the `Full-*` id scheme. The runner cfgs, `ALBCNoConstraintEnvCfg` and the
+  `paths.py` task-short mapping already existed -- only the `gym.register` blocks were
+  missing, so the attitude-only comparison set could not be launched at all. All five
+  main tasks smoke-pass at 2 iters x 16 envs. `docs/reference/task-reference.md` (the
+  single task-ID enumeration) now lists 11.
+
 - `constrained_albc/envs/_core/` (P5.6, 2026-07-13): shared algorithm core extracted from
   the main/full_dof parallel trees -- constraint_trpo, encoder (actor_critic_encoder,
   actor_critic_asym_constrained, _policy_base, _z_ablation), runners
@@ -62,6 +70,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `policy_obs_dim` auto-sync only covered one of the two runners (2026-07-23): it lived
+  inside `ConstraintEncoderRunner.__init__`, but PPO-Enc reaches the same encoder policy
+  through `OnPolicyDoraemonRunner`, which had no `__init__` at all. The cfg default 69 is
+  the pre-bias-ema width and `use_bias_ema_obs` (ON since 458eaaa) makes the env 72D
+  without touching the agent cfg, so `Isaac-ConstrainedALBC-PPO-Enc-v0` aborted at startup
+  with `Policy obs dim 72 != expected 69`. Fixed at the shared point rather than by
+  bumping the constant -- `sync_policy_obs_dim` now lives in `_core/runners/__init__.py`
+  and both runners call it. Bumping 69->72 in the cfg would re-break the moment the toggle
+  is flipped off, and there are three such hardcoded 69s. Verified at the network level:
+  the PPO-Enc checkpoint's `actor.0.weight` is `in_features=81` = 72 obs + 9 latent (a
+  stale 69 gives 78). New tests cover the DORAEMON-runner path, including that a
+  plain-PPO `ActorCritic` cfg must NOT gain the key.
+- `test_bias_ema_obs.py` still asserted `use_bias_ema_obs is False` and had been red since
+  458eaaa adopted True; the assertion now pins the adopted value and explains why
+  `observation_space` legitimately stays 69 in the cfg source (it is the pre-bump width
+  `apply_bias_ema_obs()` validates).
 - Thruster allocation matrix was a physically wrong plant model (2026-07-14, blocks the
   post-TAM baseline retrain): the horizontal channels were mis-modeled two ways a column
   permutation alone (commit 238932c) could not fix. (1) The ESC permutation mis-assigned 3
