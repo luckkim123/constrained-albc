@@ -2,14 +2,14 @@
 title: "Next from-scratch retrain manifest: what rides on the post-TAM baseline retrain (sim fixes + learning-dynamics experiments)"
 tags: ["albc", "envs-main", "retrain-campaign", "sim-to-real-audit", "baseline-retrain", "manifest", "index", "experiment-roster", "from-scratch", "constraint-trpo", "velocity-limit", "reward-weight-tuning", "two-phase"]
 created: 2026-07-05T08:06:16.009224
-updated: 2026-07-12T13:45:17.487104
+updated: 2026-07-23T07:42:44.711281
 sources: []
 links: ["experiment_result_recording_location_experiments_tree_is_ssot_no.md", "tam_columns_must_match_robot_firmware_esc_channel_order_reorder_.md", "encoder_priv_obs_normalization_bounds_must_be_dr_derived_not_har.md", "thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md", "leaky_integral_and_ema_bias_carry_over_the_mid_episode_command_r.md", "encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md", "action_bounding_is_justified_raw_gaussian_external_clamp_tanh_ru.md", "arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md", "real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md", "next_experiment_workflow_pick_a_baseline_train_once_then_re_tune.md"]
 category: convention
 confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
 ---
 
 # Next from-scratch retrain manifest: what rides on the post-TAM baseline retrain (sim fixes + learning-dynamics experiments)
@@ -128,3 +128,9 @@ Landed via merge "P4 sim-fix batch" (constrained-albc cd192b7, marinelab 02c1007
 | Thruster nonlinear curve (deadband + signed-square) | merged to main OFF-by-default (P2); STAYS OFF for the baseline per the curve card's 2026-07-02 keep-off addendum (unmeasured plant model). The consolidation plan's "recommend ON" missed that addendum -- addendum wins. |
 
 All of these change nominal dynamics or learning dynamics -> the from-scratch retrain requirement is unchanged. Record the full delta list in the campaign DESIGN.md at group creation per the migration note.
+
+---
+
+## Update (2026-07-23T07:42:44.711281)
+
+2026-07-23 curation: roster correction -- the TAM-horizontal row was shown pending/provisional, but it was actually APPLIED 2026-07-14 (commit 3bb042b) per the tam_columns_must and open_actionable_ledger pages.

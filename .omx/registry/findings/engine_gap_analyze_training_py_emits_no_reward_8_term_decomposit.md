@@ -2,12 +2,15 @@
 title: "engine-gap: analyze_training.py emits no reward 8-term decomposition scalars"
 tags: ["engine-gap", "reward-decomposition", "analyze_training", "constraint-naming", "CORRECTION", "implemented", "constraint", "reward", "naming", "verification", "anti-pattern", "tb-tags", "absorbed-into-skill", "debugging"]
 created: 2026-06-06T09:15:01.438112
-updated: 2026-07-06T02:16:31.477399
+updated: 2026-07-23T07:42:44.558584
 sources: ["diagnose-20260606-180317", "diagnose-20260606-183657"]
 links: []
 category: decision
 confidence: high
 schemaVersion: 1
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
+status: resolved
 ---
 
 # engine-gap: analyze_training.py emits no reward 8-term decomposition scalars
@@ -54,3 +57,9 @@ Hard-won 2026-06-06: running analyze_training.py is NOT the same as USING it. Th
 ## Update (2026-06-06T09:46:28.288343)
 
 [ABSORBED INTO SKILL 2026-06-06] This lesson is now a hard step in the exp-analyze skill, so future sessions get it by default rather than re-learning it. exp-analyze SKILL.md (omx commit 0de5710, branch feat/engine-output-verify) gained a 'Verify the engine's output — an empty cell is a HYPOTHESIS, not a fact' section right after the run-the-engine MUST: when a group reads 0/empty, dump ea.Tags()['scalars'], grep the prefix; if the tags exist, extract via 'omx reduce tb-final' + file an engine-gap, and only genuinely-absent tags justify 'no data'. The completeness gate was also tightened: 'the engine reported it empty' is NOT a valid reason to mark a group N/A — it must pass this cross-check first. The underlying naming mismatch that triggered this lesson is itself now FIXED in the engine (see engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit, [STATUS] implemented): analyze_training.py discovers Constraint/margin/* + viol/* and prints constraints=10 on the teacher run. So this anti-pattern is closed on both ends — the engine no longer mis-scans, and the skill cross-checks if any engine ever does again.
+
+---
+
+## Update (2026-07-23T07:42:44.558584)
+
+2026-07-23 curation: status set to resolved -- body confirms implemented 2026-06-06 and absorbed into the exp-analyze skill; sibling engine-gap pages use this field.

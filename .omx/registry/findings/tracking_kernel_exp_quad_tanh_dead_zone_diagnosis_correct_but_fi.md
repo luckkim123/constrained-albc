@@ -2,16 +2,16 @@
 title: "Tracking kernel exp-quad-tanh: dead-zone diagnosis correct but fix is on wrong axis (yaw not att_rp); the exp+L1+tanh stack has no literature precedent"
 tags: ["reward", "tracking", "kernel", "dead-zone", "att_rp", "literature", "exp-design", "rule-03-gate"]
 created: 2026-07-08T23:49:37.492504
-updated: 2026-07-21T03:34:32.487023
+updated: 2026-07-23T07:42:45.406849
 sources: []
 links: []
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
 status: resolved
-blocked-on: "Parked under the 2026-07-20 batch-pass decision."
+blocked-on: "CLOSED 2026-07-21 with explicit reopen triggers (read at DR none in the run's experiments/ eval tree): (1) roll or pitch ss_error >= 1.0 deg with ss_jitter staying low; (2) a sub-noise-floor attitude residual becomes the binding constraint on a real deliverable; (3) attitude-triggered early termination gets wired up (termination_penalty=0.0); (4) ss_jitter climbs above ss_error on the attitude axes. None currently met (roll jitter 0.094 < ss_error 0.215)."
 ---
 
 # Tracking kernel exp-quad-tanh: dead-zone diagnosis correct but fix is on wrong axis (yaw not att_rp); the exp+L1+tanh stack has no literature precedent
@@ -163,3 +163,8 @@ the bias_ema observability page, and the `none`-level residual is sub-noise-floo
 Also inert in every shipped config: `lin_ratio` is 0 everywhere, so the L1 leg of the stack
 this page names does not actually run.
 
+---
+
+## Update (2026-07-23T07:42:45.406849)
+
+2026-07-23 curation: replaced stale blocked-on -- field said 'parked under the 2026-07-20 batch-pass decision' but the body's 2026-07-21 update CLOSED the lead with explicit reopen triggers; referencing those triggers instead.

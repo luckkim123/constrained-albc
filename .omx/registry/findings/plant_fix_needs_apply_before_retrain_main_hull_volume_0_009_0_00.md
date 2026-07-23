@@ -2,16 +2,16 @@
 title: "PLANT FIX (needs-apply-before-retrain): main hull volume 0.009 -> 0.00790 recenters sim net buoyancy +10.25 N -> neutral, matching 2026-07-06 onboard measurement"
 tags: ["buoyancy", "plant-fix", "sim-to-real", "net-buoyancy", "hull-volume", "pre-retrain-gate", "marinelab", "teacher-baseline", "user-decision", "partial-correction", "launch-gate", "measured", "applied", "buoyfix"]
 created: 2026-07-16T12:13:44.284365
-updated: 2026-07-22T04:52:11.692425
+updated: 2026-07-23T07:42:44.943780
 sources: ["onboard_measured_2026_07_06", "albc.py:64", "paper-spec-table"]
 links: ["onboard_measured_2026_07_06_arm_step_response_valid_sim_zeta_0_7.md", "open_actionable_ledger_read_before_any_sim_plant_code_change_or_.md"]
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
 status: resolved
-blocked-on: "UNBLOCKED 2026-07-21: both user questions closed (buoy-net reading settled via URDF geometry; operated dry mass MEASURED 10.592 kg with buoy attached, no ballast -> mass model correct within 0.22%, so the fix is volume-only as scoped). Remaining is SEQUENCING, not information: apply only AFTER the last Stage-A eval (A4, then A5), because marinelab is a shared editable install and a mid-Stage-A swap would eval old-plant policies on the new plant. Still to decide: new run_group/wandb purpose vs teacher_baseline_posttam."
+blocked-on: "RESOLVED 2026-07-22: naming question answered -- run_group/wandb purpose settled as teacher_baseline_buoyfix; apply-gate closed."
 ---
 
 # PLANT FIX (needs-apply-before-retrain): main hull volume 0.009 -> 0.00790 recenters sim net buoyancy +10.25 N -> neutral, matching 2026-07-06 onboard measurement
@@ -149,3 +149,8 @@ estimate, so that geometric figure is suspect (likely over-estimated). This valu
 EMPIRICAL (measurement-matched net buoyancy), not derived. Upgrade path: a real hull
 displacement measurement to reconcile the geometric estimate.
 
+---
+
+## Update (2026-07-23T07:42:44.943780)
+
+2026-07-23 curation: cleared stale blocked-on -- the naming question flagged as 'still to decide' was already answered in the 2026-07-22 update.

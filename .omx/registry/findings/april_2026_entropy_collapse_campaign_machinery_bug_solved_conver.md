@@ -2,7 +2,7 @@
 title: "April 2026 entropy-collapse campaign: machinery bug SOLVED, converged-sigma collapse NOT -- and min_std is the wrong lever"
 tags: ["entropy", "exploration", "noise_std", "min_std", "entropy_coef", "per-dim", "legacy-campaign", "april-2026", "erc-trpo", "limit-cycle", "backlog-correction", "rule03", "std_min", "posttam", "zero-gpu", "log_std", "Z1", "Z1-closed"]
 created: 2026-07-20T06:08:58.240967
-updated: 2026-07-23T06:37:44.974067
+updated: 2026-07-23T07:42:44.480461
 sources: ["docs/reference/experiments-archive.md", "docs/reference/experiments-index.json", "3132605", "d7c65c3", "885327a", "26b2f54", "constraint_encoder_runner.py:366-367", "TB Noise/std_min 5 posttam runs", "diagnose-20260721-020253", "model_7999.pt", "model_4999.pt"]
 links: ["n_gt20_and_os_env_are_overshoot_percent_of_step_magnitude_not_de.md"]
 category: decision
@@ -11,7 +11,7 @@ schemaVersion: 1
 qualityScore: 70
 qualityReasons: ["no-source-marker", "generic-only-tags"]
 status: resolved
-blocked-on: "Item 1 FULLY CLOSED 2026-07-21: THRUSTER half closed 2026-07-20 via Noise/std_min; ARM half closed by the Z1 per-dim log_std read (arm0 AT FLOOR 0.10000, arm1 free at ~0.131 across the whole lineage; 5 of 8 dims floored, free set = {arm1, thr0, thr3}). Item 2 (training probe) is now the A2 run trpo_entcoefzero_260721_014731, launched 2026-07-21 -- verdict reads ONLY the 3 free dims."
+blocked-on: "CLOSED 2026-07-23 (plan consolidation): Item 1 closed by Z1 per-dim checkpoint read (5/8 dims floored, free set = {arm1, thr0, thr3}). Item 2 answered by A2 run trpo_entcoefzero_260721_014731 (diagnose-20260721-065341): the entropy BONUS, not the IPO barrier, holds sigma -- the 3 free dims depart >=10% below the anchor path from iter 500; the April kill-criterion did not fire. Caveat: eval-side deltas are single-seed (56% seed floor); the training-side mechanism verdict stands. No adoption. See docs/reference/teacher-campaign-plan.md section 6."
 ---
 
 # April 2026 entropy-collapse campaign: machinery bug SOLVED, converged-sigma collapse NOT -- and min_std is the wrong lever
@@ -263,3 +263,9 @@ at ~0.13). This makes the thruster-leg option the higher-leverage one by dim cou
 ## Update (2026-07-23T06:37:44.974067)
 
 CLOSED 2026-07-23 (plan consolidation): Item 1 closed by Z1 (5/8 dims floored, free={arm1,thr0,thr3}); Item 2 answered by A2 trpo_entcoefzero_260721_014731 (diagnose-20260721-065341): the entropy BONUS, not the IPO barrier, holds sigma -- 3 free dims depart >=10% below the anchor path from iter 500; April kill-criterion did not fire. Caveat: eval-side deltas are single-seed (56% seed floor); the training-side mechanism verdict stands. No adoption. See docs/reference/teacher-campaign-plan.md section 6.
+
+---
+
+## Update (2026-07-23T07:42:44.480461)
+
+2026-07-23 curation: cleared stale blocked-on -- field still described the A2 probe as in-flight; body's 2026-07-23 update shows both Item 1 and Item 2 concluded and closed.

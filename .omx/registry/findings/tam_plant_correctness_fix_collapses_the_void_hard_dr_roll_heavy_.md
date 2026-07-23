@@ -2,14 +2,15 @@
 title: "TAM plant-correctness fix collapses the void hard-DR roll heavy-tail (into a raised floor)"
 tags: ["heavy-tail", "roll", "TAM", "plant", "teacher-baseline", "doraemon", "auto-captured", "trpo_buoyanchor_s30_260722_134743"]
 created: 2026-07-14T16:38:59.611547
-updated: 2026-07-23T07:32:14.143051
+updated: 2026-07-23T07:42:45.096119
 sources: ["diagnose-20260715-011113", "experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_buoyanchor_s30_260722_134743/analysis/diagnose-20260723-134359/report.md", "/workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_buoyanchor_s30_260722_134743/analysis/diagnose-20260723-134359/report.md"]
 links: ["ocean_nominal_shift_collapses_actor_entropy_e2_dr_harder.md"]
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
+qualityScore: 40
+qualityReasons: ["body-under-120-chars", "no-source-marker", "generic-only-tags"]
+status: resolved
 ---
 
 # TAM plant-correctness fix collapses the void hard-DR roll heavy-tail (into a raised floor)
@@ -142,3 +143,9 @@ The plant effect is strongly seed-dependent: it rescues seeds that fell into a f
 [CONFIDENCE: HIGH]
 
 source report: /workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_buoyanchor_s30_260722_134743/analysis/diagnose-20260723-134359/report.md
+
+---
+
+## Update (2026-07-23T07:42:45.096119)
+
+2026-07-23 curation: status set to resolved -- two corrections converge on a settled verdict, no open items remain.

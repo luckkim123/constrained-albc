@@ -6279,3 +6279,91 @@
 - **Pages:** a2_is_the_first_run_of_this_lineage_to_lose_an_env_survival_fall.md, a2_pays_for_the_lost_exploration_in_the_nominal_roll_transient_o.md, across_its_own_ladder_a2_shows_the_lineage_s_usual_falling_overs.md, aggregate_latent_statistics_are_effectively_identical_between_th.md, all_ten_constraints_are_satisfied_with_negative_constraint_viol_.md, arm1_is_the_sharpest_single_result_it_reaches_its_0_10_floor_by_.md, both_critics_are_healthy_and_a2_s_are_better_fit_than_the_anchor.md, engine_diagnosis_item_4_barrier_gradient_overwhelms_reward_at_sm.md, episode_return_and_length_are_healthy_and_slightly_better_than_t.md, exactly_one_constraint_is_binding_thruster_util_and_a2_binds_it_.md, exploration_is_dead_in_a2_as_it_is_everywhere_in_this_lineage_bu.md, higher_success_with_one_more_achieved_widening_but_a_narrower_te.md, one_downstream_difference_is_not_held_and_must_be_carried_as_a_c.md, ss_jitter_rises_with_ss_error_at_every_level_rather_than_moving_.md, the_24_8_drop_in_loss_cost_value_is_the_clearest_training_side_f.md, the_curriculum_stayed_feasible_and_never_gated_in_either_run_and.md, the_earliest_changepoint_at_iter_382_is_the_manipulation_taking_.md, the_encoder_did_not_collapse_and_is_if_anything_sharper_than_the.md, the_engine_s_diagnosis_items_1_3_entropy_collapse_reward_plateau.md, the_hard_row_is_a_within_run_property_and_the_cross_run_comparis.md, the_kill_criterion_did_not_fire_the_april_2026_record_of_entropy.md, the_likeliest_reason_the_two_diverge_is_that_april_s_configurati.md, the_manipulation_is_3_3_the_per_dim_coefficient_vector_is_all_ze.md, the_mechanism_is_the_logging_point_rather_than_a_constraint_even.md, the_none_level_distribution_stays_dc_bias_like_rather_than_heavy.md, the_one_genuinely_new_signal_in_this_run_is_a_single_iteration_p.md, the_reward_decomposition_shows_a2_slightly_ahead_of_the_anchor_o.md, the_reward_trajectory_is_the_lineage_s_warmup_then_plateau_shape.md, the_reward_yaw_vel_gain_is_corroborated_by_the_eval_s_yaw_axis_s.md, the_rule_fires_on_all_three_unclamped_dims_from_the_first_checkp.md, the_scalar_entropy_coef_is_genuinely_dead_rather_than_merely_ove.md, the_spike_is_not_a_state_of_the_accepted_policy_reconstructing_t.md, the_trpo_machinery_is_healthy_and_configured_identically_to_the_.md, the_update_internals_move_in_the_direction_the_manipulation_pred.md, the_weak_dims_are_the_lineage_s_usual_weak_dims_rather_than_new_.md, three_cross_metric_changepoints_structure_the_run_and_the_two_la.md, under_the_hardest_exam_the_picture_inverts_and_becomes_heavy_tai.md, why_it_appears_in_a2_and_nowhere_else_follows_from_the_manipulat.md, a1_generalizes_across_its_own_dr_ladder_without_degradation_in_a.md, a1_is_worse_than_extend8k_on_both_axes_of_the_trade_off_extend8k.md, a_cross_metric_changepoint_at_iter_5654_pairs_a_success_rate_dro.md, against_the_pre_registered_bands_the_run_is_a_double_miss_which_.md, aggregate_latent_statistics_are_indistinguishable_across_the_thr.md, all_four_dr_levels_behave_consistently_and_survival_is_100_every.md, both_critic_losses_order_the_runs_by_exam_difficulty_not_by_iter.md, both_critics_are_healthy_and_a1_s_cost_critic_loss_sits_between_.md, env_to_env_spread_rises_with_the_transient_but_the_distribution_.md, episode_return_and_length_are_also_flat_across_the_lineage_a1_re.md, exactly_one_constraint_is_binding_thruster_util_and_its_margin_b.md, exploration_is_dead_in_a1_exactly_as_in_both_references_so_entro.md, grad_sigma_step_is_three_orders_of_magnitude_below_grad_actor_st.md, iteration_count_not_dr_width_drives_the_nominal_roll_transient_t.md, n_gt20_corroborates_the_same_distribution_rather_than_adding_ind.md, nine_of_ten_constraints_remain_deeply_slack_with_zero_violations.md, no_out_of_distribution_level_was_run_for_this_probe_so_generaliz.md, row_2_holds_with_margin_a1_s_three_deployment_params_end_near_th.md, the_curriculum_stayed_feasible_and_never_gated_success_rate_rema.md, the_encoder_did_not_collapse_a_post_run_per_parameter_z_sweep_sh.md, the_encoder_was_still_receiving_and_applying_gradient_at_the_end.md, the_hard_row_s_error_bar_4_8_on_a_4_3_mean_is_where_the_env_to_e.md, the_manipulation_is_2_3_row_1_fails_marginally_rows_2_and_3_pass.md, the_policy_update_internals_are_quantitatively_indistinguishable.md, the_probe_did_what_it_was_configured_to_do_at_the_schedule_level.md, the_reward_decomposition_is_essentially_unchanged_across_the_thr.md, the_reward_trajectory_is_a_warmup_then_plateau_shape_with_platea.md, the_row_1_leak_is_quantifiable_and_does_not_change_the_verdict_a.md, the_terminal_dr_state_is_far_from_the_config_ceiling_unlike_exte.md, the_trpo_machinery_is_healthy_and_identical_in_configuration_to_.md, the_two_pre_registered_readouts_decoupled_thruster_util_j_c_d_k_.md, three_sweep_parameters_drive_almost_no_latent_response_and_are_t.md, thruster_util_s_margin_separates_the_runs_the_same_way_its_j_c_d.md, vx_vy_vz_are_nan_at_every_dr_level_by_construction_the_main_task.md, a4_s_doraemon_took_one_more_expansion_than_the_anchor_19_vs_18_b.md, despite_the_weaker_policy_a4_expanded_more_19_vs_18_because_its_.md, doraemon_success_fell_20_8_0_6947_vs_0_8773_and_its_minimum_afte.md, encoder_gradient_flow_dropped_sharply_grad_norm_29_4_step_39_8_m.md, env_to_env_consistency_collapsed_hardest_hard_level_roll_cv_reac.md, hard_level_jitter_is_the_single_most_extreme_delta_in_the_run_ro.md, no_barrier_artifacts_in_a4_0_spikes_max_0_030_so_unlike_a3_there.md, ranking_caveat_policy_clip_fraction_is_not_the_largest_relative_.md, rp_rate_also_moved_toward_binding_margin_5_91_4_88_j_c_d_k_0_409.md, the_actor_s_behaviour_did_change_however_policy_clip_fraction_ne.md, the_anchor_s_encoder_was_using_the_dropped_dims_heavily_so_this_.md, the_cost_critic_degraded_too_16_8_but_less_than_the_value_critic.md, the_critic_hit_is_not_larger_than_every_actor_side_move_policy_c.md, the_encoder_reorganised_rather_than_degraded_the_anchor_s_only_d.md, the_latent_statistics_are_unchanged_z_std_z_min_z_max_all_within.md, the_regression_is_broad_not_axis_specific_ss_error_worsened_on_r.md, the_training_side_return_loss_5_0_is_modest_relative_to_the_eval.md, the_value_critic_degraded_substantially_39_7_which_matters_becau.md, the_z_sweep_clause_passed_while_the_eval_clauses_failed_which_ru.md, two_metrics_moved_the_other_way_and_must_be_reported_pitch_os_en.md, refinement_of_the_a3_conclusion_analysis_diagnose_20260721_16433.md, a3_fails_the_pre_registered_primary_in_the_wrong_direction_and_i.md, a3_is_the_first_teacher_baseline_posttam_run_since_a2_to_drop_be.md, a3_s_none_level_roll_sample_env_sits_at_rank_8_near_the_best_env.md, because_every_doraemon_step_saturates_the_kl_trust_region_curric.md, both_critics_are_healthy_and_essentially_unchanged_the_cost_crit.md, encoder_z_std_reading_exactly_0_4000_in_both_runs_is_a_saturatio.md, env_to_env_spread_worsened_even_where_the_mean_improved_pitch_cv.md, policy_updates_were_substantially_larger_under_the_raised_floor_.md, roll_overshoot_is_inverted_against_dr_level_in_both_runs_a3_21_5.md, terminal_beta_shows_0_of_20_parameters_at_the_beta_1_1_saturatio.md, the_anchor_s_hard_advantage_in_mean_atterr_is_partly_carried_by_.md, the_dr_curriculum_was_identical_in_the_two_runs_18_updates_at_it.md, the_encoder_is_unaffected_by_the_intervention_z_statistics_match.md, the_entire_training_side_reward_loss_is_the_yaw_channel_reward_y.md, the_intervention_separates_cleanly_into_a_dc_win_and_an_ac_trans.md, the_lever_engaged_exactly_as_designed_and_the_optimizer_stayed_h.md, the_null_outcome_does_not_apply_the_band_defined_null_as_within_.md, the_roll_overshoot_penalty_decays_monotonically_as_dr_hardens_26.md, the_strong_negative_roll_yaw_coupling_at_none_rho_0_56_for_a3_0_.md, the_three_action_quality_penalties_all_deepened_smoothness_25_2_.md, thruster_util_margin_widened_under_a3_7_51_vs_6_14_22_despite_hi.md, yaw_is_the_one_axis_where_the_trade_runs_the_other_way_at_low_dr.md, a5_trpo_budgetslack_260721_181133_loosened_constraints_that_are_.md, anchor_degradation_across_dr_is_graceful_on_roll_and_steepest_on.md, arm_n_8192_envs_is_null_every_none_roll_field_sits_inside_the_an.md, both_critics_converge_the_constraint_critic_works_measurably_har.md, changepoint_structure_is_identical_across_plants_machines_and_sc.md, optimisation_is_healthy_and_near_identical_across_all_runs_entro.md, the_doraemon_gate_is_live_and_correctly_calibrated_it_is_not_ine.md, the_ipo_barrier_is_quiet_on_the_corrected_plant_and_had_spikes_o.md, the_retrain_sign_flips_at_hard_but_that_level_is_not_like_for_li.md, a5_generalizes_across_its_own_dr_ladder_the_same_way_the_anchor_.md, an_exhaustive_scan_of_all_policy_grad_noise_loss_actor_side_tags.md, at_none_the_tracking_moved_well_outside_the_pre_registered_5_ban.md, curriculum_health_matches_the_anchor_success_0_895_vs_0_877_ess_.md, encoder_z_mean_42_3_is_a_near_zero_base_artifact_both_means_0_02.md, every_reward_term_is_within_seed_scale_of_the_anchor_the_policy_.md, no_barrier_artifacts_0_spikes_max_0_125_so_the_constraint_accoun.md, the_band_s_constraint_clause_is_satisfied_both_relaxed_guards_st.md, the_extra_expansion_lands_at_the_kl_cap_like_every_other_kl_step.md, the_surrogate_loss_doubling_is_not_a_health_flag_att_rp_total_re.md, the_value_critic_improved_9_0_and_the_cost_critic_too_8_9_releas.md, yaw_os_env_mean_377_is_a_small_base_artifact_not_a_real_overshoo.md
 - **Summary:** deleted 136, merged 28 source(s)
 
+## [2026-07-23T07:42:43.780310] add
+- **Pages:** reward_att_rp_fell_only_2_6_while_none_level_attitude_ss_error_r.md
+- **Summary:** updated '`Reward/att_rp` fell only 2.6% while `none`-level attitude ss_error rose 74-95%,'
+
+## [2026-07-23T07:42:43.865902] add
+- **Pages:** the_optimizer_machinery_is_indistinguishable_from_the_anchor_ent.md
+- **Summary:** updated 'The optimizer MACHINERY is indistinguishable from the anchor — entropy, sigma, f'
+
+## [2026-07-23T07:42:43.943074] add
+- **Pages:** doraemon_entropy_before_and_doraemon_entropy_after_are_identical.md
+- **Summary:** updated '`DORAEMON/entropy_before` and `DORAEMON/entropy_after` are identical to each oth'
+
+## [2026-07-23T07:42:44.020224] add
+- **Pages:** the_two_tail_metrics_disagree_and_they_disagree_because_they_mea.md
+- **Summary:** updated 'The two tail metrics disagree, and they disagree because they measure different '
+
+## [2026-07-23T07:42:44.097202] add
+- **Pages:** baseline_consolidated_main_reference_trpo_baseline_260713_031325.md
+- **Summary:** updated 'baseline (consolidated main) reference: trpo_baseline_260713_031325'
+
+## [2026-07-23T07:42:44.174065] add
+- **Pages:** doraemon_optimize_entropy_accept_can_leak_the_success_floor_late.md
+- **Summary:** updated 'DORAEMON _optimize_entropy accept can leak the success floor (latent divergence from reference, dead path so far)'
+
+## [2026-07-23T07:42:44.250528] add
+- **Pages:** hydro_dr_train_eval_sampling_mismatch_is_real_but_left_as_is_opt.md
+- **Summary:** updated 'hydro DR train/eval sampling mismatch is REAL but left as-is (option C): train scalar->6-axis broadcast, eval 6-axis independent'
+
+## [2026-07-23T07:42:44.326032] add
+- **Pages:** joint_dr_params_kp_kd_effort_friction_need_no_dedicated_measurem.md
+- **Summary:** updated 'Joint DR params (Kp/Kd/effort/friction) need NO dedicated measurement: PD-gain center already measured, effort/friction are DR-bypass by design'
+
+## [2026-07-23T07:42:44.403170] add
+- **Pages:** uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload_.md
+- **Summary:** updated 'uniform-only DR full roster (9 params, DORAEMON-bypassing) + payload XY-radius vs Z curriculum split'
+
+## [2026-07-23T07:42:44.480461] add
+- **Pages:** april_2026_entropy_collapse_campaign_machinery_bug_solved_conver.md
+- **Summary:** updated 'April 2026 entropy-collapse campaign: machinery bug SOLVED, converged-sigma collapse NOT -- and min_std is the wrong lever'
+
+## [2026-07-23T07:42:44.558584] add
+- **Pages:** engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md
+- **Summary:** updated 'engine-gap: analyze_training.py emits no reward 8-term decomposition scalars'
+
+## [2026-07-23T07:42:44.636172] add
+- **Pages:** engine_gap_heavy_tail_json_pct_peak_gt_thresh_exceeds_100_at_ood.md
+- **Summary:** updated 'engine-gap: heavy_tail.json pct_peak_gt_thresh exceeds 100% at ood level (denominator bug)'
+
+## [2026-07-23T07:42:44.711281] add
+- **Pages:** next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md
+- **Summary:** updated 'Next from-scratch retrain manifest: what rides on the post-TAM baseline retrain (sim fixes + learning-dynamics experiments)'
+
+## [2026-07-23T07:42:44.788055] add
+- **Pages:** omx_wiki_has_no_delete_subcommand_by_design_removal_is_gc_apply_.md
+- **Summary:** updated 'omx wiki has no delete subcommand by design: removal is gc-apply, duplicates come from add-with-new-title'
+
+## [2026-07-23T07:42:44.866132] add
+- **Pages:** performance_lb_doraemon_gate_is_causally_independent_of_the_acto.md
+- **Summary:** updated 'performance_lb (DORAEMON gate) is causally independent of the actor exploration collapse'
+
+## [2026-07-23T07:42:44.943780] add
+- **Pages:** plant_fix_needs_apply_before_retrain_main_hull_volume_0_009_0_00.md
+- **Summary:** updated 'PLANT FIX (needs-apply-before-retrain): main hull volume 0.009 -> 0.00790 recenters sim net buoyancy +10.25 N -> neutral, matching 2026-07-06 onboard measurement'
+
+## [2026-07-23T07:42:45.019743] add
+- **Pages:** step_interval_250_400_probe_separate_dr_width_from_optimisation_.md
+- **Summary:** updated "step_interval 250->400 probe: separate DR-WIDTH from OPTIMISATION-STEPS as the cause of extend8k's nominal roll transient regression (pending approval, not launched)"
+
+## [2026-07-23T07:42:45.096119] add
+- **Pages:** tam_plant_correctness_fix_collapses_the_void_hard_dr_roll_heavy_.md
+- **Summary:** updated 'TAM plant-correctness fix collapses the void hard-DR roll heavy-tail (into a raised floor)'
+
+## [2026-07-23T07:42:45.176119] add
+- **Pages:** xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e.md
+- **Summary:** updated 'xy-offset DR is load-bearing for pitch, not free NDIMS dilution (e4 xyprune)'
+
+## [2026-07-23T07:42:45.252377] add
+- **Pages:** roll_transient_is_worst_at_none_dr_and_improves_monotonically_as.md
+- **Summary:** updated 'roll transient is WORST at none DR and improves monotonically as DR hardens (inverted, both runs)'
+
+## [2026-07-23T07:42:45.329668] add
+- **Pages:** engine_gap_analyze_training_deep_plot_has_2_blank_panels_inconsi.md
+- **Summary:** updated 'ENGINE-GAP: analyze_training deep-plot has 2 blank panels + inconsistent legends; no DORAEMON curriculum plot'
+
+## [2026-07-23T07:42:45.406849] add
+- **Pages:** tracking_kernel_exp_quad_tanh_dead_zone_diagnosis_correct_but_fi.md
+- **Summary:** updated 'Tracking kernel exp-quad-tanh: dead-zone diagnosis correct but fix is on wrong axis (yaw not att_rp); the exp+L1+tanh stack has no literature precedent'
+

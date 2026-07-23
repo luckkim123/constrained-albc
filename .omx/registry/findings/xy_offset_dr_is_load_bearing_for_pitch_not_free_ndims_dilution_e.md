@@ -2,14 +2,15 @@
 title: "xy-offset DR is load-bearing for pitch, not free NDIMS dilution (e4 xyprune)"
 tags: ["dr", "doraemon", "heavy-tail", "pitch", "roll", "xyprune", "p7_tail", "privileged-obs"]
 created: 2026-07-14T05:10:47.487506
-updated: 2026-07-16T06:53:56.907691
+updated: 2026-07-23T07:42:45.176119
 sources: ["trpo_e4_xyprune_260714_090201", "diagnose-20260714-135623"]
 links: ["doraemon_over_widens_then_oscillates_when_a_converged_teacher_is.md", "eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md", "buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md", "cross_run_dr_comparability_eval_py_doraemon_dr_from_already_prov.md"]
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
+status: resolved
 ---
 
 # xy-offset DR is load-bearing for pitch, not free NDIMS dilution (e4 xyprune)
@@ -79,3 +80,8 @@ LARGER intervention than its "remove 4 hull-tolerance dims" framing suggested.
 - The common-exam METHODOLOGY (frozen reference DR + `--doraemon-dr-from`) is independent of e4 and
   remains an open lead on its own merits.
 
+---
+
+## Update (2026-07-23T07:42:45.176119)
+
+2026-07-23 curation: status set to resolved -- user's 2026-07-16 decision permanently rejects the xy-offset prune direction.

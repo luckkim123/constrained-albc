@@ -2,16 +2,16 @@
 title: "step_interval 250->400 probe: separate DR-WIDTH from OPTIMISATION-STEPS as the cause of extend8k's nominal roll transient regression (pending approval, not launched)"
 tags: ["doraemon", "step_interval", "dr-width", "transient-overshoot", "thruster-util", "probe", "teacher_baseline_posttam", "pending-approval", "correction", "result", "h1-refuted"]
 created: 2026-07-20T04:17:04.272956
-updated: 2026-07-20T17:14:00.313630
+updated: 2026-07-23T07:42:45.019743
 sources: ["diagnose-20260720-124259", "next-20260720-131526", "marinelab/marinelab/algorithms/doraemon.py", "diagnose-20260721-020253", "static_260721_014808"]
 links: ["extend8k_saturated_the_dr_config_box_at_iter_7000_all_20_params_.md"]
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 40
+qualityReasons: ["body-under-120-chars", "no-source-marker", "generic-only-tags"]
 status: resolved
-blocked-on: "PENDING HUMAN APPROVAL -- reviewer-approved 2026-07-20; user deferred launching to batch-plan accumulated leads later; nothing else blocks it"
+blocked-on: "RESOLVED 2026-07-21: probe launched and concluded -- H1 refuted, step_interval=400 rejected. No longer pending-approval/not-launched. (Title still reads 'pending approval, not launched'; retitle not applied here since it would fork the wiki slug -- flagging the stale title in this note.)"
 ---
 
 # step_interval 250->400 probe: separate DR-WIDTH from OPTIMISATION-STEPS as the cause of extend8k's nominal roll transient regression (pending approval, not launched)
@@ -187,3 +187,9 @@ directional answer (iterations dominate, width protects), so `--replay_curriculu
 demoted rather than being escalated as the fallback.
 [EVIDENCE: this page's decomposition finding; cross_run_dr_comparability page's demotion condition]
 [CONFIDENCE: MED]
+
+---
+
+## Update (2026-07-23T07:42:45.019743)
+
+2026-07-23 curation: refreshed stale blocked-on -- probe ran 2026-07-21, H1 was refuted, step_interval=400 rejected.

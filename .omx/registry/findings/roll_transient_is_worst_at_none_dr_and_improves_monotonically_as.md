@@ -2,14 +2,15 @@
 title: "roll transient is WORST at none DR and improves monotonically as DR hardens (inverted, both runs)"
 tags: ["roll", "overshoot", "transient", "dr-scaling", "os_env_mean", "open-lead"]
 created: 2026-07-21T07:58:14.787774
-updated: 2026-07-21T07:58:14.787774
+updated: 2026-07-23T07:42:45.252377
 sources: ["diagnose-20260721-164331"]
 links: ["eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md"]
 category: pattern
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
+status: needs-experiment
 ---
 
 # roll transient is WORST at none DR and improves monotonically as DR hardens (inverted, both runs)
@@ -56,3 +57,8 @@ the `none` transient WORSE, which is consistent with (b) but does not prove it. 
 next probe is a zero-GPU one: check hypothesis (a) first by reading what DR box `eval.py static`
 actually applies at the `none` level for these two checkpoints, before any training run is spent.
 
+---
+
+## Update (2026-07-23T07:42:45.252377)
+
+2026-07-23 curation: status set to needs-experiment -- matches the body's STATUS line and open-lead tag, making this open lead queryable structurally via `omx wiki list --status needs-experiment`.

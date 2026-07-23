@@ -2,14 +2,15 @@
 title: "engine-gap: heavy_tail.json pct_peak_gt_thresh exceeds 100% at ood level (denominator bug)"
 tags: ["engine-gap", "heavy-tail", "ood", "eval-adapter", "debugging"]
 created: 2026-06-08T03:03:19.015251
-updated: 2026-07-13T05:18:28.658920
+updated: 2026-07-23T07:42:44.636172
 sources: ["diagnose-20260608 dr_harder replot"]
 links: ["teacher_dr_harder_yaw_is_the_only_heavy_tail_axis_roll_is_dc_bia.md"]
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 70
-qualityReasons: ["no-source-marker", "generic-only-tags"]
+qualityScore: 40
+qualityReasons: ["body-under-120-chars", "no-source-marker", "generic-only-tags"]
+status: resolved
 ---
 
 # engine-gap: heavy_tail.json pct_peak_gt_thresh exceeds 100% at ood level (denominator bug)
@@ -26,3 +27,9 @@ Workaround for analysis: do NOT cite heavy_tail.json pct_peak_gt_thresh at ood; 
 ## Update (2026-07-13T05:18:28.658920)
 
 [STATUS] resolved-by-refactor (verified 2026-07-13, post-p7_tail planning session). The bug is NOT reproducible at HEAD (105818e): the current writer constrained_albc/analysis/_analyze/eval_dr.py::_ed_compute_heavy_tail derives ss/peak AND the denominator N from the SAME (T,N) array (lines 76-91), so pct_peak_gt_thresh > 100% is structurally impossible. Re-verified on real data: trpo_baseline_260713_031325 eval static_260713_075722 has identical shapes (7750, 64) for none/hard/ood; inline recompute of ood roll pct_peak>20deg gives 0.0% (0/64 envs), well-formed. The 2026-06-08 >100% values came from the pre-split eval_dr.py implementation, which the analysis god-file split replaced. No code change needed; workaround note (do not cite old E1/E2/E4 ood heavy_tail.json values) still applies to those OLD artifacts.
+
+---
+
+## Update (2026-07-23T07:42:44.636172)
+
+2026-07-23 curation: status set to resolved -- matches body's resolved-by-refactor verdict (2026-07-13).

@@ -2,14 +2,15 @@
 title: "Joint DR params (Kp/Kd/effort/friction) need NO dedicated measurement: PD-gain center already measured, effort/friction are DR-bypass by design"
 tags: ["albc", "envs-main", "arm", "actuator", "joint-dr", "sim-to-real", "measurement", "friction", "pd-gain", "retrain-campaign"]
 created: 2026-07-06T08:41:36.341187
-updated: 2026-07-06T08:41:36.341187
+updated: 2026-07-23T07:42:44.326032
 sources: []
 links: ["onboard_measured_2026_07_06_arm_step_response_valid_sim_zeta_0_7.md", "actuator_hardware_identification_arm_xw540_t260_board_measured_p.md", "arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md", "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md"]
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 80
-qualityReasons: ["no-source-marker"]
+qualityScore: 40
+qualityReasons: ["body-under-120-chars", "no-source-marker", "generic-only-tags"]
+status: resolved
 ---
 
 # Joint DR params (Kp/Kd/effort/friction) need NO dedicated measurement: PD-gain center already measured, effort/friction are DR-bypass by design
@@ -45,3 +46,8 @@ Breakaway (static) and viscous friction cannot be cleanly separated from inertia
 ## BOTTOM LINE
 Contrast with velocity_limit_sim (where measurement REFUTED a base constant, 6.28 vs measured 3.1 -> a real fix). For the 5 joint DR params NOTHING is refuted and NOTHING new needs measuring: PD-gain center is already measured (range stays), effort/friction are DR-bypass params (measure-hard-or-impossible, approximate DR is correct by design). The ONLY open joint item is the PD controller-STRUCTURE gap (I-term / PWM / profile), addressed by step-response sysID as a separate track -- not by touching any DR range. So: joint DR ranges ship as-is for the next retrain; no joint-DR measurement campaign is warranted.
 
+---
+
+## Update (2026-07-23T07:42:44.326032)
+
+2026-07-23 curation: status set to resolved -- firm 'no measurement campaign warranted' conclusion reached.

@@ -2,14 +2,14 @@
 title: "The optimizer MACHINERY is indistinguishable from the anchor — entropy, sigma, f"
 tags: ["auto-captured", "trpo_budgetslack_260721_181133"]
 created: 2026-07-21T10:26:11.609658
-updated: 2026-07-23T02:21:27.244561
+updated: 2026-07-23T07:42:43.865902
 sources: ["/workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_privslim24d_260721_114717/analysis/diagnose-20260721-190151/report.md", "experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_budgetslack_260721_181133/analysis/diagnose-20260722-103723/report.md", "/workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_budgetslack_260721_181133/analysis/diagnose-20260722-103723/report.md"]
 links: []
 category: session-log
 confidence: low
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
 ---
 
 # The optimizer MACHINERY is indistinguishable from the anchor — entropy, sigma, f
@@ -42,3 +42,9 @@ The optimizer machinery is indistinguishable from the anchor: entropy, sigma flo
 [CONFIDENCE: HIGH]
 
 source report: /workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_budgetslack_260721_181133/analysis/diagnose-20260722-103723/report.md
+
+---
+
+## Update (2026-07-23T07:42:43.865902)
+
+2026-07-23 curation: attempted recategorize session-log -> pattern (durable negative-control claim: optimizer machinery -- entropy, sigma, KL, step-size, line-search -- is clean and indistinguishable across all posttam ablation arms A4 and A5; never the failure mechanism). Recurs across 2 independent runs, no existing pattern page covers it.

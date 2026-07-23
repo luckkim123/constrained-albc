@@ -2,14 +2,14 @@
 title: "`Reward/att_rp` fell only 2.6% while `none`-level attitude ss_error rose 74-95%,"
 tags: ["auto-captured"]
 created: 2026-07-21T10:26:11.609658
-updated: 2026-07-21T10:26:11.609658
+updated: 2026-07-23T07:42:43.780310
 sources: ["/workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_privslim24d_260721_114717/analysis/diagnose-20260721-190151/report.md"]
 links: []
 category: session-log
 confidence: low
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
 ---
 
 # `Reward/att_rp` fell only 2.6% while `none`-level attitude ss_error rose 74-95%,
@@ -20,3 +20,9 @@ qualityReasons: ["generic-only-tags"]
 [CONFIDENCE: HIGH]
 
 source report: /workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_privslim24d_260721_114717/analysis/diagnose-20260721-190151/report.md
+
+---
+
+## Update (2026-07-23T07:42:43.780310)
+
+2026-07-23 curation: attempted recategorize session-log -> pattern (durable cross-run lesson: training Reward/att_rp is a poor proxy for eval attitude tracking quality; confirmed independently by A2 and A4 moving in opposite directions). No existing pattern page covers this reward-vs-eval proxy mismatch.

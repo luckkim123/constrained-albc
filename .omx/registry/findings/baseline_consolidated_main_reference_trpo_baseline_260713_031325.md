@@ -2,14 +2,14 @@
 title: "baseline (consolidated main) reference: trpo_baseline_260713_031325"
 tags: ["baseline", "attitude", "heavy-tail", "reference", "P7"]
 created: 2026-07-12T23:46:26.844974
-updated: 2026-07-13T03:33:17.361855
+updated: 2026-07-23T07:42:44.097202
 sources: ["diagnose-20260713-081707", "session-260713-p7tail-design"]
 links: []
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
 ---
 
 # baseline (consolidated main) reference: trpo_baseline_260713_031325
@@ -36,3 +36,8 @@ as 3D obs channel, o_t 69->72D, theory-review R1 (proposal next-20260713-122216)
 each vs trpo_baseline_260713_031325. Campaign DESIGN.md:
 experiments/rsl_rl/albc_trpo_teacher/p7_tail/DESIGN.md.
 
+---
+
+## Update (2026-07-23T07:42:44.097202)
+
+2026-07-23 curation: PRE-TAM-FIX CAVEAT -- this run (diagnose-20260713-081707, teacher_baseline_opt) trained on a TAM plant known-wrong per the incident post-mortem. Do not treat as the current baseline. Live post-TAM-fix reference: teacher_baseline_posttam (see tam_plant_correctness_fix_collapses_the_void_hard_dr_roll_heavy_.md).

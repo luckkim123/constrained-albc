@@ -2,14 +2,15 @@
 title: "hydro DR train/eval sampling mismatch is REAL but left as-is (option C): train scalar->6-axis broadcast, eval 6-axis independent"
 tags: ["hydro", "domain-randomization", "doraemon", "eval", "train-eval-mismatch", "variance-analysis", "added_mass", "damping"]
 created: 2026-07-07T07:55:02.624957
-updated: 2026-07-07T08:21:42.923873
+updated: 2026-07-23T07:42:44.250528
 sources: []
 links: []
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
+status: resolved
 ---
 
 # hydro DR train/eval sampling mismatch is REAL but left as-is (option C): train scalar->6-axis broadcast, eval 6-axis independent
@@ -63,3 +64,8 @@ Additionally, even if a gate opened, the prompt is NOT executable as written -- 
 
 DORMANT not discarded: if a future eval shows genuine axis-decorrelated hydro heavy-tail, gate 1 opens -- but only a REDESIGNED spec (3 defects fixed) may run. Lesson: a gated experiment prompt is "judge the run-condition", and the run-condition here is refuted, not merely unproven.
 
+---
+
+## Update (2026-07-23T07:42:44.250528)
+
+2026-07-23 curation: status set to resolved -- settled option-C + dormant-gate decision reached; matches sibling resolved-decision pages.

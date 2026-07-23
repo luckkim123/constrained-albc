@@ -2,14 +2,14 @@
 title: "uniform-only DR full roster (9 params, DORAEMON-bypassing) + payload XY-radius vs Z curriculum split"
 tags: ["payload", "doraemon", "dr", "ndims", "merge", "main"]
 created: 2026-07-07T06:52:51.038810
-updated: 2026-07-16T06:55:59.320356
+updated: 2026-07-23T07:42:44.403170
 sources: []
 links: ["xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e.md"]
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
 ---
 
 # uniform-only DR full roster (9 params, DORAEMON-bypassing) + payload XY-radius vs Z curriculum split
@@ -206,3 +206,8 @@ APPLICABILITY NOTE: the concrete prune this was investigated for (e4 xy-offset) 
 decision 2026-07-16 — see [[xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e]]. The trap
 is recorded because it generalizes to any future `_PARAM_DEFS` prune, not because that prune is live.
 
+---
+
+## Update (2026-07-23T07:42:44.403170)
+
+2026-07-23 curation: title says '9 params' but this page's own 2026-07-08 update shrank the uniform-only roster to 8 after payload_cog_offset_xy_u promotion. Treat the title's '9 params' as historical/outdated; current roster is 8 params. (Retitle not applied -- title change would fork the wiki slug via the CLI's slug-of-title merge key.)
