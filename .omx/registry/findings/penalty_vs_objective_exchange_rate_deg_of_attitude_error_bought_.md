@@ -1,9 +1,9 @@
 ---
 title: "Penalty-vs-objective exchange rate (deg of attitude error bought per penalty term) is the rescaling evidence, not the 1% reward share; all four penalties together buy only 0.125 deg"
-tags: ["reward", "penalty", "rescaling", "exchange-rate", "tuning", "constraint-trpo", "envs-main"]
+tags: ["reward", "penalty", "rescaling", "exchange-rate", "tuning", "constraint-trpo", "envs-main", "auto-captured", "trpo_buoyanchor_s30_260722_134743"]
 created: 2026-07-20T03:00:37.061166
-updated: 2026-07-23T06:37:45.315633
-sources: []
+updated: 2026-07-23T07:32:14.143051
+sources: ["experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_buoyanchor_s30_260722_134743/analysis/diagnose-20260723-134359/report.md", "/workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_buoyanchor_s30_260722_134743/analysis/diagnose-20260723-134359/report.md"]
 links: ["next_experiment_workflow_pick_a_baseline_train_once_then_re_tune.md", "reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md", "real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md"]
 category: reference
 confidence: high
@@ -76,3 +76,27 @@ Without that, it is the "generic solution without evidence" anti-pattern (.claud
 ## Update (2026-07-23T06:37:45.315633)
 
 CLOSED 2026-07-23 (plan consolidation, Z10 gate): the page's own gate (a MEASURED deficiency motivating rescale) answers itself -- no measured ss_jitter/vibration deficiency exists; the four penalties total ~1.4% of reward (-0.12 vs ~8.8, diagnose-20260723-134359) and the constraint layer already declines to push on effort. Lead closes resolved-by-gate. Reactivation edge: measured deployment vibration / jitter deficiency.
+
+---
+
+## Merged from the_reward_decomposition_is_near_identical_across_all_7_runs_the.md (2026-07-23T07:32:14.143051)
+
+# The reward decomposition is near-identical across all 7 runs; the plant fix did 
+
+The reward decomposition is near-identical across all 7 runs; the plant fix did not change what the policy optimises, only the plant it optimises against. | run | att_rp | yaw_vel | bias | smoothness | thruster | torque | total | |:--|--:|--:|--:|--:|--:|--:|--:| | anchor s30 | 6.69 | 2.12 | -0.01 | -0.02 | -0.02 | -0.07 | 8.69 | | anchor s31 | 6.96 | 2.05 | -0.01 | -0.02 | -0.03 | -0.06 | 8.89 | | anchor s32 | 6.81 | 1.99 | -0.01 | -0.02 | -0.03 | -0.05 | 8.70 | | Arm N 8192 | 6.92 | 1.92 | -0.01 | -0.02 | -0.03 | -0.04 | 8.75 | | dgxseed30 | 7.12 | 1.76 | -0.00 | -0.02 | -0.03 | -0.04 | 8.78 | | dgxseed31 | 7.09 | 1.90 | -0.00 | -0.02 | -0.03 | -0.04 | 8.90 | | dgxseed32 | 7.09 | 2.09 | -0.01 | -0.02 | -0.03 | -0.04 | 9.09 | The four penalty terms (`bias`, `smoothness`, `thruster`, `torque`) sum to -0.12 against a total of ~8.8 — about 1.4% of the reward. This is the quantitative basis for deferring the `penalty_vs_objective` probe: there is no penalty mass to rebalance.
+
+[EVIDENCE: `analyze_training.py --tier 3 --deep`, final-window means]
+[CONFIDENCE: HIGH]
+
+source report: experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_buoyanchor_s30_260722_134743/analysis/diagnose-20260723-134359/report.md
+
+---
+
+## Update (2026-07-23T06:44:07.820188)
+
+The reward decomposition is near-identical across all 7 runs; the plant fix did not change what the policy optimises, only the plant it optimises against. | run | att_rp | yaw_vel | bias | smoothness | thruster | torque | total | |:--|--:|--:|--:|--:|--:|--:|--:| | anchor s30 | 6.69 | 2.12 | -0.01 | -0.02 | -0.02 | -0.07 | 8.69 | | anchor s31 | 6.96 | 2.05 | -0.01 | -0.02 | -0.03 | -0.06 | 8.89 | | anchor s32 | 6.81 | 1.99 | -0.01 | -0.02 | -0.03 | -0.05 | 8.70 | | Arm N 8192 | 6.92 | 1.92 | -0.01 | -0.02 | -0.03 | -0.04 | 8.75 | | dgxseed30 | 7.12 | 1.76 | -0.00 | -0.02 | -0.03 | -0.04 | 8.78 | | dgxseed31 | 7.09 | 1.90 | -0.00 | -0.02 | -0.03 | -0.04 | 8.90 | | dgxseed32 | 7.09 | 2.09 | -0.01 | -0.02 | -0.03 | -0.04 | 9.09 | The four penalty terms (`bias`, `smoothness`, `thruster`, `torque`) sum to -0.12 against a total of ~8.8 — about 1.4% of the reward. This is the quantitative basis for deferring the `penalty_vs_objective` probe: there is no penalty mass to rebalance.
+
+[EVIDENCE: `analyze_training.py --tier 3 --deep`, final-window means]
+[CONFIDENCE: HIGH]
+
+source report: /workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_buoyanchor_s30_260722_134743/analysis/diagnose-20260723-134359/report.md

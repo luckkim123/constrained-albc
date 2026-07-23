@@ -1,9 +1,9 @@
 ---
 title: "TAM plant-correctness fix collapses the void hard-DR roll heavy-tail (into a raised floor)"
-tags: ["heavy-tail", "roll", "TAM", "plant", "teacher-baseline", "doraemon"]
+tags: ["heavy-tail", "roll", "TAM", "plant", "teacher-baseline", "doraemon", "auto-captured", "trpo_buoyanchor_s30_260722_134743"]
 created: 2026-07-14T16:38:59.611547
-updated: 2026-07-20T06:24:42.684595
-sources: ["diagnose-20260715-011113"]
+updated: 2026-07-23T07:32:14.143051
+sources: ["diagnose-20260715-011113", "experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_buoyanchor_s30_260722_134743/analysis/diagnose-20260723-134359/report.md", "/workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_buoyanchor_s30_260722_134743/analysis/diagnose-20260723-134359/report.md"]
 links: ["ocean_nominal_shift_collapses_actor_entropy_e2_dr_harder.md"]
 category: decision
 confidence: high
@@ -94,3 +94,51 @@ exactly the E2 dr-harder failure mode
 within sampling noise; centers unverified.** Comparing hard-level per-parameter means is a zero-GPU
 follow-up on the same npz files.
 
+---
+
+## Merged from the_plant_correction_carries_the_gain_retraining_on_top_adds_not.md (2026-07-23T07:32:14.143051)
+
+# The plant correction carries the gain; retraining on top adds nothing measurable
+
+The plant correction carries the gain; retraining on top adds nothing measurable and costs a sub-threshold amount of steady-state accuracy. | field | plant shift (B-A) | retrain (C-B) | seeds adverse on retrain | |:--|--:|--:|:--| | roll.ss_error | -0.043 deg | +0.110 deg | 3 / 3 | | roll.rise_time | +0.040 s | +0.147 s | 3 / 3 | | roll.os_env_mean | -3.934 deg | +0.054 deg | 2 / 3 | | roll.n_gt20 | -10.778 envs | +0.556 envs | 2 / 3 | | pitch.ss_error | +0.006 deg | +0.117 deg | 2 / 3 | Per-seed `roll.n_gt20` A -> B: 35.67 -> 16.33 (s30), 21.67 -> 9.00 (s31), 9.67 -> 9.33 (s32).
+
+[EVIDENCE: paired by seed, `none` level, A -> B -> C]
+[CONFIDENCE: MED]
+
+source report: experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_buoyanchor_s30_260722_134743/analysis/diagnose-20260723-134359/report.md
+
+---
+
+## Update (2026-07-23T06:44:07.820188)
+
+The plant correction carries the gain; retraining on top adds nothing measurable and costs a sub-threshold amount of steady-state accuracy. | field | plant shift (B-A) | retrain (C-B) | seeds adverse on retrain | |:--|--:|--:|:--| | roll.ss_error | -0.043 deg | +0.110 deg | 3 / 3 | | roll.rise_time | +0.040 s | +0.147 s | 3 / 3 | | roll.os_env_mean | -3.934 deg | +0.054 deg | 2 / 3 | | roll.n_gt20 | -10.778 envs | +0.556 envs | 2 / 3 | | pitch.ss_error | +0.006 deg | +0.117 deg | 2 / 3 | Per-seed `roll.n_gt20` A -> B: 35.67 -> 16.33 (s30), 21.67 -> 9.00 (s31), 9.67 -> 9.33 (s32).
+
+[EVIDENCE: paired by seed, `none` level, A -> B -> C]
+[CONFIDENCE: MED]
+
+source report: /workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_buoyanchor_s30_260722_134743/analysis/diagnose-20260723-134359/report.md
+
+
+---
+
+## Merged from the_plant_effect_is_strongly_seed_dependent_it_rescues_seeds_tha.md (2026-07-23T07:32:14.143051)
+
+# The plant effect is strongly seed-dependent: it rescues seeds that fell into a f
+
+The plant effect is strongly seed-dependent: it rescues seeds that fell into a failure mode and leaves an already-good seed untouched. s30 -19.33 and s31 -12.67 envs, but s32 only -0.33. The paired mean of -10.78 describes a removed failure mode, not a uniform shift.
+
+[EVIDENCE: `roll.n_gt20` A->B above]
+[CONFIDENCE: HIGH]
+
+source report: experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_buoyanchor_s30_260722_134743/analysis/diagnose-20260723-134359/report.md
+
+---
+
+## Update (2026-07-23T06:44:07.820188)
+
+The plant effect is strongly seed-dependent: it rescues seeds that fell into a failure mode and leaves an already-good seed untouched. s30 -19.33 and s31 -12.67 envs, but s32 only -0.33. The paired mean of -10.78 describes a removed failure mode, not a uniform shift.
+
+[EVIDENCE: `roll.n_gt20` A->B above]
+[CONFIDENCE: HIGH]
+
+source report: /workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_buoyanchor_s30_260722_134743/analysis/diagnose-20260723-134359/report.md

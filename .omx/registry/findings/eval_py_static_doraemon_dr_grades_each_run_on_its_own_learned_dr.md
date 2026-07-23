@@ -1,9 +1,9 @@
 ---
 title: "eval.py static --doraemon-dr grades each run on its OWN learned DR — cross-run hard/ood is non-comparable, only none is fair"
-tags: ["eval", "doraemon-dr", "cross-run", "comparability", "confound", "none-level", "static", "heavy-tail", "e1", "shared-exam", "replay"]
+tags: ["eval", "doraemon-dr", "cross-run", "comparability", "confound", "none-level", "static", "heavy-tail", "e1", "shared-exam", "replay", "auto-captured", "trpo_budgetslack_260721_181133"]
 created: 2026-07-13T10:08:05.594876
-updated: 2026-07-16T05:51:09.548030
-sources: ["experiments/rsl_rl/albc_trpo_teacher/p7_tail/trpo_e1_latdr_260713_124923/analysis/diagnose-20260713-184751/report.md", "eval.py", "dr_config.py"]
+updated: 2026-07-23T07:32:14.143051
+sources: ["experiments/rsl_rl/albc_trpo_teacher/p7_tail/trpo_e1_latdr_260713_124923/analysis/diagnose-20260713-184751/report.md", "eval.py", "dr_config.py", "/workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_privslim24d_260721_114717/analysis/diagnose-20260721-190151/report.md", "experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_budgetslack_260721_181133/analysis/diagnose-20260722-103723/report.md", "/workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_budgetslack_260721_181133/analysis/diagnose-20260722-103723/report.md"]
 links: ["an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md", "cross_run_reference_values_must_be_re_extracted_fresh_never_carr.md"]
 category: convention
 confidence: high
@@ -87,3 +87,40 @@ times -- their fair-`none` point had already settled the verdict negatively, so 
 re-eval could not change it. P-B1 is the first case where it is decision-relevant, because P-B1's
 fair-`none` point is POSITIVE and the hard level is the only open question.
 
+---
+
+## Merged from consequence_for_reading_this_report_because_eval_py_static_grade.md (2026-07-23T07:32:14.143051)
+
+# CONSEQUENCE for reading this report: because `eval.py static` grades each run on
+
+CONSEQUENCE for reading this report: because `eval.py static` grades each run on its own learned DR box, A4's soft/medium/hard columns are a HARDER exam than the anchor's, so those magnitudes are inflated. The `none` level applies no DR at eval time and so carries no EVAL-TIME confound — and the band was written on `none` precisely for this reason. A training-time curriculum difference could in principle still colour nominal behaviour, so `none` is confound-REDUCED, not confound-free; with the measured deltas 15-40x outside the band, that residual cannot account for the result. The verdict does not rest on the confounded columns.
+
+[EVIDENCE: DR box difference above; workspace rule that eval.py static uses each run's own learned box]
+[CONFIDENCE: HIGH]
+
+source report: /workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_privslim24d_260721_114717/analysis/diagnose-20260721-190151/report.md
+
+
+---
+
+## Merged from the_soft_medium_hard_columns_are_graded_on_a5_s_own_wider_dr_box.md (2026-07-23T07:32:14.143051)
+
+# The soft/medium/hard columns are graded on A5's OWN wider DR box (19 DORAEMON ex
+
+The soft/medium/hard columns are graded on A5's OWN wider DR box (19 DORAEMON expansions vs anchor 18), so cross-run magnitudes at those levels are NOT comparable to the anchor -- only `none` (no eval-time DR) is a fair cross-run point, which is why the band lives on `none`.
+
+[EVIDENCE: TB DORAEMON/kl_step -- A5 19 expansions (250..4750) vs anchor 18 (500..4750); workspace rule eval.py static grades each run on its own learned box]
+[CONFIDENCE: HIGH]
+
+source report: experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_budgetslack_260721_181133/analysis/diagnose-20260722-103723/report.md
+
+---
+
+## Update (2026-07-23T02:21:27.244561)
+
+The soft/medium/hard columns are graded on A5's OWN wider DR box (19 DORAEMON expansions vs anchor 18), so cross-run magnitudes at those levels are NOT comparable to the anchor -- only `none` (no eval-time DR) is a fair cross-run point, which is why the band lives on `none`.
+
+[EVIDENCE: TB DORAEMON/kl_step -- A5 19 expansions (250..4750) vs anchor 18 (500..4750); workspace rule eval.py static grades each run on its own learned box]
+[CONFIDENCE: HIGH]
+
+source report: /workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_budgetslack_260721_181133/analysis/diagnose-20260722-103723/report.md

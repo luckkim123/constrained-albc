@@ -1,9 +1,9 @@
 ---
 title: "priv-obs slim Stage-2 lead: contested p_t dims (quad_damp, lin_vel) need WITH-vs-WITHOUT A/B; union kept them"
-tags: ["priv_obs", "encoder", "experiment_lead", "consolidation", "p_t_layout", "lin_vel", "resolved", "premise-error"]
+tags: ["priv_obs", "encoder", "experiment_lead", "consolidation", "p_t_layout", "lin_vel", "resolved", "premise-error", "auto-captured"]
 created: 2026-07-12T12:01:49.559370
-updated: 2026-07-21T10:05:13.097666
-sources: ["diagnose-20260721-190151"]
+updated: 2026-07-23T07:32:14.143051
+sources: ["diagnose-20260721-190151", "/workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_privslim24d_260721_114717/analysis/diagnose-20260721-190151/report.md"]
 links: ["doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step.md"]
 category: reference
 confidence: high
@@ -11,7 +11,6 @@ schemaVersion: 1
 qualityScore: 80
 qualityReasons: ["no-source-marker"]
 status: resolved
-blocked-on: ""
 ---
 
 # priv-obs slim Stage-2 lead: contested p_t dims (quad_damp, lin_vel) need WITH-vs-WITHOUT A/B; union kept them
@@ -122,3 +121,30 @@ STATUS SET resolved 2026-07-21 by A4 (see the LEAD CLOSED section above). Remain
 ## Update (2026-07-21T10:05:13.097666)
 
 The 'Parked under the 2026-07-20 batch-pass decision' annotation is obsolete: the batch pass RAN this probe as A4 on 2026-07-21 and it resolved. Nothing is pending.
+
+---
+
+## Merged from a4_fails_every_eval_clause_of_its_pre_registered_band_by_a_wide_.md (2026-07-23T07:32:14.143051)
+
+# A4 fails every eval clause of its pre-registered band by a wide margin, so the l
+
+A4 fails every eval clause of its pre-registered band by a wide margin, so the lead resolves exactly as the band's alternative branch specifies: keep 28D, the contested dims are load-bearing.
+
+[EVIDENCE: summary.json `none/roll/ss_error` 0.3730 vs 0.2149, `none/pitch/ss_error` 0.3799 vs 0.1946; CV computed as ss_error_std/ss_error = 0.1564/0.3730 and 0.1122/0.3799 vs anchor 0.0372/0.2149 and 0.0193/0.1946]
+[CONFIDENCE: HIGH]
+
+source report: /workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_privslim24d_260721_114717/analysis/diagnose-20260721-190151/report.md
+
+
+---
+
+## Merged from lin_vel_is_not_a_redundant_privileged_dim_in_envs_main_the_polic.md (2026-07-23T07:32:14.143051)
+
+# `lin_vel` is NOT a redundant privileged dim in `envs/main`. The policy observati
+
+`lin_vel` is NOT a redundant privileged dim in `envs/main`. The policy observation is 20D and contains command(3) + euler(3) + body angular velocity(3) + arm(5) + thruster(6) — no linear velocity in any form, by explicit design ("Linear velocity is excluded -- no DVL on real robot"). Removing `root_lin_vel_b` from p_t therefore deleted linear velocity from the entire network, not a duplicate copy of it.
+
+[EVIDENCE: `constrained_albc/envs/main/mdp/observations.py` `compute_policy_obs` torch.cat contents read directly at HEAD; docstring lines 17-18 and 24 confirm "no measured lin_vel" / "no lin_vel_err"]
+[CONFIDENCE: HIGH]
+
+source report: /workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_privslim24d_260721_114717/analysis/diagnose-20260721-190151/report.md

@@ -1,9 +1,9 @@
 ---
 title: "DORAEMON/kl_step final value 0.0000 is a sparse-logging artifact, NOT a frozen curriculum"
-tags: ["doraemon", "kl_step", "sanity-gate", "tensorboard", "sparse-logging", "engine-output", "auto-captured", "trpo_biasema_260715_142543"]
+tags: ["doraemon", "kl_step", "sanity-gate", "tensorboard", "sparse-logging", "engine-output", "auto-captured", "trpo_biasema_260715_142543", "trpo_buoyanchor_s30_260722_134743", "gotcha"]
 created: 2026-07-16T07:48:28.708915
-updated: 2026-07-20T07:52:44.177586
-sources: ["diagnose-20260716-164016", "experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_biasema_260715_142543/analysis/diagnose-20260716-164016/report.md", "/workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_biasema_260715_142543/analysis/diagnose-20260716-164016/report.md"]
+updated: 2026-07-23T07:32:14.143051
+sources: ["diagnose-20260716-164016", "experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_biasema_260715_142543/analysis/diagnose-20260716-164016/report.md", "/workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_biasema_260715_142543/analysis/diagnose-20260716-164016/report.md", "experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_buoyanchor_s30_260722_134743/analysis/diagnose-20260723-134359/report.md", "/workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_buoyanchor_s30_260722_134743/analysis/diagnose-20260723-134359/report.md", "diagnose-20260723-134359"]
 links: []
 category: debugging
 confidence: high
@@ -39,3 +39,36 @@ The `kl_step` sanity gate PASSES — the trust region stayed pinned at the confi
 [CONFIDENCE: HIGH]
 
 source report: /workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_biasema_260715_142543/analysis/diagnose-20260716-164016/report.md
+
+---
+
+## Merged from doraemon_kl_step_reads_0_0_in_a_200_sample_trailing_window_on_al.md (2026-07-23T07:32:14.143051)
+
+# `DORAEMON/kl_step` reads 0.0 in a 200-sample trailing window on all 7 runs — thi
+
+`DORAEMON/kl_step` reads 0.0 in a 200-sample trailing window on all 7 runs — this is a LOGGING artifact, not a stalled curriculum. `DORAEMON/kl_step` has n=5000 samples of which only **19** are non-zero: the tag is written only at the ~20 curriculum update points implied by `step_interval=250` over 5000 iters. The trailing-200 window contains no update point. `DORAEMON/success_rate` by contrast has 4776 of 5000 non-zero and reads 0.808 at iter 4999.
+
+[EVIDENCE: raw TB series, anchor s30]
+[CONFIDENCE: HIGH]
+
+source report: experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_buoyanchor_s30_260722_134743/analysis/diagnose-20260723-134359/report.md
+
+---
+
+## Update (2026-07-23T06:44:07.820188)
+
+`DORAEMON/kl_step` reads 0.0 in a 200-sample trailing window on all 7 runs — this is a LOGGING artifact, not a stalled curriculum. `DORAEMON/kl_step` has n=5000 samples of which only **19** are non-zero: the tag is written only at the ~20 curriculum update points implied by `step_interval=250` over 5000 iters. The trailing-200 window contains no update point. `DORAEMON/success_rate` by contrast has 4776 of 5000 non-zero and reads 0.808 at iter 4999.
+
+[EVIDENCE: raw TB series, anchor s30]
+[CONFIDENCE: HIGH]
+
+source report: /workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_buoyanchor_s30_260722_134743/analysis/diagnose-20260723-134359/report.md
+
+
+---
+
+## Merged from doraemon_kl_step_final_window_mean_reads_0_0_a_logging_artifact_.md (2026-07-23T07:32:14.143051)
+
+# DORAEMON/kl_step final-window mean reads 0.0 -- a logging artifact, not a stalled curriculum
+
+GOTCHA: 'omx reduce tb-final --window 200' on DORAEMON/kl_step returns 0.0 for every run, which reads as 'the curriculum stopped stepping'. It has not. EVIDENCE (raw EventAccumulator dump, buoyanchor s30): DORAEMON/kl_step has n=5000 samples of which only 19 are non-zero -- the tag is written ONLY at the ~20 curriculum update points implied by step_interval=250 over 5000 iters, and a trailing-200 window contains no update point. Contrast DORAEMON/success_rate: 4776 of 5000 non-zero, reads 0.808 at iter 4999. CHECK INSTEAD: read the non-zero subsequence, or read curriculum_trajectory.json (the Beta a/b snapshots) which shows the curriculum state directly. This is the 'engine empty cell is a HYPOTHESIS not a fact' rule applied to a trailing-window reducer: a sparse tag's window mean is meaningless, not evidence of absence. Re-visit: analysis diagnose-20260723-134359 section 'doraemon'.
