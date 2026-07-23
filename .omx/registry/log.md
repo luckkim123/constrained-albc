@@ -5895,3 +5895,219 @@
 - **Pages:** seed_noise_floor_on_none_level_attitude_is_huge_75_peak_to_peak_.md
 - **Summary:** created 'Seed-noise floor on none-level attitude is HUGE (~75% peak-to-peak on roll ss_error): the +/-5% adoption band is undecidable at n=1'
 
+## [2026-07-22T04:52:11.692425] add
+- **Pages:** plant_fix_needs_apply_before_retrain_main_hull_volume_0_009_0_00.md
+- **Summary:** updated 'PLANT FIX (needs-apply-before-retrain): main hull volume 0.009 -> 0.00790 recenters sim net buoyancy +10.25 N -> neutral, matching 2026-07-06 onboard measurement'
+
+## [2026-07-22T06:00:29.113478] query
+- **Pages:** roll_transient_is_worst_at_none_dr_and_improves_monotonically_as.md, teacher_segmented_post_switch_roll_transient_jumps_under_hard_dr.md, e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite.md, extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_.md, step_interval_250_400_probe_separate_dr_width_from_optimisation_.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md, p_b1_shared_exam_on_reference_dr_hard_roll_floor_was_exam_artifa.md, tam_plant_correctness_fix_collapses_the_void_hard_dr_roll_heavy_.md, iteration_count_not_dr_width_drives_the_nominal_roll_transient_t.md, doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md, e5_alpha075_ood_per_axis_generalization_gap_universal_failure_ro.md, joint1_cumulative_ipo_constraint_generalizes_drift_bounded_at_oo.md, student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md, teacher_dr_harder_yaw_is_the_only_heavy_tail_axis_roll_is_dc_bia.md, train_py_max_iterations_under_resume_is_iters_from_resume_not_an.md, a2_pays_for_the_lost_exploration_in_the_nominal_roll_transient_o.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md, env_to_env_spread_rises_with_the_transient_but_the_distribution_.md, roll_overshoot_is_inverted_against_dr_level_in_both_runs_a3_21_5.md
+- **Summary:** query 'roll transient iterations' -> 20 of 149
+
+## [2026-07-22T06:01:13.225059] query
+- **Pages:** e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite.md, extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_.md, train_py_max_iterations_under_resume_is_iters_from_resume_not_an.md, doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md, roll_transient_is_worst_at_none_dr_and_improves_monotonically_as.md, teacher_segmented_post_switch_roll_transient_jumps_under_hard_dr.md, e5_alpha075_ood_per_axis_generalization_gap_universal_failure_ro.md, step_interval_250_400_probe_separate_dr_width_from_optimisation_.md, our_doraemon_original_both_entropy_max_center_can_move_kl_ub_is_.md, tam_plant_correctness_fix_collapses_the_void_hard_dr_roll_heavy_.md, iteration_count_not_dr_width_drives_the_nominal_roll_transient_t.md, baseline_consolidated_main_reference_trpo_baseline_260713_031325.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md, seed_noise_floor_on_none_level_attitude_is_huge_75_peak_to_peak_.md, teacher_dr_harder_yaw_is_the_only_heavy_tail_axis_roll_is_dc_bia.md, track_cmd_att_deg_logs_the_env_mean_of_command_not_the_command_r.md, no_barrier_artifacts_0_spikes_max_0_125_so_the_constraint_accoun.md, the_hard_level_heavy_tail_roll_cv_257_pitch_280_is_the_dominant_.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md
+- **Summary:** query 'A1 max_iterations roll transient 13.5' -> 20 of 299
+
+## [2026-07-22T06:13:46.374329] query
+- **Pages:** real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md, stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, imu_45deg_offset_pitch_negation_sim_uncompensated_2026_07_05.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, obs_noise_model_history_channels_are_re_noised_every_step_sim_pa.md, onboard_measured_2026_07_06_arm_step_response_valid_sim_zeta_0_7.md, thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md, arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md, experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md, incident_post_mortem_teacher_baseline_opt_e1_e4_trained_on_a_tam.md, open_actionable_ledger_read_before_any_sim_plant_code_change_or_.md, reward_md_6_error_buffers_reward_call_site_dt_scaling_theory_rev.md, bias_ema_obs_is_deployment_safe_computed_from_command_minus_meas.md, joint_dr_params_kp_kd_effort_friction_need_no_dedicated_measurem.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, analysis_engine_map_what_is_grow_able_vs_off_limits.md, constraint_viol_trajectory_barrier_sign_metrics_4_10_starts_at_d.md, engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md
+- **Summary:** query 'sim to real deployment gap thruster imu frame convention stonefish' -> 20 of 308
+
+## [2026-07-22T06:41:01.209948] query
+- **Pages:** stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md, yaw_command_is_rate_not_angle_inherited_design_defensible_only_i.md, imu_45deg_offset_pitch_negation_sim_uncompensated_2026_07_05.md, teacher_dr_harder_yaw_is_the_only_heavy_tail_axis_roll_is_dc_bia.md, real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md, baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md, bias_ema_obs_is_deployment_safe_computed_from_command_minus_meas.md, constraint_threshold_budget_tuning_thresholds_split_into_hard_ph.md, bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md, p_a8_perflb200_more_iters_5000_8000_closed_the_deployment_ood_dr.md, perflb200_final_dr_anatomy_17_bulk_params_at_config_ceiling_unif.md, tracking_kernel_exp_quad_tanh_dead_zone_diagnosis_correct_but_fi.md, added_mass_scale_upper_half_is_inert_post_dr_0_95_i_clamp_caps_i.md, april_2026_entropy_collapse_campaign_machinery_bug_solved_conver.md, constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md, e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite.md, eval_command_box_was_half_the_trained_envelope_from_2026_04_06_t.md, row_2_holds_with_margin_a1_s_three_deployment_params_end_near_th.md, the_entire_training_side_reward_loss_is_the_yaw_channel_reward_y.md
+- **Summary:** query 'stonefish deployment problem yaw disturbance observed' -> 20 of 122
+
+## [2026-07-22T10:05:40.444434] add
+- **Pages:** container_cudnn_is_cu13_against_cu128_torch_every_conv1d_fails_s.md
+- **Summary:** created 'Container cuDNN is cu13 against cu128 torch: every conv1d fails, student distillation is 70x slower with the workaround'
+
+## [2026-07-23T02:21:27.244561] add
+- **Pages:** at_none_the_tracking_moved_well_outside_the_pre_registered_5_ban.md
+- **Summary:** updated 'At `none` the tracking moved well outside the pre-registered +/-5% band on every'
+
+## [2026-07-23T02:21:27.244561] add
+- **Pages:** the_move_is_a_directional_trade_not_a_uniform_regression_roll_st.md
+- **Summary:** updated 'The move is a directional TRADE, not a uniform regression: roll steady-state deg'
+
+## [2026-07-23T02:21:27.244561] add
+- **Pages:** yaw_os_env_mean_377_is_a_small_base_artifact_not_a_real_overshoo.md
+- **Summary:** updated 'yaw `os_env_mean` +377% is a small-base artifact, not a real overshoot regressio'
+
+## [2026-07-23T02:21:27.244561] add
+- **Pages:** across_the_full_dr_ladder_the_per_env_spread_widens_sharply_with.md
+- **Summary:** updated 'Across the full DR ladder the per-env spread widens sharply with DR, the familia'
+
+## [2026-07-23T02:21:27.244561] add
+- **Pages:** every_reward_term_is_within_seed_scale_of_the_anchor_the_policy_.md
+- **Summary:** updated 'Every reward term is within seed-scale of the anchor -- the policy is being paid'
+
+## [2026-07-23T02:21:27.244561] add
+- **Pages:** the_optimizer_machinery_is_indistinguishable_from_the_anchor_ent.md
+- **Summary:** updated 'The optimizer machinery is indistinguishable from the anchor: entropy, sigma flo'
+
+## [2026-07-23T02:21:27.244561] add
+- **Pages:** an_exhaustive_scan_of_all_policy_grad_noise_loss_actor_side_tags.md
+- **Summary:** updated 'An exhaustive scan of all Policy/Grad/Noise/Loss actor-side tags common to both '
+
+## [2026-07-23T02:21:27.244561] add
+- **Pages:** the_surrogate_loss_doubling_is_not_a_health_flag_att_rp_total_re.md
+- **Summary:** updated 'The surrogate-loss doubling is not a health flag: att_rp/total reward are flat ('
+
+## [2026-07-23T02:21:27.244561] add
+- **Pages:** the_value_critic_improved_9_0_and_the_cost_critic_too_8_9_releas.md
+- **Summary:** updated 'The value critic IMPROVED (-9.0%) and the cost critic too (-8.9%): releasing the'
+
+## [2026-07-23T02:21:27.244561] add
+- **Pages:** the_encoder_is_healthy_and_slightly_more_active_latent_std_uncha.md
+- **Summary:** updated 'The encoder is healthy and slightly more active: latent std unchanged, grad flow'
+
+## [2026-07-23T02:21:27.244561] add
+- **Pages:** encoder_z_mean_42_3_is_a_near_zero_base_artifact_both_means_0_02.md
+- **Summary:** updated '`Encoder/z_mean` -42.3% is a near-zero-base artifact (both means ~-0.02 to -0.03'
+
+## [2026-07-23T02:21:27.244561] add
+- **Pages:** the_intervention_did_what_it_was_designed_to_do_and_more_than_th.md
+- **Summary:** updated 'The intervention did what it was designed to do AND more than the "both dormant"'
+
+## [2026-07-23T02:21:27.244561] add
+- **Pages:** the_band_s_constraint_clause_is_satisfied_both_relaxed_guards_st.md
+- **Summary:** updated "The band's constraint clause is SATISFIED: both relaxed guards stay satisfied (n"
+
+## [2026-07-23T02:21:27.244561] add
+- **Pages:** no_barrier_artifacts_0_spikes_max_0_125_so_the_constraint_accoun.md
+- **Summary:** updated 'No barrier artifacts: 0 spikes, max -0.125, so the constraint accounting carries'
+
+## [2026-07-23T02:21:27.244561] add
+- **Pages:** a5_took_19_doraemon_expansions_vs_the_anchor_s_18_the_same_extra.md
+- **Summary:** updated "A5 took 19 DORAEMON expansions vs the anchor's 18 -- the SAME extra-expansion pa"
+
+## [2026-07-23T02:21:27.244561] add
+- **Pages:** curriculum_health_matches_the_anchor_success_0_895_vs_0_877_ess_.md
+- **Summary:** updated 'Curriculum health matches the anchor: success 0.895 vs 0.877, ess_ratio 0.75, mo'
+
+## [2026-07-23T02:21:27.244561] add
+- **Pages:** the_extra_expansion_lands_at_the_kl_cap_like_every_other_kl_step.md
+- **Summary:** updated 'The extra expansion lands at the KL cap like every other (kl_step=0.12 at all 19'
+
+## [2026-07-23T02:21:27.244561] add
+- **Pages:** a5_generalizes_across_its_own_dr_ladder_the_same_way_the_anchor_.md
+- **Summary:** updated 'A5 generalizes across its own DR ladder the same way the anchor family does: ste'
+
+## [2026-07-23T02:21:27.244561] add
+- **Pages:** the_soft_medium_hard_columns_are_graded_on_a5_s_own_wider_dr_box.md
+- **Summary:** updated "The soft/medium/hard columns are graded on A5's OWN wider DR box (19 DORAEMON ex"
+
+## [2026-07-23T02:21:27.244561] add
+- **Pages:** the_hard_level_heavy_tail_roll_cv_257_pitch_280_is_the_dominant_.md
+- **Summary:** updated 'The hard-level heavy tail (roll CV 257%, pitch 280%) is the dominant per-env fai'
+
+## [2026-07-23T04:36:57.758434] query
+- **Pages:** training_log_analysis_engine_reference_adapter.md, analysis_engine_map_what_is_grow_able_vs_off_limits.md, engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md, exp_analyze_must_run_analyze_training_py_for_training_side_diagn.md, engine_gap_analyze_training_deep_plot_has_2_blank_panels_inconsi.md, engine_gap_heavy_tail_json_pct_peak_gt_thresh_exceeds_100_at_ood.md, engine_gap_analyze_training_py_needs_the_logs_run_dir_not_the_ex.md, engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md, engine_gap_omx_cli_gaps_found_re_analyzing_teacher_2026_06_06_ro.md, eval_analysis_core_does_stats_adapter_does_heavy_tail.md, engine_gap_eval_adapter_heavy_tail_lacks_median_based_tail_ratio.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, coverage_lint_ok_is_a_floor_not_a_quality_gate_re_analysis_uses_.md, failure_dr_join_now_covers_fault_channels_not_just_dr_per_env_fa.md, engine_gap_flat_target_eval_records_joint1_trajectory_but_render.md, engine_gap_m1_critic_side_encoder_gradient_is_not_logged_policy_.md, the_actor_s_behaviour_did_change_however_policy_clip_fraction_ne.md, arm_a_measured_angle_joint1_constraint_recovers_not_diverges_the.md, doraemon_kl_step_final_value_0_0000_is_a_sparse_logging_artifact.md, engine_gap_status_board.md
+- **Summary:** query 'analysis engine reference adapter how to analyze' -> 20 of 309
+
+## [2026-07-23T04:38:16.018716] query
+- **Pages:** seed_noise_floor_on_none_level_attitude_is_huge_75_peak_to_peak_.md, tam_plant_correctness_fix_collapses_the_void_hard_dr_roll_heavy_.md, plant_fix_needs_apply_before_retrain_main_hull_volume_0_009_0_00.md, baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, literature_map_how_rl_control_actually_handles_steady_state_erro.md, a5_budgetslack_rp_vel_settling_manipulability_budgets_x100_learn.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md, constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md, roll_error_is_dc_bias_dominated_ss_jitter_ss_error_pitch_carries.md, bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md, dr_harder_campaign_synthesis_speed_kills_attitude_center_shift_o.md, incident_post_mortem_teacher_baseline_opt_e1_e4_trained_on_a_tam.md, joint_dr_params_kp_kd_effort_friction_need_no_dedicated_measurem.md, next_experiment_workflow_pick_a_baseline_train_once_then_re_tune.md, onboard_measured_2026_07_06_arm_step_response_valid_sim_zeta_0_7.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md
+- **Summary:** query 'roll ss_error seed noise plant buoyancy retrain' -> 20 of 268
+
+## [2026-07-23T04:54:21.766685] add
+- **Pages:** roll_is_the_deficient_axis_pitch_and_yaw_are_an_order_of_magnitu.md
+- **Summary:** created 'Roll is the deficient axis; pitch and yaw are an order of magnitude cleaner on t'
+
+## [2026-07-23T04:54:21.766685] add
+- **Pages:** the_seed_noise_floor_on_the_corrected_plant_is_56_0_peak_to_peak.md
+- **Summary:** created 'The seed-noise floor on the corrected plant is 56.0% peak-to-peak on `none` `rol'
+
+## [2026-07-23T04:54:21.766685] add
+- **Pages:** the_plant_correction_carries_the_gain_retraining_on_top_adds_not.md
+- **Summary:** created 'The plant correction carries the gain; retraining on top adds nothing measurable'
+
+## [2026-07-23T04:54:21.766685] add
+- **Pages:** the_plant_effect_is_strongly_seed_dependent_it_rescues_seeds_tha.md
+- **Summary:** created 'The plant effect is strongly seed-dependent: it rescues seeds that fell into a f'
+
+## [2026-07-23T04:54:21.766685] add
+- **Pages:** restated_in_absolute_degrees_against_this_repo_s_own_reference_s.md
+- **Summary:** created "Restated in absolute degrees against this repo's own reference scales, the retra"
+
+## [2026-07-23T04:54:21.766685] add
+- **Pages:** anchor_degradation_across_dr_is_graceful_on_roll_and_steepest_on.md
+- **Summary:** created 'Anchor degradation across DR is graceful on roll and steepest on the attitude no'
+
+## [2026-07-23T04:54:21.766685] add
+- **Pages:** the_retrain_sign_flips_at_hard_but_that_level_is_not_like_for_li.md
+- **Summary:** created 'The retrain sign flips at `hard`, but that level is not like-for-like and cannot'
+
+## [2026-07-23T04:54:21.766685] add
+- **Pages:** arm_n_8192_envs_is_null_every_none_roll_field_sits_inside_the_an.md
+- **Summary:** created "Arm N (8192 envs) is NULL: every `none` roll field sits inside the anchor's own "
+
+## [2026-07-23T04:54:21.766685] add
+- **Pages:** the_reward_decomposition_is_near_identical_across_all_7_runs_the.md
+- **Summary:** created 'The reward decomposition is near-identical across all 7 runs; the plant fix did '
+
+## [2026-07-23T04:54:21.766685] add
+- **Pages:** the_engine_s_diagnosis_block_reports_reward_plateau_in_every_run.md
+- **Summary:** created 'The engine\'s `DIAGNOSIS` block reports reward plateau in every run. "Reward conv'
+
+## [2026-07-23T04:54:21.766685] add
+- **Pages:** optimisation_is_healthy_and_near_identical_across_all_runs_entro.md
+- **Summary:** created 'Optimisation is healthy and near-identical across all runs; entropy collapse and'
+
+## [2026-07-23T04:54:21.766685] add
+- **Pages:** changepoint_structure_is_identical_across_plants_machines_and_sc.md
+- **Summary:** created 'Changepoint structure is identical across plants, machines and scales. anchor s3'
+
+## [2026-07-23T04:54:21.766685] add
+- **Pages:** both_critics_converge_the_constraint_critic_works_measurably_har.md
+- **Summary:** created 'Both critics converge; the constraint critic works measurably harder on the corr'
+
+## [2026-07-23T04:54:21.766685] add
+- **Pages:** the_encoder_is_healthy_on_every_run_no_collapse_no_softsign_satu.md
+- **Summary:** created 'The encoder is healthy on every run — no collapse, no softsign saturation, live '
+
+## [2026-07-23T04:54:21.766685] add
+- **Pages:** thruster_util_is_the_binding_constraint_in_7_of_7_runs_across_bo.md
+- **Summary:** created '`thruster_util` is the binding constraint in 7 of 7 runs, across both plants, bo'
+
+## [2026-07-23T04:54:21.766685] add
+- **Pages:** a5_trpo_budgetslack_260721_181133_loosened_constraints_that_are_.md
+- **Summary:** created 'A5 (`trpo_budgetslack_260721_181133`) loosened constraints that are not binding.'
+
+## [2026-07-23T04:54:21.766685] add
+- **Pages:** the_ipo_barrier_is_quiet_on_the_corrected_plant_and_had_spikes_o.md
+- **Summary:** created 'The IPO barrier is quiet on the corrected plant and had spikes on the old one. a'
+
+## [2026-07-23T04:54:21.766685] add
+- **Pages:** the_dr_curriculum_is_still_opening_when_training_ends_it_is_limi.md
+- **Summary:** created 'The DR curriculum is still opening when training ends — it is limited by the ite'
+
+## [2026-07-23T04:54:21.766685] add
+- **Pages:** the_doraemon_gate_is_live_and_correctly_calibrated_it_is_not_ine.md
+- **Summary:** created 'The DORAEMON gate is live and correctly calibrated — it is not inert and not pin'
+
+## [2026-07-23T04:54:21.766685] add
+- **Pages:** doraemon_kl_step_reads_0_0_in_a_200_sample_trailing_window_on_al.md
+- **Summary:** created '`DORAEMON/kl_step` reads 0.0 in a 200-sample trailing window on all 7 runs — thi'
+
+## [2026-07-23T04:54:56.975932] add
+- **Pages:** thruster_util_is_the_binding_constrainttrpo_constraint_in_7_of_7.md
+- **Summary:** created 'thruster_util is the binding ConstraintTRPO constraint in 7 of 7 runs -- A5 loosened non-binding ones'
+
+## [2026-07-23T04:54:57.071654] add
+- **Pages:** dr_curriculum_is_still_opening_at_iter_5000_dr_difficulty_is_ite.md
+- **Summary:** created 'DR curriculum is still opening at iter 5000 -- DR difficulty is iteration-limited, not bounds-limited'
+
+## [2026-07-23T04:55:17.458948] add
+- **Pages:** absolute_degree_reference_scales_for_judging_attitude_deltas_sto.md
+- **Summary:** created 'Absolute-degree reference scales for judging attitude deltas (stop reading percentages on a small base)'
+
+## [2026-07-23T04:55:17.552058] add
+- **Pages:** doraemon_kl_step_final_window_mean_reads_0_0_a_logging_artifact_.md
+- **Summary:** created 'DORAEMON/kl_step final-window mean reads 0.0 -- a logging artifact, not a stalled curriculum'
+
+## [2026-07-23T04:55:41.753704] add
+- **Pages:** seed_noise_floor_on_none_level_attitude_is_huge_75_peak_to_peak_.md
+- **Summary:** updated 'Seed-noise floor on none-level attitude is HUGE (~75% peak-to-peak on roll ss_error): the +/-5% adoption band is undecidable at n=1'
+
+## [2026-07-23T04:55:41.846413] add
+- **Pages:** e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite.md
+- **Summary:** updated "e3's '5000-iter budget' verdict is scope-limited, NOT a cap: max_iterations is a DR-EXPANSION knob (step_interval clock) and the real ceiling is the Beta a=b=1 config bound, not compute"
+

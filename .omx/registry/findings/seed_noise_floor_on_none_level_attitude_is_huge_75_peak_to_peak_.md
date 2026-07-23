@@ -1,9 +1,9 @@
 ---
 title: "Seed-noise floor on none-level attitude is HUGE (~75% peak-to-peak on roll ss_error): the +/-5% adoption band is undecidable at n=1"
-tags: ["seed-floor", "none-band", "methodology", "variance", "adoption-criterion", "albc", "teacher"]
+tags: ["seed-floor", "none-band", "methodology", "variance", "adoption-criterion", "albc", "teacher", "seed", "floor", "paired-seed"]
 created: 2026-07-22T04:04:07.570011
-updated: 2026-07-22T04:04:07.570011
-sources: []
+updated: 2026-07-23T04:55:41.753704
+sources: ["diagnose-20260723-134359"]
 links: []
 category: convention
 confidence: high
@@ -31,3 +31,9 @@ THE SEED-NOISE FLOOR on none-level attitude is ~75% peak-to-peak on roll ss_erro
 CONSEQUENCE (this is the finding, not a failure): the campaign's '+/-5% of anchor' adoption band has NO measured provenance (confirmed: no wiki page ever derived it) and is DESTROYED by this measurement -- the floor is ~15x the band. EVERY single-seed vs single-seed Stage-A tracking verdict (A1-A5) read at +/-5% is UNDECIDABLE by construction: the intervention deltas (A3 +26%, A4 +74%, A5 +17% on none roll) are all INSIDE one seed's noise band. A4's +73.6% 'catastrophic' roll regression is within seed-to-seed range; A5's +16.8% is trivially inside -> A5 resolves NULL.
 
 The band MUST be re-derived before any future adopt/discard call. Options: (a) multi-seed cells (>=3 seeds/arm, compare means with the measured floor as the error bar), or (b) a paired-seed design (same seed for anchor+intervention, compare within-seed deltas which cancel the seed term). n=3 and (max-min)/mean is a crude high-biased spread estimator, but even conservatively a 2.15x roll range obliterates a +/-5% band. Caveat: this floor is at the workstation eval GPU on these DGX-trained checkpoints; the mechanism (RL seed variance in a heavy-tail-at-hard policy family) is plant-independent.
+
+---
+
+## Update (2026-07-23T04:55:41.753704)
+
+UPDATE 2026-07-23 -- the 75% figure is the OLD plant; the corrected plant measures 56.0%. The headline 74.8% was measured on seed_floor_dgx (main@9de2da1, PRE-buoyancy-recentre plant, DGX-trained): none roll ss_error 0.4499 / 0.3074 / 0.2090, mean 0.3221, p2p 74.8%. The same three seeds retrained on the CORRECTED plant (teacher_baseline_buoyfix, workstation) measure 0.4967 / 0.2786 / 0.3934, mean 0.3896, CV 22.9%, p2p 56.0%. The DESIGN CONCLUSION IS UNCHANGED -- 56% is still ~11x the +/-5% adoption band, so single-seed verdicts stay undecidable and paired-seed (same seeds for anchor and intervention, within-seed delta) remains mandatory. Only the quoted number moves. Planning documents that say '~75% on the current plant' are wrong: quote 56.0% for the post-buoyfix plant and keep 74.8% attributed to the old one. Other none-level floors on the corrected plant, same 3 seeds: pitch ss_error 89.8% p2p, roll os_env_mean 26.2%, roll n_gt20 24.8%, roll rise_time 39.3%, yaw os_env_mean 187.0%. Re-visit: analysis diagnose-20260723-134359 section 'tracking'.

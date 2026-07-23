@@ -1,0 +1,29 @@
+{
+  "acknowledged_gates": [
+    "container_cudnn_is_cu13_against_cu128_torch_every_conv1d_fails_s.md",
+    "imu_45deg_offset_pitch_negation_sim_uncompensated_2026_07_05.md",
+    "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md",
+    "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md"
+  ],
+  "gpu_gate": "DGX idle (Arm I stopped or finished) AND marinelab on exp/buoyancy-recenter@7d45c2c AND constrained-albc@c335eca; ~7.5 h per run, 3 runs serial (DGX runs one job at a time)",
+  "launch_delta": "DGX replication of the buoyfix anchor: seeds 30/31/32, 4096 envs, 5000 iters, plant marinelab exp/buoyancy-recenter@7d45c2c, constrained-albc@c335eca. SINGLE VARIABLE = training machine (vs trpo_buoyanchor_s{30,31,32} on the workstation). run_group=log_project=teacher_baseline_buoyfix; agent.run_name=buoyanchordgx_s<seed>. Verdict: paired none-level roll.ss_error vs the B0a-eval reference (0.332/0.272/0.235).",
+  "open_leads": [
+    "april_2026_entropy_collapse_campaign_machinery_bug_solved_conver.md",
+    "baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md",
+    "closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md",
+    "constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md",
+    "curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md",
+    "e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite.md",
+    "experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md",
+    "joint1_stage_1_gate_go_drift_is_real_on_unlimited_physics_not_th.md",
+    "penalty_vs_objective_exchange_rate_deg_of_attitude_error_bought_.md",
+    "reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md",
+    "stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md",
+    "thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md"
+  ],
+  "proposal_id": "next-20260723-dgxanchor",
+  "queued_at": "2026-07-23T02:36:03.740537+00:00",
+  "queued_commit": "c335ecaaef426dace606e45e2e38ed3cd2e6165f",
+  "schema_version": 1,
+  "status": "pending approval"
+}
