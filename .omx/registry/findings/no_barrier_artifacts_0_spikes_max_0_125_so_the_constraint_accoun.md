@@ -2,14 +2,14 @@
 title: "No barrier artifacts: 0 spikes, max -0.125, so the constraint accounting carries"
 tags: ["auto-captured", "trpo_budgetslack_260721_181133"]
 created: 2026-07-22T01:58:11.799085
-updated: 2026-07-22T01:58:11.799085
-sources: ["experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_budgetslack_260721_181133/analysis/diagnose-20260722-103723/report.md"]
+updated: 2026-07-23T02:21:27.244561
+sources: ["experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_budgetslack_260721_181133/analysis/diagnose-20260722-103723/report.md", "/workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_budgetslack_260721_181133/analysis/diagnose-20260722-103723/report.md"]
 links: []
 category: session-log
 confidence: low
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 ---
 
 # No barrier artifacts: 0 spikes, max -0.125, so the constraint accounting carries
@@ -20,3 +20,14 @@ No barrier artifacts: 0 spikes, max -0.125, so the constraint accounting carries
 [CONFIDENCE: HIGH]
 
 source report: experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_budgetslack_260721_181133/analysis/diagnose-20260722-103723/report.md
+
+---
+
+## Update (2026-07-23T02:21:27.244561)
+
+No barrier artifacts: 0 spikes, max -0.125, so the constraint accounting carries no rejected-line-search reading to discount.
+
+[EVIDENCE: engine barrier_penalty last=-0.2246 spikes=0 max=-0.125]
+[CONFIDENCE: HIGH]
+
+source report: /workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_budgetslack_260721_181133/analysis/diagnose-20260722-103723/report.md

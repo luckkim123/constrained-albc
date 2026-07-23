@@ -2,8 +2,8 @@
 title: "sim hydro nominal is analytical (not measured); IMU+pressure can anchor rotation/heave but not surge/sway/TAM"
 tags: ["measurement", "system-id", "domain-randomization", "sim-to-real", "damping", "free-decay", "TAM", "sensors", "fault-tolerant-control", "thruster", "load-cell", "arm-step-response", "max_thrust", "systematic-bias", "user-decision", "batch-pass"]
 created: 2026-06-14T07:38:12.841674
-updated: 2026-07-20T08:43:44.130723
-sources: ["envs/main/config.py:139", "envs/main/mdp/events.py"]
+updated: 2026-07-23T07:08:29.469662
+sources: ["envs/main/config.py:139", "envs/main/mdp/events.py", "user-input-2026-07-23"]
 links: ["curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md", "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md"]
 category: reference
 confidence: high
@@ -11,7 +11,7 @@ schemaVersion: 1
 qualityScore: 70
 qualityReasons: ["no-source-marker", "generic-only-tags"]
 status: needs-apply-before-retrain
-blocked-on: "max_thrust band SOURCED (~+/-15%: T200 voltage window 14-18V + 5% lab curve-matching) and ready to roster as its own attributable step (campaign B0c); TAM moment-arm band still blocked on a real geometric-tolerance source (CAD stack-up / bracket spec). Remaining: confirm our battery's actual voltage window, write the Z6 memo, then roster + rule-02 comparison retrain."
+blocked-on: "max_thrust band SOURCED (+/-15%) and rostered as campaign B0c (the pending apply); battery voltage window CONFIRMED 4S LiPo ~14-16.8 V (2026-07-23 Z6 memo) — narrower than the 14-18 V source window, band conservative; TAM moment-arm band still blocked on a real geometric-tolerance source (CAD stack-up / bracket spec)"
 ---
 
 # sim hydro nominal is analytical (not measured); IMU+pressure can anchor rotation/heave but not surge/sway/TAM
@@ -119,4 +119,18 @@ band does not address it.
 ## Update (2026-07-20T08:43:44.130723)
 
 2026-07-20 pass-2 sourcing result (Z6 half-done): a defensible max_thrust DR band CAN be composed from citable evidence -- ~14% from a realistic on-vehicle voltage window (14-18 V interpolated on the BlueRobotics T200 published 12/16/20 V thrust curves) + ~5% independent-lab thrust-curve-matching uncertainty (published T200 characterizations matched the vendor curve within 5%), composing to ~ +/-15% around nominal 50 N (42.5-57.5 N), comfortably inside the 20-30% actuator-gain DR magnitudes common in legged sim-to-real work. The TAM moment-arm band has NO underwater-specific mounting-tolerance source (searched 2026-07-20) -- per this page's own no-invented-bounds standard, max_thrust DR is ready-to-roster while TAM-arm DR stays blocked-on-source (CAD tolerance stack-up or vendor bracket spec needed); do not back-fill the arm band from the thrust evidence (irrelevant to geometry).
+
+---
+
+## Update (2026-07-23T07:08:29.469662)
+
+## Z6 battery-voltage memo (2026-07-23, closes the battery residual)
+
+User input (2026-07-23): the real robot battery is a 4S LiPo — full charge 16.8 V, nominal 14.8 V, practical cutoff ~14 V. The actual working window is therefore ~14-16.8 V.
+
+The +/-15% max_thrust DR band was sourced from the generic T200 voltage window 14-18 V (+5% lab curve-matching). The 4S working window is NARROWER than that source window, so +/-15% covers the real span with margin: the band is conservative, not under-scoped. Decision: keep the band at +/-15% as rostered for B0c; no DR-config change follows from this memo.
+
+User directive recorded: do not spend a dedicated experiment on thruster characterization; adopt a reasonable value and move on. Z6 therefore closes as this memo, not a study.
+
+Residual ledger after this memo: the battery-window confirmation item is RESOLVED; the max_thrust half of this lead stays SOURCED and rostered as B0c (the pending apply this status waits for); the TAM moment-arm half remains blocked on a geometric-tolerance source (CAD stack-up / bracket spec).
 
