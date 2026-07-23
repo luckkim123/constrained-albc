@@ -25,7 +25,7 @@
   "+0.110 deg retrain delta" (C-B) is machine-confounded (B policies DGX-trained, C
   workstation-trained; section 11.2). "Anchor SOUND" stands on corrected grounds: the
   clean B-A plant shift plus the anchors' in-family absolute performance.]
-- **Next**: W0 zero-GPU residuals -> B0c (max_thrust DR band, paired-seed, ~15 h)
+- **Next**: W0 COMPLETE 2026-07-23 (C0.4 4/4, C0.5, Z3, Z6) -> B0c (max_thrust DR band, paired-seed, ~15 h)
   -> D3 verdict -> C3 comparison set (4 arms x 3 seeds, ~60 h, workstation GPU0 serial)
   -> C4 deployment pack for the final teacher.
 - **GPU-hours remaining on the critical path**: ~75 h workstation-serial
@@ -121,10 +121,10 @@ verdict = the run's latest `analysis/*/report.md`. All 22 runs verified on disk
 |:--|:--|:--|:--|
 | Z1 | per-dim log_std floor read | DONE 2026-07-21: 5/8 dims floored, free = {arm1, thr0, thr3} | wiki `april_2026_entropy_collapse...` |
 | Z2 | curriculum state check | DONE 2026-07-21: 5k runs never saturate (anchor Beta a 12.900 -> 1.670, 0/20 box-bound); 8k@si250 saturates at iter ~7000 | wiki `curriculum_recalibration...`; reports `diagnose-20260723-134359`, `diagnose-20260720-124259` |
-| Z3 | encoder z_sweep on adopted checkpoint | NOT EVIDENCED — no sweep artifact on disk for the biasema/anchor checkpoints | find over experiments tree |
+| Z3 | encoder z_sweep on adopted checkpoint | DONE 2026-07-23: swept the anchor (`trpo_buoyanchor_s30`) and the pre-fix biasema checkpoint; no collapse in either (~7/9 latent dims active). Post-fix sensitivity shifts off Payload onto Buoy Volume / CoG-Z / CoB-Z, which is what the plant fix should do | `.../teacher_baseline_buoyfix/trpo_buoyanchor_s30_260722_134743/train/encoder_analysis/sweep_heatmap.png`; same file under `teacher_baseline_posttam/trpo_biasema_260715_142543` |
 | Z4 | delay-sweep eval instrument | NOT DONE — `dr_config.py`/`eval.py` have zero `control_delay` references | wiki latency page (re-verified at HEAD 2026-07-20) |
 | Z5 | Stonefish P1/P2 pre-checks | NOT DONE (separate machine) | wiki `stonefish_yaw_gap...` |
-| Z6 | physical-span sourcing | PARTIAL: max_thrust ±15% SOURCED; TAM moment-arm NO SOURCE (cannot-close); battery-voltage memo residual | wiki `sim_hydro_nominal...` |
+| Z6 | physical-span sourcing | PARTIAL, residual CLOSED 2026-07-23: max_thrust ±15% SOURCED; battery window CONFIRMED 4S LiPo ~14-16.8 V — narrower than the 14-18 V source window, so the band is conservative and stays as rostered (no DR-config change); TAM moment-arm NO SOURCE (cannot-close) | wiki `sim_hydro_nominal...` (memo merged 2026-07-23) |
 | Z7 | hull F_bu decision | DONE 2026-07-22: volume-only fix, applied as B0a | marinelab `7d45c2c`; wiki commit `29bcbea` |
 | Z8 | R1 `integral_gate_threshold` | NOT DONE (grep-verified absent at HEAD; operating-brief claim refuted) | `grep -rn integral_gate_threshold` = 0 hits |
 | Z9 | pick A7 probe | MOOT — A7 dropped 2026-07-21 | operating brief section 3 |
@@ -166,8 +166,8 @@ extensions net-negative. See group ledger.
 
 | id | status | evidence |
 |:--|:--|:--|
-| C0 | DONE 2026-07-23: 4 arms registered (`509ba86`), PPO-Enc dim-sync fixed shared (`_core/runners/__init__.py`), smoke x2 per arm passed (artifacts preserved in `/workspace/.trash/smoke-ablation-reg-260723/`). **C0.5 DONE 2026-07-23 (audit session): all 4 arms correctly wired at code level** — NoEncoder actor gets policy obs only (`actor_critic_asym_constrained.py:113`), PPO actor obs_groups `["policy"]` + `OnPolicyDoraemonRunner`, NoIPO via `terms=[]` auto-sync, PPO-Enc matches the PolicyBase split protocol; stale 69D/97D docstrings in `rsl_rl_ppo_cfg.py` corrected to 72D/100D (`observation_space: 72` since biasema). RESIDUAL: C0.4 (eval.py reads one smoke ckpt per arm) -> W0 item | git log; CHANGELOG 2026-07-23; task-reference.md; audit session 2 |
-| C3 | NOT RUN — the largest remaining block: 4 arms x 3 seeds (30/31/32, paired with the anchor), workstation GPU0 serial, ~60 h. Proposed arm = the three B1a anchor runs themselves while final config == anchor config | roster section; budget section 8 |
+| C0 | DONE 2026-07-23: 4 arms registered (`509ba86`), PPO-Enc dim-sync fixed shared (`_core/runners/__init__.py`), smoke x2 per arm passed (artifacts preserved in `/workspace/.trash/smoke-ablation-reg-260723/`). **C0.5 DONE 2026-07-23 (audit session): all 4 arms correctly wired at code level** — NoEncoder actor gets policy obs only (`actor_critic_asym_constrained.py:113`), PPO actor obs_groups `["policy"]` + `OnPolicyDoraemonRunner`, NoIPO via `terms=[]` auto-sync, PPO-Enc matches the PolicyBase split protocol; stale 69D/97D docstrings in `rsl_rl_ppo_cfg.py` corrected to 72D/100D (`observation_space: 72` since biasema). **C0.4 DONE 2026-07-23 4/4**: every arm loads its smoke checkpoint through `eval.py static` (rc 0 + `summary.json`). PPO-Enc failed first (`ValueError: Policy obs dim 72 != expected 69`) — the EVAL path had no obs-width sync at all: `eval.py` maps only `ALBCConstraintEncoderRunner` to the syncing runner and every other arm falls through to stock `OnPolicyRunner`, which is fine for non-encoder actors but not for PPO-Enc (encoder policy + stock runner). Fixed by calling `sync_policy_obs_dim` at both runner-construction sites; re-verified 4/4. C0 has no residual left | git log; CHANGELOG 2026-07-23; task-reference.md; audit session 2; `/workspace/.trash/smoke-ablation-reg-260723/c04-eval/<arm>/summary.json` |
+| C3 | NOT RUN — the largest remaining block: 4 arms x 3 seeds (30/31/32, paired with the anchor), workstation GPU0 serial, ~60 h. Proposed arm = the three B1a anchor runs themselves while final config == anchor config. LAUNCH NOTE (from C0.5): `Isaac-ConstrainedALBC-TRPO-NoIPO-v0` inherits `wandb_project="att_dr_harder"` + `logger="wandb"` from the production cfg, so that arm silently logs to the wrong project unless `--log_project_name`/`--run_group` are passed explicitly — pin both on every C3 launch | roster section; budget section 8 |
 | C4 | PARTIAL: s30 student distilled (`trpo_buoyfix_s30_tcn_260722_184307/184632`) under the cuDNN-disabled slow path; full C4 = per-FINAL-teacher distillation + `export_deploy.py --golden` pack + C4a latent-collapse diagnostic | student tree; wiki cudnn page |
 
 ## 5. Re-judgment of every remaining item (KEEP / DROP / MODIFY / ADD)
@@ -223,9 +223,9 @@ Count: 16/16 rows. After the five closes: 7 `needs-experiment` + 4 `needs-apply-
 ## 7. Remaining-work sequence (dependencies explicit)
 
 ```
-W0 (zero-GPU, now):      C0.4 eval smoke-read; Z3 encoder sweep
-                          (C0.5 DONE + Z6 DONE 2026-07-23 — see sections 4/11.7;
-                          campaign registration + wiki closes: done by this consolidation)
+W0 (zero-GPU):            COMPLETE 2026-07-23 — C0.4 4/4 (eval-path obs-width sync
+                          fixed en route), C0.5, Z3, Z6 all closed; see sections 4/11.7.
+                          B0c is now the head of the queue.
 Human decisions:          (a) B1a-dgx: DROPPED (user 2026-07-23, audit section 11)
                           (b) cuDNN cu12 image fix (recommended before C4)
                           (c) DGX plant-fix hand-replication (only needed if DGX rejoins)

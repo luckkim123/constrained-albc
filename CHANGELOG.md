@@ -70,6 +70,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The same `policy_obs_dim` gap on the EVAL side (2026-07-23, found by the C0.4 smoke-eval
+  pass): fixing both training runners left a third construction path unguarded. `eval.py`
+  maps only `ALBCConstraintEncoderRunner` to `ConstraintEncoderRunner` and lets every other
+  `class_name` fall through to stock rsl_rl `OnPolicyRunner`, which carries no sync of its
+  own -- correct for plain-PPO/NoEncoder actors that size from the real obs, wrong for
+  PPO-Enc (encoder policy + stock runner), which aborted with `Policy obs dim 72 != expected
+  69` before a single step. `sync_policy_obs_dim` is now called at both runner-construction
+  sites in `eval.py` (`run_static`, `run_periodic`), i.e. once per path rather than per
+  runner class, so a future runner cannot reintroduce it. Verified by re-running the C0.4
+  smoke eval for all four ablation arms: 4/4 exit 0 with `summary.json` written. Without
+  this, C3 would have trained PPO-Enc for ~15 h and only then failed at eval time.
 - `policy_obs_dim` auto-sync only covered one of the two runners (2026-07-23): it lived
   inside `ConstraintEncoderRunner.__init__`, but PPO-Enc reaches the same encoder policy
   through `OnPolicyDoraemonRunner`, which had no `__init__` at all. The cfg default 69 is

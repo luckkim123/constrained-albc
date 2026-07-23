@@ -334,7 +334,7 @@ from constrained_albc.envs.main.mdp import (
     randomize_ocean_current,
     randomize_payload,
 )
-from constrained_albc.envs.main.runners import ConstraintEncoderRunner
+from constrained_albc.envs.main.runners import ConstraintEncoderRunner, sync_policy_obs_dim
 from constrained_albc.envs.main.utils import update_latest_symlink
 
 # Runtime-mutable copies (overridden by --ood-scale in static mode)
@@ -1181,6 +1181,9 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         policy_nn = policy
         print(f"[INFO] Loaded student ({args_cli.encoder_type}) + frozen teacher actor (latent diagnostic on)")
     elif use_checkpoint and resume_path:
+        # Encoder policies build at the env's real obs width (69->72 with use_bias_ema_obs);
+        # stock OnPolicyRunner has no sync of its own (PPO-Enc arm), so sync here for every path.
+        sync_policy_obs_dim(env, agent_dict)
         runner_cls_map = {
             "ALBCConstraintEncoderRunner": ConstraintEncoderRunner,
         }
@@ -1690,6 +1693,8 @@ def run_periodic(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     runner_device = agent_dict.get("device", agent_cfg.device)
 
     if use_checkpoint and resume_path:
+        # Same sync as run_static: stock OnPolicyRunner carries no obs-width sync (PPO-Enc arm).
+        sync_policy_obs_dim(env, agent_dict)
         runner_cls_map = {
             "ALBCConstraintEncoderRunner": ConstraintEncoderRunner,
         }
