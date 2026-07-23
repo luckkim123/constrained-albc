@@ -25,16 +25,52 @@
   "+0.110 deg retrain delta" (C-B) is machine-confounded (B policies DGX-trained, C
   workstation-trained; section 11.2). "Anchor SOUND" stands on corrected grounds: the
   clean B-A plant shift plus the anchors' in-family absolute performance.]
-- **Next**: W0 COMPLETE 2026-07-23 (C0.4 4/4, C0.5, Z3, Z6) -> B0c (max_thrust DR band, paired-seed, ~15 h)
-  -> D3 verdict -> C3 comparison set (4 arms x 3 seeds, ~60 h, workstation GPU0 serial)
-  -> C4 deployment pack for the final teacher.
-- **GPU-hours remaining on the critical path**: ~75 h workstation-serial
-  (+15 h only if B0c adopts; +22.5 h optional DGX anchor replication, human-gated).
+- **Next** (REVISED by the 0b priority pivot, user 2026-07-23): W0 COMPLETE 2026-07-23
+  (C0.4 4/4, C0.5, Z3, Z6) -> **B0c stage 1, seed 30 only, ~5 h** (proposal
+  `next-20260723-175314`, lint-clean, code on `exp/max-thrust-dr` in both overlay repos)
+  -> D3 verdict -> C4 deployment pack. **C3 (4-arm x 3-seed ablation) is DEFERRED to a later
+  paper phase** and is no longer on the critical path.
+- **GPU-hours remaining on the critical path**: ~10 h workstation-serial (B0c stage 1 + one
+  C4 pack). Deferred, not deleted: C3 ~60 h at the paper phase; B0c stage 2 +10 h only if
+  stage 1 clears; +15 h proposed-arm re-run only if B0c adopts.
+- **Roster warning (see 0b)**: B0c is the ONLY remaining config candidate. If it returns NULL,
+  the tuning roster is empty and the choice is "accept the anchor as final" or "revive a
+  deferred lead with new motivation".
 - **Blocked on hardware/human**: TAM vertical rewrite (m4 fault), IMU 45 deg (robot
   bring-up), TAM moment-arm DR band (no source), thruster T200 curve (bench), Stonefish
   P1/P2 (separate machine), cuDNN image fix (human-gated), DGX plant-fix replication
   (manual 1-line), joint1 Stage-2 (needs a new checkpoint), control_decimation ambiguity
   (robot bring-up).
+
+## 0b. PRIORITY PIVOT (user decision 2026-07-23) — tuning first, paper ablation later
+
+**Decision, in the user's words**: run only ONE seed for now; the ablation experiments the
+paper needs are postponed; finding the optimal setting comes first.
+
+What this changes:
+
+- **C3 (4 ablation arms x 3 seeds, ~60 h) is DEFERRED to a later paper phase.** It is a
+  publication artifact — it proves the method's components carry their weight — not a
+  config-selection instrument. It no longer sits on the critical path.
+- **All tuning work runs single-seed paired screening** (protocol 11.6 item 3), which is
+  already how B0c stage 1 was staged. Paired same-seed same-machine comparison cancels the
+  seed term, so single-seed screening is methodologically sound *for screening*.
+- **11.6 item 5 is now SPLIT, not repealed.** The paper number is still the full 3-seed
+  distribution with the pre-declared median-seed deployment rule. Single-seed screening
+  results are NOT paper numbers and must never be reported as the ablation table. When the
+  paper phase opens, the 3-seed set has to be run. Deferring is not cancelling.
+- Timing consequence, stated plainly: this does not save the 60 h, it moves it. The only
+  genuine saving is if a single-seed pass eliminates an arm before its seeds are spent.
+
+**A fact this pivot exposes, which the user should see before committing GPU time**: after
+the section-5 re-judgment, **B0c is the ONLY remaining config candidate on the roster**.
+Every other tuning lever was deferred or dropped with a recorded reason (B0b/B2 behind an
+8k+ reactivation edge; A6/R1 with no consumer; B1d/latency with no instrument; Z10 closed
+by gate; the four ADD rows all deferred). So "find the optimal setting first" currently
+means: run B0c (~5 h) and then, if it is NULL — which the 5/5 zero-adoption Stage-A record
+makes the likely outcome — the tuning roster is EMPTY. At that point the options are to
+accept the anchor config as final, or to revive a deferred lead with new motivation. That
+is a decision to make consciously, not to discover after the fact.
 
 ## 1. Goal chain
 
@@ -258,10 +294,14 @@ B0c  (after W0):          max_thrust ±15% DR arm vs anchor -> D3. STAGED 2026-0
                           CODE change (marinelab per-env max_thrust tensor + albc cfg/events +
                           dr_config none-collapse registration), not a config flip -- rule-02
                           baseline-tag/exp-branch isolation applies in BOTH overlay repos.
-C3   (after B0c verdict): 4 ablation arms x seeds {30,31,32}, workstation GPU0 serial, ~60 h
-                          (+3 proposed-arm runs ONLY if B0c adopts)
-C4   (after C3):          distill final teacher -> golden pack -> C4a latent diagnostic
-                          -> Stonefish diagnostic run (Z5 framing)
+C3   DEFERRED (section 0b, user 2026-07-23): the 4-arm x 3-seed ablation set is a PAPER
+                          artifact, not a config-selection instrument. Moves off the critical
+                          path to a later paper phase, cost unchanged (~60 h) when it runs.
+C4   (after B0c, no      distill final teacher -> golden pack -> C4a latent diagnostic
+      longer after C3):   -> Stonefish diagnostic run (Z5 framing). C4 needs a FINAL TEACHER
+                          CHECKPOINT, which the anchor already is unless B0c adopts -- it
+                          never depended on the ablation set, so deferring C3 does not
+                          block it.
 ```
 
 Standing gates (unchanged): every training launch via `omx queue-launch` + human approval;
@@ -276,15 +316,19 @@ plant); deployment checkpoint rule pre-declared = median seed by none-level roll
 | Workstation RTX 4070 (GPU0) | 3.58 s/iter @4096 envs -> ~5.0 h per 5000-iter run | 11.3/12.3 GB at 4096 envs: comparison set is SERIAL on GPU0; the 8 GB 4060 evals |
 | DGX GB10 | 5.409 s/iter @4096; 9.65 s/iter @8192 (13.41 h/run) | source build, `./isaaclab.sh -p` only; one job at a time. Plant fix IS present after all (stand-down 2026-07-23: `marinelab` on `exp/buoyancy-recenter` @ `db28b5a`, volume 0.00790 — content-equal to workstation `7d45c2c`), and cuDNN works there (torch 2.9.0+cu130, cudnn 91300, conv1d fwd/bwd with grad) where the workstation image is broken |
 
-| block | runs | wall clock |
-|:--|--:|--:|
-| B0c paired-seed | 3 | ~15 h |
-| C3 comparison set (workstation) | 12 | ~60 h (~2.5 days serial) |
-| + proposed-arm re-run iff B0c adopts | 3 | ~15 h |
-| B1a-dgx (optional, human-gated) | 3 | ~~22.5 h (DGX)~~ DROPPED (user 2026-07-23) |
-| C4 distillation | per teacher | ~5 h/pack until the cuDNN image fix; minutes after |
+| block | runs | wall clock | on critical path? |
+|:--|--:|--:|:--|
+| B0c stage 1 (seed 30 only) | 1 | ~5 h | **YES — head of queue** |
+| B0c stage 2 (seeds 31/32) | 2 | ~10 h | only if stage 1 clears, human-gated |
+| C4 distillation | per teacher | ~5 h/pack until the cuDNN image fix; minutes after | YES |
+| C3 ablation set (4 arms x 3 seeds) | 12 | ~60 h (~2.5 days serial) | **NO — deferred to the paper phase (0b)** |
+| + proposed-arm re-run iff B0c adopts | 3 | ~15 h | with C3 |
+| B1a-dgx (optional, human-gated) | 3 | ~~22.5 h (DGX)~~ DROPPED (user 2026-07-23) | no |
 
-Critical path ≈ **75 h** workstation-serial (90 h if B0c adopts), plus analysis gates.
+Critical path after the 0b pivot ≈ **10 h** workstation-serial (B0c stage 1 + one C4 pack),
+plus analysis gates — down from 75 h, because the 60 h ablation set moved to the paper phase
+rather than being cancelled. Total program cost is unchanged at ~70-95 h; what changed is
+when it is spent and what it buys first.
 
 ### Machine allocation (what DGX gets, decided 2026-07-23)
 
@@ -514,7 +558,12 @@ All 12 runs + baselines re-read on `os_env_mean` / `n_gt20` / `rise_time`
 4. **Adoption confirmation**: 3 paired seeds vs the 3 anchor seeds; adopt only if 3/3
    sign-consistent AND the mean paired delta clears half the screening floor.
 5. **Paper number**: the full 3-seed distribution; pre-declared median-seed deployment
-   rule (unchanged, section 7).
+   rule (unchanged, section 7). **SPLIT 2026-07-23 (section 0b), NOT repealed**: tuning
+   and screening now run single-seed paired, which is sound for screening because pairing
+   cancels the seed term — but a single-seed result is NEVER a paper number. The ablation
+   table still requires the deferred 3-seed C3 set. Do not let a screening number migrate
+   into the paper by inheritance; if a table cites fewer than 3 seeds, it is a screening
+   table and must say so.
 6. **UNSETTLED — the true same-machine paired repeatability floor.** Everything in (3)
    uses an n=3 upper-bound-flavored scatter estimate. One repeat run (identical config
    AND seed to `trpo_buoyanchor_s30`, workstation, ~5 h) would measure it directly.
@@ -538,7 +587,7 @@ All 12 runs + baselines re-read on `os_env_mean` / `n_gt20` / `rise_time`
 | `tam_vertical_single_motor...` | **DEFER** (unchanged) | m4 HW fault |
 | W0 (C0.4, C0.5, Z3) | **KEEP** | zero-GPU hygiene, unchanged. Z6 battery memo verified DONE 2026-07-23 (4S LiPo 14-16.8 V recorded on the `sim_hydro` wiki page; +/-15% band kept, conservative) — removed from the remaining W0 set |
 | B1a-dgx (queued) | **MODIFY -> recommend DROP** | a DGX anchor cannot discriminate the workstation anchor across a +109% machine term (11.2); would spend 22.5 h to measure a machine effect already measured on the old plant; human-gated |
-| C3 comparison set | **KEEP** (12 runs, workstation serial, ~60 h) | 3 seeds/arm is the paper protocol (11.6 item 5); machine rationale corrected in section 5 |
+| C3 comparison set | **KEEP but DEFERRED to the paper phase** (user 2026-07-23, section 0b) — still 12 runs / 3 seeds per arm / workstation serial / ~60 h when it runs; off the critical path until then. Single-seed screening does NOT substitute for it | 3 seeds/arm is the paper protocol (11.6 item 5, now SPLIT not repealed — see 0b); machine rationale corrected in section 5 |
 | C4 deployment pack (+C4a) | **KEEP** | unchanged; cuDNN fix recommended first |
 | ADD: repeatability run (exact config+seed repeat of `trpo_buoyanchor_s30`) | **DECLINED by user 2026-07-23** (no appetite for extra measurement runs) | do not re-propose without new motivation; screening verdicts use the conservative indirect floors of 11.6 item 3, stated with their n=3 caveat |
 | ADD (drift, 2026-07-23): `roll_transient_is_worst_at_none_dr_...` | **CARRY as a zero-GPU eval-side probe, DEFERRED behind C3** — not on the final-model critical path and NOT addressed by B0c (B0c perturbs thruster authority; this lead is about the inverted DR-level scaling of the roll transient). Its own candidate mechanism (a), "eval-protocol artifact — `eval.py static` grades each run on its own learned DR box", is testable with NO training via the shared-exam path (`--doraemon-dr-from`), the same instrument already used by `next-20260716-144615`. Re-propose after C3, when the 12-run set makes the inversion checkable across arms instead of the 2 runs it currently rests on | wiki page (2 runs, HIGH); precedent proposal `next-20260716-144615` |
