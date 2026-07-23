@@ -29,6 +29,30 @@
       "summary": "B0c revision 2 (APPROVED by independent review 2026-07-23): max_thrust +/-15% per-env band (42.5-57.5 N), stage-1 seed 30 paired vs trpo_buoyanchor_s30. H1 nominal roll degrades >=1 screening floor / H2 all reachable floors NULL. J_C-d_k removed from all decision clauses; manipulation confirmed deterministically via env.yaml + the committed liveness test",
       "label": "B0c",
       "added_at": "2026-07-23T11:34:21.326784+00:00"
+    },
+    {
+      "proposal_id": "next-20260724-033157",
+      "summary": "Z4-sweep: build delay-sweep eval instrument (eval-side control_delay_steps=(d,d), d in 0-3) and measure anchor s30 error-vs-delay response at none+hard; discriminates free-tolerance vs delay-naive-fragility; zero training",
+      "label": "Z4-sweep",
+      "added_at": "2026-07-23T18:49:41.509694+00:00"
+    },
+    {
+      "proposal_id": "next-20260724-034543",
+      "summary": "C4a: one eval.py student-mode run on buoyfix student (student_999.pt) vs anchor teacher; in-loop latent MSE vs own open-loop residual 0.002145 (10x/2x bands); covariate-shift vs healthy-student; revision of next-20260724-033158 after review",
+      "label": "C4a",
+      "added_at": "2026-07-23T18:49:41.583980+00:00"
+    },
+    {
+      "proposal_id": "next-20260724-033159",
+      "summary": "RT-a: shared-exam re-eval of anchor s30 via --doraemon-dr-from extend8k (full config box) to discriminate exam-artifact vs OOD-corner for the none-worst roll transient; one eval, zero code",
+      "label": "RT-a",
+      "added_at": "2026-07-23T18:49:41.646420+00:00"
+    },
+    {
+      "proposal_id": "next-20260724-033200",
+      "summary": "P2-yaw: eval-only constant external Mz injection sweep 0.5-5 N.m at none on anchor s30 to measure yaw rejection ceiling (Stonefish-gap P2 half); instrument + 6 evals, zero training",
+      "label": "P2-yaw",
+      "added_at": "2026-07-23T18:49:41.706170+00:00"
     }
   ]
 }
