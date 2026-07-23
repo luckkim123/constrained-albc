@@ -1,9 +1,9 @@
 ---
 title: "Seed-noise floor on none-level attitude is HUGE (~75% peak-to-peak on roll ss_error): the +/-5% adoption band is undecidable at n=1"
-tags: ["seed-floor", "none-band", "methodology", "variance", "adoption-criterion", "albc", "teacher", "seed", "floor", "paired-seed"]
+tags: ["seed-floor", "none-band", "methodology", "variance", "adoption-criterion", "albc", "teacher", "seed", "floor", "paired-seed", "scoping", "audit"]
 created: 2026-07-22T04:04:07.570011
-updated: 2026-07-23T04:55:41.753704
-sources: ["diagnose-20260723-134359"]
+updated: 2026-07-23T07:08:18.136272
+sources: ["diagnose-20260723-134359", "teacher-campaign-plan.md#11"]
 links: []
 category: convention
 confidence: high
@@ -37,3 +37,10 @@ The band MUST be re-derived before any future adopt/discard call. Options: (a) m
 ## Update (2026-07-23T04:55:41.753704)
 
 UPDATE 2026-07-23 -- the 75% figure is the OLD plant; the corrected plant measures 56.0%. The headline 74.8% was measured on seed_floor_dgx (main@9de2da1, PRE-buoyancy-recentre plant, DGX-trained): none roll ss_error 0.4499 / 0.3074 / 0.2090, mean 0.3221, p2p 74.8%. The same three seeds retrained on the CORRECTED plant (teacher_baseline_buoyfix, workstation) measure 0.4967 / 0.2786 / 0.3934, mean 0.3896, CV 22.9%, p2p 56.0%. The DESIGN CONCLUSION IS UNCHANGED -- 56% is still ~11x the +/-5% adoption band, so single-seed verdicts stay undecidable and paired-seed (same seeds for anchor and intervention, within-seed delta) remains mandatory. Only the quoted number moves. Planning documents that say '~75% on the current plant' are wrong: quote 56.0% for the post-buoyfix plant and keep 74.8% attributed to the old one. Other none-level floors on the corrected plant, same 3 seeds: pitch ss_error 89.8% p2p, roll os_env_mean 26.2%, roll n_gt20 24.8%, roll rise_time 39.3%, yaw os_env_mean 187.0%. Re-visit: analysis diagnose-20260723-134359 section 'tracking'.
+
+---
+
+## Update (2026-07-23T07:08:18.136272)
+
+SCOPE CORRECTION from the 2026-07-23 validity audit (SSOT section 11.4 D3): this page's floor is UNPAIRED (cross-seed) and must NOT be used to judge PAIRED same-seed same-machine comparisons. The Stage-A runs were already paired (all 10 posttam runs carry seed: 30, verified in every train/params/agent.yaml), so the earlier sentence on this page calling "EVERY single-seed Stage-A tracking verdict undecidable by construction" over-reaches: under the paired analysis A4's +73.6% (+0.158 deg, 3.5-4x the paired scatter bound, coherent across roll+pitch+CV) is a DECIDABLE FAIL, and A5's +16.8% (+0.036 deg) is NULL by the PAIRED floor, not by this unpaired one. What remains true and unchanged: the +/-5% band is dead under every floor; paired-seed design is the correct screening method; this floor governs UNPAIRED designs and seed-generalization claims. Two hard limits the paired design keeps: (a) pairing survives only WITHIN one machine (same config + same seed cross-machine measured +109% on roll ss_error: dgxseed30 vs biasema); (b) the same-machine paired repeatability floor is unmeasured (n=3 scatter bound 16.8%; a repeat run is proposed, human-gated). Screening/adoption/paper protocol now lives in the eval-metric-units-and-decision-floors convention page and SSOT section 11.6.
+

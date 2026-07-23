@@ -1,15 +1,15 @@
 ---
 title: "e3's '5000-iter budget' verdict is scope-limited, NOT a cap: max_iterations is a DR-EXPANSION knob (step_interval clock) and the real ceiling is the Beta a=b=1 config bound, not compute"
-tags: ["doraemon", "curriculum-budget", "max-iterations", "num-envs", "dgx", "scale-up", "e3", "config-ceiling", "p-a6", "user-decision", "extend8k", "result-recorded", "exam-comparability", "correction", "step_interval", "mechanism-isolated", "scale", "num_envs"]
+tags: ["doraemon", "curriculum-budget", "max-iterations", "num-envs", "dgx", "scale-up", "e3", "config-ceiling", "p-a6", "user-decision", "extend8k", "result-recorded", "exam-comparability", "correction", "step_interval", "mechanism-isolated", "scale", "num_envs", "arm-n", "cross-machine", "scoping", "audit"]
 created: 2026-07-16T05:58:47.795144
-updated: 2026-07-23T06:37:45.230332
-sources: ["diagnose-20260714-084409", "diagnose-20260720-115818", "diagnose-20260720-123142", "diagnose-20260721-020253", "diagnose-20260723-134359"]
+updated: 2026-07-23T07:08:24.061574
+sources: ["diagnose-20260714-084409", "diagnose-20260720-115818", "diagnose-20260720-123142", "diagnose-20260721-020253", "diagnose-20260723-134359", "teacher-campaign-plan.md#11"]
 links: ["performance_lb_recon_needs_zero_new_rollouts_doraemon_state_pt_a.md", "decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema.md", "extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_.md", "eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md"]
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 70
-qualityReasons: ["no-source-marker", "generic-only-tags"]
+qualityScore: 80
+qualityReasons: ["no-source-marker"]
 status: resolved
 blocked-on: "REMAINING SCOPE ONLY: DGX scale-up (larger num_envs AND max_iterations). The same-plant 'does extending past 5000 help' half is ANSWERED (verdict rests on the fair none level) -- do not re-run that arm."
 ---
@@ -202,3 +202,10 @@ CLOSE 2026-07-23 -- the num_envs half is ANSWERED NULL; the lead's remaining sco
 ## Update (2026-07-23T06:37:45.230332)
 
 CLOSED 2026-07-23 (plan consolidation): remaining scope emptied by Arm N trpo_e3scaleN_envs8192_260722_151230 (NULL -- all metrics inside the buoyfix anchor 3-seed band; diagnose-20260723-134359) after the iteration half was answered net-negative twice (extend8k, moreiters). Arm I (4096x12000) CANCELLED. Reactivation edge = B0b 8k+ regime (docs/reference/teacher-campaign-plan.md section 5).
+
+---
+
+## Update (2026-07-23T07:08:24.061574)
+
+ARM-N SCOPING from the 2026-07-23 validity audit (SSOT section 11.3): Arm N (trpo_e3scaleN_envs8192_260722_151230) trained on DGX (env.yaml usd_path /home/seungmin/... signature) with the corrected plant (volume 0.0079) but was judged against WORKSTATION anchors - a cross-machine comparison over a measured +109% same-config same-seed machine term (dgxseed30 vs biasema). Therefore "every none roll field inside the anchor 3-seed band" CANNOT attribute the null to envs: as a claim that "8192 envs has no effect" the result is INCONCLUSIVE. The lead-closing DECISION (do not adopt 8192@DGX; final model trains on the workstation) STANDS on independent grounds: no benefit was demonstrated anywhere, and the machine-isolation rule forbids a DGX-trained final regardless. A clean envs answer would need a workstation 8192 run that nothing currently motivates - not proposed.
+

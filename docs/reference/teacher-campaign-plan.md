@@ -19,6 +19,12 @@
 - **The anchor is SOUND** (retraction of the 2026-07-23 mid-session claim stands:
   retrain delta +0.110 deg = 9.6% of one obs-noise sigma, sub-threshold; plant fix is
   the win: -3.93 deg roll overshoot). Final config = the anchor config unless B0c adopts.
+  [AUDIT-CORRECTION 2026-07-23, section 11: "-3.93 deg" mislabels the unit — `os_env_mean`
+  is percent-of-step (`recompute_metrics.py:109`), so the plant win is -3.93 pp =
+  **-1.18 deg** on the 30-deg roll steps (24% of the settling gate, not 79%). The
+  "+0.110 deg retrain delta" (C-B) is machine-confounded (B policies DGX-trained, C
+  workstation-trained; section 11.2). "Anchor SOUND" stands on corrected grounds: the
+  clean B-A plant shift plus the anchors' in-family absolute performance.]
 - **Next**: W0 zero-GPU residuals -> B0c (max_thrust DR band, paired-seed, ~15 h)
   -> D3 verdict -> C3 comparison set (4 arms x 3 seeds, ~60 h, workstation GPU0 serial)
   -> C4 deployment pack for the final teacher.
@@ -147,8 +153,8 @@ extensions net-negative. See group ledger.
 |:--|:--|:--|:--|
 | B0a | marinelab `7d45c2c` (volume 0.009 -> 0.00790) | DONE 2026-07-22; wiki apply-gate closed | commit; wiki `29bcbea` |
 | B0a-eval | `trpo_dgxseed30/31/32` re-evaluated on new plant | DONE 3/3 (`static_260723_110214/111102/111955`) | eval dirs |
-| B1a | `trpo_buoyanchor_s30/s31/s32_26072{2,3}_*` | DONE 3/3 trained + evaluated; s30 analyzed: plant fix ADOPT (-3.93 deg roll overshoot), retrain delta +0.110 deg = 9.6% of 1 sigma (sub-threshold) -> **anchor SOUND** | report `diagnose-20260723-134359` |
-| seed_floor_dgx | `trpo_dgxseed30/31/32_260721_*` | DONE: seed floor 74.8% p2p (old plant), 56.0% p2p (corrected, from B1a 3 seeds) — kills every single-seed ±5% verdict | same report, lines 60-65 |
+| B1a | `trpo_buoyanchor_s30/s31/s32_26072{2,3}_*` | DONE 3/3 trained + evaluated; s30 analyzed: plant fix ADOPT (-3.93 deg roll overshoot), retrain delta +0.110 deg = 9.6% of 1 sigma (sub-threshold) -> **anchor SOUND** [AUDIT-CORRECTION 2026-07-23: -3.93 pp = -1.18 deg (os unit is percent-of-step); retrain delta C-B machine-confounded — see section 11] | report `diagnose-20260723-134359`; section 11 |
+| seed_floor_dgx | `trpo_dgxseed30/31/32_260721_*` | DONE: seed floor 74.8% p2p (old plant), 56.0% p2p (corrected, from B1a 3 seeds) — kills every single-seed ±5% verdict [AUDIT-SCOPE 2026-07-23: this floor is UNPAIRED (cross-seed); it does not transfer to paired same-seed same-machine deltas — section 11.4 D3] | same report, lines 60-65 |
 | B1a-dgx | queued `trpo_buoyanchordgx_s30_PLACEHOLDER` | PENDING human approval; stakes revised DOWN (discriminates a sub-threshold effect); OPTIONAL — C3 does not depend on it | proposal `next-20260723-dgxanchor` |
 | B0b/B1b | — | NOT RUN — re-judged, deferred with edge (section 5) | — |
 | B0c/B1c | — | NOT RUN — KEEP, next tuning arm (section 5) | — |
@@ -173,12 +179,12 @@ extensions net-negative. See group ledger.
 | B1d latency arm | **DROP as scheduled item; deferred with edge** — Z4 instrument does not exist and delay is off-DORAEMON (stalls the curriculum, e1 lesson). Edge: build Z4, then re-propose. User direction (latency wanted in final training config, 2026-07-20) recorded, not actionable yet | wiki latency page (both blockers re-verified) |
 | B2 scale-up | **DROP**. Arm N (envs x2 at 5k) NULL; iteration extension answered net-negative twice (extend8k, moreiters); Arm I cancelled as a third dose of the same lever. The campaign's literal question ("scale after the box is widened") is moot while B0b is deferred — reactivation edge shared with B0b | wiki e3 page (closed 2026-07-23); reports |
 | B3 joint1 Stage-2 | **DEFER** (unchanged): requires a station-keeping-on-unlimited-physics checkpoint that does not exist; not on the final-model path | wiki joint1 page |
-| B1a-dgx replication | **KEEP as OPTIONAL, human-gated** — already queued; stakes low (discriminates a 9.6%-of-sigma effect); C3 does not wait for it | proposal `next-20260723-dgxanchor` |
+| B1a-dgx replication | **KEEP as OPTIONAL, human-gated** — already queued; stakes low (discriminates a 9.6%-of-sigma effect); C3 does not wait for it [AUDIT 2026-07-23: recommend **DROP** — same-config same-seed cross-machine delta is +109% on roll ss_error (section 11.2), so a DGX anchor cannot discriminate anything about the workstation anchor; decision stays with the human] | proposal `next-20260723-dgxanchor`; section 11.2 |
 | A6 (sigma-R6) + Z8 (sigma-R1) | **DEFER both** — R1 is not in code (grep-verified; the "Z8 shipped" record was wrong) and nothing on the roster consumes it now that R6 is deferred; zero adopted levers + 56% seed floor make another ±5% tuning probe paired-seed-expensive with no motivating deficiency. Edge: a future reward-kernel experiment (R1 must land first, behavior-preserving) | grep; wiki reward_sigma page |
 | Z10 penalty rescale | **DROP — close resolved-by-gate**: the page's own gate (measured deficiency) answers itself; penalties are 1.4% of reward | report; wiki page |
 | Z3 encoder sweep | **KEEP (W0)** — zero-GPU rule-03 hygiene on the anchor checkpoint | rule 03 |
 | C0 residuals (C0.4, C0.5) | **KEEP (W0)** — cheap; a mislabelled arm invalidates the comparison it anchors | roster C0 items 4-5 |
-| C3 comparison set | **KEEP** — machine decided: **workstation** (e3 NULL means the final model is the workstation Stage-B model; the plant fix lives only on the workstation editable install). 12 runs paired-seed | roster section 3 ordering argument; batch-pass DGX wrinkle |
+| C3 comparison set | **KEEP** — machine decided: **workstation** (e3 NULL means the final model is the workstation Stage-B model; the plant fix lives only on the workstation editable install). 12 runs paired-seed [AUDIT-CORRECTION 2026-07-23: "fix lives only on workstation" is wrong as stated — Arm N trained WITH the fix on DGX (its `env.yaml` `volume: 0.0079`); the binding reason is machine-comparability: cross-machine same-config same-seed delta +109% on roll ss_error, section 11.2. Workstation decision unchanged, on corrected grounds] | roster section 3 ordering argument; section 11.2 |
 | C4 deployment | **KEEP** — per-final-teacher distillation + golden pack. Recommend the cuDNN cu12 image fix first (human-gated): collapses ~5 h/pack back to minutes. Includes **C4a** (ADD): closed-loop latent-collapse diagnostic re-pointed at the buoyfix student (one eval, no training) | wiki cudnn + latent-collapse pages |
 
 **ADD rows (findings nobody rostered — now recorded, all deferred with owners/edges):**
@@ -282,3 +288,229 @@ actuation-noise experiment, P-B7 candidates 1-3, latency/B1d+Z4, A6/R1+R6
   `seed_floor_dgx`, `e3_dgxscale_buoyfix` created; `teacher_baseline_posttam` ledger
   back-filled from run reports (a one-time reconstruction; from now on events are
   appended at launch/eval/verdict time).
+
+## 11. Experiment-validity audit (2026-07-23)
+
+Audited per `.sp/plans/2026-07-23-experiment-validity-audit-prompt.md`: for each of the
+12 executed runs, could the design produce the verdict it reported? Every number below
+was read from disk or computed from `summary.json` / `train/params/*.yaml` on
+2026-07-23. Reports were read via `omx report-parse` only. Confidence tags:
+HIGH = read/computed from a file; MED = inference across sources; LOW = judgment.
+Reports are append-only (report-guard), so corrections to report text are recorded here
+and in the wiki, never by editing a `report.md`.
+
+### 11.1 Unit corrections (the root defect; it propagated into three documents)
+
+- `ss_error` / `ss_jitter` are **degrees** (`constrained_albc/analysis/_analyze/recompute_metrics.py:167`:
+  |actual_deg - target_deg|). HIGH.
+- `os_env_mean` / `os_env_median` / `us_env_mean` are **percent of the step magnitude**
+  (`recompute_metrics.py:109`: `(peak - target) / step_mag * 100`), NOT degrees. HIGH.
+- `n_gt20` counts envs whose overshoot exceeds **20 percent of the step**, not 20 deg
+  (`recompute_metrics.py:121`). HIGH.
+- The static-eval schedule steps roll by exactly **30 deg** in every attitude segment
+  (pitch 30 or 60 deg) — computed from `data_none.npz` target arrays. Roll
+  `os_env_mean` in degrees = pp x 0.30, exact. HIGH.
+- Consequences: anchor roll os 15.86 pp = **4.76 deg** peak beyond target (95% of the
+  4.985-deg settling gate — not "318%"); plant-fix os shift -3.93 pp = **-1.18 deg**
+  (24% of the gate — not "-3.93 deg" / 79%). The "(deg)" mislabel originated in report
+  `diagnose-20260723-134359` (its tables print "os_env_mean (deg)") and propagated into
+  section 0 of this document and into the audit prompt itself. HIGH.
+- The audit prompt's own "A5 +16.8% = +0.065 deg" is also wrong: it applied the
+  percentage to the corrected-plant anchor mean (0.390) instead of A5's actual baseline
+  (biasema 0.2149). Actual: **+0.036 deg = 3.1% of one sigma**. HIGH.
+
+### 11.2 Reference scales and measured floors (roll, `none` level)
+
+| quantity | value | source | conf |
+|:--|--:|:--|:--|
+| obs-noise sigma, euler | 1.146 deg (0.02 rad) | `envs/main/config.py:271-274` | HIGH |
+| `rp_vel_settling` gate | 4.985 deg (0.087 rad) | `envs/main/mdp/constraints.py:222` | HIGH |
+| eval determinism | exact repeat | biasema evaluated twice independently (2026-07-15 19:35 and 07-16 16:11, different files/md5), metrics identical to 4 sig figs; all run-to-run variance is training-side | HIGH |
+| eval-code drift 07-15..07-22 | none | `git log --since=2026-07-15 --until=2026-07-22 -- constrained_albc/analysis/` is empty; biasema and Stage-A evals ran the same code | HIGH |
+| cross-seed floor, old plant (UNPAIRED) | 74.8% p2p = 0.241 deg ss_error | `seed_floor_dgx` 3 seeds | HIGH |
+| cross-seed floor, corrected plant (UNPAIRED) | 56.0% p2p = 0.218 deg | buoyanchor 3 seeds | HIGH |
+| paired same-machine scatter bound (one-lever 5k arms vs biasema: A2/A3/A5) | -5.8% .. +16.8% (max 0.036 deg) | `summary.json` deltas; n=3 and the levers may carry true effects, so this is an upper-bound-flavored bound | MED |
+| cross-machine, same config + same seed (n=1 pair) | **+109% ss_error (+0.235 deg), +6.4 pp os, +31.3 envs n_gt20** | dgxseed30 (DGX, `usd_path /home/seungmin/...`) vs biasema (workstation); config diff = usd_path prefix + wandb project ONLY, seed 30 both | HIGH |
+
+Reading: the +/-5% adoption band (+/-0.011 deg on the biasema base) is ~1% of one
+obs-noise sigma and far below every floor above — undecidable under any design. The
+correct decidability scale is run-to-run training variance (eval is deterministic);
+sigma is the physical-relevance scale. Same-machine paired deltas under ~0.04 deg are
+indistinguishable from lever-free scatter. Cross-machine comparisons are meaningless
+below ~0.24 deg.
+
+### 11.3 Part A — 12 executed runs, 7 checks each
+
+Checks: (1) metric resolution, (2) baseline identity, (3) plant identity, (4) DR-level
+fairness (`none` only), (5) manipulation applied, (6) metric-hypothesis match,
+(7) answer was NOT available without training. ok = passes; W = caveat in notes.
+
+| run | 1 | 2 | 3 | 4 | 5 | 6 | 7 | verdict | follow-up |
+|:--|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:--|:--|
+| A1 `stepint400` | ok | ok | old | ok | ok | ok | ok | **VALID** — H1 refutation robust | none |
+| A2 `entcoefzero` | ok | ok | old | ok | ok | ok | ok | **VALID** (diagnostic) | none |
+| A3 `minstdthr008` | W | ok | old | W | ok | ok | ok | **VALID as screening DISCARD**; effect-size claim INCONCLUSIVE | (c) moot |
+| A4 `privslim24d` | W | ok | old | ok | ok | ok | ok | **VALID** — FAIL decidable | none |
+| A5 `budgetslack` | W | ok | old | ok | ok | ok | W | **VALID as NULL** (tracking); transient trade real-looking (11.5) | (b) re-analyzed here |
+| `dgxseed30` | ok | n/a | old | ok | ok | ok | ok | **VALID** (measurement) | none |
+| `dgxseed31` | ok | n/a | old | ok | ok | ok | ok | **VALID** (measurement) | none |
+| `dgxseed32` | ok | n/a | old | ok | ok | ok | ok | **VALID** (measurement) | none |
+| `buoyanchor_s30` | ok | W | new | ok | ok | ok | ok | **VALID** (anchor); C-B retrain claim **INVALID-BY-BASELINE** | (c) moot, plant never reverts |
+| `buoyanchor_s31` | ok | W | new | ok | ok | ok | ok | **VALID** (anchor) | none |
+| `buoyanchor_s32` | ok | W | new | ok | ok | ok | ok | **VALID** (anchor) | none |
+| Arm N `e3scaleN_envs8192` | ok | **X** | new | ok | ok | ok | W | **INCONCLUSIVE** as "envs have no effect" (cross-machine baseline); the no-adoption DECISION stands | (c) closed lead stands, scoped |
+
+Count: 12 runs x 7 checks = 84 checks reported. Notes:
+
+- **A1** (8000 iters, `model_7999`): baseline = `extend8k` at 8000 iters — intended and
+  fair (isolates `step_interval` 250->400 at fixed budget; `env.yaml:513` shows 400 vs
+  biasema 250, HIGH); ref5k biasema shown for context. Bands were pole predictions, not
+  +/-5%: H1 pole 17.0 pp os (5.10 deg), H2 pole 25-27 pp (7.5-8.1 deg), measured 30.55 pp
+  (9.16 deg). Distance from H1 = 13.5 pp = 4.06 deg >> all floors -> **H1 refuted,
+  decidable** (HIGH). Distance from H2 = 3.6 pp = 1.07 deg, within plausible paired
+  transient scatter -> the secondary "H2 also missed" is INCONCLUSIVE (MED); the
+  headline verdict does not depend on it.
+- **A2**: manipulation = `entropy_coef_per_dim (0.0 x8)` vs biasema `(0.01 x2, 0.001 x6)`;
+  per-dim overrides the scalar (`_core/algorithms/constraint_trpo.py:68,107`), so the
+  yaml's scalar `entropy_coef: 0.003` is dead — manipulation APPLIED (HIGH). Verdict
+  reads TB sigma trajectories (deterministic logs), not an eval band — resolution
+  concerns do not apply to the mechanism claim.
+- **A3**: manipulation = `min_std_per_dim` thruster dims 0.05->0.08 (arm dims 0.1
+  unchanged) — APPLIED (HIGH). Its primary band required a -10% os improvement
+  (-1.7 pp = -0.51 deg), below the paired transient scatter (unrelated levers moved os
+  by +7.7 / +9.3 pp) -> the adoption bar was **undetectable by design**
+  (band-invalid-by-resolution); measured +4.5 pp (+1.34 deg) is also within that
+  scatter -> "actively worsens" unproven (MED). The DISCARD stands on burden: the
+  pre-registered improvement was not demonstrated. Alt clause read at `hard` violates
+  DR fairness (check 4 W) but decided nothing (it also failed).
+- **A4**: manipulation = `state_space: 24` vs 28 (`env.yaml:96`) — APPLIED (HIGH). Band
+  +/-5% (+/-0.011 deg) is band-invalid-by-resolution, but the measured effect is
+  +0.158 deg roll / +0.185 deg pitch (14-16% of sigma), 3.5-4x the paired scatter
+  bound, coherent across both axes AND CV -> **FAIL decidable despite the band** (MED-HIGH).
+- **A5**: manipulation = budgets `rp_vel_settling` 0.2->20.0 and `manipulability`
+  0.05->5.0 (x100, `env.yaml` diff vs biasema) — APPLIED (HIGH). Tracking delta
+  +0.036 deg = 3.1% sigma, inside paired scatter -> NULL correct. Check 7 W: the
+  constraint-inertness half (J_C/d_k margins) was already visible in anchor TB without
+  a run. See 11.5 for the transient-trade upgrade.
+- **dgxseed30/31/32**: purpose = UNPAIRED cross-seed floor; valid as such. The wiki
+  page itself already forbids cross-GPU comparison. Their `static_260723_*` re-evals
+  (B0a-eval, `PLANT.txt` markers) provide the clean B-A plant shift (same policy,
+  eval-only plant swap) — VALID (HIGH).
+- **buoyanchor s30/31/32** check 2 W: the A->B->C decomposition's C-B ("retrain")
+  compares DGX-trained policies (B) against workstation-trained policies (C), so
+  "+0.110 deg retrain cost" bundles the machine term (+0.235 deg on the only measured
+  same-config pair) with the retrain term — **INVALID-BY-BASELINE as a retrain
+  measurement** (HIGH on the confound's existence; the sign/size of the pure retrain
+  term is unknown). B-A (plant, eval-only) is clean. "Anchor SOUND" survives: no
+  adverse absolute signal, in-family with the posttam distribution, physically
+  motivated fix.
+- **Arm N** check 2 X: trained on DGX (`usd_path /home/seungmin/...`, HIGH) with the
+  corrected plant (`volume: 0.0079`, HIGH), judged against WORKSTATION anchors — a
+  cross-machine comparison with a measured +109% machine term. "Inside the anchor
+  band" therefore cannot attribute the null to envs. The DECISION (do not adopt
+  8192@DGX) stands independently: no benefit demonstrated + machine-comparability
+  forbids DGX-trained finals anyway.
+- **Arm I** (12k iters on DGX, stopped before artifacts): stopping was RIGHT —
+  a third dose of a twice-net-negative lever (extend8k, moreiters), on a
+  cross-machine-confounded rig, in a regime (8k+) that is off-roster while B0b is
+  deferred. HIGH.
+
+### 11.4 The three suspected defects, adjudicated
+
+- **D1 (verdict metric below physical resolution): CONFIRMED in conclusion, corrected
+  in mechanism and units.** The +/-5% band is dead (11.2), but because of run-to-run
+  training variance, not obs-noise per se — eval is deterministic, so sigma (1.146 deg)
+  is the physical-relevance scale, not a measurement floor. The os rows of the prompt's
+  table were unit-mislabeled (11.1); the overshoot axis is genuinely the largest
+  absolute deficiency (anchor 4.76 deg peak-beyond-target vs 0.39 deg ss_error), so the
+  prompt's direction survives the correction.
+- **D2 (Stage A on a later-corrected plant): timeline CONFIRMED** (marinelab `7d45c2c`
+  2026-07-22 13:36; all Stage-A runs started 2026-07-20 18:02 .. 07-21 18:11 and carry
+  `volume: 0.009`, HIGH). Consequences re-scoped: the plant term on the verdict axis
+  (ss_error) is only -0.043 deg paired — the plant win is on the transient
+  (-1.18 deg os, n_gt20 -19.3/-12.7/-0.3 per seed = a removed failure mode in 2 of 3
+  seeds). Transport: A1/A2 are mechanism verdicts (training dynamics) — transport
+  (MED); A3/A5 are burden-based no-adoptions — nothing to transport; A4 is an
+  information-ablation with an effect ~4x the paired floor — plausibly
+  plant-independent (MED). **No Stage-A re-runs are warranted.**
+- **D3 (seed-floor misapplied to paired comparisons): premise CONFIRMED** — all 10
+  posttam runs carry `seed: 30` (every `agent.yaml` read, HIGH). Wiki `cc06451` is
+  **right-but-mis-scoped**: right that +/-5% is dead and that paired designs cancel the
+  seed term, wrong to label the already-paired Stage-A verdicts undecidable by the
+  UNPAIRED floor — under the paired analysis A4 is decidable-FAIL and A5 is NULL, which
+  the page's own examples get backwards. The genuine limits are: (a) same-seed pairing
+  survives only WITHIN one machine (+109% cross-machine pair); (b) the same-machine
+  paired repeatability floor is unmeasured (bounded above by the 11.2 scatter bound).
+  Correct protocol in 11.6.
+
+### 11.5 Re-analysis on transient metrics (existing eval data, zero GPU)
+
+All 12 runs + baselines re-read on `os_env_mean` / `n_gt20` / `rise_time`
+(`summary.json`, `none`, roll). What changes:
+
+| run | os pp (deg) | n_gt20 /64 | rise s | new reading |
+|:--|--:|--:|--:|:--|
+| biasema (ref5k) | 17.02 (5.11) | 4.3 | 0.403 | uniquely clean tail — every other old-plant run shows 21-61 envs |
+| extend8k | 26.99 (8.10) | 61.3 | 0.361 | the 8k extension's real cost: 96% of envs overshoot >6 deg — reinforces B0b deferral and the Arm-I stop |
+| A1 | 30.55 (9.16) | 53.7 | 0.333 | + ss_error +52.9% (+0.090 deg) vs extend8k: additional evidence against si400 beyond the os verdict |
+| A2 | 24.70 (7.41) | 42.7 | 0.332 | entropy removal degrades the tail while return rises — confirms "reward up" is an unsafe adoption criterion |
+| A5 | 26.35 (7.90) | 54.7 | 0.307 | rise -24%, os +9.3 pp (+2.8 deg), n_gt20 +50: a coherent released-damping signature of `rp_vel_settling` x100 -> the constraint is inert in J_C margins but NOT inert in transient shaping (MED-HIGH); "learner near-twin of anchor" needs this scope |
+| anchor 3-seed | 15.86 (4.76) | 12.1 | 0.539 | plant fix trades slower rise (+0.14 s) for a smaller tail |
+| Arm N | 16.08 (4.82) | 13.3 | 0.528 | inside anchor band, unattributable (cross-machine) |
+
+### 11.6 Corrected decision protocol (supersedes the +/-5% band everywhere)
+
+1. **Machine isolation**: never compare runs trained on different machines; a machine
+   that hosts training needs its own anchor. (Evidence: 11.2 cross-machine pair.)
+2. **Units**: pre-register every band in absolute units — deg for ss_error, pp AND deg
+   (x0.30 roll) for overshoot. Percent-only bands are how this campaign broke.
+3. **Screening** (per probe arm): 1 paired run, same seed, same machine as its
+   baseline. Call an effect REAL only if |d ss_error| >= 0.10 deg (~2.5x the scatter
+   bound) or |d os| >= 10 pp (3.0 deg) or |d n_gt20| >= 15 envs; roll+pitch sign
+   coherence strengthens. Below the floors: NULL/INCONCLUSIVE, never "worse"/"better".
+4. **Adoption confirmation**: 3 paired seeds vs the 3 anchor seeds; adopt only if 3/3
+   sign-consistent AND the mean paired delta clears half the screening floor.
+5. **Paper number**: the full 3-seed distribution; pre-declared median-seed deployment
+   rule (unchanged, section 7).
+6. **UNSETTLED — the true same-machine paired repeatability floor.** Everything in (3)
+   uses an n=3 upper-bound-flavored scatter estimate. One repeat run (identical config
+   AND seed to `trpo_buoyanchor_s30`, workstation, ~5 h) measures it directly. Proposed
+   below; human-gated.
+
+### 11.7 Part B — every not-yet-run item (11 open wiki leads + roster items)
+
+| item (wiki slug / roster id) | verdict | deciding evidence |
+|:--|:--|:--|
+| `closed_loop_latent_collapse...` -> C4a | **KEEP** | eval-only, cheap, unblocked; unaffected by this audit |
+| `curriculum_recalibration...` -> B0b | **KEEP-DEFERRED** (8k+ edge, unchanged) | audit strengthens: the 8k regime's transient cost restated in degrees (extend8k os 8.10 deg, 61/64 envs >20% — 11.5) |
+| `experiment_idea_latency...` -> B1d/Z4 | **DEFER** (unchanged) | Z4 instrument absent (grep at HEAD, section 4 Z4); both blockers stand |
+| `joint1_stage_1_gate...` -> B3 | **DEFER** (unchanged) | prerequisite checkpoint does not exist |
+| `reward_sigma_integral_obs_gate...` -> A6/R1 | **DEFER** (unchanged) | R1 absent at HEAD (grep, section 4 Z8); no consumer |
+| `stonefish_yaw_gap...` -> Z5 | **KEEP** as deployment diagnostic (unchanged) | separate machine; framing already correct |
+| `thruster_nonlinear_curve_t200...` | **DEFER** (unchanged) | bench hardware |
+| `container_cudnn_is_cu13...` | **KEEP** as C4 infra, human-gated (unchanged) | throughput-only blocker |
+| `imu_45deg_offset...` | **DEFER** (unchanged) | user decision 2026-07-20; robot bring-up track |
+| `sim_hydro_nominal...` (max_thrust) -> B0c | **KEEP, MODIFY the decision rule** | run as planned (3 paired seeds vs anchor seeds, ~15 h, before C3) but judged by protocol 11.6 items 2-4, NOT +/-5%; pre-register the band in deg at proposal time |
+| `tam_vertical_single_motor...` | **DEFER** (unchanged) | m4 HW fault |
+| W0 (C0.4, C0.5, Z3, Z6 memo) | **KEEP** | zero-GPU hygiene, unchanged |
+| B1a-dgx (queued) | **MODIFY -> recommend DROP** | a DGX anchor cannot discriminate the workstation anchor across a +109% machine term (11.2); would spend 22.5 h to measure a machine effect already measured on the old plant; human-gated |
+| C3 comparison set | **KEEP** (12 runs, workstation serial, ~60 h) | 3 seeds/arm is the paper protocol (11.6 item 5); machine rationale corrected in section 5 |
+| C4 deployment pack (+C4a) | **KEEP** | unchanged; cuDNN fix recommended first |
+| ADD: repeatability run (exact config+seed repeat of `trpo_buoyanchor_s30`) | **PROPOSE**, human-gated, ~5 h | directly measures the paired floor every screening verdict in 11.6 depends on; the cheapest decisive measurement available. NOT launched by this audit |
+
+Forward plan and GPU budget (sections 7-8) are otherwise unchanged: critical path
+~75 h workstation-serial; B1a-dgx recommended drop removes 22.5 h from the optional
+pool; the proposed repeatability run adds 5 h if approved.
+
+### 11.8 What this audit could not settle
+
+- The same-machine paired repeatability floor (11.6 item 6) — needs the proposed
+  repeat run.
+- Whether 8192 envs has any effect at all: Arm N is cross-machine-confounded; a clean
+  answer needs a workstation 8192 run (~10+ h) that nothing currently motivates — not
+  proposed.
+- Whether biasema's uniquely clean tail (n_gt20 4.3 vs 21-61 everywhere else on the old
+  plant) is the bias-ema effect or a fortunate draw — single-seed, old plant, moot for
+  the forward path (the anchor family retains the biasema config).
+- The pure retrain term of B1a's C-B leg (machine-confounded); moot — the plant never
+  reverts, so no decision consumes it.
