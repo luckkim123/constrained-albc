@@ -11,6 +11,12 @@
       "proposal_id": "next-20260723-dgxanchor",
       "summary": "B1a-dgx: replicate anchor on DGX 3 seeds (machine-artifact discrimination); OPTIONAL, stakes revised down (sub-threshold effect); pending human approval",
       "added_at": "2026-07-23T06:35:59.699842+00:00"
+    },
+    {
+      "proposal_id": "next-20260723-175314",
+      "summary": "B0c: max_thrust +/-15% per-env DR band (42.5-57.5 N), stage-1 seed 30 paired vs trpo_buoyanchor_s30; H1 band perturbs the 7/7 binding thruster_util constraint / H2 band inert behind the existing +/-30% gain DR",
+      "label": "B0c",
+      "added_at": "2026-07-23T08:56:46.674245+00:00"
     }
   ]
 }

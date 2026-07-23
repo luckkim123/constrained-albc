@@ -230,6 +230,13 @@ extensions net-negative. See group ledger.
 
 Count: 16/16 rows. After the five closes: 7 `needs-experiment` + 4 `needs-apply-before-retrain` remain live.
 
+**LIVE-BACKLOG CORRECTION 2026-07-23 (post-consolidation drift, B0c session)**: the backlog is
+live and has already moved. `omx wiki list --status needs-experiment` now returns **8**, not 7 —
+`roll_transient_is_worst_at_none_dr_and_improves_monotonically_as.md` (created 2026-07-21,
+unblocked) was never carried into section 6 or 11.7. Its disposition is now recorded in 11.7.
+The count above is kept as the as-of-consolidation figure; treat `omx wiki list` as the
+authority and re-enumerate at every session start rather than trusting this number.
+
 ## 7. Remaining-work sequence (dependencies explicit)
 
 ```
@@ -241,7 +248,16 @@ Human decisions:          (a) B1a-dgx: DROPPED (user 2026-07-23, audit section 1
                           (c) DGX plant-fix hand-replication (only needed if DGX rejoins)
                           (d) repeatability run: DECLINED (user 2026-07-23) — screening
                               floors stay on the conservative indirect estimate (11.6)
-B0c  (after W0):          max_thrust ±15% DR arm, paired-seed 3 runs vs anchor, ~15 h -> D3
+B0c  (after W0):          max_thrust ±15% DR arm vs anchor -> D3. STAGED 2026-07-23 (user seed
+                          aversion + protocol 11.6 items 3->4): stage 1 = seed 30 ONLY, paired
+                          vs trpo_buoyanchor_s30, ~5 h (screening, 11.6 item 3); stage 2 =
+                          seeds 31/32 (~10 h) ONLY on human approval after a stage-1 clear in
+                          the improving direction (confirmation, 11.6 item 4). A stage-1 pass
+                          without stage 2 yields "promising, unconfirmed" -- NOT an adoption.
+                          Proposal: next-20260723-175314 (lint ok, label B0c). NOTE: B0c is a
+                          CODE change (marinelab per-env max_thrust tensor + albc cfg/events +
+                          dr_config none-collapse registration), not a config flip -- rule-02
+                          baseline-tag/exp-branch isolation applies in BOTH overlay repos.
 C3   (after B0c verdict): 4 ablation arms x seeds {30,31,32}, workstation GPU0 serial, ~60 h
                           (+3 proposed-arm runs ONLY if B0c adopts)
 C4   (after C3):          distill final teacher -> golden pack -> C4a latent diagnostic
@@ -525,6 +541,7 @@ All 12 runs + baselines re-read on `os_env_mean` / `n_gt20` / `rise_time`
 | C3 comparison set | **KEEP** (12 runs, workstation serial, ~60 h) | 3 seeds/arm is the paper protocol (11.6 item 5); machine rationale corrected in section 5 |
 | C4 deployment pack (+C4a) | **KEEP** | unchanged; cuDNN fix recommended first |
 | ADD: repeatability run (exact config+seed repeat of `trpo_buoyanchor_s30`) | **DECLINED by user 2026-07-23** (no appetite for extra measurement runs) | do not re-propose without new motivation; screening verdicts use the conservative indirect floors of 11.6 item 3, stated with their n=3 caveat |
+| ADD (drift, 2026-07-23): `roll_transient_is_worst_at_none_dr_...` | **CARRY as a zero-GPU eval-side probe, DEFERRED behind C3** — not on the final-model critical path and NOT addressed by B0c (B0c perturbs thruster authority; this lead is about the inverted DR-level scaling of the roll transient). Its own candidate mechanism (a), "eval-protocol artifact — `eval.py static` grades each run on its own learned DR box", is testable with NO training via the shared-exam path (`--doraemon-dr-from`), the same instrument already used by `next-20260716-144615`. Re-propose after C3, when the 12-run set makes the inversion checkable across arms instead of the 2 runs it currently rests on | wiki page (2 runs, HIGH); precedent proposal `next-20260716-144615` |
 
 Forward plan and GPU budget (sections 7-8) are otherwise unchanged: critical path
 ~75 h workstation-serial; B1a-dgx recommended drop removes 22.5 h from the optional
