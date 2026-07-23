@@ -28,6 +28,7 @@ import torch
 from rsl_rl.runners import OnPolicyRunner
 
 from ..utils.logging import flush_metrics
+from . import sync_policy_obs_dim
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +40,14 @@ class OnPolicyDoraemonRunner(OnPolicyRunner):
     user disables DORAEMON via ``cfg.doraemon.enable = False``), so this runner
     is safe to use as a drop-in replacement for OnPolicyRunner.
     """
+
+    def __init__(self, env, train_cfg, log_dir=None, device="cpu"):
+        # PPO-Enc reaches the encoder policy through this runner, so it needs the
+        # same env->cfg obs-width sync ConstraintEncoderRunner does; without it the
+        # encoder builds at the cfg's static 69 against a 72D env (use_bias_ema_obs).
+        # No-op for the plain-PPO variant, whose ActorCritic cfg has no policy_obs_dim.
+        sync_policy_obs_dim(env, train_cfg)
+        super().__init__(env, train_cfg, log_dir=log_dir, device=device)
 
     # ------------------------------------------------------------------
     # Helpers (duplicated from ConstraintEncoderRunner; kept private to

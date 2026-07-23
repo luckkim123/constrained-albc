@@ -60,14 +60,19 @@ def _config_ast() -> ast.Module:
 # ---------------------------------------------------------------------------
 
 
-def test_default_toggle_off_and_obs_space_unchanged():
-    """use_bias_ema_obs defaults to False; observation_space is still 69 (byte-identical)."""
+def test_toggle_adopted_and_declared_obs_space_is_pre_bump():
+    """use_bias_ema_obs is ON (P-B1, adopted 2026-07-16, commit 458eaaa).
+
+    ``observation_space`` stays 69 in the cfg source: it is the PRE-bump width that
+    apply_bias_ema_obs() reads and raises on if it is not 69. The 72D env width is
+    produced at cfg-construction time, never written here.
+    """
     assigns = {}
     for node in ast.walk(_config_ast()):
         if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
             if isinstance(node.value, ast.Constant):
                 assigns[node.target.id] = node.value.value
-    assert assigns.get("use_bias_ema_obs") is False
+    assert assigns.get("use_bias_ema_obs") is True
     assert assigns.get("observation_space") == 69
 
 
@@ -162,19 +167,27 @@ def test_materializer_raises_on_double_apply():
 # ---------------------------------------------------------------------------
 
 
-def _load_runner_standalone():
-    pytest.importorskip("rsl_rl", reason="ConstraintEncoderRunner needs rsl_rl (not installed here)")
+def _load_runner_standalone(module_name: str = "constraint_encoder_runner"):
+    pytest.importorskip("rsl_rl", reason="the ALBC runners need rsl_rl (not installed here)")
     core_dir = Path(__file__).resolve().parent.parent / "constrained_albc" / "envs" / "_core"
 
     for pkg_name in [
         "constrained_albc",
         "constrained_albc.envs",
         "constrained_albc.envs._core",
-        "constrained_albc.envs._core.runners",
         "constrained_albc.envs._core.utils",
     ]:
         if pkg_name not in sys.modules:
             sys.modules[pkg_name] = types.ModuleType(pkg_name)
+
+    # The runners package __init__ is loaded for real (not stubbed): it holds
+    # sync_policy_obs_dim, which both runners import, and is import-light by design.
+    runners_pkg = "constrained_albc.envs._core.runners"
+    if not hasattr(sys.modules.get(runners_pkg), "sync_policy_obs_dim"):
+        pkg_spec = importlib.util.spec_from_file_location(runners_pkg, core_dir / "runners" / "__init__.py")
+        pkg_mod = importlib.util.module_from_spec(pkg_spec)
+        sys.modules[runners_pkg] = pkg_mod
+        pkg_spec.loader.exec_module(pkg_mod)
 
     logging_spec = importlib.util.spec_from_file_location(
         "constrained_albc.envs._core.utils.logging", core_dir / "utils" / "logging.py"
@@ -184,8 +197,8 @@ def _load_runner_standalone():
     logging_spec.loader.exec_module(logging_mod)
 
     runner_spec = importlib.util.spec_from_file_location(
-        "constrained_albc.envs._core.runners.constraint_encoder_runner",
-        core_dir / "runners" / "constraint_encoder_runner.py",
+        f"constrained_albc.envs._core.runners.{module_name}",
+        core_dir / "runners" / f"{module_name}.py",
     )
     runner_mod = importlib.util.module_from_spec(runner_spec)
     runner_mod.__package__ = "constrained_albc.envs._core.runners"
@@ -226,3 +239,33 @@ def test_runner_leaves_policy_obs_dim_when_already_matching(monkeypatch):
     runner_mod.ConstraintEncoderRunner(env, train_cfg, log_dir=None, device="cpu")
 
     assert train_cfg["policy"]["policy_obs_dim"] == 69
+
+
+def test_doraemon_runner_also_syncs_policy_obs_dim(monkeypatch):
+    """PPO-Enc reaches the encoder policy through OnPolicyDoraemonRunner, not the
+    constraint runner. Until this sync was shared, that path kept the stale 69 and
+    Isaac-ConstrainedALBC-PPO-Enc-v0 aborted at startup with
+    'Policy obs dim 72 != expected 69'."""
+    runner_mod = _load_runner_standalone("on_policy_doraemon_runner")
+    _patch_super_init(monkeypatch, runner_mod.OnPolicyRunner)
+
+    env = SimpleNamespace(unwrapped=SimpleNamespace(cfg=SimpleNamespace(observation_space=72)))
+    train_cfg = {"algorithm": {}, "policy": {"policy_obs_dim": 69}}
+
+    runner_mod.OnPolicyDoraemonRunner(env, train_cfg, log_dir=None, device="cpu")
+
+    assert train_cfg["policy"]["policy_obs_dim"] == 72
+
+
+def test_doraemon_runner_does_not_invent_the_key_for_plain_ppo(monkeypatch):
+    """The plain-PPO ablation shares this runner but uses a stock ActorCritic cfg
+    with no policy_obs_dim; the sync must leave it absent rather than add one."""
+    runner_mod = _load_runner_standalone("on_policy_doraemon_runner")
+    _patch_super_init(monkeypatch, runner_mod.OnPolicyRunner)
+
+    env = SimpleNamespace(unwrapped=SimpleNamespace(cfg=SimpleNamespace(observation_space=72)))
+    train_cfg = {"algorithm": {}, "policy": {"class_name": "ActorCritic"}}
+
+    runner_mod.OnPolicyDoraemonRunner(env, train_cfg, log_dir=None, device="cpu")
+
+    assert "policy_obs_dim" not in train_cfg["policy"]
