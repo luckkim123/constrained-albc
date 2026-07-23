@@ -2,7 +2,7 @@
 title: "ConstraintTRPO slack tail: 9 of 10 constraints deep-slack is plausibly healthy complementary slackness (UNVERIFIED) -- confirm via training-time trajectory + loosening ablation before tuning budgets"
 tags: ["constraint", "CMDP", "complementary-slackness", "thruster_util", "slack-tail", "inertness", "loosening-ablation", "budget-tuning", "next-experiment", "ConstraintTRPO"]
 created: 2026-07-12T10:04:32.803449
-updated: 2026-07-20T07:54:39.551806
+updated: 2026-07-23T06:37:45.145108
 sources: ["diagnose-20260606-194621", "diagnose-20260607-113942"]
 links: ["constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md", "constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md"]
 category: pattern
@@ -10,7 +10,7 @@ confidence: high
 schemaVersion: 1
 qualityScore: 70
 qualityReasons: ["no-source-marker", "generic-only-tags"]
-status: needs-experiment
+status: resolved
 blocked-on: "Parked under the 2026-07-20 batch-pass decision."
 ---
 
@@ -55,3 +55,9 @@ STEP 1 (free training-time trajectory check) DONE — 2026-07-13 post-p7_tail pl
 ## Update (2026-07-20T07:54:39.551806)
 
 STATUS PROMOTION (2026-07-20 wiki sweep): the loosening ablation (rp_vel_settling + manipulability budgets x100, confirm they stay non-binding) is an unstarted training probe; promoted to needs-experiment.
+
+---
+
+## Update (2026-07-23T06:37:45.145108)
+
+CLOSED 2026-07-23 (plan consolidation): answered by A5 trpo_budgetslack_260721_181133 (diagnose-20260722-103723) -- budgets x100 on the two genuinely-inert constraints (rp_vel_settling, manipulability) left constraints satisfied and tracking deltas within the seed-noise floor (NULL). Complementary-slackness interpretation confirmed; no budget tuning warranted. The 2026-07-13 trajectory check had already cleared the other 8.

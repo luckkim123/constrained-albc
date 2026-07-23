@@ -1,0 +1,16 @@
+{
+  "campaign_id": "teacher_baseline_buoyfix",
+  "created": "2026-07-23T06:35:41.650059+00:00",
+  "goal": "Corrected-plant anchor (hull volume 0.009->0.00790, marinelab 7d45c2c) + paired-seed tuning on seeds 30/31/32; program teacher-final-closeout",
+  "baseline_run_id": "trpo_buoyanchor_s30_260722_134743",
+  "program": "teacher-final-closeout",
+  "predecessor": "teacher_baseline_posttam",
+  "master_doc": "docs/reference/teacher-campaign-plan.md",
+  "planned": [
+    {
+      "proposal_id": "next-20260723-dgxanchor",
+      "summary": "B1a-dgx: replicate anchor on DGX 3 seeds (machine-artifact discrimination); OPTIONAL, stakes revised down (sub-threshold effect); pending human approval",
+      "added_at": "2026-07-23T06:35:59.699842+00:00"
+    }
+  ]
+}

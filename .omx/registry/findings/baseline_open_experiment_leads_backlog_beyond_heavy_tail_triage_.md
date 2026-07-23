@@ -2,15 +2,15 @@
 title: "Baseline open experiment-leads backlog (beyond heavy-tail): triage by value x launchability with blockers"
 tags: ["backlog", "experiment-roster", "next-experiment", "heavy-tail", "doraemon-per-axis-gate", "command-box", "tam-dr", "sim-to-real", "triage", "teacher-baseline", "doraemon", "performance_lb", "exploration", "batch-planning", "needs-apply-before-retrain", "plant-fidelity", "dgx", "correction", "joint1"]
 created: 2026-07-14T07:57:24.357274
-updated: 2026-07-20T06:09:23.834087
+updated: 2026-07-23T06:37:45.059552
 sources: ["diagnose-20260713-081707", "diagnose-20260715-133249", "diagnose-20260720-124259", "diagnose-20260713-031533"]
 links: ["decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema.md", "april_2026_entropy_collapse_campaign_machinery_bug_solved_conver.md"]
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
-status: needs-experiment
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
+status: resolved
 blocked-on: "PARKED BY USER DECISION 2026-07-20: all open leads (roster A + B) are to be planned and executed in ONE later batch pass; nothing is to be launched before that pass"
 ---
 
@@ -258,3 +258,8 @@ Cheapest next step for this item is zero-GPU: read PER-DIM log_std from an exten
 establish which dims are actually floor-bound. `Policy/mean_noise_std` is an 8-dim mean and cannot
 answer that. Park status unchanged.
 
+---
+
+## Update (2026-07-23T06:37:45.059552)
+
+CLOSED 2026-07-23 (plan consolidation): index page discharged -- every sub-lead is now carried, deferred-with-edge, or closed in docs/reference/teacher-campaign-plan.md (sections 5-6) and the per-lead wiki statuses. The 2026-07-20 park order ('one batch pass') is fulfilled by that consolidation.

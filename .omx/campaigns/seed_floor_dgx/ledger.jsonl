@@ -1,0 +1,7 @@
+{"ts": "2026-07-23T06:36:10.834331+00:00", "event": "launched", "run_id": "trpo_dgxseed30_260721_113426", "data": {"seed": 30, "machine": "DGX", "plant": "pre-buoyfix posttam config", "backfilled": "2026-07-23 consolidation"}}
+{"ts": "2026-07-23T06:36:10.889797+00:00", "event": "launched", "run_id": "trpo_dgxseed31_260721_191452", "data": {"seed": 31, "machine": "DGX", "backfilled": "2026-07-23 consolidation"}}
+{"ts": "2026-07-23T06:36:10.945514+00:00", "event": "launched", "run_id": "trpo_dgxseed32_260721_191457", "data": {"seed": 32, "machine": "DGX", "backfilled": "2026-07-23 consolidation"}}
+{"ts": "2026-07-23T06:36:11.001414+00:00", "event": "eval", "run_id": "trpo_dgxseed30_260721_113426", "data": {"eval": "static_260721_192504 + B0a-eval static_260723_110214 (new plant)"}}
+{"ts": "2026-07-23T06:36:11.056001+00:00", "event": "eval", "run_id": "trpo_dgxseed31_260721_191452", "data": {"eval": "static_260722_125338 + B0a-eval static_260723_111102 (new plant)"}}
+{"ts": "2026-07-23T06:36:11.110666+00:00", "event": "eval", "run_id": "trpo_dgxseed32_260721_191457", "data": {"eval": "static_260722_125338 + B0a-eval static_260723_111955 (new plant)"}}
+{"ts": "2026-07-23T06:36:11.165445+00:00", "event": "note", "data": {"verdict": "seed-noise floor 74.8% p2p on none roll ss_error (0.209/0.307/0.450, old plant) -> kills every single-seed +/-5% verdict; corrected-plant floor 56.0% p2p (from buoyfix anchor 3 seeds); methodology switched to paired-seed. Evidence: diagnose-20260723-134359 lines 60-65; wiki commit cc06451"}}

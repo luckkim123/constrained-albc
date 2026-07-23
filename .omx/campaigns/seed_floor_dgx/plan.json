@@ -1,0 +1,10 @@
+{
+  "campaign_id": "seed_floor_dgx",
+  "created": "2026-07-23T06:35:41.714959+00:00",
+  "goal": "3-seed noise-floor measurement, identical config seeds 30/31/32 (DGX); doubles as B0a-eval policy set",
+  "baseline_run_id": "trpo_dgxseed30_260721_113426",
+  "program": "teacher-final-closeout",
+  "predecessor": "teacher_baseline_posttam",
+  "master_doc": "docs/reference/teacher-campaign-plan.md",
+  "kind": "measurement"
+}

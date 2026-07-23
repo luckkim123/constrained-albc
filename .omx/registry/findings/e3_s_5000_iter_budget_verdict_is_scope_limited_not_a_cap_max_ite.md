@@ -2,15 +2,15 @@
 title: "e3's '5000-iter budget' verdict is scope-limited, NOT a cap: max_iterations is a DR-EXPANSION knob (step_interval clock) and the real ceiling is the Beta a=b=1 config bound, not compute"
 tags: ["doraemon", "curriculum-budget", "max-iterations", "num-envs", "dgx", "scale-up", "e3", "config-ceiling", "p-a6", "user-decision", "extend8k", "result-recorded", "exam-comparability", "correction", "step_interval", "mechanism-isolated", "scale", "num_envs"]
 created: 2026-07-16T05:58:47.795144
-updated: 2026-07-23T04:55:41.846413
+updated: 2026-07-23T06:37:45.230332
 sources: ["diagnose-20260714-084409", "diagnose-20260720-115818", "diagnose-20260720-123142", "diagnose-20260721-020253", "diagnose-20260723-134359"]
 links: ["performance_lb_recon_needs_zero_new_rollouts_doraemon_state_pt_a.md", "decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema.md", "extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_.md", "eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md"]
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 80
-qualityReasons: ["no-source-marker"]
-status: needs-experiment
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
+status: resolved
 blocked-on: "REMAINING SCOPE ONLY: DGX scale-up (larger num_envs AND max_iterations). The same-plant 'does extending past 5000 help' half is ANSWERED (verdict rests on the fair none level) -- do not re-run that arm."
 ---
 
@@ -196,3 +196,9 @@ REUSABLE LESSON: 'both plain static / neither used --doraemon-dr-from' is NOT a 
 ## Update (2026-07-23T04:55:41.846413)
 
 CLOSE 2026-07-23 -- the num_envs half is ANSWERED NULL; the lead's remaining scope is now empty. EVIDENCE: Arm N (trpo_e3scaleN_envs8192_260722_151230, DGX, num_envs 8192 x 5000 iters, corrected plant) evaluated with eval.py static at 64 envs and compared at the fair none level against the buoyanchor 3-seed band: roll.ss_error 0.3531 vs 0.3896 (-9.4%, band 56.0%); roll.os_env_mean 16.083 vs 15.862 (+1.4%, band 26.2%); roll.n_gt20 13.33 vs 12.11 (+10.1%, band 24.8%); roll.rise_time 0.528 vs 0.539 (-2.0%, band 39.3%); survival 100.00 vs 100.00. EVERY field is inside the anchor's own three-seed spread. CAVEAT: n=1 vs n=3 and cross-machine, so this is 'no evidence of benefit', not 'proven no benefit' -- but the effect is far inside the noise floor. The max_iterations half was already net-negative (extend8k) and adverse by +13.5 pts (A1). MECHANISM (new): the Beta curriculum is still opening monotonically at iter 5000 (mean a 12.9 -> 1.67, 0 of 20 params at the a=b=1 bound), so extra iterations buy a HARDER DR box rather than a better policy, and the nominal roll transient pays for it -- which is exactly what A1 measured. The 5000-iter budget is therefore a sweet spot, not an arbitrary cap. Arm I (4096 x 12000) is a third dose of the same failed lever and was recommended for cancellation. Re-visit: analysis diagnose-20260723-134359 sections 'generalization' and 'doraemon'.
+
+---
+
+## Update (2026-07-23T06:37:45.230332)
+
+CLOSED 2026-07-23 (plan consolidation): remaining scope emptied by Arm N trpo_e3scaleN_envs8192_260722_151230 (NULL -- all metrics inside the buoyfix anchor 3-seed band; diagnose-20260723-134359) after the iteration half was answered net-negative twice (extend8k, moreiters). Arm I (4096x12000) CANCELLED. Reactivation edge = B0b 8k+ regime (docs/reference/teacher-campaign-plan.md section 5).

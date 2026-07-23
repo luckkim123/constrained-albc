@@ -1,0 +1,9 @@
+{
+  "campaign_id": "e3_dgxscale_buoyfix",
+  "created": "2026-07-23T06:35:41.771109+00:00",
+  "goal": "DGX scale GO/ABORT on corrected plant (Arm N envs 8192; Arm I cancelled)",
+  "baseline_run_id": "trpo_e3scaleN_envs8192_260722_151230",
+  "program": "teacher-final-closeout",
+  "predecessor": "teacher_baseline_buoyfix",
+  "master_doc": "docs/reference/teacher-campaign-plan.md"
+}

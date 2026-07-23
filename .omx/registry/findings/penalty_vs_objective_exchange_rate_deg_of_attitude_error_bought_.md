@@ -2,15 +2,15 @@
 title: "Penalty-vs-objective exchange rate (deg of attitude error bought per penalty term) is the rescaling evidence, not the 1% reward share; all four penalties together buy only 0.125 deg"
 tags: ["reward", "penalty", "rescaling", "exchange-rate", "tuning", "constraint-trpo", "envs-main"]
 created: 2026-07-20T03:00:37.061166
-updated: 2026-07-20T03:00:37.061166
+updated: 2026-07-23T06:37:45.315633
 sources: []
 links: ["next_experiment_workflow_pick_a_baseline_train_once_then_re_tune.md", "reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md", "real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md"]
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
-status: needs-experiment
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
+status: resolved
 ---
 
 # Penalty-vs-objective exchange rate (deg of attitude error bought per penalty term) is the rescaling evidence, not the 1% reward share; all four penalties together buy only 0.125 deg
@@ -71,3 +71,8 @@ deployment vibration -- note [[real_robot_deployment_vibration_differential_diag
 exonerates the action_smoothness term for vibration), not the aesthetic observation that 1% looks small.
 Without that, it is the "generic solution without evidence" anti-pattern (.claude/rules/03).
 
+---
+
+## Update (2026-07-23T06:37:45.315633)
+
+CLOSED 2026-07-23 (plan consolidation, Z10 gate): the page's own gate (a MEASURED deficiency motivating rescale) answers itself -- no measured ss_jitter/vibration deficiency exists; the four penalties total ~1.4% of reward (-0.12 vs ~8.8, diagnose-20260723-134359) and the constraint layer already declines to push on effort. Lead closes resolved-by-gate. Reactivation edge: measured deployment vibration / jitter deficiency.
