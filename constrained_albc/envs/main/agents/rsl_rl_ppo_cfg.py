@@ -359,8 +359,8 @@ class _ALBCPPOPolicyCfg(RslRlPpoActorCriticCfg):
     """Standard rsl-rl ActorCritic with asymmetric obs (Baseline 2).
 
     Architecture (8D action):
-        Actor:  o_t(69D)          -> MLP[256,128,64] -> 8D
-        Critic: cat(o_t, p_t)=97D -> MLP[512,256,128] -> 1D
+        Actor:  o_t(72D)           -> MLP[256,128,64] -> 8D
+        Critic: cat(o_t, p_t)=100D -> MLP[512,256,128] -> 1D
 
     Asymmetric routing is done via Runner.obs_groups -- no custom policy
     class required because rsl-rl ActorCritic auto-computes num_actor_obs
@@ -412,7 +412,7 @@ class ALBCPPORunnerCfg(_BaseALBCRunnerCfg):
     confounding the algorithm ablation with a DR-curriculum ablation.
 
     Asymmetric actor/critic observation routing is expressed purely through
-    obs_groups: actor receives "policy" (69D) only while critic receives
+    obs_groups: actor receives "policy" (72D) only while critic receives
     cat(["policy", "privileged"]) = 97D.
 
     DR, reward weights, action space, and DORAEMON hyperparameters are

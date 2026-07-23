@@ -155,7 +155,7 @@ extensions net-negative. See group ledger.
 | B0a-eval | `trpo_dgxseed30/31/32` re-evaluated on new plant | DONE 3/3 (`static_260723_110214/111102/111955`) | eval dirs |
 | B1a | `trpo_buoyanchor_s30/s31/s32_26072{2,3}_*` | DONE 3/3 trained + evaluated; s30 analyzed: plant fix ADOPT (-3.93 deg roll overshoot), retrain delta +0.110 deg = 9.6% of 1 sigma (sub-threshold) -> **anchor SOUND** [AUDIT-CORRECTION 2026-07-23: -3.93 pp = -1.18 deg (os unit is percent-of-step); retrain delta C-B machine-confounded — see section 11] | report `diagnose-20260723-134359`; section 11 |
 | seed_floor_dgx | `trpo_dgxseed30/31/32_260721_*` | DONE: seed floor 74.8% p2p (old plant), 56.0% p2p (corrected, from B1a 3 seeds) — kills every single-seed ±5% verdict [AUDIT-SCOPE 2026-07-23: this floor is UNPAIRED (cross-seed); it does not transfer to paired same-seed same-machine deltas — section 11.4 D3] | same report, lines 60-65 |
-| B1a-dgx | queued `trpo_buoyanchordgx_s30_PLACEHOLDER` | PENDING human approval; stakes revised DOWN (discriminates a sub-threshold effect); OPTIONAL — C3 does not depend on it | proposal `next-20260723-dgxanchor` |
+| B1a-dgx | queued `trpo_buoyanchordgx_s30_PLACEHOLDER` | **DROPPED (user 2026-07-23)** — audit section 11: the +109% cross-machine term makes the probe non-discriminating; queue artifact marked `dropped`, campaign ledger noted | proposal `next-20260723-dgxanchor` (status DROPPED) |
 | B0b/B1b | — | NOT RUN — re-judged, deferred with edge (section 5) | — |
 | B0c/B1c | — | NOT RUN — KEEP, next tuning arm (section 5) | — |
 | B1d | — | conditional on Z4; deferred with latency lead | — |
@@ -166,7 +166,7 @@ extensions net-negative. See group ledger.
 
 | id | status | evidence |
 |:--|:--|:--|
-| C0 | DONE 2026-07-23: 4 arms registered (`509ba86`), PPO-Enc dim-sync fixed shared (`_core/runners/__init__.py`), smoke x2 per arm passed (artifacts preserved in `/workspace/.trash/smoke-ablation-reg-260723/`). RESIDUAL: C0.4 (eval.py reads one smoke ckpt per arm) and C0.5 (arm-identity audit: obs wiring / `class_name` / `num_constraints` vs the ladder) not evidenced -> W0 items | git log; CHANGELOG 2026-07-23; task-reference.md |
+| C0 | DONE 2026-07-23: 4 arms registered (`509ba86`), PPO-Enc dim-sync fixed shared (`_core/runners/__init__.py`), smoke x2 per arm passed (artifacts preserved in `/workspace/.trash/smoke-ablation-reg-260723/`). **C0.5 DONE 2026-07-23 (audit session): all 4 arms correctly wired at code level** — NoEncoder actor gets policy obs only (`actor_critic_asym_constrained.py:113`), PPO actor obs_groups `["policy"]` + `OnPolicyDoraemonRunner`, NoIPO via `terms=[]` auto-sync, PPO-Enc matches the PolicyBase split protocol; stale 69D/97D docstrings in `rsl_rl_ppo_cfg.py` corrected to 72D/100D (`observation_space: 72` since biasema). RESIDUAL: C0.4 (eval.py reads one smoke ckpt per arm) -> W0 item | git log; CHANGELOG 2026-07-23; task-reference.md; audit session 2 |
 | C3 | NOT RUN — the largest remaining block: 4 arms x 3 seeds (30/31/32, paired with the anchor), workstation GPU0 serial, ~60 h. Proposed arm = the three B1a anchor runs themselves while final config == anchor config | roster section; budget section 8 |
 | C4 | PARTIAL: s30 student distilled (`trpo_buoyfix_s30_tcn_260722_184307/184632`) under the cuDNN-disabled slow path; full C4 = per-FINAL-teacher distillation + `export_deploy.py --golden` pack + C4a latent-collapse diagnostic | student tree; wiki cudnn page |
 
@@ -179,7 +179,7 @@ extensions net-negative. See group ledger.
 | B1d latency arm | **DROP as scheduled item; deferred with edge** — Z4 instrument does not exist and delay is off-DORAEMON (stalls the curriculum, e1 lesson). Edge: build Z4, then re-propose. User direction (latency wanted in final training config, 2026-07-20) recorded, not actionable yet | wiki latency page (both blockers re-verified) |
 | B2 scale-up | **DROP**. Arm N (envs x2 at 5k) NULL; iteration extension answered net-negative twice (extend8k, moreiters); Arm I cancelled as a third dose of the same lever. The campaign's literal question ("scale after the box is widened") is moot while B0b is deferred — reactivation edge shared with B0b | wiki e3 page (closed 2026-07-23); reports |
 | B3 joint1 Stage-2 | **DEFER** (unchanged): requires a station-keeping-on-unlimited-physics checkpoint that does not exist; not on the final-model path | wiki joint1 page |
-| B1a-dgx replication | **KEEP as OPTIONAL, human-gated** — already queued; stakes low (discriminates a 9.6%-of-sigma effect); C3 does not wait for it [AUDIT 2026-07-23: recommend **DROP** — same-config same-seed cross-machine delta is +109% on roll ss_error (section 11.2), so a DGX anchor cannot discriminate anything about the workstation anchor; decision stays with the human] | proposal `next-20260723-dgxanchor`; section 11.2 |
+| B1a-dgx replication | **KEEP as OPTIONAL, human-gated** — already queued; stakes low (discriminates a 9.6%-of-sigma effect); C3 does not wait for it [AUDIT 2026-07-23: recommend **DROP** — same-config same-seed cross-machine delta is +109% on roll ss_error (section 11.2), so a DGX anchor cannot discriminate anything about the workstation anchor; decision stays with the human] **-> user DROPPED 2026-07-23** | proposal `next-20260723-dgxanchor`; section 11.2 |
 | A6 (sigma-R6) + Z8 (sigma-R1) | **DEFER both** — R1 is not in code (grep-verified; the "Z8 shipped" record was wrong) and nothing on the roster consumes it now that R6 is deferred; zero adopted levers + 56% seed floor make another ±5% tuning probe paired-seed-expensive with no motivating deficiency. Edge: a future reward-kernel experiment (R1 must land first, behavior-preserving) | grep; wiki reward_sigma page |
 | Z10 penalty rescale | **DROP — close resolved-by-gate**: the page's own gate (measured deficiency) answers itself; penalties are 1.4% of reward | report; wiki page |
 | Z3 encoder sweep | **KEEP (W0)** — zero-GPU rule-03 hygiene on the anchor checkpoint | rule 03 |
@@ -223,11 +223,14 @@ Count: 16/16 rows. After the five closes: 7 `needs-experiment` + 4 `needs-apply-
 ## 7. Remaining-work sequence (dependencies explicit)
 
 ```
-W0 (zero-GPU, now):      C0.4 + C0.5 verification; Z3 encoder sweep; Z6 battery memo
-                          (campaign registration + wiki closes: done by this consolidation)
-Human decisions:          (a) fire or drop B1a-dgx (queued, optional, 22.5 h DGX)
+W0 (zero-GPU, now):      C0.4 eval smoke-read; Z3 encoder sweep
+                          (C0.5 DONE + Z6 DONE 2026-07-23 — see sections 4/11.7;
+                          campaign registration + wiki closes: done by this consolidation)
+Human decisions:          (a) B1a-dgx: DROPPED (user 2026-07-23, audit section 11)
                           (b) cuDNN cu12 image fix (recommended before C4)
                           (c) DGX plant-fix hand-replication (only needed if DGX rejoins)
+                          (d) repeatability run: DECLINED (user 2026-07-23) — screening
+                              floors stay on the conservative indirect estimate (11.6)
 B0c  (after W0):          max_thrust ±15% DR arm, paired-seed 3 runs vs anchor, ~15 h -> D3
 C3   (after B0c verdict): 4 ablation arms x seeds {30,31,32}, workstation GPU0 serial, ~60 h
                           (+3 proposed-arm runs ONLY if B0c adopts)
@@ -252,7 +255,7 @@ plant); deployment checkpoint rule pre-declared = median seed by none-level roll
 | B0c paired-seed | 3 | ~15 h |
 | C3 comparison set (workstation) | 12 | ~60 h (~2.5 days serial) |
 | + proposed-arm re-run iff B0c adopts | 3 | ~15 h |
-| B1a-dgx (optional, human-gated) | 3 | ~22.5 h (DGX) |
+| B1a-dgx (optional, human-gated) | 3 | ~~22.5 h (DGX)~~ DROPPED (user 2026-07-23) |
 | C4 distillation | per teacher | ~5 h/pack until the cuDNN image fix; minutes after |
 
 Critical path ≈ **75 h** workstation-serial (90 h if B0c adopts), plus analysis gates.
@@ -474,8 +477,9 @@ All 12 runs + baselines re-read on `os_env_mean` / `n_gt20` / `rise_time`
    rule (unchanged, section 7).
 6. **UNSETTLED — the true same-machine paired repeatability floor.** Everything in (3)
    uses an n=3 upper-bound-flavored scatter estimate. One repeat run (identical config
-   AND seed to `trpo_buoyanchor_s30`, workstation, ~5 h) measures it directly. Proposed
-   below; human-gated.
+   AND seed to `trpo_buoyanchor_s30`, workstation, ~5 h) would measure it directly.
+   DECLINED by user 2026-07-23 — remains unsettled by choice; use the conservative
+   floors in (3) and do not re-propose without new motivation.
 
 ### 11.7 Part B — every not-yet-run item (11 open wiki leads + roster items)
 
@@ -496,7 +500,7 @@ All 12 runs + baselines re-read on `os_env_mean` / `n_gt20` / `rise_time`
 | B1a-dgx (queued) | **MODIFY -> recommend DROP** | a DGX anchor cannot discriminate the workstation anchor across a +109% machine term (11.2); would spend 22.5 h to measure a machine effect already measured on the old plant; human-gated |
 | C3 comparison set | **KEEP** (12 runs, workstation serial, ~60 h) | 3 seeds/arm is the paper protocol (11.6 item 5); machine rationale corrected in section 5 |
 | C4 deployment pack (+C4a) | **KEEP** | unchanged; cuDNN fix recommended first |
-| ADD: repeatability run (exact config+seed repeat of `trpo_buoyanchor_s30`) | **PROPOSE**, human-gated, ~5 h | directly measures the paired floor every screening verdict in 11.6 depends on; the cheapest decisive measurement available. NOT launched by this audit |
+| ADD: repeatability run (exact config+seed repeat of `trpo_buoyanchor_s30`) | **DECLINED by user 2026-07-23** (no appetite for extra measurement runs) | do not re-propose without new motivation; screening verdicts use the conservative indirect floors of 11.6 item 3, stated with their n=3 caveat |
 
 Forward plan and GPU budget (sections 7-8) are otherwise unchanged: critical path
 ~75 h workstation-serial; B1a-dgx recommended drop removes 22.5 h from the optional

@@ -5,6 +5,8 @@
     "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md",
     "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md"
   ],
+  "dropped_at": "2026-07-23",
+  "dropped_reason": "User decision 2026-07-23 following the validity audit (SSOT section 11): same-config same-seed cross-machine delta is +109% on none roll ss_error (dgxseed30 vs biasema), so a DGX anchor cannot discriminate the workstation anchor; H2 (machine artifact) is already the supported hypothesis without this probe.",
   "gpu_gate": "DGX idle (Arm I stopped or finished) AND marinelab on exp/buoyancy-recenter@7d45c2c AND constrained-albc@c335eca; ~7.5 h per run, 3 runs serial (DGX runs one job at a time)",
   "launch_delta": "DGX replication of the buoyfix anchor: seeds 30/31/32, 4096 envs, 5000 iters, plant marinelab exp/buoyancy-recenter@7d45c2c, constrained-albc@c335eca. SINGLE VARIABLE = training machine (vs trpo_buoyanchor_s{30,31,32} on the workstation). run_group=log_project=teacher_baseline_buoyfix; agent.run_name=buoyanchordgx_s<seed>. Verdict: paired none-level roll.ss_error vs the B0a-eval reference (0.332/0.272/0.235).",
   "open_leads": [
@@ -25,5 +27,5 @@
   "queued_at": "2026-07-23T02:36:03.740537+00:00",
   "queued_commit": "c335ecaaef426dace606e45e2e38ed3cd2e6165f",
   "schema_version": 1,
-  "status": "pending approval"
+  "status": "dropped"
 }
