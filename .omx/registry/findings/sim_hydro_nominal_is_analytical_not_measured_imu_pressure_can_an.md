@@ -2,14 +2,14 @@
 title: "sim hydro nominal is analytical (not measured); IMU+pressure can anchor rotation/heave but not surge/sway/TAM"
 tags: ["measurement", "system-id", "domain-randomization", "sim-to-real", "damping", "free-decay", "TAM", "sensors", "fault-tolerant-control", "thruster", "load-cell", "arm-step-response", "max_thrust", "systematic-bias", "user-decision", "batch-pass"]
 created: 2026-06-14T07:38:12.841674
-updated: 2026-07-23T07:08:29.469662
-sources: ["envs/main/config.py:139", "envs/main/mdp/events.py", "user-input-2026-07-23"]
-links: ["curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md", "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md"]
+updated: 2026-07-23T11:15:48.949319
+sources: ["envs/main/config.py:139", "envs/main/mdp/events.py", "user-input-2026-07-23", "B0c-implementation-260723", "diagnose-20260723-134359"]
+links: ["curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md", "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md", "adding_a_dr_axis_is_half_a_change_dr_config_s_dr_tuple_fields_tr.md"]
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 70
-qualityReasons: ["no-source-marker", "generic-only-tags"]
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 status: needs-apply-before-retrain
 blocked-on: "max_thrust band SOURCED (+/-15%) and rostered as campaign B0c (the pending apply); battery voltage window CONFIRMED 4S LiPo ~14-16.8 V (2026-07-23 Z6 memo) — narrower than the 14-18 V source window, band conservative; TAM moment-arm band still blocked on a real geometric-tolerance source (CAD stack-up / bracket spec)"
 ---
@@ -133,4 +133,50 @@ The +/-15% max_thrust DR band was sourced from the generic T200 voltage window 1
 User directive recorded: do not spend a dedicated experiment on thruster characterization; adopt a reasonable value and move on. Z6 therefore closes as this memo, not a study.
 
 Residual ledger after this memo: the battery-window confirmation item is RESOLVED; the max_thrust half of this lead stays SOURCED and rostered as B0c (the pending apply this status waits for); the TAM moment-arm half remains blocked on a geometric-tolerance source (CAD stack-up / bracket spec).
+
+---
+
+## Update (2026-07-23T11:15:48.949319)
+
+## max_thrust half: APPLY LANDED on a branch (2026-07-23), verdict still pending
+
+Status intentionally UNCHANGED (`needs-apply-before-retrain`): the TAM moment-arm half of this
+lead is still blocked on a geometric-tolerance source, and the max_thrust apply lives on an
+experiment branch that may yet be discarded. This note records that the max_thrust half moved
+from "rostered" to "implemented", so the next reader does not re-derive it.
+
+WHAT LANDED (branch `exp/max-thrust-dr`, both overlay repos, baseline pinned at tag
+`baseline-260723-b0c`; NOT on main, NOT pushed):
+- `marinelab` `f45d612`: per-env `_max_thrust` tensor in `ThrusterModel`, `max_thrust_scale`
+  argument on `randomize_parameters`, per-env clamp in `compute_wrench`. Default
+  `(1.0, 1.0)` = OFF, so pre-existing callers are unchanged.
+- `constrained-albc` `147751f`: `max_thrust_scale = (0.85, 1.15)` on `DomainRandomizationCfg`,
+  wired at BOTH `randomize_parameters` call sites in `albc_env.py`, plus the eval-side
+  registration in `dr_config.py` without which the `none` level would not collapse the band.
+
+WHY IT WAS NOT A CONFIG FLIP (correcting the roster's implicit assumption): `max_thrust` had no
+DR anywhere, and the clamp consuming it was scalar (`marinelab/core/thruster.py`), so a per-env
+band could not be expressed in config alone. This is a two-repo code change and therefore falls
+under the rule-02 baseline-tag / exp-branch discipline.
+
+MECHANISM NOTE worth carrying: `thrust_coefficient_scale (0.7, 1.3)` does NOT already cover
+this. The coefficient is a GAIN applied BEFORE the clamp, so scaling it moves where in the
+command range saturation begins while every env still saturates at the same 50 N wrench. Only a
+ceiling band changes the achievable wrench set. "Already randomised" is the wrong objection.
+
+VERIFIED before launch: band OFF is bit-identical to the pre-B0c scalar clamp (`torch.equal`
+over saturating commands), and the 0.85x/1.15x ceilings do change the output, so the axis is
+live rather than a no-op.
+
+Motivation strengthened by the anchor analysis (`diagnose-20260723-134359`): `thruster_util` is
+the BINDING ConstraintTRPO constraint in 7 of 7 runs across both plants, both machines and both
+scales (J_C/d_k 0.805-0.943). The parameter this lead wants banded is the ceiling of the one
+channel the CMDP actually binds through, which is why the probe is mechanistically motivated
+rather than a generic "add DR" move.
+
+Registration trap this surfaced is written up separately:
+[[adding_a_dr_axis_is_half_a_change_dr_config_s_dr_tuple_fields_tr]].
+
+Proposal: `next-20260723-175314` (campaign label B0c, lint-clean). Not launched -- training
+remains human-gated.
 

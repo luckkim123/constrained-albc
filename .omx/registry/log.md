@@ -6399,3 +6399,31 @@
 - **Pages:** eval_metric_units_and_decision_floors_os_env_mean_is_percent_of_.md
 - **Summary:** updated 'Eval metric units and decision floors: os_env_mean is percent-of-step (roll steps 30 deg), ss_error is degrees; paired screening floors and the machine-isolation rule'
 
+## [2026-07-23T08:52:23.674664] query
+- **Pages:** safety_rail_constraints_fire_hard_at_init_go_quiet_and_re_fire_a.md, step_interval_250_400_probe_separate_dr_width_from_optimisation_.md, reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md, e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite.md, a5_budgetslack_rp_vel_settling_manipulability_budgets_x100_learn.md, incident_post_mortem_teacher_baseline_opt_e1_e4_trained_on_a_tam.md, yaw_command_is_rate_not_angle_inherited_design_defensible_only_i.md, dr_harder_ood_verdict_e2_best_survives_ood_the_harder_curriculum.md, extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_.md, kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md, performance_lb_doraemon_gate_is_causally_independent_of_the_acto.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, april_2026_entropy_collapse_campaign_machinery_bug_solved_conver.md, plant_fix_needs_apply_before_retrain_main_hull_volume_0_009_0_00.md, tam_plant_correctness_fix_collapses_the_void_hard_dr_roll_heavy_.md, bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md, bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, e3_extend10k_regressed_the_policy_training_budget_is_not_the_p7_.md, bias_ema_observability_p_b1_confirmed_at_the_fair_none_point_68_.md, engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md
+- **Summary:** query 'max_thrust thruster saturation domain randomization band' -> 20 of 33
+
+## [2026-07-23T08:52:23.755618] query
+- **Pages:** constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md, thruster_util_is_the_binding_constrainttrpo_constraint_in_7_of_7.md, constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md, joint1_cumulative_rotation_constraint_never_binds_policy_parks_a.md, joint1_cumulative_ipo_constraint_generalizes_drift_bounded_at_oo.md, doraemon_is_trust_region_limited_not_feasibility_limited_kl_step.md, dr_harder_reward_decomposition_confirms_eval_trades_on_the_train.md, engine_generic_flags_entropy_collapse_barrier_spike_reward_plate.md, student_distillation_converges_to_a_residual_that_rules_out_late.md, student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md, teacher_dr_harder_doraemon_curriculum_froze_before_run_end_unuse.md, teacher_dr_harder_yaw_is_the_only_heavy_tail_axis_roll_is_dc_bia.md
+- **Summary:** query 'thruster utilization binding constraint' -> 12 of 12
+
+## [2026-07-23T08:53:14.721562] query
+- **Pages:** engine_gap_analyze_training_py_needs_the_logs_run_dir_not_the_ex.md, engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md, engine_gap_m1_critic_side_encoder_gradient_is_not_logged_policy_.md, engine_gap_omx_cli_gaps_found_re_analyzing_teacher_2026_06_06_ro.md, engine_gap_eval_adapter_heavy_tail_lacks_median_based_tail_ratio.md, engine_gap_flat_target_eval_records_joint1_trajectory_but_render.md, engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md, engine_gap_eval_npz_saves_no_raw_obs_std_privileged_blocks_exact.md, engine_gap_heavy_tail_json_pct_peak_gt_thresh_exceeds_100_at_ood.md, eval_analysis_core_does_stats_adapter_does_heavy_tail.md, exp_analyze_must_run_analyze_training_py_for_training_side_diagn.md, p_a8_perflb200_more_iters_5000_8000_closed_the_deployment_ood_dr.md, extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_.md, joint1_stage_1_gate_go_drift_is_real_on_unlimited_physics_not_th.md, performance_lb_doraemon_gate_is_causally_independent_of_the_acto.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md, tam_plant_correctness_fix_collapses_the_void_hard_dr_roll_heavy_.md, a5_budgetslack_rp_vel_settling_manipulability_budgets_x100_learn.md, arm_a_measured_angle_joint1_constraint_recovers_not_diverges_the.md
+- **Summary:** query 'engine-gap' -> 20 of 29
+
+## [2026-07-23T08:56:06.197015] query
+- **Pages:** added_mass_scale_upper_half_is_attenuated_not_inert_the_0_95_i_c.md, stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md
+- **Summary:** query 'above absolute absorbed accept across add added adding' -> 5 of 135
+
+## [2026-07-23T11:14:44.738116] query
+- **Pages:** added_mass_scale_upper_half_is_attenuated_not_inert_the_0_95_i_c.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md, stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md
+- **Summary:** query 'abandoned above absolute absorbed accept across actually add' -> 5 of 139
+
+## [2026-07-23T11:15:10.115662] add
+- **Pages:** adding_a_dr_axis_is_half_a_change_dr_config_s_dr_tuple_fields_tr.md
+- **Summary:** created "Adding a DR axis is half a change: dr_config's _DR_TUPLE_FIELDS / _TRUE_NOMINAL_PHYSICS must both register it or the none level silently keeps the training band"
+
+## [2026-07-23T11:15:48.949319] add
+- **Pages:** sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md
+- **Summary:** updated 'sim hydro nominal is analytical (not measured); IMU+pressure can anchor rotation/heave but not surge/sway/TAM'
+
