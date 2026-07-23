@@ -1,0 +1,25 @@
+{
+  "acknowledged_gates": [
+    "container_cudnn_is_cu13_against_cu128_torch_every_conv1d_fails_s.md",
+    "imu_45deg_offset_pitch_negation_sim_uncompensated_2026_07_05.md",
+    "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md",
+    "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md"
+  ],
+  "gpu_gate": "Workstation GPU0 idle; marinelab MUST be on exp/max-thrust-dr (branched from exp/buoyancy-recenter -- checking out main silently reverts the plant fix); constrained-albc on exp/max-thrust-dr @766219e; verify tests/test_max_thrust_identity.py still passes; ~5.0 h at 3.58 s/iter",
+  "launch_delta": "B0c stage 1: add a per-env max_thrust DR band of +/-15% (42.5-57.5 N around the 50.0 N nominal) to the anchor config. SINGLE VARIABLE vs trpo_buoyanchor_s30_260722_134743. Seed 30 ONLY (~5 h); seeds 31/32 are stage 2 and require separate human approval. Config: randomization.max_thrust_scale=(0.85,1.15), 4096 envs, 5000 iters, task Isaac-ConstrainedALBC-TRPO-v0, workstation GPU0. run_group=log_project=teacher_baseline_buoyfix; agent.run_name=b0cmaxthrust_s30. CODE (not a config flip): constrained-albc exp/max-thrust-dr @766219e + marinelab exp/max-thrust-dr @f45d612, both tagged baseline-260723-b0c. VERDICT at the none DR level only, roll axis, vs the s30 baseline (ss_error 0.4967 deg / os_env_mean 13.545 pp / n_gt20 14.0): REAL only if |d ss_error| >= 0.10 deg OR |d os_env_mean| >= 10 pp. The n_gt20 clause is UNREACHABLE in the improving direction from this baseline and can only fire on the degrading side. thruster_util J_C/d_k is descriptive context, NOT a decision criterion.",
+  "open_leads": [
+    "closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md",
+    "curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md",
+    "experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md",
+    "joint1_stage_1_gate_go_drift_is_real_on_unlimited_physics_not_th.md",
+    "reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md",
+    "roll_transient_is_worst_at_none_dr_and_improves_monotonically_as.md",
+    "stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md",
+    "thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md"
+  ],
+  "proposal_id": "next-20260723-203114",
+  "queued_at": "2026-07-23T11:34:21.390095+00:00",
+  "queued_commit": "766219eccc21e4c4556c050bc2fd27b70b73c7a4",
+  "schema_version": 1,
+  "status": "pending approval"
+}

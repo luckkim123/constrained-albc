@@ -254,7 +254,12 @@ B0c  (after W0):          max_thrust ±15% DR arm vs anchor -> D3. STAGED 2026-0
                           seeds 31/32 (~10 h) ONLY on human approval after a stage-1 clear in
                           the improving direction (confirmation, 11.6 item 4). A stage-1 pass
                           without stage 2 yields "promising, unconfirmed" -- NOT an adoption.
-                          Proposal: next-20260723-175314 (lint ok, label B0c). NOTE: B0c is a
+                          Proposal: next-20260723-203114 (label B0c) -- APPROVED by independent
+                          review after TWO `revise` rounds; supersedes next-20260723-175314 and
+                          next-20260723-202249, both retained unchanged for audit. QUEUED
+                          2026-07-23 (`.omx/runs/trpo_b0cmaxthrust_s30_PLACEHOLDER/`,
+                          status=pending approval, queued_commit 766219e, 4 gates acked).
+                          NOT LAUNCHED -- awaiting human approval. NOTE: B0c is a
                           CODE change (marinelab per-env max_thrust tensor + albc cfg/events +
                           dr_config none-collapse registration), not a config flip -- rule-02
                           baseline-tag/exp-branch isolation applies in BOTH overlay repos.

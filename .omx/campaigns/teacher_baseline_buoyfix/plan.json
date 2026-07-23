@@ -17,6 +17,18 @@
       "summary": "B0c: max_thrust +/-15% per-env DR band (42.5-57.5 N), stage-1 seed 30 paired vs trpo_buoyanchor_s30; H1 band perturbs the 7/7 binding thruster_util constraint / H2 band inert behind the existing +/-30% gain DR",
       "label": "B0c",
       "added_at": "2026-07-23T08:56:46.674245+00:00"
+    },
+    {
+      "proposal_id": "next-20260723-202249",
+      "summary": "B0c REVISION of next-20260723-175314 after independent review returned revise: identity guard re-run against the real compute_wrench (committed test), events.py->albc_env.py call-site correction, J_C-d_k check demoted from threshold to directional (its band was cross-seed, the comparison is same-seed)",
+      "label": "B0c",
+      "added_at": "2026-07-23T11:23:20.314144+00:00"
+    },
+    {
+      "proposal_id": "next-20260723-203114",
+      "summary": "B0c revision 2 (APPROVED by independent review 2026-07-23): max_thrust +/-15% per-env band (42.5-57.5 N), stage-1 seed 30 paired vs trpo_buoyanchor_s30. H1 nominal roll degrades >=1 screening floor / H2 all reachable floors NULL. J_C-d_k removed from all decision clauses; manipulation confirmed deterministically via env.yaml + the committed liveness test",
+      "label": "B0c",
+      "added_at": "2026-07-23T11:34:21.326784+00:00"
     }
   ]
 }
