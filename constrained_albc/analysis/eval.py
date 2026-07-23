@@ -90,6 +90,16 @@ sp_static = subparsers.add_parser("static", description="Evaluate DR robustness 
 _add_common(sp_static)
 sp_static.add_argument("--segment_duration", type=float, default=5.0, help="Duration per segment in seconds.")
 sp_static.add_argument(
+    "--control-delay",
+    type=int,
+    default=0,
+    help="E2 latency instrument: inject a FIXED N-step transport delay "
+    "(control_delay_steps=(N,N)) on the applied action at EVERY DR level "
+    "(1 step = 20 ms @ 50 Hz). 0 = off, byte-identical to stock (the env skips the "
+    "DelayBuffer when hi<=0). Does not touch _DR_TUPLE_FIELDS, so all DR levels stay "
+    "comparable with prior evals.",
+)
+sp_static.add_argument(
     "--att-amp-deg",
     type=float,
     default=None,
@@ -1264,6 +1274,16 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
             raw_env.cfg.randomization = build_ood_dr_config(_dr_config_module._DORAEMON_RAW)
         else:
             apply_dr_config(raw_env.cfg, DR_SCALE[level])
+
+        # E2 latency instrument: fixed N-step transport delay at every DR level. Set AFTER
+        # the DR cfg is (re)built above and BEFORE the level's rollout reset, which redraws
+        # per-env delay from cfg.randomization.control_delay_steps (albc_env.py:1497-1501).
+        # control_delay_steps is not a _DR_TUPLE_FIELDS dim, so build_dr_config never sets it;
+        # at --control-delay 0 this block is skipped and it stays (0,0) = byte-identical stock.
+        if args_cli.control_delay > 0:
+            _cd = args_cli.control_delay
+            raw_env.cfg.randomization.control_delay_steps = (_cd, _cd)
+            print(f"[INFO] control_delay={_cd} steps ({_cd * 20} ms) injected at level {level}")
 
         if is_student_mode:
             policy.reset_logs()  # per-level latent logs (don't carry across DR levels)
