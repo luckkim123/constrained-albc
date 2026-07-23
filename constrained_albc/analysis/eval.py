@@ -1154,6 +1154,15 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
 
     # ---- Create env (initial DR = none) ----
     apply_dr_config(env_cfg, DR_SCALE["none"])
+    # E2 latency instrument: control_delay_steps MUST be non-(0,0) at env __init__ so
+    # _draw_control_delay allocates the DelayBuffer (albc_env.py:338); a buffer that starts
+    # None stays None (the _reset_idx redraw is guarded by `if buf is not None`, line 1496),
+    # so a purely per-level cfg change would never take effect. Set it here (after
+    # apply_dr_config, which rebuilds randomization) AND per-level below (apply_dr_config wipes
+    # it back to (0,0) each level, so the per-level reset must re-set it to draw lag=d).
+    if args_cli.control_delay > 0:
+        _cd0 = args_cli.control_delay
+        env_cfg.randomization.control_delay_steps = (_cd0, _cd0)
     env = gym.make(args_cli.task, cfg=env_cfg)
     clip_actions = run_agent_dict.get("clip_actions") if run_agent_dict else agent_cfg.clip_actions
     env = RslRlVecEnvWrapper(env, clip_actions=clip_actions)
