@@ -492,7 +492,7 @@ All 12 runs + baselines re-read on `os_env_mean` / `n_gt20` / `rise_time`
 | `imu_45deg_offset...` | **DEFER** (unchanged) | user decision 2026-07-20; robot bring-up track |
 | `sim_hydro_nominal...` (max_thrust) -> B0c | **KEEP, MODIFY the decision rule** | run as planned (3 paired seeds vs anchor seeds, ~15 h, before C3) but judged by protocol 11.6 items 2-4, NOT +/-5%; pre-register the band in deg at proposal time |
 | `tam_vertical_single_motor...` | **DEFER** (unchanged) | m4 HW fault |
-| W0 (C0.4, C0.5, Z3, Z6 memo) | **KEEP** | zero-GPU hygiene, unchanged |
+| W0 (C0.4, C0.5, Z3) | **KEEP** | zero-GPU hygiene, unchanged. Z6 battery memo verified DONE 2026-07-23 (4S LiPo 14-16.8 V recorded on the `sim_hydro` wiki page; +/-15% band kept, conservative) — removed from the remaining W0 set |
 | B1a-dgx (queued) | **MODIFY -> recommend DROP** | a DGX anchor cannot discriminate the workstation anchor across a +109% machine term (11.2); would spend 22.5 h to measure a machine effect already measured on the old plant; human-gated |
 | C3 comparison set | **KEEP** (12 runs, workstation serial, ~60 h) | 3 seeds/arm is the paper protocol (11.6 item 5); machine rationale corrected in section 5 |
 | C4 deployment pack (+C4a) | **KEEP** | unchanged; cuDNN fix recommended first |
