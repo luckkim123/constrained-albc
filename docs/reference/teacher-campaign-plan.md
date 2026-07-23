@@ -155,11 +155,11 @@ extensions net-negative. See group ledger.
 | B0a-eval | `trpo_dgxseed30/31/32` re-evaluated on new plant | DONE 3/3 (`static_260723_110214/111102/111955`) | eval dirs |
 | B1a | `trpo_buoyanchor_s30/s31/s32_26072{2,3}_*` | DONE 3/3 trained + evaluated; s30 analyzed: plant fix ADOPT (-3.93 deg roll overshoot), retrain delta +0.110 deg = 9.6% of 1 sigma (sub-threshold) -> **anchor SOUND** [AUDIT-CORRECTION 2026-07-23: -3.93 pp = -1.18 deg (os unit is percent-of-step); retrain delta C-B machine-confounded — see section 11] | report `diagnose-20260723-134359`; section 11 |
 | seed_floor_dgx | `trpo_dgxseed30/31/32_260721_*` | DONE: seed floor 74.8% p2p (old plant), 56.0% p2p (corrected, from B1a 3 seeds) — kills every single-seed ±5% verdict [AUDIT-SCOPE 2026-07-23: this floor is UNPAIRED (cross-seed); it does not transfer to paired same-seed same-machine deltas — section 11.4 D3] | same report, lines 60-65 |
-| B1a-dgx | queued `trpo_buoyanchordgx_s30_PLACEHOLDER` | **DROPPED (user 2026-07-23)** — audit section 11: the +109% cross-machine term makes the probe non-discriminating; queue artifact marked `dropped`, campaign ledger noted | proposal `next-20260723-dgxanchor` (status DROPPED) |
+| B1a-dgx | queued `trpo_buoyanchordgx_s30_PLACEHOLDER` | **DROPPED (user 2026-07-23)** — audit section 11: the +109% cross-machine term makes the probe non-discriminating; queue artifact marked `dropped`, campaign ledger noted. RACE, resolved 2026-07-23: the DGX session had already launched seed 30 under an earlier green light when the drop was decided here; its stand-down killed it at ~1750 iters and never launched s31/s32. A partial DGX run dir therefore exists on that machine, untransferred and not analyzable (unconverged, and cross-machine anyway) — treat any `trpo_buoyanchordgx*` artifact as dead by decision, not as data | proposal `next-20260723-dgxanchor` (status DROPPED); DGX stand-down report 2026-07-23 (relayed, not verifiable from the workstation) |
 | B0b/B1b | — | NOT RUN — re-judged, deferred with edge (section 5) | — |
 | B0c/B1c | — | NOT RUN — KEEP, next tuning arm (section 5) | — |
 | B1d | — | conditional on Z4; deferred with latency lead | — |
-| B2 | Arm N = `trpo_e3scaleN_envs8192_260722_151230` | envs-only half ran: NULL (all metrics inside the 3-seed anchor band; 9.65 s/iter, 13.41 h). Arm I cancelled. Lead closed 2026-07-23 | report `diagnose-20260723-134359`; wiki e3 page |
+| B2 | Arm N = `trpo_e3scaleN_envs8192_260722_151230` | envs-only half ran: NULL (all metrics inside the 3-seed anchor band; 9.65 s/iter, 13.41 h). Arm I cancelled. Lead closed 2026-07-23. CORRECTION 2026-07-23: "Arm I produced no artifact" (pre-audit handoff) is wrong — the DGX stand-down found `e3_dgxscale_buoyfix/trpo_e3scaleI_iters12k_260723_044049` with checkpoints up to `model_6200.pt` (52% of the 12k target) plus `logs_queue/e3scaleI_260723.log`, still on DGX and never transferred. It stays out of the campaign either way (cancelled, unconverged, DGX-trained), but it is a real 8k+-regime partial should the B0b reactivation edge ever fire — decide transfer-or-discard before wiping that machine | report `diagnose-20260723-134359`; wiki e3 page; DGX stand-down report 2026-07-23 |
 | B3 | — | NOT RUN — blocked (needs a station-keeping checkpoint on unlimited joint1 physics) | wiki `joint1_stage_1_gate...` |
 
 ### Comparison / deployment track
@@ -248,7 +248,7 @@ plant); deployment checkpoint rule pre-declared = median seed by none-level roll
 | resource | throughput | note |
 |:--|:--|:--|
 | Workstation RTX 4070 (GPU0) | 3.58 s/iter @4096 envs -> ~5.0 h per 5000-iter run | 11.3/12.3 GB at 4096 envs: comparison set is SERIAL on GPU0; the 8 GB 4060 evals |
-| DGX GB10 | 5.409 s/iter @4096; 9.65 s/iter @8192 (13.41 h/run) | source build, `./isaaclab.sh -p` only; one job at a time; plant fix NOT yet replicated there |
+| DGX GB10 | 5.409 s/iter @4096; 9.65 s/iter @8192 (13.41 h/run) | source build, `./isaaclab.sh -p` only; one job at a time. Plant fix IS present after all (stand-down 2026-07-23: `marinelab` on `exp/buoyancy-recenter` @ `db28b5a`, volume 0.00790 — content-equal to workstation `7d45c2c`), and cuDNN works there (torch 2.9.0+cu130, cudnn 91300, conv1d fwd/bwd with grad) where the workstation image is broken |
 
 | block | runs | wall clock |
 |:--|--:|--:|
@@ -259,6 +259,20 @@ plant); deployment checkpoint rule pre-declared = median seed by none-level roll
 | C4 distillation | per teacher | ~5 h/pack until the cuDNN image fix; minutes after |
 
 Critical path ≈ **75 h** workstation-serial (90 h if B0c adopts), plus analysis gates.
+
+### Machine allocation (what DGX gets, decided 2026-07-23)
+
+Machine isolation (11.6 item 1) says campaign training runs on the workstation; it does
+not say DGX is unusable. The split is by *whether the output is compared across machines*,
+and every roster states DGX's slot explicitly — including when that slot is "idle this
+block", so an idle GB10 is a decision rather than an oversight.
+
+| work | machine | why |
+|:--|:--|:--|
+| Any run whose numbers enter a campaign comparison (B0c, C3, all anchors) | **workstation only** | identical config + identical seed differ by +109% on roll `ss_error` across machines (11.2); one DGX arm silently invalidates the set |
+| C4 student distillation | **DGX candidate — human decision** | supervised imitation from a FROZEN workstation teacher checkpoint: the teacher is the file, not the machine, so no cross-machine term enters the comparison. DGX cuDNN works (stand-down 2026-07-23); the workstation runs the cuDNN-disabled workaround at ~70x slowdown. Deciding this is cheaper than the image fix, and does not block it |
+| Instrument/tooling probes, smoke checks, load-checks | either | nothing is compared |
+| A future DGX-trained campaign arm | **DGX, but only with its own anchor set** | rejoin condition: explicit roster allocation + plant fix present on DGX (satisfied, `db28b5a`) + a DGX-trained anchor to compare against. Never fold a DGX number into a workstation-anchored comparison |
 
 ## 9. DONE criterion and cannot-close list
 
