@@ -1,6 +1,6 @@
 # Wiki Index
 
-> 173 pages | Last updated: 2026-07-23T07:56:32.108870
+> 172 pages | Last updated: 2026-07-23T07:56:47.242050
 
 ## convention
 
@@ -131,7 +131,6 @@
 - [action pipeline behavior walk-through (two clamps / raw gaussian vs tanh / delta integrator reset / single-vector two-dynamics / arm PD gain DR)](action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md) - # action pipeline behavior walk-through (two clamps / raw gaussian vs tanh / ...
 - [Actuator hardware identification: arm=XW540-T260 (board-measured), prior 'no PID-gain code' claim corrected, thrust-curve keep-off, step-response prereqs](actuator_hardware_identification_arm_xw540_t260_board_measured_p.md) - # Actuator hardware identification: arm=XW540-T260 (board-measured), prior 'n...
 - [added_mass_scale upper half is ATTENUATED, not inert: the 0.95*I clamp ceiling is co-sampled with inertia_scale DR; still do not widen hydro DR up](added_mass_scale_upper_half_is_attenuated_not_inert_the_0_95_i_c.md) - # added_mass_scale upper half is ATTENUATED, not inert: the 0.95*I clamp ceil...
-- [added_mass_scale upper half is INERT: post-DR 0.95*I clamp caps it (yaw eff bound ~1.01), so hydro DR cannot be widened up](added_mass_scale_upper_half_is_inert_post_dr_0_95_i_clamp_caps_i.md) - # added_mass_scale upper half is INERT: post-DR 0.95*I clamp caps it (yaw eff...
 - [analysis engine map — what is grow-able vs off-limits](analysis_engine_map_what_is_grow_able_vs_off_limits.md) - # analysis engine map — what is grow-able vs off-limits
 - [barrier_alpha runtime=0.05 (agent cfg injects over ctor default 0.02)](barrier_alpha_runtime_0_05_agent_cfg_injects_over_ctor_default_0.md) - # barrier_alpha runtime=0.05 (agent cfg injects over ctor default 0.02)
 - [baseline (consolidated main) reference: trpo_baseline_260713_031325](baseline_consolidated_main_reference_trpo_baseline_260713_031325.md) - # baseline (consolidated main) reference: trpo_baseline_260713_031325

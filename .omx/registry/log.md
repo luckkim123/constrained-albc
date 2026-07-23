@@ -6383,3 +6383,7 @@
 - **Pages:** added_mass_scale_upper_half_is_attenuated_not_inert_the_0_95_i_c.md
 - **Summary:** created 'added_mass_scale upper half is ATTENUATED, not inert: the 0.95*I clamp ceiling is co-sampled with inertia_scale DR; still do not widen hydro DR up'
 
+## [2026-07-23T07:56:47.242050] gc-apply
+- **Pages:** none
+- **Summary:** deleted 0, merged 1 source(s)
+
