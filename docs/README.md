@@ -39,7 +39,7 @@ Organized [Diátaxis](https://diataxis.fr/)-style by reader intent. English-only
 | Doc | Use |
 |---|---|
 | [task-reference](reference/task-reference.md) | all 7 registered task IDs — env package, obs/privileged/action dims, typical launch command (SSOT for task ID enumeration) |
-| [teacher-campaign-plan](reference/teacher-campaign-plan.md) | consolidated teacher-campaign plan + status (SSOT): canonical experiment ids, legacy-name mapping, disk-derived status, remaining work + GPU budget |
+| [teacher-campaign-plan](../.omx/programs/teacher-final-closeout/PLAN.md) | consolidated teacher-campaign plan + status (SSOT, moved 2026-07-23 into the omx program layer; redirect stub at `reference/teacher-campaign-plan.md`): canonical experiment ids, legacy-name mapping, disk-derived status, remaining work + GPU budget |
 | [observation-space](reference/observation-space.md) | `envs/main` 69D obs / 28D privileged obs breakdown, proprioception history, encoder consumption |
 | [action-pipeline](reference/action-pipeline.md) | `envs/main` action path: policy output -> clamps -> arm delta-PD + 6-thruster TAM wrench |
 | [command-and-task](reference/command-and-task.md) | `envs/main` command/goal side: attitude+yaw-rate sampling, tracking error, reward consumption |

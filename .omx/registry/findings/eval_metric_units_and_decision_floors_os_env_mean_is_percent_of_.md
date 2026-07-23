@@ -2,14 +2,14 @@
 title: "Eval metric units and decision floors: os_env_mean is percent-of-step (roll steps 30 deg), ss_error is degrees; paired screening floors and the machine-isolation rule"
 tags: ["units", "os_env_mean", "ss_error", "decision-floor", "machine-isolation", "paired-seed", "methodology", "audit"]
 created: 2026-07-23T07:08:05.945326
-updated: 2026-07-23T07:08:05.945326
+updated: 2026-07-23T08:41:31.063757
 sources: ["diagnose-20260723-134359", "teacher-campaign-plan.md#11"]
 links: []
 category: convention
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
 ---
 
 # Eval metric units and decision floors: os_env_mean is percent-of-step (roll steps 30 deg), ss_error is degrees; paired screening floors and the machine-isolation rule
@@ -35,3 +35,8 @@ RULES:
 5. Paper number = full 3-seed distribution, pre-declared median-seed rule.
 UNSETTLED: the true same-machine paired repeatability floor; measured directly by one exact config+seed repeat of trpo_buoyanchor_s30 (~5 h, human-gated, proposed in SSOT 11.7).
 
+---
+
+## Update (2026-07-23T08:41:31.063757)
+
+UPDATE 2026-07-23: the audit SSOT document moved to constrained-albc/.omx/programs/teacher-final-closeout/PLAN.md (omx v0.9.0 program layer); section 11 content unchanged. Redirect stub remains at docs/reference/teacher-campaign-plan.md.

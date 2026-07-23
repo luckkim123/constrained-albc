@@ -5,7 +5,7 @@
   "baseline_run_id": "trpo_buoyanchor_s30_260722_134743",
   "program": "teacher-final-closeout",
   "predecessor": "teacher_baseline_posttam",
-  "master_doc": "docs/reference/teacher-campaign-plan.md",
+  "master_doc": ".omx/programs/teacher-final-closeout/PLAN.md",
   "planned": [
     {
       "proposal_id": "next-20260723-dgxanchor",

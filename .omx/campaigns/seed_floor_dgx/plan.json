@@ -5,6 +5,6 @@
   "baseline_run_id": "trpo_dgxseed30_260721_113426",
   "program": "teacher-final-closeout",
   "predecessor": "teacher_baseline_posttam",
-  "master_doc": "docs/reference/teacher-campaign-plan.md",
+  "master_doc": ".omx/programs/teacher-final-closeout/PLAN.md",
   "kind": "measurement"
 }

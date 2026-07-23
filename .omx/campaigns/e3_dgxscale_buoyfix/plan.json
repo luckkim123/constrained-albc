@@ -5,5 +5,5 @@
   "baseline_run_id": "trpo_e3scaleN_envs8192_260722_151230",
   "program": "teacher-final-closeout",
   "predecessor": "teacher_baseline_buoyfix",
-  "master_doc": "docs/reference/teacher-campaign-plan.md"
+  "master_doc": ".omx/programs/teacher-final-closeout/PLAN.md"
 }

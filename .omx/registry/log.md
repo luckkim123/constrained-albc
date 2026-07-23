@@ -6387,3 +6387,15 @@
 - **Pages:** none
 - **Summary:** deleted 0, merged 1 source(s)
 
+## [2026-07-23T08:10:24.034283] add
+- **Pages:** container_cudnn_is_cu13_against_cu128_torch_every_conv1d_fails_s.md
+- **Summary:** updated 'Container cuDNN is cu13 against cu128 torch: every conv1d fails, student distillation is 70x slower with the workaround'
+
+## [2026-07-23T08:41:30.977876] add
+- **Pages:** plan_consolidation_2026_07_23_canonical_ids_z_a_b_c_one_campaign.md
+- **Summary:** updated 'Plan consolidation 2026-07-23: canonical ids Z/A/B/C + one-campaign-per-group; master doc docs/reference/teacher-campaign-plan.md'
+
+## [2026-07-23T08:41:31.063757] add
+- **Pages:** eval_metric_units_and_decision_floors_os_env_mean_is_percent_of_.md
+- **Summary:** updated 'Eval metric units and decision floors: os_env_mean is percent-of-step (roll steps 30 deg), ss_error is degrees; paired screening floors and the machine-isolation rule'
+
