@@ -2,14 +2,14 @@
 title: "DORAEMON is trust-region-limited not feasibility-limited: kl_step is pinned AT kl_ub every update, so kl_ub x n_updates is one expansion budget"
 tags: ["doraemon", "kl_ub", "curriculum", "expansion-budget", "p-a9", "dgx", "correction", "dwell-time", "step_interval", "success-gate"]
 created: 2026-07-16T05:49:54.801488
-updated: 2026-07-21T10:05:34.382940
+updated: 2026-07-23T07:56:12.833488
 sources: ["diagnose-20260721-190151"]
 links: ["doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step.md"]
 category: pattern
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
 status: resolved
 ---
 
@@ -154,3 +154,8 @@ topic too before writing it as new.
 [EVIDENCE: analysis diagnose-20260721-164331 (A3) wiki-capture step; this page's pre-existing title]
 [CONFIDENCE: HIGH]
 
+---
+
+## Update (2026-07-23T07:56:12.833488)
+
+2026-07-23 curation: the frontmatter links carried a typo'd target missing its trailing underscore; the correct page is [[doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_]].

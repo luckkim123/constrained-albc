@@ -2,14 +2,14 @@
 title: "Cross-run DR comparability: eval.py --doraemon-dr-from already provides a common test distribution; p7_tail knew and declined, judging a robustness campaign on nominal-only"
 tags: ["eval", "comparability", "doraemon-dr-from", "common-exam", "confound", "methodology", "p7-tail", "e4", "demonstrated", "curriculum-replay", "doraemon", "causal-attribution", "biasema", "adoption-vs-mechanism", "priority-demotion", "user-decision", "demotion-confirmed", "auto-captured", "trpo_budgetslack_260721_181133"]
 created: 2026-07-16T06:00:00.285512
-updated: 2026-07-23T07:32:14.143051
+updated: 2026-07-23T07:56:12.911385
 sources: ["diagnose-20260716-164016", "doraemon.py:817", "train.py:58", "experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_biasema_260715_142543/analysis/diagnose-20260716-164016/report.md", "diagnose-20260721-020253", "experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_budgetslack_260721_181133/analysis/diagnose-20260722-103723/report.md", "/workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_budgetslack_260721_181133/analysis/diagnose-20260722-103723/report.md"]
 links: ["sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e.md", "extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_.md", "step_interval_250_400_probe_separate_dr_width_from_optimisation_.md", "step_interval_250_400_probe_separate_dr_width_from_optimisation.md"]
 category: convention
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
 status: resolved
 ---
 
@@ -234,3 +234,9 @@ A5 took 19 DORAEMON expansions vs the anchor's 18 -- the SAME extra-expansion pa
 [CONFIDENCE: HIGH]
 
 source report: /workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_budgetslack_260721_181133/analysis/diagnose-20260722-103723/report.md
+
+---
+
+## Update (2026-07-23T07:56:12.911385)
+
+2026-07-23 curation: the frontmatter links carried a stale target; the correct page is [[step_interval_250_400_probe_separate_dr_width_from_optimisation_]].

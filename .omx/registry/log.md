@@ -6367,3 +6367,19 @@
 - **Pages:** tracking_kernel_exp_quad_tanh_dead_zone_diagnosis_correct_but_fi.md
 - **Summary:** updated 'Tracking kernel exp-quad-tanh: dead-zone diagnosis correct but fix is on wrong axis (yaw not att_rp); the exp+L1+tanh stack has no literature precedent'
 
+## [2026-07-23T07:56:12.748027] add
+- **Pages:** priv_obs_slim_stage_2_lead_contested_p_t_dims_quad_damp_lin_vel_.md
+- **Summary:** updated 'priv-obs slim Stage-2 lead: contested p_t dims (quad_damp, lin_vel) need WITH-vs-WITHOUT A/B; union kept them'
+
+## [2026-07-23T07:56:12.833488] add
+- **Pages:** doraemon_is_trust_region_limited_not_feasibility_limited_kl_step.md
+- **Summary:** updated 'DORAEMON is trust-region-limited not feasibility-limited: kl_step is pinned AT kl_ub every update, so kl_ub x n_updates is one expansion budget'
+
+## [2026-07-23T07:56:12.911385] add
+- **Pages:** cross_run_dr_comparability_eval_py_doraemon_dr_from_already_prov.md
+- **Summary:** updated 'Cross-run DR comparability: eval.py --doraemon-dr-from already provides a common test distribution; p7_tail knew and declined, judging a robustness campaign on nominal-only'
+
+## [2026-07-23T07:56:32.108870] add
+- **Pages:** added_mass_scale_upper_half_is_attenuated_not_inert_the_0_95_i_c.md
+- **Summary:** created 'added_mass_scale upper half is ATTENUATED, not inert: the 0.95*I clamp ceiling is co-sampled with inertia_scale DR; still do not widen hydro DR up'
+

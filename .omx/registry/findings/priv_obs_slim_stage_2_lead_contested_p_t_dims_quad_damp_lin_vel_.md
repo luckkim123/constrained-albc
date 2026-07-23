@@ -2,14 +2,14 @@
 title: "priv-obs slim Stage-2 lead: contested p_t dims (quad_damp, lin_vel) need WITH-vs-WITHOUT A/B; union kept them"
 tags: ["priv_obs", "encoder", "experiment_lead", "consolidation", "p_t_layout", "lin_vel", "resolved", "premise-error", "auto-captured"]
 created: 2026-07-12T12:01:49.559370
-updated: 2026-07-23T07:32:14.143051
+updated: 2026-07-23T07:56:12.748027
 sources: ["diagnose-20260721-190151", "/workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_privslim24d_260721_114717/analysis/diagnose-20260721-190151/report.md"]
 links: ["doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step.md"]
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 80
-qualityReasons: ["no-source-marker"]
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
 status: resolved
 ---
 
@@ -148,3 +148,9 @@ source report: /workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/
 [CONFIDENCE: HIGH]
 
 source report: /workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_privslim24d_260721_114717/analysis/diagnose-20260721-190151/report.md
+
+---
+
+## Update (2026-07-23T07:56:12.748027)
+
+2026-07-23 curation: the frontmatter links carried a typo'd target missing its trailing underscore; the correct page is [[doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_]].
