@@ -90,6 +90,24 @@ sp_static = subparsers.add_parser("static", description="Evaluate DR robustness 
 _add_common(sp_static)
 sp_static.add_argument("--segment_duration", type=float, default=5.0, help="Duration per segment in seconds.")
 sp_static.add_argument(
+    "--control-delay",
+    type=int,
+    default=0,
+    help="E2 latency instrument: inject a FIXED N-step transport delay "
+    "(control_delay_steps=(N,N)) on the applied action at EVERY DR level "
+    "(1 step = 20 ms @ 50 Hz). 0 = off, byte-identical to stock (the env skips the "
+    "DelayBuffer when hi<=0). Does not touch _DR_TUPLE_FIELDS, so all DR levels stay "
+    "comparable with prior evals.",
+)
+sp_static.add_argument(
+    "--inject-yaw-torque",
+    type=float,
+    default=0.0,
+    help="E3 yaw-torque instrument: apply a CONSTANT external body-frame yaw torque Mz "
+    "(N.m) on the robot base link at EVERY physics step, at every DR level. "
+    "0.0 = off, byte-identical to stock (no wrench-composer hook installed).",
+)
+sp_static.add_argument(
     "--att-amp-deg",
     type=float,
     default=None,
@@ -591,6 +609,41 @@ def _read_per_env_fault(raw_env) -> dict[str, np.ndarray]:
         tensors["joint_health"] = _np(raw_env._joint_health)
 
     return per_env_fault_from_tensors(tensors)
+
+
+def _install_yaw_torque_injector(raw_env, mz: float) -> None:
+    """E3 instrument: apply a constant external body-frame yaw torque Mz on the base link.
+
+    Wraps `raw_env._apply_action` (called once per physics substep, isaaclab
+    envs/direct_rl_env.py `step()` decimation loop) so the injected torque is re-added
+    AFTER the env's own hydro/thruster wrench is set on the same body every substep --
+    `permanent_wrench_composer.set_forces_and_torques` is a SET, not an ADD, so injecting
+    only once (e.g. before `env.step()`) would be silently overwritten by `_apply_action`.
+    Re-adding every substep also survives env resets: `_reset_idx` -> `robot.reset()`
+    zeroes the composer for the reset envs, but the very next `_apply_action` call
+    (start of the next substep, for ALL envs) re-adds Mz before `write_data_to_sim()`
+    pushes the buffer to PhysX, so no env is ever left without the injected torque.
+    """
+    body_ids = raw_env._body_id  # same "base" link the main hydro/thruster wrench uses
+    num_envs = raw_env.num_envs
+    device = raw_env.device
+    zero_forces = torch.zeros(num_envs, len(body_ids), 3, device=device)
+    torques = torch.zeros(num_envs, len(body_ids), 3, device=device)
+    torques[:, :, 2] = mz
+
+    orig_apply_action = raw_env._apply_action
+
+    def _apply_action_with_yaw_torque():
+        orig_apply_action()
+        raw_env._robot.permanent_wrench_composer.add_forces_and_torques(
+            forces=zero_forces, torques=torques, body_ids=body_ids, is_global=False
+        )
+
+    raw_env._apply_action = _apply_action_with_yaw_torque
+    print(
+        f"[INFO] inject_yaw_torque={mz:.3f} N.m constant Mz on body {body_ids} "
+        f"('{raw_env.cfg.hydrodynamics.body_name}') every physics step (all DR levels)"
+    )
 
 
 def run_evaluation(
@@ -1144,6 +1197,15 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
 
     # ---- Create env (initial DR = none) ----
     apply_dr_config(env_cfg, DR_SCALE["none"])
+    # E2 latency instrument: control_delay_steps MUST be non-(0,0) at env __init__ so
+    # _draw_control_delay allocates the DelayBuffer (albc_env.py:338); a buffer that starts
+    # None stays None (the _reset_idx redraw is guarded by `if buf is not None`, line 1496),
+    # so a purely per-level cfg change would never take effect. Set it here (after
+    # apply_dr_config, which rebuilds randomization) AND per-level below (apply_dr_config wipes
+    # it back to (0,0) each level, so the per-level reset must re-set it to draw lag=d).
+    if args_cli.control_delay > 0:
+        _cd0 = args_cli.control_delay
+        env_cfg.randomization.control_delay_steps = (_cd0, _cd0)
     env = gym.make(args_cli.task, cfg=env_cfg)
     clip_actions = run_agent_dict.get("clip_actions") if run_agent_dict else agent_cfg.clip_actions
     env = RslRlVecEnvWrapper(env, clip_actions=clip_actions)
@@ -1155,6 +1217,12 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
 
     print(f"[INFO] step_dt={step_dt:.4f}s, num_envs={num_envs}, device={device}")
     print(f"[INFO] Segment duration: {args_cli.segment_duration}s")
+
+    # E3 yaw-torque instrument: constant external Mz on the base link, applied at every
+    # DR level (single hook, installed once -- raw_env persists across the level loop
+    # below). 0.0 = off, byte-identical to stock (no hook installed).
+    if args_cli.inject_yaw_torque != 0.0:
+        _install_yaw_torque_injector(raw_env, args_cli.inject_yaw_torque)
 
     # ---- Create runner + load policy ----
     agent_dict = run_agent_dict if run_agent_dict else agent_cfg.to_dict()
@@ -1264,6 +1332,16 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
             raw_env.cfg.randomization = build_ood_dr_config(_dr_config_module._DORAEMON_RAW)
         else:
             apply_dr_config(raw_env.cfg, DR_SCALE[level])
+
+        # E2 latency instrument: fixed N-step transport delay at every DR level. Set AFTER
+        # the DR cfg is (re)built above and BEFORE the level's rollout reset, which redraws
+        # per-env delay from cfg.randomization.control_delay_steps (albc_env.py:1497-1501).
+        # control_delay_steps is not a _DR_TUPLE_FIELDS dim, so build_dr_config never sets it;
+        # at --control-delay 0 this block is skipped and it stays (0,0) = byte-identical stock.
+        if args_cli.control_delay > 0:
+            _cd = args_cli.control_delay
+            raw_env.cfg.randomization.control_delay_steps = (_cd, _cd)
+            print(f"[INFO] control_delay={_cd} steps ({_cd * 20} ms) injected at level {level}")
 
         if is_student_mode:
             policy.reset_logs()  # per-level latent logs (don't carry across DR levels)
