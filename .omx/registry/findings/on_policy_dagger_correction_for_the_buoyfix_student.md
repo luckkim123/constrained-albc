@@ -2,16 +2,16 @@
 title: "On-policy DAgger correction for the buoyfix student"
 tags: ["distillation", "student", "covariate-shift", "dagger", "albc", "sim-to-real", "next-experiment"]
 created: 2026-07-24T03:35:28.710539
-updated: 2026-07-24T07:18:57.305669
+updated: 2026-07-24T08:18:41.484275
 sources: []
 links: []
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 70
-qualityReasons: ["no-source-marker", "generic-only-tags"]
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 status: needs-experiment
-blocked-on: "PARTIAL adoption measured; residual = observability floor (longer history window + explicit velocity channel), a separate training experiment"
+blocked-on: "residual EXPLAINED as observability under-dispersion (2026-07-24); no correction-side experiment remains, hand off to observability retrain"
 ---
 
 # On-policy DAgger correction for the buoyfix student
@@ -70,4 +70,25 @@ NOW blocked ONLY on the human pasting that prompt on the DGX (--dagger_beta_end 
 ## Update (2026-07-24T07:18:57.305669)
 
 [MEASURED on DGX 2026-07-24] C4b ran to completion (code be42a2f exp/dagger-correction; TCN student from anchor s30 model_4999, 4096 envs, 1000 iters, beta 1.0->0.0 over 600 anneal VERIFIED from tfevents, --enable_cudnn, seed 42, wandb 6mezo5uz, 19.4 min). Open-loop loss_latent 0.00518 (teacher-only 0.00493). Step-4 in-loop diagnostic vs the E4 teacher-only baseline (base residual 0.002145): none 0.15584->0.03833 (4.07x reduction), soft 0.16190->0.04419 (3.66x), medium 0.16829->0.06798 (2.48x), hard 0.17613->0.14794 (1.19x). l_hat_envvar 0.0031/0.0032/0.0062/0.0119; l_hat/l_true ratio 0.16/0.12/0.14/0.13 (essentially unchanged from E4's 0.14-0.18). VERDICT: INTERMEDIATE / PARTIAL. NOT clean H1 (covariate shift fully fixed): overall_mse never drops below l_true_envvar, under-dispersion (6-8x env collapse) UNTOUCHED. NOT H2 (observability floor, no help): none/soft dropped 4x, far beyond H2's <=2x -> covariate shift WAS a real, DAgger-addressable component. MIXED: big win at low DR collapsing to 1.19x at hard, under-dispersion floor persists and worsens with DR. CONSEQUENCE: PARTIAL adoption -- keep on-policy DAgger (cuts closed-loop latent error 2.5-4x at low-mod DR) but NOT sufficient alone; residual needs the OBSERVABILITY angle (longer history window and/or explicit velocity channel). No blanket deployment claim. per_dim_mse (hard dims 5/7/3) EXPLORATORY only (z_sweep caveat). CONVERGENT EVIDENCE: Z4 (20ms delay -> 2x degrade) and RT-a (nominal-corner real) independently point at the SAME temporal/observability fragility -> the observability retrain is now a triply-supported lead. DGX output: logs/rsl_rl/albc_trpo_student/trpo_buoyfix_dagger_s30_tcn_260724_133040/ (PULL via Mac; workstation can't reach ksm-nas). DGX-local wiki page: c4b_dagger_correction_measured_partial_2_5_4x_in_loop_reduction_.
+
+---
+
+## Update (2026-07-24T08:18:41.484275)
+
+## Residual structure characterized per-dim (workstation deep analysis, 2026-07-24)
+
+The C4b DAgger student's raw in-loop latent was pulled to the workstation and dissected per-dim
+(analysis: `experiments/rsl_rl/albc_trpo_student/trpo_buoyfix_dagger_s30_tcn_260724_133040/analysis/diagnose-latent-260724/`).
+This characterizes WHAT the residual "partial adoption" floor is:
+
+- The DAgger student's in-loop residual is an ENV-VAR UNDER-DISPERSION, not random error: it reproduces
+  <=16% of the teacher latent's env-to-env spread, flat across all 4 DR levels (structural floor).
+- 8 of 9 latent dims collapse (env-var ratio <0.10); only 1 dim (the least-informative) partially
+  reconstructs. Temporal variance is preserved, so the encoder is alive -- it loses the slow env-identity.
+- Interpretation: DAgger fixed the covariate-shift half of the gap (in-loop mse cut 4.07x at none) but the
+  irreducible half is observability -- the attitude-only obs cannot see the force/heave signal the collapsed
+  dims encode. No amount of on-policy correction recovers information absent from the input.
+- Therefore this lead's residual is CLOSED as "explained": the next move is the observability retrain
+  (velocity channel +/- longer history), tracked under the closed_loop_latent_collapse lead. This DAgger
+  lead needs no further correction-side experiment.
 

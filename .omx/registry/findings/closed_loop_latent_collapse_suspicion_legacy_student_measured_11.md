@@ -2,16 +2,16 @@
 title: "Closed-loop latent collapse suspicion: legacy student measured 11-17x worse in-loop, deployed student unverified"
 tags: ["experiment-lead", "distillation", "covariate-shift", "latent", "student", "sim-to-real", "eval", "albc", "priv-obs"]
 created: 2026-07-21T10:03:29.000311
-updated: 2026-07-24T07:18:57.392023
+updated: 2026-07-24T08:18:41.399431
 sources: []
 links: ["albc_stage_2_is_teacher_driven_off_policy_bc_with_mixed_latent_a.md", "experiment_idea_feed_o_t_into_the_encoder_alongside_p_t_state_co.md", "next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md", "student_distillation_converges_to_a_residual_that_rules_out_late.md", "engine_gap_eval_npz_saves_no_raw_obs_std_privileged_blocks_exact.md"]
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 70
-qualityReasons: ["no-source-marker", "generic-only-tags"]
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 status: needs-experiment
-blocked-on: "covariate shift confirmed PARTIALLY fixable by DAgger (C4b); the residual observability floor is the open lead"
+blocked-on: "observability floor quantified per-dim (2026-07-24); open lead = observability retrain (velocity channel +/- longer history), a training experiment"
 ---
 
 # Closed-loop latent collapse suspicion: legacy student measured 11-17x worse in-loop, deployed student unverified
@@ -292,4 +292,29 @@ CONFIDENCE: high
 ## Update (2026-07-24T07:18:57.392023)
 
 [C4b CROSS-REF 2026-07-24] The DAgger correction (see lead "On-policy DAgger correction for the buoyfix student") MEASURED this collapse as PARTLY covariate shift (real, DAgger-addressable: in-loop mse cut 4.07x at none / 3.66x soft / 2.48x medium / 1.19x hard) and PARTLY an under-dispersion/observability floor that DAgger does NOT fix (l_hat/l_true ratio stayed ~0.12-0.16, unchanged from this lead's original 0.14-0.18; worst at hard DR). So the "severe closed-loop latent collapse" recorded here is NOT purely covariate shift -- closing the train/deploy distribution gap removed a large chunk (72.7x base -> 17.9x at none) but the cross-env under-dispersion persists. Next = observability angle (longer history + velocity channel), not more DAgger.
+
+---
+
+## Update (2026-07-24T08:18:41.399431)
+
+## Per-dim quantification of the observability floor (DAgger student, 2026-07-24)
+
+The residual observability floor is now measured per-dim on the C4b DAgger student
+`trpo_buoyfix_dagger_s30_tcn_260724_133040` (in-loop latent, `models/eval_dr/latent_*.npz`,
+shape T=7751 x E=64 x D=9). Analysis: `experiments/rsl_rl/albc_trpo_student/trpo_buoyfix_dagger_s30_tcn_260724_133040/analysis/diagnose-latent-260724/latent_underdispersion_analysis.md`.
+
+- **Floor is structural, not DR-transient**: env-var reconstruction ratio (l_hat_envvar/l_true_envvar)
+  is flat across DR levels: aggregate 0.161/0.122/0.139/0.126 (none/soft/medium/hard); stricter
+  var-of-time-mean measure ~0.08-0.10. Student captures <=16% of the env-to-env spread at every level.
+- **8/9 dims collapse; the survivor is the least-informative**: per-dim ratio (soft/med/hard mean) has
+  8 dims <0.10 (z2 0.023, z6 0.032, z1 0.033, z5 0.052, z8 0.057, z4 0.071, z3 0.096, z0 0.099) and only
+  z7 partial at 0.46 -- and z7 carries the LEAST true env-var (0.061 hard) while the collapsed z1/z3/z4
+  carry the most (0.12-0.13). The student resolves the cheapest dim, loses the eight that matter.
+- **Not a dead encoder**: l_hat_tvar >= l_true_tvar at every level -- temporal variation preserved, only
+  the slow env-identity constant is lost.
+- **Mechanism (index-independent)**: the encoder family keys on buoyancy/mass/CoB/CoG/OceanCurrentZ/LinVelW
+  (force + linear-dynamics quantities); the attitude-only 72D obs has no lin_vel channel, so that identity
+  is unobservable. Per-dim param naming NOT claimed (dim indices are per-seed permutations).
+- **Fix = observability retrain**: explicit velocity channel (heave-first) +/- longer TCN history window,
+  as a WITH-vs-WITHOUT A/B. Deterministic encoder (multimodality already ruled out). This is the open lead.
 
