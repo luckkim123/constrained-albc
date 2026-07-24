@@ -50,6 +50,21 @@ class StudentInLoopPolicy:
         blob = torch.load(student_ckpt, map_location=device, weights_only=False)
         sd = blob["student_state_dict"]
         saved_cfg = blob.get("cfg", {})
+        # The obs width the student consumes must equal the teacher's -- they read the
+        # same env observation. StudentCfg's default (69) goes stale the moment
+        # use_bias_ema_obs bumps the env to 72, so restore it from the student's own
+        # saved cfg, mirroring FrozenTeacher which reads its width off the checkpoint
+        # (infer_teacher_geometry). Without this the channel transform / GRU input
+        # builds at 69 and load_state_dict fails against a 72D checkpoint (the encoder
+        # width is set from cfg.policy_obs_dim in models.py, and the ring below).
+        if "policy_obs_dim" in saved_cfg:
+            cfg.policy_obs_dim = saved_cfg["policy_obs_dim"]
+        if cfg.policy_obs_dim != self.teacher.obs_dim:
+            raise ValueError(
+                f"student obs width ({cfg.policy_obs_dim}) != teacher obs width "
+                f"({self.teacher.obs_dim}): the student and teacher were trained on "
+                "different observation layouts and cannot be paired for in-loop eval."
+            )
         if cfg.encoder_type == "gru":
             if "gru.weight_ih_l0" in sd:
                 cfg.gru_hidden = sd["gru.weight_ih_l0"].shape[0] // 3
