@@ -242,7 +242,12 @@ class DomainRandomizationCfg:
     # pack is a 4S LiPo (~14-16.8 V working window), NARROWER than the source window,
     # so the band is conservative. See omx wiki `sim_hydro_nominal...`.
     # (1.0, 1.0) = OFF and numerically identical to the pre-B0c fixed ceiling.
-    max_thrust_scale: tuple[float, float] = (0.85, 1.15)
+    # B0c VERDICT (2026-07-24): NULL / not adopted. The (0.85, 1.15) band was measured
+    # inert behind the existing +/-30% gain DR (none-level roll d ss_error -0.069 deg < 0.10
+    # floor, d os_env_mean +2.36 pp < 10 pp floor; 6th consecutive Stage-A null). Left OFF so
+    # the default plant matches the anchor (trained band-free); the DR code stays as dormant
+    # infrastructure. Set back to (0.85, 1.15) only to re-run the band as an experiment.
+    max_thrust_scale: tuple[float, float] = (1.0, 1.0)
 
     # Control-action transport delay (discrete N-step lag on the applied
     # action) as integer control steps; 1 step = 20 ms @ 50 Hz.
