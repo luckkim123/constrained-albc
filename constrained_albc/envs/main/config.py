@@ -411,7 +411,14 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     integral_dims: int = 3  # [roll, pitch, yaw_rate]
     integral_leak: float = 0.99  # Leaky integrator decay: I_{t+1} = leak * I_t + err * dt
     integral_clamp: float = 2.0  # Windup prevention: clamp |I| <= this value
-    integral_gated: bool = True  # Error-gated integration: only accumulate when |err| < reward sigma
+    integral_gated: bool = True  # Error-gated integration: only accumulate when |err| < integral_gate_threshold
+    # Per-axis settling-band gate threshold [roll, pitch, yaw_rate] for the integral-obs
+    # accumulator (R1 decouple, reward.md 7 review). The gate accumulates only while
+    # |err| < this. DECOUPLED from reward.*.sigma: default (0.10, 0.10, 0.10) reproduces the
+    # historical shared-sigma value byte-identically (att_rp.sigma=yaw_vel.sigma=0.10), but
+    # retuning a tracking-kernel sigma no longer silently retunes this gate -- removes the
+    # aliasing that confounded reward-kernel ablations. roll/pitch in rad, yaw_rate in rad/s.
+    integral_gate_threshold: tuple[float, float, float] = (0.10, 0.10, 0.10)
     # bias-ema obs: ON by default since P-B1 (adopted 2026-07-16). Exposes the 3D _bias_ema
     # buffer [roll, pitch, yaw_rate] the reward.k_bias penalty already reads but the policy
     # cannot observe (non-Markov bias reward, R1). +3 obs dims, 69->72D; materialized by

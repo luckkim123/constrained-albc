@@ -206,13 +206,13 @@ class ALBCEnv(DirectRLEnv):
         # Pre-build the integral error-gating sigma tensor once (step-invariant cfg constants).
         # Avoids re-allocating torch.tensor(...) every step in _get_rewards (hot loop).
         if self.cfg.use_integral_obs and self.cfg.integral_gated:
-            # Attitude-only: 3 integral channels [roll, pitch, yaw_rate]
-            sigmas = [
-                self.cfg.reward.att_rp.sigma,
-                self.cfg.reward.att_rp.sigma,
-                self.cfg.reward.yaw_vel.sigma,
-            ]
-            self._integral_gate_sigmas = torch.tensor(sigmas, device=self.device)
+            # Attitude-only: 3 integral channels [roll, pitch, yaw_rate].
+            # R1 decouple: read the independent per-axis integral_gate_threshold, NOT
+            # reward.*.sigma -- removes the shared-sigma aliasing (reward.md 7 review). The
+            # default (0.10, 0.10, 0.10) reproduces the historical copied value byte-identically.
+            self._integral_gate_sigmas = torch.tensor(
+                self.cfg.integral_gate_threshold, device=self.device
+            )
         else:
             self._integral_gate_sigmas = None
 
