@@ -36,6 +36,16 @@ parser.add_argument("--minibatch_size", type=int, default=8192)
 parser.add_argument("--lr", type=float, default=5e-4)
 parser.add_argument("--lambda_latent", type=float, default=1.0)
 parser.add_argument("--save_interval", type=int, default=100)
+parser.add_argument("--dagger_beta_start", type=float, default=1.0,
+                    help="DAgger: teacher-action mix at iter 0 (1.0=pure teacher).")
+parser.add_argument("--dagger_beta_end", type=float, default=1.0,
+                    help="DAgger: teacher-action mix after anneal. Default 1.0 = INERT "
+                         "(pure teacher-driven rollout == current recipe). Set 0.0 for on-policy.")
+parser.add_argument("--dagger_anneal_iters", type=int, default=0,
+                    help="DAgger: iters to anneal beta_start->beta_end. 0 = constant beta_end.")
+parser.add_argument("--enable_cudnn", action="store_true",
+                    help="Do NOT disable cuDNN. Default off keeps the workstation cu13/cu128 "
+                         "workaround; pass on a healthy-cuDNN host (DGX) for full-speed conv1d.")
 parser.add_argument("--gru_hidden", type=int, default=None,
                     help="GRU hidden size (default: StudentCfg.gru_hidden).")
 parser.add_argument("--gru_head_hidden", type=int, default=None,
@@ -93,7 +103,13 @@ logger = logging.getLogger("train_student")
 # Upgrade path: replace nvidia-cudnn-cu13 with the cu12 build matching torch's
 # CUDA 12.8, verify `python -c "import torch,torch.nn as nn;
 # nn.Conv1d(32,64,3).cuda()(torch.randn(64,32,9,device='cuda'))"`, then delete this.
-torch.backends.cudnn.enabled = False
+#
+# --enable_cudnn (default OFF) keeps this workstation-safe disable. On a host with healthy
+# cuDNN (the DGX: torch 2.9.0+cu130, conv1d probe PASSED 2026-07-23) pass --enable_cudnn to run
+# conv at full speed. DAgger adds a student conv1d to the COLLECTION path too, so without this
+# the ~70x penalty would apply to both phases -- host DAgger on the DGX with --enable_cudnn.
+if not args_cli.enable_cudnn:
+    torch.backends.cudnn.enabled = False
 
 
 @hydra_task_config(args_cli.task, "rsl_rl_cfg_entry_point")
@@ -112,6 +128,9 @@ def main(env_cfg: DirectRLEnvCfg, _agent_cfg) -> None:
     cfg.lr = args_cli.lr
     cfg.lambda_latent = args_cli.lambda_latent
     cfg.save_interval = args_cli.save_interval
+    cfg.dagger_beta_start = args_cli.dagger_beta_start
+    cfg.dagger_beta_end = args_cli.dagger_beta_end
+    cfg.dagger_anneal_iters = args_cli.dagger_anneal_iters
     cfg.seed = args_cli.seed
     cfg.logger = args_cli.logger
     cfg.wandb_project = args_cli.wandb_project

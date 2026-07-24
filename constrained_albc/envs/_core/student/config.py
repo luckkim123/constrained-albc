@@ -70,6 +70,18 @@ class StudentCfg:
     lambda_latent: float = 1.0
     save_interval: int = 100
 
+    # DAgger (on-policy correction). During rollout collection the env is stepped with
+    # beta*a_teacher + (1-beta)*a_student, where a_student is the action the student's own
+    # latent induces. beta is annealed linearly from dagger_beta_start (iter 0) to
+    # dagger_beta_end (iter >= dagger_anneal_iters), then held. The teacher's (l_t, a_t)
+    # are STILL recorded as the supervision targets every step (DAgger relabeling) -- only
+    # the action that drives the env changes. Defaults beta_start=beta_end=1.0 -> beta==1
+    # always -> pure teacher-driven rollout == the current off-policy BC recipe, so this is
+    # INERT until a run sets dagger_beta_end < 1. A DAgger run: start 1.0, end 0.0, anneal 600.
+    dagger_beta_start: float = 1.0
+    dagger_beta_end: float = 1.0
+    dagger_anneal_iters: int = 0
+
     # Logging. log_dir_root is ABSOLUTE (anchored to the constrained-albc repo) so student
     # output does not leak into the isaaclab cwd train_student.py runs from. It mirrors the
     # teacher layout logs/rsl_rl/<experiment_name>/. experiments_root is derived from this in
@@ -81,3 +93,18 @@ class StudentCfg:
     # Environment
     task: str = "Isaac-ConstrainedALBC-TRPO-v0"
     device: str = "cuda:0"          # overridden by CUDA_VISIBLE_DEVICES at launch
+
+
+def dagger_beta_at(cfg: StudentCfg, it: int) -> float:
+    """Teacher-action mixing coefficient at iteration ``it`` (1.0 = pure teacher).
+
+    Linear anneal from ``dagger_beta_start`` at it=0 to ``dagger_beta_end`` at
+    it>=``dagger_anneal_iters``, held at ``dagger_beta_end`` after. ``dagger_anneal_iters<=0``
+    means no anneal -- beta is constant ``dagger_beta_end`` (so the default
+    start=end=1.0 gives beta==1.0 every iteration = the current teacher-only recipe).
+    Pure float math, no torch: kept import-light so it is unit-testable without Isaac Sim.
+    """
+    if cfg.dagger_anneal_iters <= 0:
+        return cfg.dagger_beta_end
+    frac = min(1.0, max(0.0, it / cfg.dagger_anneal_iters))
+    return cfg.dagger_beta_start + (cfg.dagger_beta_end - cfg.dagger_beta_start) * frac
