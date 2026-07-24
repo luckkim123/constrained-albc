@@ -2,7 +2,7 @@
 title: "experiment idea: latency/transport-delay DR (sensor-obs + control-action lag) -- infra exists (isaaclab DelayBuffer) but unused; DelayedPD failed before"
 tags: ["latency", "delay", "domain-randomization", "sim2real", "experiment-idea", "control_delay", "delay-buffer", "sim-to-real", "doraemon", "eval-instrument", "e1", "user-decision"]
 created: 2026-07-08T02:50:39.246807
-updated: 2026-07-24T00:05:54.075973
+updated: 2026-07-24T07:18:33.943973
 sources: ["trpo_e1_latdr_260713_124923", "diagnose-20260713-184751", "next-20260713-122215", "next-20260713-142602", "dr_config.py", "eval.py", "next-20260724-033157", "static_260724_083142", "static_260724_085559"]
 links: ["real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md", "eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md", "an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md", "baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md", "xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e.md", "cross_run_dr_comparability_eval_py_doraemon_dr_from_already_prov.md"]
 category: convention
@@ -11,7 +11,7 @@ schemaVersion: 1
 qualityScore: 90
 qualityReasons: ["generic-only-tags"]
 status: needs-experiment
-blocked-on: "BLOCKER 1: delay-sweep eval instrument (proposal next-20260713-142602) does not exist -- dr_config.py/eval.py have zero control_delay at HEAD 2026-07-20, so the benefit half is unmeasurable. BLOCKER 2: delay is off-DORAEMON and stalls the curriculum -- needs either _PARAM_DEFS dim or a MEASURED performance_lb recalibration. Also parked under the 2026-07-20 batch-pass decision."
+blocked-on: "BLOCKER 1 (eval instrument) RESOLVED; BLOCKER 2 (delay is off-DORAEMON, needs _PARAM_DEFS dim or MEASURED performance_lb recalibration) remains for the training side"
 ---
 
 # experiment idea: latency/transport-delay DR (sensor-obs + control-action lag) -- infra exists (isaaclab DelayBuffer) but unused; DelayedPD failed before
@@ -188,4 +188,10 @@ gated on BLOCKER 2: delay is off-DORAEMON and stalls the curriculum -- needs eit
 dim or a MEASURED performance_lb recalibration to the delay-ON nominal return. Write it as a
 SEPARATE proposal (human-gated launch) and grade it on THIS sweep, not delay-free axes. The e1
 run (trpo_e1_latdr) already showed a naive delay-ON run stalls -- do not repeat that design.
+
+---
+
+## Update (2026-07-24T07:18:33.943973)
+
+[MEASURED 2026-07-24] Z4 delay eval sweep DONE -> BLOCKER 1 (no delay-sweep instrument) RESOLVED. Built `--control-delay N` on exp/latency-eval-instrument (99de708 + 790b0c8 DelayBuffer-at-env-init); d=0 reproduces the clean anchor byte-for-byte (roll ss_error none 0.539) = instrument is a clean no-op at d=0, so the delay effect is REAL not artifact. Anchor s30, none+hard, d in {0,1,2,3} (1 step = 20 ms @ 50 Hz). att_norm ss_error vs d0: none d1=+134% (0.63->1.47), d2=+414%, d3=+790% (5.60); hard d1=1.7x, d2=8.4x, d3=12.8x (10.68 deg); roll ss_jitter blows up 2.2x/4.8x/8.5x (none) and 2.8x/7.6x/11.6x (hard); hard survival drops 100->92%. VERDICT: H2 (delay-naive policy degrades MATERIALLY) CONFIRMED strongly -- the H1 "delay is free" tolerance (att_norm within +10%, jitter <2x) breaks already at d=1 (20 ms). Control latency is NOT free; large sim-to-real risk. CONSEQUENCE: a delay-ON training probe is justified (benefit-half now measured). CAVEAT: the magnitude is large enough that the delay-ON training proposal should FIRST re-confirm the DelayBuffer semantics in code (rule 03 "verify implementation not name"). BLOCKER 2 (off-DORAEMON, performance_lb recalibration) still gates the training side. Data: experiments/.../trpo_buoyanchor_s30_260722_134743/sweeps/z4_delay/d*/summary.json.
 

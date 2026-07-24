@@ -2,16 +2,16 @@
 title: "On-policy DAgger correction for the buoyfix student"
 tags: ["distillation", "student", "covariate-shift", "dagger", "albc", "sim-to-real", "next-experiment"]
 created: 2026-07-24T03:35:28.710539
-updated: 2026-07-24T04:25:09.180110
+updated: 2026-07-24T07:18:57.305669
 sources: []
 links: []
 category: decision
-confidence: medium
+confidence: high
 schemaVersion: 1
 qualityScore: 70
 qualityReasons: ["no-source-marker", "generic-only-tags"]
 status: needs-experiment
-blocked-on: "IMPLEMENTED + pushed (exp/dagger-correction @ be42a2f, reviewer-APPROVE). Blocked ONLY on the human-gated DGX launch (prompt .sp/plans/2026-07-24-dgx-C4b-dagger-launch.md). Readout = re-run E4 in-loop diagnostic on the DAgger student."
+blocked-on: "PARTIAL adoption measured; residual = observability floor (longer history window + explicit velocity channel), a separate training experiment"
 ---
 
 # On-policy DAgger correction for the buoyfix student
@@ -64,4 +64,10 @@ env.step + _dagger_action reusing the eval StudentInLoopPolicy ring/hidden; trai
 full-speed). Sim-free tests/test_dagger_schedule.py + E4 regression = 6 passed. DGX launch prompt:
 .sp/plans/2026-07-24-dgx-C4b-dagger-launch.md (+ be42a2f-dagger-correction.patch relay fallback).
 NOW blocked ONLY on the human pasting that prompt on the DGX (--dagger_beta_end 0.0 --dagger_anneal_iters 600).
+
+---
+
+## Update (2026-07-24T07:18:57.305669)
+
+[MEASURED on DGX 2026-07-24] C4b ran to completion (code be42a2f exp/dagger-correction; TCN student from anchor s30 model_4999, 4096 envs, 1000 iters, beta 1.0->0.0 over 600 anneal VERIFIED from tfevents, --enable_cudnn, seed 42, wandb 6mezo5uz, 19.4 min). Open-loop loss_latent 0.00518 (teacher-only 0.00493). Step-4 in-loop diagnostic vs the E4 teacher-only baseline (base residual 0.002145): none 0.15584->0.03833 (4.07x reduction), soft 0.16190->0.04419 (3.66x), medium 0.16829->0.06798 (2.48x), hard 0.17613->0.14794 (1.19x). l_hat_envvar 0.0031/0.0032/0.0062/0.0119; l_hat/l_true ratio 0.16/0.12/0.14/0.13 (essentially unchanged from E4's 0.14-0.18). VERDICT: INTERMEDIATE / PARTIAL. NOT clean H1 (covariate shift fully fixed): overall_mse never drops below l_true_envvar, under-dispersion (6-8x env collapse) UNTOUCHED. NOT H2 (observability floor, no help): none/soft dropped 4x, far beyond H2's <=2x -> covariate shift WAS a real, DAgger-addressable component. MIXED: big win at low DR collapsing to 1.19x at hard, under-dispersion floor persists and worsens with DR. CONSEQUENCE: PARTIAL adoption -- keep on-policy DAgger (cuts closed-loop latent error 2.5-4x at low-mod DR) but NOT sufficient alone; residual needs the OBSERVABILITY angle (longer history window and/or explicit velocity channel). No blanket deployment claim. per_dim_mse (hard dims 5/7/3) EXPLORATORY only (z_sweep caveat). CONVERGENT EVIDENCE: Z4 (20ms delay -> 2x degrade) and RT-a (nominal-corner real) independently point at the SAME temporal/observability fragility -> the observability retrain is now a triply-supported lead. DGX output: logs/rsl_rl/albc_trpo_student/trpo_buoyfix_dagger_s30_tcn_260724_133040/ (PULL via Mac; workstation can't reach ksm-nas). DGX-local wiki page: c4b_dagger_correction_measured_partial_2_5_4x_in_loop_reduction_.
 

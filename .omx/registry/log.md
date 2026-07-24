@@ -6559,3 +6559,23 @@
 - **Pages:** on_policy_dagger_correction_for_the_buoyfix_student.md
 - **Summary:** updated 'On-policy DAgger correction for the buoyfix student'
 
+## [2026-07-24T07:18:08.018271] add
+- **Pages:** stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md
+- **Summary:** updated 'Stonefish yaw-gap claim review: main-body hydro yaw torque structurally zero (symmetric added mass kills Munk); PhysX DOES model arm reaction; real gaps = buoy added-mass ~10x under, no arm-link hydro, no yaw-torque DR axis'
+
+## [2026-07-24T07:18:33.943973] add
+- **Pages:** experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md
+- **Summary:** updated 'experiment idea: latency/transport-delay DR (sensor-obs + control-action lag) -- infra exists (isaaclab DelayBuffer) but unused; DelayedPD failed before'
+
+## [2026-07-24T07:18:34.028573] add
+- **Pages:** roll_transient_is_worst_at_none_dr_and_improves_monotonically_as.md
+- **Summary:** updated 'roll transient is WORST at none DR and improves monotonically as DR hardens (inverted, both runs)'
+
+## [2026-07-24T07:18:57.305669] add
+- **Pages:** on_policy_dagger_correction_for_the_buoyfix_student.md
+- **Summary:** updated 'On-policy DAgger correction for the buoyfix student'
+
+## [2026-07-24T07:18:57.392023] add
+- **Pages:** closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md
+- **Summary:** updated 'Closed-loop latent collapse suspicion: legacy student measured 11-17x worse in-loop, deployed student unverified'
+

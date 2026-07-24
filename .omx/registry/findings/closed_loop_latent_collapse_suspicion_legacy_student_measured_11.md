@@ -2,16 +2,16 @@
 title: "Closed-loop latent collapse suspicion: legacy student measured 11-17x worse in-loop, deployed student unverified"
 tags: ["experiment-lead", "distillation", "covariate-shift", "latent", "student", "sim-to-real", "eval", "albc", "priv-obs"]
 created: 2026-07-21T10:03:29.000311
-updated: 2026-07-24T03:34:55.200764
+updated: 2026-07-24T07:18:57.392023
 sources: []
 links: ["albc_stage_2_is_teacher_driven_off_policy_bc_with_mixed_latent_a.md", "experiment_idea_feed_o_t_into_the_encoder_alongside_p_t_state_co.md", "next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md", "student_distillation_converges_to_a_residual_that_rules_out_late.md", "engine_gap_eval_npz_saves_no_raw_obs_std_privileged_blocks_exact.md"]
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
-status: resolved
-blocked-on: "Both E4 eval fixes PUSHED to origin/main (9de2da1->88e0849, 2026-07-24): b751d22 teacher + 88e0849 student. DGX unblock = git fetch + checkout origin/main (no patch relay). Then re-run E4 (cross-machine, DGX unreachable from workstation). Prompt v3+: .sp/plans/2026-07-24-dgx-C4a-prompt.md"
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
+status: needs-experiment
+blocked-on: "covariate shift confirmed PARTIALLY fixable by DAgger (C4b); the residual observability floor is the open lead"
 ---
 
 # Closed-loop latent collapse suspicion: legacy student measured 11-17x worse in-loop, deployed student unverified
@@ -286,4 +286,10 @@ distillation correction before any deployment claim -- see the follow-up lead
 exp-analyze. DGX-root parallel finding: `e4_measured_buoyfix_student_in_loop_latent_mse_is_72_82x_its_ope`.
 
 CONFIDENCE: high
+
+---
+
+## Update (2026-07-24T07:18:57.392023)
+
+[C4b CROSS-REF 2026-07-24] The DAgger correction (see lead "On-policy DAgger correction for the buoyfix student") MEASURED this collapse as PARTLY covariate shift (real, DAgger-addressable: in-loop mse cut 4.07x at none / 3.66x soft / 2.48x medium / 1.19x hard) and PARTLY an under-dispersion/observability floor that DAgger does NOT fix (l_hat/l_true ratio stayed ~0.12-0.16, unchanged from this lead's original 0.14-0.18; worst at hard DR). So the "severe closed-loop latent collapse" recorded here is NOT purely covariate shift -- closing the train/deploy distribution gap removed a large chunk (72.7x base -> 17.9x at none) but the cross-env under-dispersion persists. Next = observability angle (longer history + velocity channel), not more DAgger.
 

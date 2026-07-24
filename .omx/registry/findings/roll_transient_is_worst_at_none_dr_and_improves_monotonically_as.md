@@ -2,7 +2,7 @@
 title: "roll transient is WORST at none DR and improves monotonically as DR hardens (inverted, both runs)"
 tags: ["roll", "overshoot", "transient", "dr-scaling", "os_env_mean", "open-lead"]
 created: 2026-07-21T07:58:14.787774
-updated: 2026-07-23T19:18:40.914973
+updated: 2026-07-24T07:18:34.028573
 sources: ["diagnose-20260721-164331", "next-20260724-033159", "static_260724_040413", "static_260723_091813"]
 links: ["eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md"]
 category: pattern
@@ -10,7 +10,8 @@ confidence: high
 schemaVersion: 1
 qualityScore: 90
 qualityReasons: ["generic-only-tags"]
-status: resolved
+status: needs-experiment
+blocked-on: "follow-up = nominal-corner exposure (DORAEMON nominal sampling floor), a training-side experiment sequenced after C3"
 ---
 
 # roll transient is WORST at none DR and improves monotonically as DR hardens (inverted, both runs)
@@ -105,4 +106,10 @@ STATUS: resolved (2026-07-24, E1/RT-a). Probe RAN; hypothesis (a) rejected, (b) 
 No training implication. Practical note for all future per-level roll readings: nominal (none) is a
 real ~0.5 deg OOD-corner residual vs soft/medium, indistinguishable from full-box hard; treat
 sub-1.0 pp per-level os differences as eval noise.
+
+---
+
+## Update (2026-07-24T07:18:34.028573)
+
+[MEASURED 2026-07-24] RT-a shared-exam re-eval DONE (anchor s30, `--doraemon-dr-from trpo_biasema_extend8k_260716_162849` = full config box Beta(1,1) all 20 dims, vs the anchor's own-box). Question: is the none-worst roll inversion an EXAM-LENIENCY artifact (own box too easy at none) or a REAL OOD-corner? Roll os_env_mean under the FULL shared box: none 13.22 / soft 11.67 / medium 11.36 / hard 12.98 pp. none stays the HIGHEST (worst) even when the exam is hardened -> H1 (exam artifact) REJECTED: no randomized level rises to the fixed none value; the inversion does NOT disappear. But not a clean H2 either: none beats soft/medium by >1.5 pp yet beats hard by only 0.24 pp under the full box. VERDICT: H2 (OOD-corner) LEANING / MIXED at the margin -- the roll-worst-at-none pattern is a REAL property of the policy, not exam leniency, but the hard corner closes to within 0.24 pp when the exam is hardened. CONSEQUENCE: lead SURVIVES (not closed) with a real nominal-corner mechanism question; the follow-up (NOT yet proposed) = a DORAEMON floor on nominal sampling, a training-side experiment after C3. Data: experiments/.../trpo_buoyanchor_s30_260722_134743/sweeps/rt_a_extend8k/summary.json.
 
