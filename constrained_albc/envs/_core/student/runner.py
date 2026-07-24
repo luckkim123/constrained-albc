@@ -21,7 +21,7 @@ import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 
 from .collector import RolloutBuffer
-from .config import StudentCfg
+from .config import StudentCfg, dagger_beta_at
 from .models import make_student_encoder
 from .teacher import FrozenTeacher
 
@@ -119,8 +119,10 @@ class StudentRunner:
                 dir=log_dir,
             )
 
-        # GRU hidden state carried across rollout steps (collection-time only
-        # — unused during training; training uses self.train_hidden below).
+        # GRU hidden state carried across rollout steps (collection-time). Fed forward
+        # only when DAgger drives the rollout with the student action (beta<1); with the
+        # default teacher-only recipe (beta==1) it stays unused. Training uses
+        # self.train_hidden below, a separate persisted hidden.
         if cfg.encoder_type == "gru":
             self.gru_hidden = self.student.init_hidden(cfg.num_envs, device)
             # Training-time hidden persists across iterations so BPTT chunks
@@ -131,6 +133,21 @@ class StudentRunner:
             self.gru_hidden = None
             self.train_hidden = None
 
+        # DAgger collection-time TCN history ring, mirroring StudentInLoopPolicy
+        # (analysis/student_policy.py) so the on-policy action the student contributes to the
+        # rollout is built from EXACTLY the same window construction as eval. Persists across
+        # iterations (carries history over rollout boundaries), zeroed per-env on done.
+        # Allocated at the teacher-synced obs width (cfg.policy_obs_dim was set above from
+        # the teacher checkpoint). Only TCN needs it, and only when DAgger will actually drive
+        # the rollout (beta dips below 1) -- a pure teacher-only run allocates nothing.
+        dagger_active = cfg.dagger_beta_start < 1.0 or cfg.dagger_beta_end < 1.0
+        if cfg.encoder_type == "tcn" and dagger_active:
+            self.collect_ring: torch.Tensor | None = torch.zeros(
+                cfg.num_envs, cfg.tcn_history, cfg.policy_obs_dim, device=device
+            )
+        else:
+            self.collect_ring = None
+
         # dones from the last env.step of the previous rollout. Used to tag the
         # very first observation of the next rollout as "post-reset" when an env
         # terminated right at the rollout boundary. Initialized in learn().
@@ -139,8 +156,17 @@ class StudentRunner:
         os.makedirs(os.path.join(log_dir, "models"), exist_ok=True)
         logger.info("StudentRunner initialized: encoder=%s log_dir=%s", cfg.encoder_type, log_dir)
 
-    def _collect_rollout(self, obs: torch.Tensor, privileged: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        """Run n_steps env steps with teacher actions, filling the buffer.
+    def _collect_rollout(
+        self, obs: torch.Tensor, privileged: torch.Tensor, beta: float
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Run n_steps env steps, filling the buffer with teacher-relabeled targets.
+
+        The env is stepped with ``beta*a_teacher + (1-beta)*a_student`` (DAgger). At
+        ``beta==1`` this is the original teacher-only off-policy rollout; at ``beta<1`` the
+        student's own latent drives part of the action, so the states visited move toward the
+        distribution the student induces at deploy time. The SUPERVISION targets recorded in
+        the buffer are always the teacher's ``(l_t, a_t)`` at the visited state -- DAgger
+        changes who drives, not what is labeled.
 
         Alignment (BC-critical):
             buffer[step_idx=s] stores (obs_s, priv_s, a_s, l_s) where a_s, l_s were
@@ -159,22 +185,37 @@ class StudentRunner:
         assert self.prev_dones is not None, "prev_dones must be initialized in learn()"
         prev_dones = self.prev_dones
 
+        use_student = beta < 1.0
+        if use_student:
+            # Run the collection-time student in EVAL mode to match deploy inference exactly
+            # (StudentInLoopPolicy calls .eval()): the DAgger premise is that the induced
+            # rollout distribution equals the deploy distribution. Restored to train() below
+            # before the optimization phase. The current encoder is LayerNorm-only so this is
+            # a guard against a future mode-dependent layer, not a present-day numeric change.
+            self.student.eval()
         for _ in range(self.cfg.n_steps_per_rollout):
             # Teacher acts from CURRENT (pre-step) obs+privileged
             a_t, l_t = self.teacher.act(obs, privileged)
 
-            # Record PRE-STEP: (obs_s, priv_s, l_s, a_s, prev_dones).
+            # Record PRE-STEP: (obs_s, priv_s, l_s, a_s, prev_dones). This is the BC
+            # supervision target and is UNCHANGED by DAgger -- the teacher relabels the
+            # visited state regardless of who drove the env there.
             # prev_dones says whether the current obs is a fresh post-reset obs.
             self.buffer.add(obs, privileged, l_t.detach(), a_t.detach(), prev_dones)
 
-            # Step env with teacher action
-            obs_next, _rew, dones, extras = self.env.step(a_t)
+            # Step env with the DAgger-mixed action (== a_t when beta==1). The student
+            # forward runs only when beta<1, so the default teacher-only recipe pays no cost.
+            a_exec = self._dagger_action(obs, a_t, beta) if use_student else a_t
+            obs_next, _rew, dones, extras = self.env.step(a_exec)
 
-            # GRU hidden state: zero out for reset envs so the next forward pass
-            # starts fresh for them.
-            if self.gru_hidden is not None and dones.any():
+            # Zero the collection-time student history for reset envs so the next student
+            # forward starts fresh for them (GRU hidden and/or TCN ring).
+            if dones.any():
                 reset_ids = torch.nonzero(dones).squeeze(-1)
-                self.gru_hidden[:, reset_ids] = 0.0
+                if self.gru_hidden is not None:
+                    self.gru_hidden[:, reset_ids] = 0.0
+                if use_student and self.collect_ring is not None:
+                    self.collect_ring[reset_ids] = 0.0
 
             obs = obs_next["policy"]
             privileged = obs_next["privileged"]
@@ -187,8 +228,36 @@ class StudentRunner:
         # Slide the last H rollout obs into the pre-rollout history region of
         # flat_buf so the NEXT iteration's early windows contain real history.
         # (GRU path is a no-op.)
+        if use_student:
+            self.student.train()  # restore train mode for the optimization phase in learn()
         self.buffer.carry_over_history()
         return obs, privileged
+
+    @torch.no_grad()
+    def _dagger_action(self, obs: torch.Tensor, a_teacher: torch.Tensor, beta: float) -> torch.Tensor:
+        """Mix the teacher action with the action the student's own latent induces.
+
+        The student latent is built from the same normalized history-window machinery as
+        eval-time inference (StudentInLoopPolicy.__call__, analysis/student_policy.py): a
+        left-rolled TCN ring (newest obs at index H-1) or the carried GRU hidden. no_grad:
+        this only shapes the rollout state distribution; the loss is computed later on the
+        buffer targets, so the student action must not carry gradient here.
+        """
+        if self.cfg.encoder_type == "tcn":
+            assert self.collect_ring is not None
+            # Match StudentInLoopPolicy: shift LEFT (drop oldest at idx 0), newest at idx H-1.
+            self.collect_ring = torch.roll(self.collect_ring, shifts=-1, dims=1)
+            self.collect_ring[:, -1] = obs
+            B, H, D = self.collect_ring.shape
+            ring_n = self.obs_normalizer(self.collect_ring.reshape(B * H, D)).reshape(B, H, D)
+            l_hat = self.student(ring_n)
+        else:
+            obs_n = self.obs_normalizer(obs)
+            l_hat_seq, self.gru_hidden = self.student(obs_n.unsqueeze(1), hidden=self.gru_hidden)
+            l_hat = l_hat_seq[:, -1]
+        obs_normed = self.teacher.normalize_obs(obs)
+        a_student = self.teacher.actor_forward(obs_normed, l_hat)
+        return beta * a_teacher + (1.0 - beta) * a_student
 
     def _compute_loss_tcn(self, batch) -> dict[str, torch.Tensor]:
         # Normalize per-step with teacher's actor_obs_normalizer so TCN input
@@ -245,9 +314,10 @@ class StudentRunner:
 
         t_start = time.time()
         for it in range(self.cfg.max_iterations):
-            # Collect
+            # Collect (DAgger: beta anneals teacher->student action over the rollout)
+            beta = dagger_beta_at(self.cfg, it)
             t0 = time.time()
-            obs, privileged = self._collect_rollout(obs, privileged)
+            obs, privileged = self._collect_rollout(obs, privileged, beta)
             t_collect = time.time() - t0
 
             # Train
@@ -319,6 +389,7 @@ class StudentRunner:
                 "student/time_collect": t_collect,
                 "student/time_train": t_train,
                 "student/iter": it,
+                "student/dagger_beta": beta,
             }
             self._log(it, metrics)
 
