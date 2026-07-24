@@ -2,14 +2,14 @@
 title: "experiment idea: latency/transport-delay DR (sensor-obs + control-action lag) -- infra exists (isaaclab DelayBuffer) but unused; DelayedPD failed before"
 tags: ["latency", "delay", "domain-randomization", "sim2real", "experiment-idea", "control_delay", "delay-buffer", "sim-to-real", "doraemon", "eval-instrument", "e1", "user-decision"]
 created: 2026-07-08T02:50:39.246807
-updated: 2026-07-20T05:14:39.045842
-sources: ["trpo_e1_latdr_260713_124923", "diagnose-20260713-184751", "next-20260713-122215", "next-20260713-142602", "dr_config.py", "eval.py"]
+updated: 2026-07-24T00:05:54.075973
+sources: ["trpo_e1_latdr_260713_124923", "diagnose-20260713-184751", "next-20260713-122215", "next-20260713-142602", "dr_config.py", "eval.py", "next-20260724-033157", "static_260724_083142", "static_260724_085559"]
 links: ["real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md", "eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md", "an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md", "baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md", "xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e.md", "cross_run_dr_comparability_eval_py_doraemon_dr_from_already_prov.md"]
 category: convention
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 status: needs-experiment
 blocked-on: "BLOCKER 1: delay-sweep eval instrument (proposal next-20260713-142602) does not exist -- dr_config.py/eval.py have zero control_delay at HEAD 2026-07-20, so the benefit half is unmeasurable. BLOCKER 2: delay is off-DORAEMON and stalls the curriculum -- needs either _PARAM_DEFS dim or a MEASURED performance_lb recalibration. Also parked under the 2026-07-20 batch-pass decision."
 ---
@@ -150,4 +150,42 @@ NOT evidence that the robot has no delay.
 
 Sensor/observation delay remains entirely unimplemented (2026-07-20 (A) correction) and is a
 separate channel from the control-action delay e1 exercised.
+
+---
+
+## Update (2026-07-24T00:05:54.075973)
+
+[FINDING] E2/Z4-sweep (proposal next-20260724-033157) RESOLVES the benefit/cost question:
+H2 CONFIRMED overwhelmingly -- the delay-naive anchor policy has ZERO free delay tolerance.
+BLOCKER 1 CLEARED: the delay-sweep eval instrument now EXISTS (eval.py --control-delay <N>,
+commits 99de708 + fix 790b0c8 on branch exp/latency-eval-instrument; d=0 byte-identical stock,
+gate passed: d0 att_norm 0.630 vs anchor 0.586 within eval noise). none-level delay response on
+anchor s30 model_4999 (config-clean -- max_thrust forced 1.0 at none), att_norm ss_error / roll
+ss_jitter vs delay:
+
+| d | delay | att_norm ss_error | roll ss_jitter |
+|---|---|---|---|
+| 0 | 0 ms  | 0.630 deg (base)  | 0.338 deg (1.0x) |
+| 1 | 20 ms | 1.477 deg (+134%) | 0.745 deg (2.2x) |
+| 2 | 40 ms | 3.246 deg (+415%) | 1.623 deg (4.8x) |
+| 3 | 60 ms | 5.608 deg (+790%) | 2.879 deg (8.5x) |
+
+Even a SINGLE 20 ms step of un-trained dead-time roughly doubles attitude error and jitter;
+60 ms drives ~8x jitter / ~9x error (policy oscillates). hard-level is the same shape
+(d=3 att_norm +1143%). Pre-registered H2 (d=3/none >=+30% att OR >=2x jitter) is cleared at
+EVERY d>=1.
+
+[EVIDENCE: sweep2 eval/static_260724_{083142,083940,084749,085559} on anchor model_4999,
+64 env cuda:0, code-exec 2026-07-24; thresholds from proposal next-20260724-033157. The FIRST
+sweep (static_260724_{075630..082030}) is INVALID -- a buffer-allocation bug made the delay a
+no-op, caught by byte-identical d=0..3, fixed in 790b0c8.]
+[CONFIDENCE: HIGH]
+
+STATUS: needs-experiment (the TRAINING follow-up remains). The eval/measurement half is DONE
+(H2 -- delay needs training exposure, quantifying the user's 2026-07-20 "latency in final config"
+decision). The remaining experiment is a delay-ON training run (control_delay_steps (0,3)), still
+gated on BLOCKER 2: delay is off-DORAEMON and stalls the curriculum -- needs either a _PARAM_DEFS
+dim or a MEASURED performance_lb recalibration to the delay-ON nominal return. Write it as a
+SEPARATE proposal (human-gated launch) and grade it on THIS sweep, not delay-free axes. The e1
+run (trpo_e1_latdr) already showed a naive delay-ON run stalls -- do not repeat that design.
 

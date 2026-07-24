@@ -6427,3 +6427,135 @@
 - **Pages:** sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md
 - **Summary:** updated 'sim hydro nominal is analytical (not measured); IMU+pressure can anchor rotation/heave but not surge/sway/TAM'
 
+## [2026-07-23T11:22:49.585723] query
+- **Pages:** constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, literature_map_how_rl_control_actually_handles_steady_state_erro.md, bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md
+- **Summary:** query 'abandoned above absolute absorbed accept across actual actually' -> 5 of 128
+
+## [2026-07-23T11:22:57.615818] query
+- **Pages:** constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, literature_map_how_rl_control_actually_handles_steady_state_erro.md, bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md
+- **Summary:** query 'abandoned above absolute absorbed accept across actual actually' -> 5 of 128
+
+## [2026-07-23T11:24:05.820150] query
+- **Pages:** constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, literature_map_how_rl_control_actually_handles_steady_state_erro.md, bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md
+- **Summary:** query 'abandoned above absolute absorbed accept across actual actually' -> 5 of 128
+
+## [2026-07-23T11:31:41.822987] query
+- **Pages:** constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md
+- **Summary:** query 'abandoned about above absent absolute absorbed accept across' -> 5 of 126
+
+## [2026-07-23T18:09:18.823043] query
+- **Pages:** session_state_2026_07_12_constraint_deep_dive_q_a_covered_struct.md, eval_command_box_was_half_the_trained_envelope_from_2026_04_06_t.md, imu_45deg_offset_pitch_negation_sim_uncompensated_2026_07_05.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, group_folder_name_equals_wandb_project_name_equals_experiment_pu.md, plan_consolidation_2026_07_23_canonical_ids_z_a_b_c_one_campaign.md, onboard_measured_2026_07_06_arm_step_response_valid_sim_zeta_0_7.md, reward_md_deep_dive_session_2026_07_11_4_review_fix_prompts_queu.md, april_2026_entropy_collapse_campaign_machinery_bug_solved_conver.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, engine_gap_omx_cli_gaps_found_re_analyzing_teacher_2026_06_06_ro.md, experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md, tam_vertical_single_motor_dual_esc_measured_2026_07_05.md, baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md, plant_fix_needs_apply_before_retrain_main_hull_volume_0_009_0_00.md, command_is_not_domain_randomization_command_range_scale_is_inert.md, diagnosis_md_2026_05_25_retirement_open_item_ledger.md, eval_metric_units_and_decision_floors_os_env_mean_is_percent_of_.md, thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md, decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema.md
+- **Summary:** query '2026-07-20 batch-pass decision parked leads' -> 20 of 169
+
+## [2026-07-23T18:37:35.089513] query
+- **Pages:** constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, absolute_degree_reference_scales_for_judging_attitude_deltas_sto.md, added_mass_scale_upper_half_is_attenuated_not_inert_the_0_95_i_c.md, reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md
+- **Summary:** query 'absolute add against albc_env alone anchor att_norm axes' -> 5 of 169
+
+## [2026-07-23T18:37:35.247691] query
+- **Pages:** seed_noise_floor_on_none_level_attitude_is_huge_75_peak_to_peak_.md, open_actionable_ledger_read_before_any_sim_plant_code_change_or_.md, baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md, baseline_repro_reproduces_teacher_deterministically_e4_control.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md
+- **Summary:** query 'accordingly adds adoption anchor any axis base before' -> 5 of 155
+
+## [2026-07-23T18:37:35.410698] query
+- **Pages:** doraemon_kl_step_final_value_0_0000_is_a_sparse_logging_artifact.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, extend8k_saturated_the_dr_config_box_at_iter_7000_all_20_params_.md, doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md, doraemon_mean_and_doraemon_std_tb_tags_are_raw_physical_units_no.md
+- **Summary:** query 'above after against anchor any artifact becomes beta' -> 5 of 139
+
+## [2026-07-23T18:37:35.569578] query
+- **Pages:** constraint_threshold_budget_tuning_thresholds_split_into_hard_ph.md, incident_post_mortem_teacher_baseline_opt_e1_e4_trained_on_a_tam.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, literature_map_how_rl_control_actually_handles_steady_state_erro.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md
+- **Summary:** query 'above after against anchor any api appears applied' -> 5 of 138
+
+## [2026-07-23T18:38:14.766972] query
+- **Pages:** constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, absolute_degree_reference_scales_for_judging_attitude_deltas_sto.md, added_mass_scale_upper_half_is_attenuated_not_inert_the_0_95_i_c.md, reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md
+- **Summary:** query 'absolute add against albc_env alone anchor att_norm axes' -> 5 of 169
+
+## [2026-07-23T18:38:30.295198] query
+- **Pages:** seed_noise_floor_on_none_level_attitude_is_huge_75_peak_to_peak_.md, open_actionable_ledger_read_before_any_sim_plant_code_change_or_.md, baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md, baseline_repro_reproduces_teacher_deterministically_e4_control.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md
+- **Summary:** query 'accordingly adds adoption anchor any axis base before' -> 5 of 155
+
+## [2026-07-23T18:38:34.927395] query
+- **Pages:** doraemon_kl_step_final_value_0_0000_is_a_sparse_logging_artifact.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, extend8k_saturated_the_dr_config_box_at_iter_7000_all_20_params_.md, doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md, doraemon_mean_and_doraemon_std_tb_tags_are_raw_physical_units_no.md
+- **Summary:** query 'above after against anchor any artifact becomes beta' -> 5 of 139
+
+## [2026-07-23T18:38:48.340506] query
+- **Pages:** constraint_threshold_budget_tuning_thresholds_split_into_hard_ph.md, incident_post_mortem_teacher_baseline_opt_e1_e4_trained_on_a_tam.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, literature_map_how_rl_control_actually_handles_steady_state_erro.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md
+- **Summary:** query 'above after against anchor any api appears applied' -> 5 of 138
+
+## [2026-07-23T18:39:08.481861] query
+- **Pages:** posttam_constraint_set_is_healthy_8_active_guards_exactly_2_dorm.md, priv_obs_slim_stage_2_lead_contested_p_t_dims_quad_damp_lin_vel_.md, arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md, incident_post_mortem_teacher_baseline_opt_e1_e4_trained_on_a_tam.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload_.md, adding_a_dr_axis_is_half_a_change_dr_config_s_dr_tuple_fields_tr.md, eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md, a5_budgetslack_rp_vel_settling_manipulability_budgets_x100_learn.md, added_mass_scale_upper_half_is_attenuated_not_inert_the_0_95_i_c.md, baseline_consolidated_main_reference_trpo_baseline_260713_031325.md, baseline_repro_reproduces_teacher_deterministically_e4_control.md, buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md, eval_command_box_was_half_the_trained_envelope_from_2026_04_06_t.md, next_experiment_workflow_pick_a_baseline_train_once_then_re_tune.md, reward_cost_parallel_structure_mostly_mirroring_two_real_couplin.md, reward_md_deep_dive_session_2026_07_11_4_review_fix_prompts_queu.md, reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md, xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e.md, closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md
+- **Summary:** query 'A4 privslim24d lin_vel load-bearing' -> 20 of 164
+
+## [2026-07-23T18:39:34.454419] query
+- **Pages:** student_distillation_converges_to_a_residual_that_rules_out_late.md, closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md, container_cudnn_is_cu13_against_cu128_torch_every_conv1d_fails_s.md, albc_stage_2_is_teacher_driven_off_policy_bc_with_mixed_latent_a.md, student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md, encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md, experiment_idea_feed_o_t_into_the_encoder_alongside_p_t_state_co.md, doraemon_optimize_entropy_accept_can_leak_the_success_floor_late.md, doraemon_kl_step_final_value_0_0000_is_a_sparse_logging_artifact.md, reward_md_6_error_buffers_reward_call_site_dt_scaling_theory_rev.md, literature_map_how_rl_control_actually_handles_steady_state_erro.md, group_folder_name_equals_wandb_project_name_equals_experiment_pu.md, policy_head_design_rationale_and_literature_standing_encoder_inp.md, posttam_encoder_is_alive_and_specialized_z_sweep_exploration_col.md, safety_rail_constraints_fire_hard_at_init_go_quiet_and_re_fire_a.md, teacher_encoder_0_dead_latent_dims_keys_on_lateral_cog_cob_offse.md, plant_fix_needs_apply_before_retrain_main_hull_volume_0_009_0_00.md, bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md, april_2026_entropy_collapse_campaign_machinery_bug_solved_conver.md, perflb200_final_dr_anatomy_17_bulk_params_at_config_ceiling_unif.md
+- **Summary:** query 'buoyfix student loss_latent final distillation' -> 20 of 95
+
+## [2026-07-23T18:40:31.615279] query
+- **Pages:** constraint_threshold_budget_tuning_thresholds_split_into_hard_ph.md, reward_md_deep_dive_session_2026_07_11_4_review_fix_prompts_queu.md, arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md, posttam_constraint_set_is_healthy_8_active_guards_exactly_2_dorm.md, reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md, eval_command_box_was_half_the_trained_envelope_from_2026_04_06_t.md, reward_penalty_terms_thruster_smoothness_bias_block_3_temporal_b.md, reward_md_6_error_buffers_reward_call_site_dt_scaling_theory_rev.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md, a5_budgetslack_rp_vel_settling_manipulability_budgets_x100_learn.md, constrainttrpo_faithful_norbc_modified_ipo_kim_2024_arxiv_2308_1.md, doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md, eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md, posttam_encoder_is_alive_and_specialized_z_sweep_exploration_col.md, safety_rail_constraints_fire_hard_at_init_go_quiet_and_re_fire_a.md, session_state_2026_07_12_constraint_deep_dive_q_a_covered_struct.md, cross_run_reference_values_must_be_re_extracted_fresh_never_carr.md, next_experiment_workflow_pick_a_baseline_train_once_then_re_tune.md, priv_obs_slim_stage_2_lead_contested_p_t_dims_quad_damp_lin_vel_.md
+- **Summary:** query 'Lin Vel U V W driving 8-9 of 9 latent dims' -> 20 of 173
+
+## [2026-07-23T18:48:01.176758] query
+- **Pages:** seed_noise_floor_on_none_level_attitude_is_huge_75_peak_to_peak_.md, absolute_degree_reference_scales_for_judging_attitude_deltas_sto.md, bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md
+- **Summary:** query 'above absolute accordingly adds adopt against ambiguous anchor' -> 5 of 121
+
+## [2026-07-23T19:18:40.914973] add
+- **Pages:** roll_transient_is_worst_at_none_dr_and_improves_monotonically_as.md
+- **Summary:** updated 'roll transient is WORST at none DR and improves monotonically as DR hardens (inverted, both runs)'
+
+## [2026-07-23T22:48:49.363229] add
+- **Pages:** sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md
+- **Summary:** updated 'sim hydro nominal is analytical (not measured); IMU+pressure can anchor rotation/heave but not surge/sway/TAM'
+
+## [2026-07-24T00:05:54.075973] add
+- **Pages:** experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md
+- **Summary:** updated 'experiment idea: latency/transport-delay DR (sensor-obs + control-action lag) -- infra exists (isaaclab DelayBuffer) but unused; DelayedPD failed before'
+
+## [2026-07-24T01:12:39.843455] add
+- **Pages:** stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md
+- **Summary:** updated 'Stonefish yaw-gap claim review: main-body hydro yaw torque structurally zero (symmetric added mass kills Munk); PhysX DOES model arm reaction; real gaps = buoy added-mass ~10x under, no arm-link hydro, no yaw-torque DR axis'
+
+## [2026-07-24T01:20:04.835298] add
+- **Pages:** reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md
+- **Summary:** updated 'reward-sigma / integral-obs-gate coupling (reward.md 7) theory review: conditionally sound; shared-sigma ALIASING is the defect (decouple gate threshold), gate is a settling-band accumulator not anti-windup, clamp is dead code in gated mode, Hwangbo-2017 citation is wrong (use Yu&Lee 2023)'
+
+## [2026-07-24T02:01:10.735263] add
+- **Pages:** closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md
+- **Summary:** updated 'Closed-loop latent collapse suspicion: legacy student measured 11-17x worse in-loop, deployed student unverified'
+
+## [2026-07-24T02:32:54.512785] add
+- **Pages:** closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md
+- **Summary:** updated 'Closed-loop latent collapse suspicion: legacy student measured 11-17x worse in-loop, deployed student unverified'
+
+## [2026-07-24T02:46:05.594650] add
+- **Pages:** closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md
+- **Summary:** updated 'Closed-loop latent collapse suspicion: legacy student measured 11-17x worse in-loop, deployed student unverified'
+
+## [2026-07-24T03:02:54.840166] add
+- **Pages:** closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md
+- **Summary:** updated 'Closed-loop latent collapse suspicion: legacy student measured 11-17x worse in-loop, deployed student unverified'
+
+## [2026-07-24T03:05:53.032386] add
+- **Pages:** closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md
+- **Summary:** updated 'Closed-loop latent collapse suspicion: legacy student measured 11-17x worse in-loop, deployed student unverified'
+
+## [2026-07-24T03:34:55.200764] add
+- **Pages:** closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md
+- **Summary:** updated 'Closed-loop latent collapse suspicion: legacy student measured 11-17x worse in-loop, deployed student unverified'
+
+## [2026-07-24T03:35:28.710539] add
+- **Pages:** on_policy_dagger_correction_for_the_buoyfix_student.md
+- **Summary:** created 'On-policy DAgger correction for the buoyfix student'
+
+## [2026-07-24T03:52:10.899417] query
+- **Pages:** student_distillation_converges_to_a_residual_that_rules_out_late.md, albc_stage_2_is_teacher_driven_off_policy_bc_with_mixed_latent_a.md, analysis_engine_map_what_is_grow_able_vs_off_limits.md, container_cudnn_is_cu13_against_cu128_torch_every_conv1d_fails_s.md, open_actionable_ledger_read_before_any_sim_plant_code_change_or_.md
+- **Summary:** query 'a_hat a_student a_t above accumulates across action actor_forward' -> 5 of 174
+
+## [2026-07-24T03:53:21.709105] query
+- **Pages:** student_distillation_converges_to_a_residual_that_rules_out_late.md, albc_stage_2_is_teacher_driven_off_policy_bc_with_mixed_latent_a.md, analysis_engine_map_what_is_grow_able_vs_off_limits.md, container_cudnn_is_cu13_against_cu128_torch_every_conv1d_fails_s.md, open_actionable_ledger_read_before_any_sim_plant_code_change_or_.md
+- **Summary:** query 'a_hat a_student a_t above accumulates across action actor_forward' -> 5 of 174
+
+## [2026-07-24T03:59:19.951519] add
+- **Pages:** on_policy_dagger_correction_for_the_buoyfix_student.md
+- **Summary:** updated 'On-policy DAgger correction for the buoyfix student'
+
+## [2026-07-24T04:25:09.180110] add
+- **Pages:** on_policy_dagger_correction_for_the_buoyfix_student.md
+- **Summary:** updated 'On-policy DAgger correction for the buoyfix student'
+

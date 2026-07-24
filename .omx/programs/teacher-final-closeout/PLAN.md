@@ -248,18 +248,41 @@ Human decisions:          (a) B1a-dgx: DROPPED (user 2026-07-23, audit section 1
                           (c) DGX plant-fix hand-replication (only needed if DGX rejoins)
                           (d) repeatability run: DECLINED (user 2026-07-23) — screening
                               floors stay on the conservative indirect estimate (11.6)
-B0c  (after W0):          max_thrust ±15% DR arm vs anchor -> D3. STAGED 2026-07-23 (user seed
-                          aversion + protocol 11.6 items 3->4): stage 1 = seed 30 ONLY, paired
-                          vs trpo_buoyanchor_s30, ~5 h (screening, 11.6 item 3); stage 2 =
-                          seeds 31/32 (~10 h) ONLY on human approval after a stage-1 clear in
-                          the improving direction (confirmation, 11.6 item 4). A stage-1 pass
-                          without stage 2 yields "promising, unconfirmed" -- NOT an adoption.
+B0c  (after W0):          max_thrust ±15% DR arm vs anchor -> D3. SINGLE-SEED SCREENING ONLY
+                          (user 2026-07-24, reaffirmed seed aversion): seed 30, paired vs
+                          trpo_buoyanchor_s30, ~5 h (11.6 item 3). The old "stage 2 = seeds
+                          31/32" multi-seed confirmation is CANCELLED -- not run in this
+                          campaign. Any multi-seed run is deferred to an explicit paper-phase
+                          request (user doubts it is needed at all). Per 11.6 item 5 (SPLIT,
+                          not repealed) a single-seed number is a config screening verdict,
+                          never a paper claim: a stage-1 clear makes B0c a candidate config to
+                          carry forward, NOT a seed-confirmed adoption.
                           Proposal: next-20260723-203114 (label B0c) -- APPROVED by independent
                           review after TWO `revise` rounds; supersedes next-20260723-175314 and
                           next-20260723-202249, both retained unchanged for audit. QUEUED
                           2026-07-23 (`.omx/runs/trpo_b0cmaxthrust_s30_PLACEHOLDER/`,
-                          status=pending approval, queued_commit 766219e, 4 gates acked).
-                          NOT LAUNCHED -- awaiting human approval. NOTE: B0c is a
+                          queued_commit 766219e, 4 gates acked). LAUNCHED 2026-07-24 02:43
+                          (human-approved) -> run trpo_b0cmaxthrust_s30_260724_024326, seed 30,
+                          workstation GPU0; eval+verdict run autonomously on completion (eval
+                          is not gated), then STOP -- no further training without the human.
+                          VERDICT 2026-07-24 07:38 (single-seed, TERMINAL): NULL -- neither
+                          pre-registered floor crossed at none/roll (Δos_env_mean +2.03 pp vs
+                          >=10 pp needed; Δss_error -0.027 deg vs >=0.10 deg). Eval
+                          static_260724_073758 vs anchor static_260723_091813: roll os_env_mean
+                          slightly HIGHER at none/soft/hard (+1-2 pp ~= +0.6 deg overshoot,
+                          above the E1 ~0.33 pp eval-noise floor), ss_error unchanged within
+                          noise (~0.04 deg), pitch flat, n_gt20 mixed/small. B0c does NOT clear
+                          a screening floor improving-side (consistent with Stage A 5/5
+                          zero-adoption). REFRAME: B0c is not a tuning knob but the SOURCED
+                          max_thrust ±15% DR band (a needs-apply-before-retrain sim-fidelity
+                          correction). NULL-on-nominal = applying the physically-correct band
+                          costs ~nothing nominal (small transient +0.6 deg, DC offset flat)
+                          while adding a robustness dim the anchor lacks. ADOPT-vs-KEEP is a
+                          HUMAN call (SSOT 0b): keep anchor as final (tuning-null reading) OR
+                          adopt B0c as the fidelity-correct baseline (apply reading) -> if
+                          adopted, final teacher changes -> re-distill + re-run C4a(E4). Seeds
+                          31/32 CANCELLED -- no confirmation run. Left for the human.
+                          NOTE: B0c is a
                           CODE change (marinelab per-env max_thrust tensor + albc cfg/events +
                           dr_config none-collapse registration), not a config flip -- rule-02
                           baseline-tag/exp-branch isolation applies in BOTH overlay repos.

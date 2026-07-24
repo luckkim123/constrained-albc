@@ -2,8 +2,8 @@
 title: "sim hydro nominal is analytical (not measured); IMU+pressure can anchor rotation/heave but not surge/sway/TAM"
 tags: ["measurement", "system-id", "domain-randomization", "sim-to-real", "damping", "free-decay", "TAM", "sensors", "fault-tolerant-control", "thruster", "load-cell", "arm-step-response", "max_thrust", "systematic-bias", "user-decision", "batch-pass"]
 created: 2026-06-14T07:38:12.841674
-updated: 2026-07-23T11:15:48.949319
-sources: ["envs/main/config.py:139", "envs/main/mdp/events.py", "user-input-2026-07-23", "B0c-implementation-260723", "diagnose-20260723-134359"]
+updated: 2026-07-23T22:48:49.363229
+sources: ["envs/main/config.py:139", "envs/main/mdp/events.py", "user-input-2026-07-23", "B0c-implementation-260723", "diagnose-20260723-134359", "next-20260723-203114", "static_260724_073758"]
 links: ["curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md", "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md", "adding_a_dr_axis_is_half_a_change_dr_config_s_dr_tuple_fields_tr.md"]
 category: reference
 confidence: high
@@ -179,4 +179,27 @@ Registration trap this surfaced is written up separately:
 
 Proposal: `next-20260723-175314` (campaign label B0c, lint-clean). Not launched -- training
 remains human-gated.
+
+---
+
+## Update (2026-07-23T22:48:49.363229)
+
+[FINDING] B0c (the max_thrust ±15% DR band = this lead's max_thrust apply sub-item) RAN
+2026-07-24 and returned NULL-on-nominal, single-seed TERMINAL. Applying the sourced band
+costs ~nothing at the nominal plant: none/roll os_env_mean +2.03 pp (~+0.6 deg transient
+overshoot, just above the ~0.33 pp eval-noise floor), roll ss_error unchanged within noise
+(-0.027 deg vs a ~0.04 deg run-to-run wobble), pitch flat. Neither pre-registered floor
+crossed (>=10 pp os OR >=0.10 deg ss_error). So the physically-correct band is
+regression-free on nominal while adding a robustness dim the anchor lacked.
+
+[EVIDENCE: eval trpo_b0cmaxthrust_s30_260724_024326/eval/static_260724_073758 vs anchor
+trpo_buoyanchor_s30/eval/static_260723_091813, roll all four levels, code-exec 2026-07-24;
+verdict rule proposal next-20260723-203114; noise floors from E1 static_260724_040413]
+[CONFIDENCE: HIGH]
+
+STATUS: still needs-apply-before-retrain. The max_thrust APPLY is NOT auto-closed by B0c
+running -- it closes only if the human ADOPTS B0c as the fidelity-correct baseline (SSOT 0b
+decision, left for the human; if adopted -> final teacher changes -> re-distill + re-run
+C4a/E4). The TAM moment-arm band sub-item stays blocked (no geometric-tolerance source).
+Battery-voltage window confirmed 4S LiPo ~14-16.8 V (Z6 memo, band conservative).
 

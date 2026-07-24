@@ -2,15 +2,15 @@
 title: "roll transient is WORST at none DR and improves monotonically as DR hardens (inverted, both runs)"
 tags: ["roll", "overshoot", "transient", "dr-scaling", "os_env_mean", "open-lead"]
 created: 2026-07-21T07:58:14.787774
-updated: 2026-07-23T07:42:45.252377
-sources: ["diagnose-20260721-164331"]
+updated: 2026-07-23T19:18:40.914973
+sources: ["diagnose-20260721-164331", "next-20260724-033159", "static_260724_040413", "static_260723_091813"]
 links: ["eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md"]
 category: pattern
 confidence: high
 schemaVersion: 1
 qualityScore: 90
 qualityReasons: ["generic-only-tags"]
-status: needs-experiment
+status: resolved
 ---
 
 # roll transient is WORST at none DR and improves monotonically as DR hardens (inverted, both runs)
@@ -62,3 +62,47 @@ actually applies at the `none` level for these two checkpoints, before any train
 ## Update (2026-07-23T07:42:45.252377)
 
 2026-07-23 curation: status set to needs-experiment -- matches the body's STATUS line and open-lead tag, making this open lead queryable structurally via `omx wiki list --status needs-experiment`.
+
+---
+
+## Update (2026-07-23T19:18:40.914973)
+
+[FINDING] E1/RT-a probe (proposal next-20260724-033159) RESOLVES exam-artifact hypothesis (a):
+REJECTED. Re-evaluating the SAME anchor s30 checkpoint (model_4999) under the WIDEST legal exam
+(--doraemon-dr-from trpo_biasema_extend8k_260716_162849, terminal DORAEMON = Beta(1,1) on all 20
+params = full config box) did NOT lift any randomized level to >= the fixed none. The none-worst
+inversion survives the widest exam, so it is NOT an artifact of each run grading itself on its own
+lenient learned DR box.
+
+| DR level | own-box roll os_env_mean (pp) | full-box roll os_env_mean (pp) | delta |
+|---|---|---|---|
+| none   | 13.545 | 13.217 | fixed physics; -0.33 = eval noise |
+| soft   | 11.770 | 11.672 | -0.10 |
+| medium | 12.201 | 11.355 | -0.85 |
+| hard   | 11.872 | 12.979 | +1.11 |
+
+[EVIDENCE: roll os_env_mean per level, own-box eval/static_260723_091813 vs shared-full-box
+eval/static_260724_040413 of trpo_buoyanchor_s30_260722_134743, both 64 env cuda:1, code-exec read
+2026-07-24]
+[CONFIDENCE: HIGH]
+
+[FINDING] Mechanism (b) nominal=OOD-corner is supported in DIRECTION but WEAK in magnitude, so the
+lead is PARKED and no training is warranted. none stays the numerically worst level under the full
+box, but the margin is only 0.24 pp over full-box hard (which rose +1.11 pp toward none, the only
+level that moved materially) and 1.5-1.9 pp over soft/medium. The 0.24 pp none-vs-hard gap is INSIDE
+the demonstrated eval noise: none itself moved 0.33 pp (os) and 14->12 (n_gt20) between two
+fixed-physics runs, so none and full-box-hard are statistically indistinguishable. Robust none-worst
+holds only vs soft/medium (~0.5 deg at 0.30 deg/pp). Below any defensible floor, so the H2-branch
+training follow-up (a nominal-sampling DORAEMON floor) is DECLINED on magnitude; do not spend a run.
+
+[EVIDENCE: same two summaries; none-level run-to-run wobble os 13.545->13.217, n_gt20 14->12,
+us_env_mean 0.477->0.713, all at fixed nominal physics, so eval is not bit-reproducible (audit 11.2
+determinism claim is too strong); pre-registered thresholds H1>=none and clean-H2 margin>=1.0 pp from
+proposal next-20260724-033159]
+[CONFIDENCE: HIGH]
+
+STATUS: resolved (2026-07-24, E1/RT-a). Probe RAN; hypothesis (a) rejected, (b) real-but-sub-floor.
+No training implication. Practical note for all future per-level roll readings: nominal (none) is a
+real ~0.5 deg OOD-corner residual vs soft/medium, indistinguishable from full-box hard; treat
+sub-1.0 pp per-level os differences as eval noise.
+

@@ -2,14 +2,14 @@
 title: "Stonefish yaw-gap claim review: main-body hydro yaw torque structurally zero (symmetric added mass kills Munk); PhysX DOES model arm reaction; real gaps = buoy added-mass ~10x under, no arm-link hydro, no yaw-torque DR axis"
 tags: ["sim-to-real", "stonefish", "yaw", "hydrodynamics", "munk-moment", "added-mass", "domain-randomization", "arm-reaction"]
 created: 2026-07-16T12:56:49.986664
-updated: 2026-07-16T12:56:49.986664
-sources: []
+updated: 2026-07-24T01:12:39.843455
+sources: ["next-20260724-033200", "static_260724_092023", "static_260724_100219"]
 links: ["sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "teacher_dr_harder_yaw_is_the_only_heavy_tail_axis_roll_is_dc_bia.md", "buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md", "yaw_command_is_rate_not_angle_inherited_design_defensible_only_i.md"]
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 status: needs-experiment
 blocked-on: "P1 cross-sim joint1 swing + P2 eval yaw-torque injection sweep before any training-code change"
 ---
@@ -46,4 +46,43 @@ P2. Eval-side yaw-torque injection sweep (0.5-5 N m constant external torque dur
 Only if P1/P2 show ceiling < Stonefish demand does a training intervention become justified (candidates, one variable at a time: yaw-torque DR channel; enable damping_cross_coupling; revisit buoy added-mass cap). Related blocking lead: TAM/max_thrust DR band (sim_hydro page, needs-apply-before-retrain).
 
 Cross-links: [[sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an]] (analytical nominals, TAM no-DR), [[teacher_dr_harder_yaw_is_the_only_heavy_tail_axis_roll_is_dc_bia]] (yaw = extreme tail), [[buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy]] (two-body hydro split), [[yaw_command_is_rate_not_angle_inherited_design_defensible_only_i]] (yaw is rate-tracked).
+
+---
+
+## Update (2026-07-24T01:12:39.843455)
+
+[FINDING] E3/P2-yaw (proposal next-20260724-033200) MEASURES the yaw rejection ceiling and closes
+the P2 half: H1 CONFIRMED -- the anchor policy has a HIGH ceiling. A constant external body-frame
+yaw torque Mz was swept {0,0.5,1,2,3.5,5} N.m on anchor s30 model_4999 at the none level (fixed
+nominal physics isolates the torque). none-level yaw ss_error vs Mz:
+
+| Mz (N.m) | yaw ss_error | x base | roll ss_err | pitch ss_err |
+|---|---|---|---|---|
+| 0   | 0.00570 | 1.0x | 0.539 | 0.219 |
+| 0.5 | 0.00581 | 1.0x | 0.556 | 0.223 |
+| 1.0 | 0.00896 | 1.6x | 0.566 | 0.230 |
+| 2.0 | 0.01578 | 2.8x | 0.577 | 0.251 |
+| 3.5 | 0.02679 | 4.7x | 0.614 | 0.316 |
+| 5.0 | 0.03640 | 6.4x | 0.673 | 0.401 |
+
+NO break through 5.0 N.m (break line = 10x base = 0.057; 5 N.m reaches only 6.4x = 0.036), no
+attitude-fail. 5.0 N.m is ~3.5x the max training-world steady disturbance (~1.4 N.m). Growth is
+graceful and roughly linear -- a constant torque maps to a constant thrust trim (the 3D integral
+obs supports it), exactly Lane 2's "rate-loop-cheap rejection." CONSEQUENCE: the policy side is
+NOT the weak link -- a future Stonefish/tank yaw failure would indict disturbance magnitude /
+modeling (or the P1 cross-sim gap), NOT missing yaw-rejection training. No training-side
+yaw-torque DR axis is justified.
+
+Instrument: eval.py --inject-yaw-torque (constant body-frame Mz on the hull hydro link via the
+permanent_wrench_composer ADD path, re-applied per substep; commit 1b18631, branch
+exp/latency-eval-instrument; Mz=0 byte-identical; self-gated sanity Mz=0 0.0057 vs Mz=5 0.0364).
+[EVIDENCE: eval/static_260724_{092023,093722,094546,095402,100219,092900} on anchor model_4999,
+64 env cuda:0, code-exec 2026-07-24; break criterion + bands from proposal next-20260724-033200]
+[CONFIDENCE: HIGH]
+
+STATUS: needs-experiment (only the P1 half remains). P2 (eval yaw-torque injection ceiling) is
+DONE -- H1 high ceiling; the curve is now the standing "rejection ceiling" reference for
+interpreting the C4 -> Stonefish diagnostic. P1 (cross-sim joint1 swing on the Stonefish machine)
+stays DEFERRED -- needs the Stonefish host; it gives the cross-sim disturbance number that the P2
+ceiling is compared against.
 

@@ -2,14 +2,14 @@
 title: "reward-sigma / integral-obs-gate coupling (reward.md 7) theory review: conditionally sound; shared-sigma ALIASING is the defect (decouple gate threshold), gate is a settling-band accumulator not anti-windup, clamp is dead code in gated mode, Hwangbo-2017 citation is wrong (use Yu&Lee 2023)"
 tags: ["albc", "envs-main", "reward", "integral-obs", "error-gate", "leaky-integrator", "sigma-coupling", "anti-windup", "settling-band", "doe-confounding", "aliasing", "theory-review", "literature", "experiment-lead"]
 created: 2026-07-11T07:09:55.881613
-updated: 2026-07-20T07:54:39.698724
-sources: []
+updated: 2026-07-24T01:20:04.835298
+sources: ["fea5974"]
 links: ["bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md", "leaky_integral_and_ema_bias_carry_over_the_mid_episode_command_r.md"]
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 70
-qualityReasons: ["no-source-marker", "generic-only-tags"]
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 status: needs-experiment
 blocked-on: "R1 is a zero-GPU code change; R6 training probe parked under the 2026-07-20 batch-pass decision."
 ---
@@ -43,3 +43,28 @@ UNCERTAINTY (declarative): A/B-only — (a) whether decoupling the gate from sig
 ## Update (2026-07-20T07:54:39.698724)
 
 STATUS PROMOTION (2026-07-20 wiki sweep): R1 (decouple integral_gate_threshold from reward sigma -- behavior-preserving code change) and the R6 training probe remain unstarted; promoted to needs-experiment.
+
+---
+
+## Update (2026-07-24T01:20:04.835298)
+
+[FINDING] R1 (the highest-priority recommendation, zero-GPU code change) IMPLEMENTED 2026-07-24.
+The shared-sigma ALIASING defect is removed: added an independent per-axis cfg field
+`integral_gate_threshold` (default (0.10,0.10,0.10)) that the integral-obs gate reads instead of
+copying reward.att_rp.sigma / reward.yaw_vel.sigma at env init. Behavior-preserving -- the default
+reproduces the historical copied value byte-identically, so no prior run is invalidated -- but a
+reward-kernel sigma ablation (att_rp.sigma 0.10->0.15) no longer silently retunes the obs gate.
+On branch exp/integral-gate-decouple (commit fea5974: config.py integral_gate_threshold +
+albc_env.py gate-build rewire + tests/test_integral_gate_decouple.py), NOT yet merged to main.
+[EVIDENCE: commit fea5974; sim-free test tests/test_integral_gate_decouple.py -- default==historical
+(0.10,0.10,0.10) AND the env gate reads integral_gate_threshold not reward.*.sigma, 2 passed; config
+contract intact via test_attitude_only_dims + test_bias_ema_obs, 12 passed]
+[CONFIDENCE: HIGH]
+
+STATUS: still needs-experiment. R1 (the enabling refactor) is DONE; what remains is R6 -- the A/B
+that measures whether decoupling the gate from sigma actually changes learned performance (needs a
+from-scratch checkpoint; design-only, exp-design gate, DO NOT launch; fold into the sim-to-real
+retrain batch). R2-R5 are doc-only (Hwangbo->Yu&Lee 2023 citation fix, relabel the gate as a
+settling-band accumulator not anti-windup, note the clamp is inert in gated mode) and are not yet
+applied.
+

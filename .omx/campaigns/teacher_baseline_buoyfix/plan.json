@@ -53,6 +53,12 @@
       "summary": "P2-yaw: eval-only constant external Mz injection sweep 0.5-5 N.m at none on anchor s30 to measure yaw rejection ceiling (Stonefish-gap P2 half); instrument + 6 evals, zero training",
       "label": "P2-yaw",
       "added_at": "2026-07-23T18:49:41.706170+00:00"
+    },
+    {
+      "proposal_id": "next-20260724-124841",
+      "summary": "C4b-dagger: on-policy (DAgger) distillation correction of the buoyfix student -- env stepped by beta-mixed teacher/student action (beta 1->0), teacher relabeling unchanged; discriminates covariate-shift (H1: on-policy data fixes the E4 collapse) vs observability floor (H2: lin-vel-driven latent unreconstructable, DAgger no help); readout = re-run E4 in-loop diagnostic; DGX-hosted (cuDNN); reviewer-approved; human-gated launch",
+      "label": "C4b-dagger",
+      "added_at": "2026-07-24T03:58:11.985701+00:00"
     }
   ]
 }
