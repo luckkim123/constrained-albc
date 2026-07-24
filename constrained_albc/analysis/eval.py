@@ -100,6 +100,14 @@ sp_static.add_argument(
     "comparable with prior evals.",
 )
 sp_static.add_argument(
+    "--inject-yaw-torque",
+    type=float,
+    default=0.0,
+    help="E3 yaw-torque instrument: apply a CONSTANT external body-frame yaw torque Mz "
+    "(N.m) on the robot base link at EVERY physics step, at every DR level. "
+    "0.0 = off, byte-identical to stock (no wrench-composer hook installed).",
+)
+sp_static.add_argument(
     "--att-amp-deg",
     type=float,
     default=None,
@@ -601,6 +609,41 @@ def _read_per_env_fault(raw_env) -> dict[str, np.ndarray]:
         tensors["joint_health"] = _np(raw_env._joint_health)
 
     return per_env_fault_from_tensors(tensors)
+
+
+def _install_yaw_torque_injector(raw_env, mz: float) -> None:
+    """E3 instrument: apply a constant external body-frame yaw torque Mz on the base link.
+
+    Wraps `raw_env._apply_action` (called once per physics substep, isaaclab
+    envs/direct_rl_env.py `step()` decimation loop) so the injected torque is re-added
+    AFTER the env's own hydro/thruster wrench is set on the same body every substep --
+    `permanent_wrench_composer.set_forces_and_torques` is a SET, not an ADD, so injecting
+    only once (e.g. before `env.step()`) would be silently overwritten by `_apply_action`.
+    Re-adding every substep also survives env resets: `_reset_idx` -> `robot.reset()`
+    zeroes the composer for the reset envs, but the very next `_apply_action` call
+    (start of the next substep, for ALL envs) re-adds Mz before `write_data_to_sim()`
+    pushes the buffer to PhysX, so no env is ever left without the injected torque.
+    """
+    body_ids = raw_env._body_id  # same "base" link the main hydro/thruster wrench uses
+    num_envs = raw_env.num_envs
+    device = raw_env.device
+    zero_forces = torch.zeros(num_envs, len(body_ids), 3, device=device)
+    torques = torch.zeros(num_envs, len(body_ids), 3, device=device)
+    torques[:, :, 2] = mz
+
+    orig_apply_action = raw_env._apply_action
+
+    def _apply_action_with_yaw_torque():
+        orig_apply_action()
+        raw_env._robot.permanent_wrench_composer.add_forces_and_torques(
+            forces=zero_forces, torques=torques, body_ids=body_ids, is_global=False
+        )
+
+    raw_env._apply_action = _apply_action_with_yaw_torque
+    print(
+        f"[INFO] inject_yaw_torque={mz:.3f} N.m constant Mz on body {body_ids} "
+        f"('{raw_env.cfg.hydrodynamics.body_name}') every physics step (all DR levels)"
+    )
 
 
 def run_evaluation(
@@ -1174,6 +1217,12 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
 
     print(f"[INFO] step_dt={step_dt:.4f}s, num_envs={num_envs}, device={device}")
     print(f"[INFO] Segment duration: {args_cli.segment_duration}s")
+
+    # E3 yaw-torque instrument: constant external Mz on the base link, applied at every
+    # DR level (single hook, installed once -- raw_env persists across the level loop
+    # below). 0.0 = off, byte-identical to stock (no hook installed).
+    if args_cli.inject_yaw_torque != 0.0:
+        _install_yaw_torque_injector(raw_env, args_cli.inject_yaw_torque)
 
     # ---- Create runner + load policy ----
     agent_dict = run_agent_dict if run_agent_dict else agent_cfg.to_dict()
