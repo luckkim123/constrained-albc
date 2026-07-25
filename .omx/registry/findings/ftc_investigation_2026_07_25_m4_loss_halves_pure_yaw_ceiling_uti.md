@@ -2,16 +2,16 @@
 title: "FTC investigation 2026-07-25: m4 loss halves pure-yaw ceiling (util x2) while roll/pitch stay buoyancy-dominated; literature + composition risks; verdict MEASURE-FIRST (deterministic m4-kill eval before any FTC training)"
 tags: ["fault-tolerant-control", "ftc", "thruster-fault", "authority-gap", "TAM", "yaw", "buoyancy", "thruster_util", "doraemon", "literature-review", "measure-first", "handoff"]
 created: 2026-07-25T06:49:57.904689
-updated: 2026-07-25T06:49:57.904689
+updated: 2026-07-25T07:37:50.622103
 sources: ["handoff-2026-07-24-ftc", "authority_gap.py-260725", "oms-scholar-researcher-surveys-260725"]
 links: ["real_robot_has_2_faulted_thrusters_user_judges_buoyancy_restorin.md", "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md", "tam_columns_must_match_robot_firmware_esc_channel_order_reorder.md", "plant_fix_needs_apply_before_retrain_main_hull_volume_0_009_0_00.md", "thruster_util_is_the_binding_constrainttrpo_constraint_in_7_of_7.md", "per_env_heavy_tail_analysis_current_capability_hard_ceiling_and.md", "an_off_doraemon_channel_that_costs_return_stalls_the_curriculum.md", "eval_metric_units_and_decision_floors_os_env_mean_is_percent_of.md"]
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 status: needs-experiment
-blocked-on: "user confirmation of faulted-channel identity (m3+m4 hypothesis) + human-gated approval of the m4-kill eval proposal"
+blocked-on: "human-gated approval to run the FTC-m4 eval (proposal next-20260725-155325); fault-DR training arm to be designed via exp-design AFTER the eval measures the fault cost"
 ---
 
 # FTC investigation 2026-07-25: m4 loss halves pure-yaw ceiling (util x2) while roll/pitch stay buoyancy-dominated; literature + composition risks; verdict MEASURE-FIRST (deterministic m4-kill eval before any FTC training)
@@ -47,4 +47,19 @@ Synthesis of the FTC handoff mission (/workspace/.sp/plans/2026-07-24-fault-tole
 [CONFIDENCE: HIGH]
 
 [NEXT -- RECOMMENDATION: MEASURE-FIRST] Do NOT start FTC training now. The user's proceed-without-FTC baseline decision stands unrefuted for roll/pitch and unproven for yaw. The one measurement that settles it: eval-only deterministic fault injection on the anchor checkpoint (trpo_buoyanchor_s30) -- m4 health=0 in ALL envs vs healthy, static eval, all DR levels, ZERO training. Eval is deterministic (repeat runs give identical metrics), so any delta is signal; pre-register absolute floors per [[eval_metric_units_and_decision_floors_os_env_mean_is_percent_of_]]. Below floors -> NO-GO recorded with evidence, baseline proceeds as-is. Above floors on yaw -> design a fault-training arm that addresses risks (1)-(4) explicitly. Prerequisites: user confirms fault identity (m3+m4 hypothesis); instrument = deterministic per-thruster mask extension (additive, off-by-default byte-identical). Proposal drafted via exp-design, human-gated, never auto-launched.
+
+---
+
+## Update (2026-07-25T07:37:50.622103)
+
+[DECISION 2026-07-25 -- user] Direction CONFIRMED: proceed to fault-as-DR robustness training (randomized per-env thruster/sensor/joint faults during training -> single fault-agnostic policy, no fault in obs, no FDI on the real robot). The MEASURE-FIRST verdict is now a SEQUENCING step, not a go/no-go gate: the cheap m4-kill eval (proposal FTC-m4 / next-20260725-155325) runs FIRST to measure the fault return-cost, which is the input needed to recalibrate DORAEMON performance_lb and avoid the e1-style curriculum stall in the training arm.
+[EVIDENCE: user statement 2026-07-25 -- "학습 환경에서 랜덤하게 확률적으로 고장" + confirmed m3+m4 fault identity is correct but "굳이 알 필요 없다" (irrelevant to randomized-DR training)]
+[CONFIDENCE: HIGH -- user domain decision]
+
+[FINDING] The requested capability ALREADY EXISTS and is dormant (FaultInjectionCfg + ActuationNoiseCfg, config.py:347-387, built 2026-06-14, default off). The user's five cases map 1:1: healthy (thruster_fail_prob), partial degradation + full death (thruster_health_range 0.0-0.5), sensor noise (sensor_noise_scale_range), actuation noise (ActuationNoiseCfg). No new fault mechanism needs building for the training arm -- only the design decisions below.
+[EVIDENCE: code read 2026-07-25 -- envs/main/config.py:347-387, mdp/faults.py:27-44, marinelab/core/thruster.py:197-201]
+[CONFIDENCE: HIGH]
+
+[NEXT -- fault-DR training arm design constraints (the four composition risks, now the design spec)] (1) DORAEMON stall: fault is off-curriculum static DR that costs return; promote fault-severity to a _PARAM_DEFS curriculum dim OR recalibrate performance_lb from the MEASURED fault-on return (eval FTC-m4 supplies the number). (2) Controllability + sim-fidelity bound on the fault distribution: keep all-fail probability ~0; VERTICAL faults (m0/m3) are sim-unfaithful (single motor modeled as two independent channels) so restrict faithful fault-DR to the horizontal channels (m1,m2,m4,m5) until the vertical TAM rewrite lands. (3) binding thruster_util constraint suppresses the surviving-thruster over-drive that fault compensation needs -- constraint budget may need rethinking for the fault-on regime (isolate carefully, minimum-change). (4) robustness-vs-nominal cost: fault-DR will likely shave healthy-case attitude tracking (the insurance premium). Sequenced AFTER the FTC-m4 eval.
+[CONFIDENCE: HIGH for the mechanisms; the training-arm proposal itself is exp-design's job, human-gated]
 
