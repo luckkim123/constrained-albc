@@ -77,7 +77,32 @@ def _add_common(sp: argparse.ArgumentParser) -> None:
         help="Enable per-env fault injection (cfg.fault.enable). Records fault_<name>[N] "
         "per-env into data_<level>.npz alongside dr_<name>. Off -> npz is fault-free.",
     )
+    sp.add_argument(
+        "--fault_fixed_health",
+        type=str,
+        default=None,
+        help="Deterministic per-thruster health for ALL envs: num_thrusters comma-separated "
+        "values in [0,1] (e.g. '1,1,1,1,0,1' = thruster m4 dead, the FTC-m4 probe). Implies "
+        "--fault and bypasses the Bernoulli sampler. Off -> Bernoulli path unchanged.",
+    )
     cli_args.add_rsl_rl_args(sp)
+
+
+def _apply_fault_cli(env_cfg, args_cli) -> None:
+    """Wire the --fault / --fault_fixed_health CLI onto env_cfg.fault (no-op if absent).
+
+    --fault enables per-env fault injection; --fault_fixed_health additionally pins a
+    deterministic per-thruster health vector across all envs (and implies enable=True).
+    Shared by every eval mode so the two flags behave identically in each.
+    """
+    if not hasattr(env_cfg, "fault"):
+        return
+    if getattr(args_cli, "fault", False):
+        env_cfg.fault.enable = True
+    ffh = getattr(args_cli, "fault_fixed_health", None)
+    if ffh:
+        env_cfg.fault.enable = True
+        env_cfg.fault.thruster_fixed_health = tuple(float(x) for x in ffh.split(","))
 
 
 parser = argparse.ArgumentParser(description="DR-robustness evaluation for ALBC.")
@@ -1024,8 +1049,7 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         env_cfg.doraemon.enable = False
     # Fault injection: opt-in via --fault. Independent of observation_noise_model (which
     # eval turns off above) -- fault sensor noise is added directly in _get_observations.
-    if getattr(args_cli, "fault", False) and hasattr(env_cfg, "fault"):
-        env_cfg.fault.enable = True
+    _apply_fault_cli(env_cfg, args_cli)
 
     # Compute episode_length_s from trajectory (see TRAJECTORY_N_SEGMENTS).
     env_cfg.episode_length_s = TRAJECTORY_N_SEGMENTS * args_cli.segment_duration + 10.0
@@ -1685,8 +1709,7 @@ def run_periodic(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         env_cfg.doraemon.enable = False
     # Fault injection: opt-in via --fault. Independent of observation_noise_model (which
     # eval turns off above) -- fault sensor noise is added directly in _get_observations.
-    if getattr(args_cli, "fault", False) and hasattr(env_cfg, "fault"):
-        env_cfg.fault.enable = True
+    _apply_fault_cli(env_cfg, args_cli)
 
     # Episode must be long enough for all DR steps
     env_cfg.episode_length_s = args_cli.step_duration * args_cli.num_steps + 10.0
@@ -2072,8 +2095,7 @@ def run_segmented(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         env_cfg.doraemon.enable = False
     # Fault injection: opt-in via --fault. Independent of observation_noise_model (which
     # eval turns off above) -- fault sensor noise is added directly in _get_observations.
-    if getattr(args_cli, "fault", False) and hasattr(env_cfg, "fault"):
-        env_cfg.fault.enable = True
+    _apply_fault_cli(env_cfg, args_cli)
     # Upright init (no attitude noise)
     if hasattr(env_cfg, "play_init_attitude_noise_deg"):
         env_cfg.play_init_attitude_noise_deg = 0.0

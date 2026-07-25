@@ -356,6 +356,14 @@ class FaultInjectionCfg:
     thruster_fail_prob: float = 0.10
     thruster_health_range: tuple[float, float] = (0.0, 0.5)
 
+    # -- Deterministic per-thruster health override (eval instrument) --
+    # When set to a tuple of `num_thrusters` values in [0, 1], sample_thruster_health
+    # RETURNS THIS FIXED VECTOR for every env, bypassing the Bernoulli sampler above --
+    # so a specific thruster can be killed across ALL envs (e.g. (1,1,1,1,0,1) = m4 dead,
+    # the FTC-m4 probe). None (default) -> Bernoulli path unchanged, byte-identical.
+    # Intended for eval only; leave None on any training run.
+    thruster_fixed_health: tuple[float, ...] | None = None
+
     # -- Sensor noise fault (per-env extra observation noise scale) --
     # Per-env multiplier ADDED on top of the always-on _OBS_NOISE_STD model:
     # extra_noise = scale[env] * N(0, 1) * obs_noise_std. 0 = nominal sensor.

@@ -36,7 +36,22 @@ def sample_thruster_health(
     Each thruster independently fails with probability ``cfg.thruster_fail_prob``; a
     failed thruster keeps a residual health drawn uniformly from
     ``cfg.thruster_health_range`` (0 = dead). Healthy thrusters stay at exactly 1.0.
+
+    Deterministic override: when ``cfg.thruster_fixed_health`` is set (a length-
+    ``num_thrusters`` sequence in [0, 1]), that vector is returned for EVERY env and
+    the Bernoulli sampling is skipped -- used to kill a specific thruster across all
+    envs (FTC-m4 eval instrument). getattr-guarded so cfgs predating the field
+    fall through to the Bernoulli path unchanged.
     """
+    fixed = getattr(cfg, "thruster_fixed_health", None)
+    if fixed is not None:
+        if len(fixed) != num_thrusters:
+            raise ValueError(
+                f"thruster_fixed_health has {len(fixed)} entries, expected num_thrusters={num_thrusters}"
+            )
+        vec = torch.tensor(fixed, device=device, dtype=torch.float32)
+        return vec.unsqueeze(0).expand(num_envs, num_thrusters).clone()
+
     shape = (num_envs, num_thrusters)
     fail = torch.rand(shape, device=device, generator=generator) < cfg.thruster_fail_prob
     lo, hi = cfg.thruster_health_range
