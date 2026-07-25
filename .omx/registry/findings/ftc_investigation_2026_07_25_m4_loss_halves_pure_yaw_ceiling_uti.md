@@ -2,7 +2,7 @@
 title: "FTC investigation 2026-07-25: m4 loss halves pure-yaw ceiling (util x2) while roll/pitch stay buoyancy-dominated; literature + composition risks; verdict MEASURE-FIRST (deterministic m4-kill eval before any FTC training)"
 tags: ["fault-tolerant-control", "ftc", "thruster-fault", "authority-gap", "TAM", "yaw", "buoyancy", "thruster_util", "doraemon", "literature-review", "measure-first", "handoff"]
 created: 2026-07-25T06:49:57.904689
-updated: 2026-07-25T08:55:40.246733
+updated: 2026-07-25T19:13:56.655562
 sources: ["handoff-2026-07-24-ftc", "authority_gap.py-260725", "oms-scholar-researcher-surveys-260725"]
 links: ["real_robot_has_2_faulted_thrusters_user_judges_buoyancy_restorin.md", "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md", "tam_columns_must_match_robot_firmware_esc_channel_order_reorder.md", "plant_fix_needs_apply_before_retrain_main_hull_volume_0_009_0_00.md", "thruster_util_is_the_binding_constrainttrpo_constraint_in_7_of_7.md", "per_env_heavy_tail_analysis_current_capability_hard_ceiling_and.md", "an_off_doraemon_channel_that_costs_return_stalls_the_curriculum.md", "eval_metric_units_and_decision_floors_os_env_mean_is_percent_of.md"]
 category: reference
@@ -11,7 +11,7 @@ schemaVersion: 1
 qualityScore: 90
 qualityReasons: ["generic-only-tags"]
 status: needs-experiment
-blocked-on: "fault-DR A/B proposal FaultDR-AB (next-20260725-175508) pending human approval + launch; then post-training fault eval"
+blocked-on: "BOTH fault-DR arms TRAINED to completion 2026-07-25 (model_4999.pt saved). Remaining: post-training FTC-m4 fault eval (Arm A vs Arm B vs anchor), user-gated -- not run yet per user 'launch only' instruction"
 ---
 
 # FTC investigation 2026-07-25: m4 loss halves pure-yaw ceiling (util x2) while roll/pitch stay buoyancy-dominated; literature + composition risks; verdict MEASURE-FIRST (deterministic m4-kill eval before any FTC training)
@@ -98,4 +98,16 @@ Synthesis of the FTC handoff mission (/workspace/.sp/plans/2026-07-24-fault-tole
 [CONFIDENCE: HIGH -- user decision; the physical claim (single motor cannot produce the differential torque) is sound]
 
 [NEXT] On approval: implement on exp/fault-dr-training (fault_severity DORAEMON knob + train.py --fault + all-6-channel faults + Arm-B 28->34D privileged obs + unit test), queue BOTH arms via omx queue-launch (new wandb purpose fault_dr), then the post-training FTC-m4 fault eval (reuses committed instrument 3e01f22) comparing Arm A / Arm B / anchor. Student transfer of any Arm-B benefit is a sequenced follow-on gated on the latent-collapse fix (lead closed_loop_latent_collapse_suspicion).
+
+---
+
+## Update (2026-07-25T19:13:56.655562)
+
+[RESULT 2026-07-25 -- fault-DR A/B LAUNCHED + BOTH ARMS TRAINED TO COMPLETION] User authorized launch 2026-07-25. Both teacher arms trained on the workstation (RTX 4070, GPU 0), seed 30, 4096 envs, 5000/5000 iters, wandb project fault_dr, no errors. Construction smokes (Arm A + Arm B) passed first, validating the previously-untested Arm B privileged-obs (28->34D) wiring through a full run.
+- Arm A (fault-agnostic): logs/rsl_rl/albc_trpo_teacher/fault_dr/trpo_faultdr_agnostic_s30_260725_183121/model_4999.pt
+- Arm B (privileged-fault): logs/rsl_rl/albc_trpo_teacher/fault_dr/trpo_faultdr_priv_s30_260725_232149/model_4999.pt
+Both under all-6-channel thruster-health faults on the new DORAEMON fault-severity curriculum knob (branch exp/fault-dr-training, commit cb06646). Proposal FaultDR-AB / next-20260725-175508.
+[EVIDENCE: launch logs full_a/full_b (Learning iteration 4999/5000, exit 0); checkpoints on disk; campaign-drift shows fault_dr runs]
+[CONFIDENCE: HIGH -- completion verified (final iter + checkpoint + no traceback)]
+[NEXT -- USER-GATED, not yet run per user instruction] Post-training FTC-m4 fault eval: run the committed deterministic-mask instrument (3e01f22) on Arm A, Arm B, and the anchor; robustness gain = anchor fault-delta minus each arm's fault-delta, horizontal (faithful) vs vertical (sim-caveat) flagged separately; discriminates H1 (privileged fault helps) vs H2 (arms equal / agnostic sufficient). NOT started -- user asked for launch only, no eval/analyze yet.
 
