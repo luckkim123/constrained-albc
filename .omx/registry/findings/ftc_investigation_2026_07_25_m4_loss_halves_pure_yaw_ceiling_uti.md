@@ -2,7 +2,7 @@
 title: "FTC investigation 2026-07-25: m4 loss halves pure-yaw ceiling (util x2) while roll/pitch stay buoyancy-dominated; literature + composition risks; verdict MEASURE-FIRST (deterministic m4-kill eval before any FTC training)"
 tags: ["fault-tolerant-control", "ftc", "thruster-fault", "authority-gap", "TAM", "yaw", "buoyancy", "thruster_util", "doraemon", "literature-review", "measure-first", "handoff"]
 created: 2026-07-25T06:49:57.904689
-updated: 2026-07-25T07:37:50.622103
+updated: 2026-07-25T08:10:08.945701
 sources: ["handoff-2026-07-24-ftc", "authority_gap.py-260725", "oms-scholar-researcher-surveys-260725"]
 links: ["real_robot_has_2_faulted_thrusters_user_judges_buoyancy_restorin.md", "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md", "tam_columns_must_match_robot_firmware_esc_channel_order_reorder.md", "plant_fix_needs_apply_before_retrain_main_hull_volume_0_009_0_00.md", "thruster_util_is_the_binding_constrainttrpo_constraint_in_7_of_7.md", "per_env_heavy_tail_analysis_current_capability_hard_ceiling_and.md", "an_off_doraemon_channel_that_costs_return_stalls_the_curriculum.md", "eval_metric_units_and_decision_floors_os_env_mean_is_percent_of.md"]
 category: reference
@@ -11,7 +11,7 @@ schemaVersion: 1
 qualityScore: 90
 qualityReasons: ["generic-only-tags"]
 status: needs-experiment
-blocked-on: "human-gated approval to run the FTC-m4 eval (proposal next-20260725-155325); fault-DR training arm to be designed via exp-design AFTER the eval measures the fault cost"
+blocked-on: "MEASURE-FIRST eval DONE 2026-07-25 (H1 confirmed, GO). Remaining: design fault-DR training arm via exp-design (human-gated); performance_lb recalibration number from training-side return, not this tracking eval"
 ---
 
 # FTC investigation 2026-07-25: m4 loss halves pure-yaw ceiling (util x2) while roll/pitch stay buoyancy-dominated; literature + composition risks; verdict MEASURE-FIRST (deterministic m4-kill eval before any FTC training)
@@ -62,4 +62,26 @@ Synthesis of the FTC handoff mission (/workspace/.sp/plans/2026-07-24-fault-tole
 
 [NEXT -- fault-DR training arm design constraints (the four composition risks, now the design spec)] (1) DORAEMON stall: fault is off-curriculum static DR that costs return; promote fault-severity to a _PARAM_DEFS curriculum dim OR recalibrate performance_lb from the MEASURED fault-on return (eval FTC-m4 supplies the number). (2) Controllability + sim-fidelity bound on the fault distribution: keep all-fail probability ~0; VERTICAL faults (m0/m3) are sim-unfaithful (single motor modeled as two independent channels) so restrict faithful fault-DR to the horizontal channels (m1,m2,m4,m5) until the vertical TAM rewrite lands. (3) binding thruster_util constraint suppresses the surviving-thruster over-drive that fault compensation needs -- constraint budget may need rethinking for the fault-on regime (isolate carefully, minimum-change). (4) robustness-vs-nominal cost: fault-DR will likely shave healthy-case attitude tracking (the insurance premium). Sequenced AFTER the FTC-m4 eval.
 [CONFIDENCE: HIGH for the mechanisms; the training-arm proposal itself is exp-design's job, human-gated]
+
+---
+
+## Update (2026-07-25T08:10:08.945701)
+
+[RESULT 2026-07-25 -- FTC-m4 eval RAN and returned decisively] The MEASURE-FIRST probe (proposal next-20260725-155325) executed: deterministic m4 health=0 in all 64 envs vs healthy, anchor trpo_buoyanchor_s30 model_4999.pt, same eval commit (3e01f22, exp/ftc-fault-eval), seed 42, static, all 4 DR levels. Bite-checks PASS (npz fault_thruster_4==0 all envs / others 1.0; faulted != healthy overwhelmingly). Result dirs: experiments/.../trpo_buoyanchor_s30_260722_134743/eval/static_260725_164839 (healthy) + static_260725_165657 (m4-dead, carries ftc_m4_healthy_vs_dead.png + FTC_M4_README.md).
+
+[FINDING] H1 CONFIRMED at ALL 4 DR levels and ALL axes: the fault-unaware anchor policy degrades materially when m4 dies. Not absorbed. GO for fault-DR robustness training (the user's plan is validated by direct measurement, not assumed).
+[EVIDENCE: none-level healthy->m4-dead: roll ss_error 0.539->1.909 deg (+1.37, floor 0.10), pitch 0.219->1.209 (+0.99), yaw ss_error 0.0057->0.0976 rad/s (17x, +0.092, floor 0.0017), yaw os_env_mean 2.69->24.68 pp (+21.98, floor 10), yaw n_gt20 0->27.5 envs (floor 15). Every DR level breaches. att_norm ss_error none 0.63->2.44 (~4x). summary.json both arms]
+[CONFIDENCE: HIGH -- deterministic eval, clean same-commit A/B, m4 is a horizontal channel with the 2026-07-06 MEASURED TAM (faithful, unlike vertical m3)]
+
+[FINDING] Yaw is the hardest-hit axis, exactly as the authority analysis predicted (m4 loss halves the pure-yaw ceiling 23.0->11.5 N.m, peak util x2 on the surviving diagonal pair m2+m5). Yaw breaches on all three metrics (ss_error, os, n_gt20) at all 4 levels; the 17x none-level yaw ss_error jump is the actuator-authority mechanism made visible.
+[EVIDENCE: authority computation (wiki, this page above) + eval yaw deltas +0.037..+0.168 rad/s across levels]
+[CONFIDENCE: HIGH]
+
+[FINDING -- REFUTES a prior user assessment] "Buoyancy restoring dominates, so the 2 thruster faults are low-impact for the attitude-only task" is FALSE for TRACKING. Roll/pitch tracking degrades heavily under m4-dead (none roll 0.54->1.91 deg, pitch 0.22->1.21; hard roll 0.68->3.17). The buoyancy restoring provides STABILITY (survival stays 92-100%, the vehicle does not tumble) but NOT tracking accuracy: the fault-unaware policy issues commands calibrated to a healthy TAM, so with m4 dead the realized wrench is wrong on every axis it drives, and its yaw-compensation over-drive of m2+m5 spills coupling into roll/pitch. Stability != tracking. The low-impact hypothesis held only for "does it stay upright", not for "does it track".
+[EVIDENCE: eval roll/pitch ss_error deltas all >= floor at all levels; survival_pct healthy 100% vs m4-dead 94/100/95/92% (none/soft/medium/hard)]
+[CONFIDENCE: HIGH for the measurement; the mechanism (policy TAM-mismatch + yaw-compensation coupling) is a code-level inference, MED-HIGH]
+
+[CAVEAT] This tracking eval does NOT directly give the episode-RETURN cost needed to recalibrate DORAEMON performance_lb for the fault-DR training arm (summary.json logs tracking error + survival, not RL return). The return-cost number still must come from the fault-DR training arm's early return (or a reward-logged eval). The eval settled the "is the fault real" gate (YES); the performance_lb figure is the remaining training-design input. Also: fresh healthy differs from a 2026-07-24 eval by max 0.124 deg ss_error (different prior eval settings/command-box era) -- the trustworthy A/B is the same-commit healthy vs faulted, not vs older evals.
+
+[NEXT] Design the fault-DR robustness training arm via exp-design (human-gated launch), addressing the four recorded composition risks (DORAEMON stall / binding thruster_util / discrete-fault representation / broken student channel). Faithful fault-DR restricted to horizontal channels (m1,m2,m4,m5) until the vertical TAM rewrite lands. Instrument for deterministic single-thruster eval is committed (3e01f22).
 
