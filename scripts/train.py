@@ -68,6 +68,23 @@ parser.add_argument(
 parser.add_argument(
     "--ray-proc-id", "-rid", type=int, default=None, help="Automatically configured by Ray integration, otherwise None."
 )
+parser.add_argument(
+    "--fault",
+    action="store_true",
+    default=False,
+    help="Enable per-env actuator/sensor fault injection (env_cfg.fault.enable). "
+    "Default off is byte-identical to fault-free training. No-op with a warning "
+    "on a task whose env cfg has no 'fault' field.",
+)
+parser.add_argument(
+    "--privileged-fault-obs",
+    action="store_true",
+    default=False,
+    help="Arm B (FaultDR-AB): append the true 6D per-thruster health to the "
+    "privileged (critic/encoder) observation only -- the policy obs is unchanged. "
+    "Default off is Arm A (fault-agnostic). No-op with a warning on a task whose "
+    "env cfg has no 'use_privileged_fault_obs' field.",
+)
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
 # append AppLauncher cli args, parse, and launch omniverse app
@@ -155,6 +172,20 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     if args_cli.replay_curriculum is not None:
         if getattr(env_cfg, "doraemon", None) is not None:
             env_cfg.doraemon.replay_curriculum_path = args_cli.replay_curriculum
+
+    # CLI --fault / --privileged-fault-obs (FaultDR-AB, next-20260725-175508).
+    # getattr-guarded: tasks whose env cfg has no such field (e.g. full_dof, BlueROV)
+    # get a warning instead of an AttributeError.
+    if args_cli.fault:
+        if getattr(env_cfg, "fault", None) is not None:
+            env_cfg.fault.enable = True
+        else:
+            logger.warning("--fault given but env_cfg has no 'fault' field; ignored.")
+    if args_cli.privileged_fault_obs:
+        if hasattr(env_cfg, "use_privileged_fault_obs"):
+            env_cfg.use_privileged_fault_obs = True
+        else:
+            logger.warning("--privileged-fault-obs given but env_cfg has no 'use_privileged_fault_obs' field; ignored.")
 
     # set the environment seed
     env_cfg.seed = agent_cfg.seed

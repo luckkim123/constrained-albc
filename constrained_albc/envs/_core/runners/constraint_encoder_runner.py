@@ -21,7 +21,7 @@ import torch
 from rsl_rl.runners import OnPolicyRunner
 
 from ..utils.logging import flush_metrics, log_encoder_metrics
-from . import sync_policy_obs_dim
+from . import sync_policy_obs_dim, sync_privileged_dim
 
 logger = logging.getLogger(__name__)
 
@@ -67,8 +67,9 @@ class ConstraintEncoderRunner(OnPolicyRunner):
         else:
             self._constraint_names = ()
 
-        # Auto-sync policy_obs_dim from env config (mirrors num_constraints above).
+        # Auto-sync policy_obs_dim / privileged_dim from env config (mirrors num_constraints above).
         sync_policy_obs_dim(env, train_cfg)
+        sync_privileged_dim(env, train_cfg)
 
         # Override encoder normalization bounds with DR-derived values.
         # The hardcoded _PRIV_OBS_LOWER/UPPER in rsl_rl_ppo_cfg.py are only a
@@ -104,6 +105,12 @@ class ConstraintEncoderRunner(OnPolicyRunner):
                 hydro_cfg=env_cfg.hydrodynamics,
                 buoy_hydro_cfg=env_cfg.buoy_hydrodynamics,
             )
+            if getattr(env_cfg, "use_privileged_fault_obs", False):
+                # Arm B: compute_privileged_obs appends 6D true per-thruster health
+                # (always in [0, 1] by construction) as p_t's last 6 dims -- fixed
+                # unit-range bounds, not DR-derived (no DR-range field for it).
+                lower = lower + [0.0] * 6
+                upper = upper + [1.0] * 6
             logger.info("Overriding encoder_obs_lower/upper with DR-derived bounds (margin 0)")
             policy_cfg["encoder_obs_lower"] = lower
             policy_cfg["encoder_obs_upper"] = upper

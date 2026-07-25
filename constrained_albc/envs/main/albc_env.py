@@ -25,7 +25,7 @@ from isaaclab.utils.math import euler_xyz_from_quat, quat_apply, quat_apply_inve
 
 from marinelab.core import HydrodynamicsModel
 
-from .config import ALBCEnvCfg, apply_bias_ema_obs
+from .config import ALBCEnvCfg, apply_bias_ema_obs, apply_privileged_fault_obs
 from .mdp import faults
 from .mdp.constraints import apply_joint1_constraint_arm, compute_all_costs
 from .mdp.events import (
@@ -109,6 +109,12 @@ class ALBCEnv(DirectRLEnv):
         # noise-model tuples that DirectRLEnv.__init__ consumes to build gym spaces + the
         # noise model. See config.apply_bias_ema_obs.
         apply_bias_ema_obs(cfg)
+
+        # Materialize the Arm-B privileged-fault-obs toggle (no-op unless
+        # cfg.use_privileged_fault_obs). MUST also run before super().__init__():
+        # it bumps cfg.state_space, which DirectRLEnv.__init__ consumes to build the
+        # state-space gym Box. See config.apply_privileged_fault_obs.
+        apply_privileged_fault_obs(cfg)
 
         # Convert noise config tuples to tensors before DirectRLEnv creates the noise model.
         # Tuples are used in config for OmegaConf/Hydra serialization compatibility.
@@ -1577,8 +1583,18 @@ class ALBCEnv(DirectRLEnv):
         # Thruster fault: resample per-env per-thruster health for the reset envs.
         # No-op when fault disabled (set_thruster_health returns early on a None buffer).
         if self.cfg.fault.enable and self._thruster is not None:
+            # Fault-severity DORAEMON knob (FaultDR-AB): same sampled/fallback pattern as
+            # obs_noise_scale above -- DORAEMON on + dim registered -> per-env sampled value
+            # (training); else uniform draw over fault_severity_range (eval sweep fallback).
+            # At nominal (0.0, 0.0) the draw is all zeros -> byte-identical (no health drawn).
+            if sampled is not None and "fault_severity" in sampled:
+                severity = sampled["fault_severity"]
+            else:
+                severity = faults.sample_uniform_per_env(
+                    len(env_ids), rand_cfg.fault_severity_range, self.device
+                )
             health = faults.sample_thruster_health(
-                len(env_ids), self.cfg.thrusters.num_thrusters, self.cfg.fault, self.device
+                len(env_ids), self.cfg.thrusters.num_thrusters, self.cfg.fault, self.device, severity=severity
             )
             self._thruster.set_thruster_health(env_ids, health)
 

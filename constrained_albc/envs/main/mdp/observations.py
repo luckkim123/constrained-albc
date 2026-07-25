@@ -131,6 +131,12 @@ def compute_privileged_obs(
             [24]    control-action delay (normalized steps, 0 when off)
         Measured Velocity (3D):
             [25:28] body linear velocity (u, v, w)
+
+    Arm-B fault-DR extension (FaultDR-AB, next-20260725-175508), 28D -> 34D:
+        Thruster Health (6D) -- when ``env.cfg.use_privileged_fault_obs``:
+            [28:34] true per-thruster health in [0, 1] (1.0 = healthy). Critic/
+            encoder only -- the 72D policy obs never sees this (no thruster FDI
+            on the real robot). Ones when fault injection is disabled.
     """
     jid = env._albc_joint_ids[0]
 
@@ -146,7 +152,7 @@ def compute_privileged_obs(
         thrust_coeff = torch.zeros(env.num_envs, device=env.device)
         time_const = torch.zeros(env.num_envs, device=env.device)
 
-    return torch.cat(
+    p_t = torch.cat(
         [
             # Hydrodynamics (7D)
             env._hydro.volume.unsqueeze(-1),
@@ -183,3 +189,16 @@ def compute_privileged_obs(
         ],
         dim=-1,
     )
+
+    if getattr(env.cfg, "use_privileged_fault_obs", False):
+        # Arm B: true per-thruster health, ones when fault injection is disabled
+        # (thruster present but _thruster_health buffer only allocated when
+        # enable_fault=True -- see ThrusterModel.__init__).
+        thr = env._thruster
+        if thr is not None and thr._thruster_health is not None:
+            health = thr._thruster_health
+        else:
+            health = torch.ones(env.num_envs, 6, device=env.device)
+        p_t = torch.cat([p_t, health], dim=-1)
+
+    return p_t

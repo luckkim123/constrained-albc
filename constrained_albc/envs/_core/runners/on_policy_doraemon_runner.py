@@ -28,7 +28,7 @@ import torch
 from rsl_rl.runners import OnPolicyRunner
 
 from ..utils.logging import flush_metrics
-from . import sync_policy_obs_dim
+from . import sync_policy_obs_dim, sync_privileged_dim
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +47,7 @@ class OnPolicyDoraemonRunner(OnPolicyRunner):
         # encoder builds at the cfg's static 69 against a 72D env (use_bias_ema_obs).
         # No-op for the plain-PPO variant, whose ActorCritic cfg has no policy_obs_dim.
         sync_policy_obs_dim(env, train_cfg)
+        sync_privileged_dim(env, train_cfg)
         super().__init__(env, train_cfg, log_dir=log_dir, device=device)
 
     # ------------------------------------------------------------------

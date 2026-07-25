@@ -269,6 +269,16 @@ class DomainRandomizationCfg:
     # (total std sqrt(2)x today). std only; the per-episode bias stays the static model.
     # Same normalized range for base and Hard (it is not a physical magnitude).
     obs_noise_scale_range: tuple[float, float] = (0.0, 1.0)
+    # Fault-severity curriculum: a normalized knob u in [0, 1], DORAEMON-managed
+    # (same pattern as ocean_current_strength_range/obs_noise_scale_range above).
+    # Scales cfg.fault.thruster_fail_prob BEFORE the Bernoulli compare in
+    # faults.sample_thruster_health: effective_prob = u * thruster_fail_prob.
+    # Nominal u=0 -> effective_prob=0 -> every thruster healthy (byte-identical to
+    # fault-free) widening to u=1 -> the full base distribution, as the policy
+    # masters easier variants. Lives here (not on FaultInjectionCfg) because
+    # DORAEMON's build_param_specs reads DR-knob bounds off this cfg only
+    # (mirrors the two existing [0,1] knobs above; see doraemon.py _PARAM_DEFS).
+    fault_severity_range: tuple[float, float] = (0.0, 1.0)
 
 
 # ==========================================================================
@@ -558,6 +568,15 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # Fault Injection (off by default; FTC infrastructure, see FaultInjectionCfg)
     # ==========================================================================
     fault: FaultInjectionCfg = FaultInjectionCfg()
+    # Arm A/B fault-DR privileged-obs toggle (FaultDR-AB, next-20260725-175508).
+    # False (Arm A, fault-agnostic): state_space stays 28, no fault signal anywhere.
+    # True (Arm B, privileged-fault): state_space 28 -> 34 (materialized by
+    # apply_privileged_fault_obs below, called from ALBCEnv.__init__ before
+    # super().__init__(), mirrors apply_bias_ema_obs); compute_privileged_obs
+    # appends the 6D true per-thruster health as the LAST 6 dims (critic/encoder
+    # only). The 72D policy obs is UNCHANGED in both arms -- the real robot has no
+    # thruster FDI, so the deployable actor never sees this.
+    use_privileged_fault_obs: bool = False
 
     # Per-step multiplicative actuation noise (3rd channel; off by default). Sibling
     # of fault/randomization -- independently toggleable, never entangled with them.
@@ -674,3 +693,20 @@ def apply_bias_ema_obs(cfg) -> None:
         noise_cfg.std = tuple(noise_cfg.std) + zeros3
         bias_cfg.n_min = tuple(bias_cfg.n_min) + zeros3
         bias_cfg.n_max = tuple(bias_cfg.n_max) + zeros3
+
+
+def apply_privileged_fault_obs(cfg) -> None:
+    """Materialize the Arm-B privileged-fault-obs toggle, in place.
+
+    MUST be called from ALBCEnv.__init__ BEFORE super().__init__() (mirrors
+    apply_bias_ema_obs): state_space is consumed by DirectRLEnv.__init__ to build
+    the state-space gym Box, so the bump must land before that call.
+
+    use_privileged_fault_obs=False (default): no-op, byte-identical (28D privileged).
+    use_privileged_fault_obs=True: state_space 28 -> 34. compute_privileged_obs
+    (mdp/observations.py) appends the 6D true per-thruster health as the last 6
+    dims when it sees this flag; the 72D policy obs is untouched.
+    """
+    if not cfg.use_privileged_fault_obs:
+        return
+    cfg.state_space += 6

@@ -30,6 +30,7 @@ def sample_thruster_health(
     cfg,
     device: str | torch.device,
     generator: torch.Generator | None = None,
+    severity: torch.Tensor | None = None,
 ) -> torch.Tensor:
     """Sample per-env per-thruster health [N, num_thrusters].
 
@@ -42,6 +43,15 @@ def sample_thruster_health(
     the Bernoulli sampling is skipped -- used to kill a specific thruster across all
     envs (FTC-m4 eval instrument). getattr-guarded so cfgs predating the field
     fall through to the Bernoulli path unchanged.
+
+    ``severity``: optional per-env DORAEMON fault-severity scale [N] in [0, 1]
+    (FaultDR-AB curriculum knob, see config.py fault_severity_range). When given,
+    the effective fail probability is ``severity * cfg.thruster_fail_prob``
+    (scaled BEFORE the Bernoulli compare) instead of the flat ``cfg.thruster_fail_prob``.
+    ``severity=None`` (default) is byte-identical to the pre-curriculum behavior --
+    every existing caller that does not pass it is unaffected. At severity=0 the
+    fail probability is 0 for every thruster, so ``torch.where`` returns all ones
+    regardless of ``cfg.thruster_fail_prob``.
     """
     fixed = getattr(cfg, "thruster_fixed_health", None)
     if fixed is not None:
@@ -53,7 +63,8 @@ def sample_thruster_health(
         return vec.unsqueeze(0).expand(num_envs, num_thrusters).clone()
 
     shape = (num_envs, num_thrusters)
-    fail = torch.rand(shape, device=device, generator=generator) < cfg.thruster_fail_prob
+    fail_prob = cfg.thruster_fail_prob if severity is None else severity.unsqueeze(-1) * cfg.thruster_fail_prob
+    fail = torch.rand(shape, device=device, generator=generator) < fail_prob
     lo, hi = cfg.thruster_health_range
     residual = torch.rand(shape, device=device, generator=generator) * (hi - lo) + lo
     return torch.where(fail, residual, torch.ones(shape, device=device))

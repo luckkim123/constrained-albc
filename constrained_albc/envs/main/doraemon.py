@@ -76,6 +76,13 @@ _PARAM_DEFS: list[tuple[str, str, float, float]] = [
     # (no extra noise, byte-identical to today) widening to 1.0 (+1x std) as the policy
     # masters the cleaner variants. std only; the per-episode bias stays the static model.
     ("obs_noise_scale", "obs_noise_scale_range", 0.0, 1.0),
+    # Fault-severity curriculum (FaultDR-AB, next-20260725-175508): a normalized
+    # scale in [0,1] on cfg.fault.thruster_fail_prob, applied in
+    # faults.sample_thruster_health BEFORE the Bernoulli compare. Nominal=0
+    # (_NOMINAL_OVERRIDES below) -> curriculum starts fault-free (byte-identical)
+    # and expands to the full base fail-probability distribution as the policy
+    # masters simpler variants. Same wiring as ocean_current_strength/obs_noise_scale.
+    ("fault_severity", "fault_severity_range", 0.0, 1.0),
 ]
 NDIMS = len(_PARAM_DEFS)
 
@@ -84,6 +91,7 @@ _NOMINAL_OVERRIDES: dict[str, float] = {
     "ocean_current_strength": 0.0,
     "payload_cog_offset_xy_u": 0.0,  # start with no XY offset, widen as policy masters it
     "obs_noise_scale": 0.0,  # start with no extra sensor noise, widen as policy masters it
+    "fault_severity": 0.0,  # start fault-free, widen as policy masters simpler fault variants
 }
 
 # Default specs (base bounds) for callers without a DR cfg; matches pre-promotion PARAM_SPECS.
