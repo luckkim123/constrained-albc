@@ -65,6 +65,12 @@
       "summary": "FTC-m4: deterministic m4 health=0 eval on anchor s30 vs healthy (zero training); H1 yaw degrades beyond pre-registered floors (authority-limited) / H2 all axes within floors (absorbed; user's no-FTC decision validated); instrument = off-by-default thruster_fixed_health mask; gated on user confirming m3+m4 fault identity",
       "label": "FTC-m4",
       "added_at": "2026-07-25T07:00:07.069764+00:00"
+    },
+    {
+      "proposal_id": "next-20260725-175508",
+      "summary": "FaultDR-AB: teacher-level one-variable A/B, Arm A fault-agnostic vs Arm B privileged thruster-health (28->34D priv obs); shared all-6-channel faults under a NEW DORAEMON fault-severity curriculum knob (stall mitigation); post-training FTC-m4 fault eval compares robustness gain; student transfer sequenced later; human-gated 2 launches",
+      "label": "FaultDR-AB",
+      "added_at": "2026-07-25T09:00:11.353900+00:00"
     }
   ]
 }
