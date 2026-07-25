@@ -59,6 +59,12 @@
       "summary": "C4b-dagger: on-policy (DAgger) distillation correction of the buoyfix student -- env stepped by beta-mixed teacher/student action (beta 1->0), teacher relabeling unchanged; discriminates covariate-shift (H1: on-policy data fixes the E4 collapse) vs observability floor (H2: lin-vel-driven latent unreconstructable, DAgger no help); readout = re-run E4 in-loop diagnostic; DGX-hosted (cuDNN); reviewer-approved; human-gated launch",
       "label": "C4b-dagger",
       "added_at": "2026-07-24T03:58:11.985701+00:00"
+    },
+    {
+      "proposal_id": "next-20260725-155325",
+      "summary": "FTC-m4: deterministic m4 health=0 eval on anchor s30 vs healthy (zero training); H1 yaw degrades beyond pre-registered floors (authority-limited) / H2 all axes within floors (absorbed; user's no-FTC decision validated); instrument = off-by-default thruster_fixed_health mask; gated on user confirming m3+m4 fault identity",
+      "label": "FTC-m4",
+      "added_at": "2026-07-25T07:00:07.069764+00:00"
     }
   ]
 }
