@@ -2,7 +2,7 @@
 title: "FTC investigation 2026-07-25: m4 loss halves pure-yaw ceiling (util x2) while roll/pitch stay buoyancy-dominated; literature + composition risks; verdict MEASURE-FIRST (deterministic m4-kill eval before any FTC training)"
 tags: ["fault-tolerant-control", "ftc", "thruster-fault", "authority-gap", "TAM", "yaw", "buoyancy", "thruster_util", "doraemon", "literature-review", "measure-first", "handoff"]
 created: 2026-07-25T06:49:57.904689
-updated: 2026-07-25T08:10:08.945701
+updated: 2026-07-25T08:55:40.246733
 sources: ["handoff-2026-07-24-ftc", "authority_gap.py-260725", "oms-scholar-researcher-surveys-260725"]
 links: ["real_robot_has_2_faulted_thrusters_user_judges_buoyancy_restorin.md", "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md", "tam_columns_must_match_robot_firmware_esc_channel_order_reorder.md", "plant_fix_needs_apply_before_retrain_main_hull_volume_0_009_0_00.md", "thruster_util_is_the_binding_constrainttrpo_constraint_in_7_of_7.md", "per_env_heavy_tail_analysis_current_capability_hard_ceiling_and.md", "an_off_doraemon_channel_that_costs_return_stalls_the_curriculum.md", "eval_metric_units_and_decision_floors_os_env_mean_is_percent_of.md"]
 category: reference
@@ -11,7 +11,7 @@ schemaVersion: 1
 qualityScore: 90
 qualityReasons: ["generic-only-tags"]
 status: needs-experiment
-blocked-on: "MEASURE-FIRST eval DONE 2026-07-25 (H1 confirmed, GO). Remaining: design fault-DR training arm via exp-design (human-gated); performance_lb recalibration number from training-side return, not this tracking eval"
+blocked-on: "fault-DR A/B proposal FaultDR-AB (next-20260725-175508) pending human approval + launch; then post-training fault eval"
 ---
 
 # FTC investigation 2026-07-25: m4 loss halves pure-yaw ceiling (util x2) while roll/pitch stay buoyancy-dominated; literature + composition risks; verdict MEASURE-FIRST (deterministic m4-kill eval before any FTC training)
@@ -84,4 +84,18 @@ Synthesis of the FTC handoff mission (/workspace/.sp/plans/2026-07-24-fault-tole
 [CAVEAT] This tracking eval does NOT directly give the episode-RETURN cost needed to recalibrate DORAEMON performance_lb for the fault-DR training arm (summary.json logs tracking error + survival, not RL return). The return-cost number still must come from the fault-DR training arm's early return (or a reward-logged eval). The eval settled the "is the fault real" gate (YES); the performance_lb figure is the remaining training-design input. Also: fresh healthy differs from a 2026-07-24 eval by max 0.124 deg ss_error (different prior eval settings/command-box era) -- the trustworthy A/B is the same-commit healthy vs faulted, not vs older evals.
 
 [NEXT] Design the fault-DR robustness training arm via exp-design (human-gated launch), addressing the four recorded composition risks (DORAEMON stall / binding thruster_util / discrete-fault representation / broken student channel). Faithful fault-DR restricted to horizontal channels (m1,m2,m4,m5) until the vertical TAM rewrite lands. Instrument for deterministic single-thruster eval is committed (3e01f22).
+
+---
+
+## Update (2026-07-25T08:55:40.246733)
+
+[DECISION 2026-07-25 -- user, supersedes/extends the earlier fault-DR direction] Fault-DR training will be a ONE-VARIABLE A/B at the TEACHER level: Arm A (fault-agnostic, fault in no obs) vs Arm B (privileged-fault, true per-thruster health added to the 28D privileged obs only, never the 72D policy obs). Both share all-6-channel thruster-health faults under a NEW DORAEMON fault-severity curriculum knob (nominal 0, mirrors ocean_current_strength_range/obs_noise_scale_range) -- the stall mitigation. Proposal: FaultDR-AB / next-20260725-175508 (pending approval, human-gated launch).
+[EVIDENCE: user 2026-07-25 -- "1,2 둘다 구현하고 실험"; DORAEMON knob precedent config.py:260-271; e1 stall wiki an_off_doraemon_channel...]
+[CONFIDENCE: HIGH -- user decision]
+
+[FINDING -- deployment convention (record so it is not lost)] The real-robot vertical single-motor/dual-ESC (m0/m3) will be reconciled on the ROBOT SIDE (Arduino firmware): the one physical vertical motor is driven from the m0+m3 command SUM; the m0-m3 pitch differential maps to no physical actuator and is accepted as a known sim-optimistic pitch gap. Consequence: the sim keeps its (physically wrong) 2-independent-channel vertical model as-is, and NO sim vertical-TAM rewrite is a prerequisite for fault-DR training. The vertical-TAM-rewrite lead (tam_vertical_single_motor_dual_esc) stays open but is DECOUPLED from this training arm by the firmware decision.
+[EVIDENCE: user 2026-07-25 -- "실제 로봇의 arduino 펌웨어를 수정"; live TAM Fz=[1,0,0,1,0,0], My m0/m3=+-0.145; wiki tam_vertical_single_motor_dual_esc_measured_2026_07_05]
+[CONFIDENCE: HIGH -- user decision; the physical claim (single motor cannot produce the differential torque) is sound]
+
+[NEXT] On approval: implement on exp/fault-dr-training (fault_severity DORAEMON knob + train.py --fault + all-6-channel faults + Arm-B 28->34D privileged obs + unit test), queue BOTH arms via omx queue-launch (new wandb purpose fault_dr), then the post-training FTC-m4 fault eval (reuses committed instrument 3e01f22) comparing Arm A / Arm B / anchor. Student transfer of any Arm-B benefit is a sequenced follow-on gated on the latent-collapse fix (lead closed_loop_latent_collapse_suspicion).
 
