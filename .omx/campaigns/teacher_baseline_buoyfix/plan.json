@@ -71,6 +71,12 @@
       "summary": "FaultDR-AB: teacher-level one-variable A/B, Arm A fault-agnostic vs Arm B privileged thruster-health (28->34D priv obs); shared all-6-channel faults under a NEW DORAEMON fault-severity curriculum knob (stall mitigation); post-training FTC-m4 fault eval compares robustness gain; student transfer sequenced later; human-gated 2 launches",
       "label": "FaultDR-AB",
       "added_at": "2026-07-25T09:00:11.353900+00:00"
+    },
+    {
+      "proposal_id": "next-20260727-155500",
+      "summary": "E-int: integration retrain composing the two adopted changes (max_thrust band D-a + fault-DR Arm A D-b) into the final teacher; H1 sub-additive vs H2 super-additive on the shared thruster actuation budget, with pre-registered ADOPT-WITH-CAVEAT middle zone",
+      "label": "E-int",
+      "added_at": "2026-07-27T07:06:45.568166+00:00"
     }
   ]
 }
