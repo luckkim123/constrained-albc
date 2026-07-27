@@ -157,6 +157,86 @@ def _discover_doraemon_params(data):
     prefix = "DORAEMON/mean/"
     return sorted(tag[len(prefix):] for tag in data if tag.startswith(prefix))
 
+
+def _load_doraemon_bounds(run_path):
+    """Read {param: (lo, hi)} from the run's curriculum_trajectory.json, else {}.
+
+    TB carries DORAEMON/mean|std/<param> but NOT the bounds, so the frac-of-range
+    column needs the trajectory file. Missing/corrupt file -> {} (frac omitted).
+    """
+    import json
+    if run_path is None:
+        return {}
+    path = Path(run_path) / "curriculum_trajectory.json"
+    if not path.exists():
+        return {}
+    try:
+        with open(path) as f:
+            d = json.load(f)
+        return {n: (float(lo), float(hi)) for n, (lo, hi) in zip(d["param_names"], d["param_bounds"])}
+    except Exception:
+        return {}
+
+
+def _doraemon_param_verdicts(data, bounds):
+    """Per-dim curriculum verdict from the TB DORAEMON/mean|std/<param> trajectories.
+
+    Assessed over the last quarter of samples:
+      SATURATED  - flat with the mean pinned at a bound, or flat at ~uniform width
+      EXPANDING  - mean still moving away from its start, or std still widening
+      CONTRACTED - mean moving back toward its start (or std shrinking)
+      STALLED    - flat well below full expansion
+
+    One-sided dims (e.g. fault_severity in [0,1], nominal 0) expand through the
+    MEAN; centered dims expand through the STD, so both channels are assessed.
+    # ponytail: fixed heuristics (flat = <1% of range moved over the window,
+    # at-bound = within 2% of a bound, saturated width = 90% of uniform std);
+    # promote to config if a run class ever needs different thresholds.
+    """
+    out = []
+    for param in _discover_doraemon_params(data):
+        pts = data[f"DORAEMON/mean/{param}"]
+        if len(pts) < 8:
+            continue
+        steps = np.array([s for s, _ in pts], dtype=np.float64)
+        means = np.array([v for _, v in pts], dtype=np.float64)
+        q = max(4, len(means) // 4)
+        m_slope = float(np.polyfit(steps[-q:], means[-q:], 1)[0])
+        lo_hi = bounds.get(param)
+        rng = (lo_hi[1] - lo_hi[0]) if lo_hi and lo_hi[1] > lo_hi[0] else None
+        scale = rng if rng else max(abs(means[-1]), abs(means[0]), 1e-9)
+        m_moved = m_slope * (steps[-1] - steps[-q])
+        m_flat = abs(m_moved) < 0.01 * scale
+
+        std_f, s_slope, s_moved = None, 0.0, 0.0
+        std_pts = data.get(f"DORAEMON/std/{param}")
+        if std_pts and len(std_pts) >= 8:
+            s_steps = np.array([s for s, _ in std_pts], dtype=np.float64)
+            s_vals = np.array([v for _, v in std_pts], dtype=np.float64)
+            sq = max(4, len(s_vals) // 4)
+            s_slope = float(np.polyfit(s_steps[-sq:], s_vals[-sq:], 1)[0])
+            s_moved = s_slope * (s_steps[-1] - s_steps[-sq])
+            std_f = float(s_vals[-1])
+        s_flat = abs(s_moved) < 0.01 * scale
+
+        frac = (means[-1] - lo_hi[0]) / rng if rng else None
+        at_bound = frac is not None and min(frac, 1.0 - frac) <= 0.02
+        # width relative to a uniform distribution over the bounds (std_uniform = rng/sqrt(12))
+        wide = rng is not None and std_f is not None and std_f >= 0.9 * (rng / np.sqrt(12.0))
+        away = (means[-1] - means[0]) * m_slope > 0
+
+        if m_flat and s_flat:
+            verdict = "SATURATED" if (at_bound or wide) else "STALLED"
+        elif (not m_flat and away) or (m_flat and s_moved > 0):
+            verdict = "EXPANDING"
+        else:
+            verdict = "CONTRACTED"
+        trend_ch = "mean" if not m_flat else "std"
+        trend = (m_slope if not m_flat else s_slope) * 1000.0
+        out.append({"param": param, "mean": float(means[-1]), "frac": frac, "std": std_f,
+                    "trend_per_1k": trend, "trend_channel": trend_ch, "verdict": verdict})
+    return out
+
 # ==================================================================
 # 2. CONFIG READING
 # ==================================================================
@@ -780,7 +860,7 @@ def format_tier1(data):
     return lines, anomaly_tags
 
 
-def format_tier2(data):
+def format_tier2(data, run_path=None):
     """Constraints + TRPO + DORAEMON + dynamics."""
     lines = []
 
@@ -906,6 +986,17 @@ def format_tier2(data):
         if sr is not None:
             sr_arrow = _quartile_arrow_str(data, "DORAEMON/success_rate")
             lines.append(f"  entropy_trend={ent_arrow.strip()}  success_trend={sr_arrow.strip()}")
+        # Per-parameter curriculum table (G3): the per-dim expansion state was
+        # previously visible only in the 05 plot, never in text, so a numbers-first
+        # report missed e.g. fault_severity ending at 8% of range while still rising.
+        verdicts = _doraemon_param_verdicts(data, _load_doraemon_bounds(run_path))
+        if verdicts:
+            lines.append(f"  {'param':<26} {'mean':>9} {'frac':>7} {'std':>9} {'trend/1k':>14}  verdict")
+            for v in verdicts:
+                frac_s = f"{v['frac'] * 100:6.1f}%" if v["frac"] is not None else "      -"
+                std_s = f"{v['std']:9.4f}" if v["std"] is not None else "        -"
+                trend_s = f"{v['trend_channel']}{v['trend_per_1k']:+10.4f}"
+                lines.append(f"  {v['param']:<26} {v['mean']:>9.4f} {frac_s} {std_s} {trend_s}  {v['verdict']}")
 
     # Gradient Decomposition (constrained_full_albc)
     grad_decomp = [
@@ -1071,7 +1162,7 @@ def format_tier3(data):
     return lines
 
 
-def format_diagnosis(anomaly_tags, data):
+def format_diagnosis(anomaly_tags, data, run_path=None):
     """Auto-diagnose based on anomaly patterns and data patterns.
 
     Always runs: checks both anomaly_tags (from tier 1) and data patterns
@@ -1084,6 +1175,36 @@ def format_diagnosis(anomaly_tags, data):
                 findings.append(message)
         except Exception:
             pass
+
+    # G3: per-dim curriculum state is next-experiment-shaping information
+    # ("dim X ended at 8% of its range and was still expanding").
+    try:
+        curr = _doraemon_param_verdicts(data, _load_doraemon_bounds(run_path))
+    except Exception:
+        curr = []
+    expanding = [v for v in curr if v["verdict"] == "EXPANDING"]
+    stalled = [v for v in curr if v["verdict"] == "STALLED"]
+    if expanding:
+        # Name one-sided dims (mean channel) with their frac; centered dims widening
+        # through std sit at ~50% mean-frac by construction, so only count them.
+        named = [v for v in expanding if v["trend_channel"] == "mean"]
+        det = ", ".join(
+            v["param"] + (f" at {v['frac'] * 100:.0f}% of range" if v["frac"] is not None else "")
+            for v in named
+        )
+        n_rest = len(expanding) - len(named)
+        if n_rest:
+            det = (det + ", " if det else "") + f"{n_rest} centered dims still widening (std)"
+        findings.append(
+            f"DORAEMON dims still EXPANDING at final iter ({det}): curriculum "
+            "under-converged -- the run ended before these dims reached their DR range."
+        )
+    if stalled:
+        findings.append(
+            "DORAEMON dims STALLED well below their bound: "
+            + ", ".join(v["param"] for v in stalled)
+            + ". Check the per-dim success channel (an_off_doraemon_channel failure mode)."
+        )
 
     if not findings:
         return []
@@ -1876,12 +1997,12 @@ def main():
     tier = args.tier if args.tier > 0 else 2
     violations = []
     if tier >= 2:
-        t2_lines, violations = format_tier2(data)
+        t2_lines, violations = format_tier2(data, run_path=run_path)
         for line in t2_lines:
             print(line)
 
     # Diagnosis (always runs, checks both anomaly_tags AND data patterns)
-    diag = format_diagnosis(anomaly_tags, data)
+    diag = format_diagnosis(anomaly_tags, data, run_path=run_path)
     for line in diag:
         print(line)
 
