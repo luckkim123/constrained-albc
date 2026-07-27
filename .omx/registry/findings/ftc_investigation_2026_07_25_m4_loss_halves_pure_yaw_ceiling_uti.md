@@ -2,7 +2,7 @@
 title: "FTC investigation 2026-07-25: m4 loss halves pure-yaw ceiling (util x2) while roll/pitch stay buoyancy-dominated; literature + composition risks; verdict MEASURE-FIRST (deterministic m4-kill eval before any FTC training)"
 tags: ["fault-tolerant-control", "ftc", "thruster-fault", "authority-gap", "TAM", "yaw", "buoyancy", "thruster_util", "doraemon", "literature-review", "measure-first", "handoff"]
 created: 2026-07-25T06:49:57.904689
-updated: 2026-07-25T19:13:56.655562
+updated: 2026-07-27T03:40:34.759626
 sources: ["handoff-2026-07-24-ftc", "authority_gap.py-260725", "oms-scholar-researcher-surveys-260725"]
 links: ["real_robot_has_2_faulted_thrusters_user_judges_buoyancy_restorin.md", "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md", "tam_columns_must_match_robot_firmware_esc_channel_order_reorder.md", "plant_fix_needs_apply_before_retrain_main_hull_volume_0_009_0_00.md", "thruster_util_is_the_binding_constrainttrpo_constraint_in_7_of_7.md", "per_env_heavy_tail_analysis_current_capability_hard_ceiling_and.md", "an_off_doraemon_channel_that_costs_return_stalls_the_curriculum.md", "eval_metric_units_and_decision_floors_os_env_mean_is_percent_of.md"]
 category: reference
@@ -11,7 +11,7 @@ schemaVersion: 1
 qualityScore: 90
 qualityReasons: ["generic-only-tags"]
 status: needs-experiment
-blocked-on: "BOTH fault-DR arms TRAINED to completion 2026-07-25 (model_4999.pt saved). Remaining: post-training FTC-m4 fault eval (Arm A vs Arm B vs anchor), user-gated -- not run yet per user 'launch only' instruction"
+blocked-on: "IN FLIGHT (bg job badhwgm9z): fault eval of Arm A/B vs anchor (concurrent). Deploy dry-run = anchor pack (verified, no retrain). Post-compaction: A/B eval comparison + Stonefish deploy guide"
 ---
 
 # FTC investigation 2026-07-25: m4 loss halves pure-yaw ceiling (util x2) while roll/pitch stay buoyancy-dominated; literature + composition risks; verdict MEASURE-FIRST (deterministic m4-kill eval before any FTC training)
@@ -110,4 +110,22 @@ Both under all-6-channel thruster-health faults on the new DORAEMON fault-severi
 [EVIDENCE: launch logs full_a/full_b (Learning iteration 4999/5000, exit 0); checkpoints on disk; campaign-drift shows fault_dr runs]
 [CONFIDENCE: HIGH -- completion verified (final iter + checkpoint + no traceback)]
 [NEXT -- USER-GATED, not yet run per user instruction] Post-training FTC-m4 fault eval: run the committed deterministic-mask instrument (3e01f22) on Arm A, Arm B, and the anchor; robustness gain = anchor fault-delta minus each arm's fault-delta, horizontal (faithful) vs vertical (sim-caveat) flagged separately; discriminates H1 (privileged fault helps) vs H2 (arms equal / agnostic sufficient). NOT started -- user asked for launch only, no eval/analyze yet.
+
+---
+
+## Update (2026-07-27T03:40:34.759626)
+
+[STATE 2026-07-27 -- deploy dry-run (anchor) + concurrent fault eval, mid-flight] User decisions 2026-07-27: (1) Stonefish deploy TEST uses the EXISTING buoyfix anchor teacher+student (NO new training); (2) run the mask FTC-m4 fault eval CONCURRENTLY with deploy prep.
+
+[FINDING] "corrected version (TAM/buoyancy)" = the CURRENT buoyfix+posttam anchor plant, already in use. Buoyancy recenter (hull 0.009->0.00790) APPLIED; horizontal TAM (2026-07-06 measured) APPLIED; vertical TAM BLOCKED (unmeasured, m4 HW fault) + firmware-side per user; imu-45 firmware-deferred; max_thrust B0c screened NULL. So NO further sim correction is applicable/unapplied -- there is no separate "corrected plant" to retrain on.
+[EVIDENCE: needs-apply-before-retrain backlog reconciliation; wiki tam_vertical / sim_hydro / imu_45deg pages]
+[CONFIDENCE: HIGH]
+
+[FINDING] Anchor deploy pack VERIFIED complete + valid, no re-export needed: deploy/teacher_baseline_buoyfix/pack_buoyfix_s30_260722_234446/ (teacher=buoyanchor s30 model_4999, student=trpo_buoyfix_s30_tcn_260722_184632/student_999). MANIFEST parity CLOSED (teacher_act_max_err 7.15e-7, tcn_latent_max_err 1.19e-7, atol 1e-5, closed_in_container). dims obs72/action8/latent9/teacher_input81/tcn_history9. Copy at deploy/stonefish_test/pack/ with detailed DEPLOYMENT_NOTES.md (I/O contract, 2 normalization traps, obs assembly, [-1,1] clamp, 50Hz). Caveat: this student's latent is the known-collapsed one (8-16% reconstruction).
+[EVIDENCE: MANIFEST.json parity block; deploy/stonefish_test/DEPLOYMENT_NOTES.md]
+[CONFIDENCE: HIGH]
+
+[IN-FLIGHT -- background job badhwgm9z] Concurrent FTC-m4 fault eval running: 4 evals (Arm A + Arm B, healthy + m4-dead) on the fault-DR checkpoints, seed42, num_envs64, GPU0. Arm B needs --privileged-fault-obs (added to eval.py, commit 64247b9, on exp/fault-dr-training). Compare each arm's m4-dead degradation vs its own healthy AND vs the ANCHOR's existing evals (static_260725_164839 healthy / static_260725_165657 m4-dead). Verdict: H1 (privileged fault helps -> Arm B m4-dead delta << Arm A) vs H2 (arms equal -> agnostic sufficient). Do the comparison DIRECTLY (python + PNG), NOT the omx analyze skill (user standing preference).
+
+[NEXT -- pending, post-compaction] (1) When badhwgm9z finishes: verify 4 eval dirs, bite-check fault_thruster_4==0 on the dead arms, build the A/B/anchor comparison table + PNG, report H1/H2. (2) Stream A remaining: write the consolidated Stonefish deployment guide (source: DEPLOYMENT_NOTES.md + the plant-conventions reconciliation above); actual Stonefish RUN needs the separate Stonefish machine (I prepare pack+guide only).
 
