@@ -23,7 +23,9 @@ import json
 import os
 
 import numpy as np
-from scipy.io import savemat
+# scipy.io is imported lazily in _npz_to_mat: a module-level import makes the
+# whole _analyze package unimportable on system python3 (numpy 2.x + old scipy),
+# which the CSV/paired paths do not deserve.
 
 from ._shared import _load_npz
 
@@ -40,6 +42,8 @@ def _sanitize_mat_key(key: str) -> str:
 def _npz_to_mat(npz_path: str, out_path: str) -> None:
     """Convert one trajectory npz to a .mat. String arrays become MATLAB cell
     arrays (dtype=object) so savemat does not choke on them."""
+    from scipy.io import savemat
+
     data = _load_npz(npz_path)
     mat: dict[str, object] = {}
     for k, v in data.items():

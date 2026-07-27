@@ -6,9 +6,12 @@
 
 Subcommands:
     dr      --dirs --labels --output   multi-policy eval_dr .npz comparison plot
+    paired  --pair LABEL:BASE:TREAT    paired-condition delta table with decision floors
 
 Usage:
     python3 constrained_albc/analysis/compare.py dr --dirs A/ts B/ts --labels A B --output cmp.png
+    python3 constrained_albc/analysis/compare.py paired \\
+        --pair anchor:<healthy_eval_dir>:<fault_eval_dir> --bite fault_thruster_4
 """
 
 from __future__ import annotations
@@ -19,6 +22,7 @@ import os
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+from _analyze.paired import DEFAULT_AXES, DEFAULT_FIELDS, cmd_paired
 from common import DR_LEVELS, DR_SCALE
 from matplotlib.ticker import MultipleLocator
 
@@ -300,6 +304,22 @@ def main() -> None:
     p_dr.add_argument("--labels", nargs="+", required=True, help="Labels for each directory")
     p_dr.add_argument("--output", type=str, default=None, help="Output path prefix (default: auto)")
     p_dr.set_defaults(func=cmd_dr)
+
+    # -- paired (G4) --
+    p_pd = sub.add_parser("paired", help="Paired-condition delta table with decision floors.")
+    p_pd.add_argument(
+        "--pair", action="append", required=True, metavar="LABEL:BASE_DIR:TREAT_DIR",
+        help="Labelled (baseline-condition, treatment-condition) eval-dir pair; repeatable.",
+    )
+    p_pd.add_argument("--axes", nargs="+", default=list(DEFAULT_AXES), help="Axes to compare.")
+    p_pd.add_argument("--fields", nargs="+", default=list(DEFAULT_FIELDS), help="Metric fields to compare.")
+    p_pd.add_argument(
+        "--bite", type=str, default=None, metavar="NPZ_KEY",
+        help="Injection bite-check: npz key that must exist in treatment and differ "
+        "from baseline (e.g. fault_thruster_4). Fails the run on a silent no-op.",
+    )
+    p_pd.add_argument("--allow-no-bite", action="store_true", help="Downgrade a failed bite-check to a warning.")
+    p_pd.set_defaults(func=cmd_paired)
 
     args = parser.parse_args()
     args.func(args)
