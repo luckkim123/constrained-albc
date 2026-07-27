@@ -77,6 +77,12 @@
       "summary": "E-int: integration retrain composing the two adopted changes (max_thrust band D-a + fault-DR Arm A D-b) into the final teacher; H1 sub-additive vs H2 super-additive on the shared thruster actuation budget, with pre-registered ADOPT-WITH-CAVEAT middle zone",
       "label": "E-int",
       "added_at": "2026-07-27T07:06:45.568166+00:00"
+    },
+    {
+      "proposal_id": "next-20260727-174905",
+      "summary": "HydroRC: retrain with hydro DR nominals recentered to Stonefish-measured effective values (marinelab exp/hydro-recenter 016d1b1, damping is the gap: yaw ~45-100x/pitch-linear ~10x/translational 3-8x under old analytical nominal; heave added mass 1.0->8.0 cap-bound); single variable vs E-int, sequenced after E-int; H1 Stonefish limit cycle shrinks >=2x / H2 persists (seams dominate)",
+      "label": "HydroRC",
+      "added_at": "2026-07-27T08:52:16.580464+00:00"
     }
   ]
 }

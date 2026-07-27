@@ -1,0 +1,26 @@
+{
+  "acknowledged_gates": [
+    "container_cudnn_is_cu13_against_cu128_torch_every_conv1d_fails_s.md",
+    "imu_45deg_offset_pitch_negation_sim_uncompensated_2026_07_05.md",
+    "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md",
+    "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md"
+  ],
+  "gpu_gate": "Workstation GPU0 idle (700 MiB display-only, no training procs; nvidia-smi 2026-07-27 19:4x). Branches VERIFIED at queue time: constrained-albc exp/fault-dr-training (39e819a IS ancestor of HEAD 7e6dab9, config.py:254 max_thrust_scale=(0.85,1.15) live, no uncommitted code diff), marinelab exp/max-thrust-dr f45d612 (plant fix 7d45c2c verified ancestor). ~2650 iters at ~4.0 s/iter = ~3.0 h.",
+  "launch_delta": "RESUME of the crashed E-int run, NOT a new experiment. Original trpo_eint_s30_260727_160913 (launched 16:09, human-approved under this same proposal) died at iteration ~2390/5000 at 19:30 from an Isaac Sim INTERNAL fault: carb.tasking/Mutex.cpp:103 assertion (m_recursive) 'Recursion not allowed' -> C++ abort. NOT a policy/learning failure: last logged iteration showed Mean reward 260.5, Term/terminated 0.0000, roll_err 0.78 deg / pitch_err 0.68 deg, thr/util_mean 0.1487, no NaN/OOM/CUDA error and no Python traceback. Last checkpoint model_2350.pt (19:24). Possible contributing factor recorded for the record: startup warnings 'CUDA_VISIBLE_DEVICES is set ... can lead to undesired behavior or crashes' + RTX 4060 skipped as 'CUDA in bad state'; not proven causal. RESUME SEMANTICS verified in code before queuing: (a) ALBCConstraintEncoderRunner.load() restores doraemon_state.pt via _load_aux_state (constraint_encoder_runner.py:309-313), so the DORAEMON curriculum continues rather than resetting -- this is what keeps the pre-registered fault_severity check valid; (b) rsl_rl OnPolicyRunner.load() restores current_learning_iteration = loaded_dict['iter'] (on_policy_runner.py:325) and learn() computes tot_iter = start_iter + num_learning_iterations (line 97), THEREFORE --max_iterations must be 2650 (=5000-2350) so the run ends at 5000 and writes model_4999.pt, the exact checkpoint the pre-registered verdict rule names. Passing 5000 would run to 7350 and invalidate the comparison. (c) train.py:236 always mints a NEW run_id dir from the current timestamp, so the resume CANNOT append to the original dir -- hence a new tag. TAG eint_s30_rs2350 (not the bare eint_s30) for two reasons: two dirs sharing the tag would make agent.load_run regex ambiguous, and scripts/finalize_run_log.sh requires EXACTLY ONE dir matching *<name>_2* (it fails loud on 2 matches). Everything else IDENTICAL to the original: task Isaac-ConstrainedALBC-TRPO-v0, seed 30, 4096 envs, --fault (Arm A), --privileged-fault-obs ABSENT, group + wandb project teacher_baseline_buoyfix, GPU0. Knobs re-verified in the ORIGINAL run params/env.yaml: max_thrust_scale (0.85,1.15), fault.enable true, use_privileged_fault_obs false. VERDICT RULE UNCHANGED (pre-registered in next-20260727-155500, independent-reviewer FINAL APPROVE after 3 rounds); the resume does not touch it. One comparability caveat to carry into the report: the run is stitched across a process restart at iter 2350, so DORAEMON continues from restored state but the env RNG stream restarts -- a discontinuity absent from the anchor run. COMMAND: /isaac-sim/python.sh scripts/train.py --task Isaac-ConstrainedALBC-TRPO-v0 --num_envs 4096 --max_iterations 2650 --headless --fault --run_group teacher_baseline_buoyfix --logger wandb --log_project_name teacher_baseline_buoyfix agent.run_name=eint_s30_rs2350 agent.resume=true agent.load_run=teacher_baseline_buoyfix/trpo_eint_s30_260727_160913 agent.load_checkpoint=model_2350.pt",
+  "open_leads": [
+    "closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md",
+    "curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md",
+    "experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md",
+    "joint1_stage_1_gate_go_drift_is_real_on_unlimited_physics_not_th.md",
+    "on_policy_dagger_correction_for_the_buoyfix_student.md",
+    "reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md",
+    "roll_transient_is_worst_at_none_dr_and_improves_monotonically_as.md",
+    "stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md",
+    "thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md"
+  ],
+  "proposal_id": "next-20260727-155500",
+  "queued_at": "2026-07-27T10:42:28.703103+00:00",
+  "queued_commit": "7e6dab92eaf386a8d036c75d6991ccf408c3ce11",
+  "schema_version": 1,
+  "status": "pending approval"
+}
