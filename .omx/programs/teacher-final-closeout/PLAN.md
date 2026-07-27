@@ -670,15 +670,19 @@ their dates), `trpo_buoyanchordgx_s30_PLACEHOLDER` (user-DROPPED 2026-07-23).
 |:--|:--|:--|:--|
 | **E-ftc1** (head of queue) | `fault_severity` exposure budget: faster severity schedule at the FIXED 5000-iter budget (NOT an 8k extension — twice-net-negative lever, sections 5/11.5); exact lever (initial Beta spread vs per-dim pacing) pinned at proposal time | workstation, ~5 h, seed 30 paired vs Arm A | achieved `fault_severity` mean (engine G3 table) + the same paired healthy/m4-dead eval via `compare.py paired`, floors 11.6 item 3. WATCH: `thruster_util` (Arm A already at 0.902 of budget) — if it binds at higher severity, budget redesign becomes its own follow-up arm rather than a confound inside this one |
 | E-int | integration retrain (anchor + B0c band + fault-DR); **ARMED 2026-07-27 — D-a and D-b both adopted (user)**; whether E-ftc1 precedes it pends the user's re-judgment of E-ftc1 (the user declined an "8k extension" reading 2026-07-27; the as-designed probe is 5k-fixed, see 12.2 E-ftc1) | workstation, ~5 h | becomes the final teacher -> C4 |
-| E-obs | student observability retrain: +velocity (heave-first) obs channel +/- longer TCN history, WITH-vs-WITHOUT A/B, deterministic encoder (carries `closed_loop_latent_collapse` + `on_policy_dagger` handoff) | DGX (cuDNN works; distillation is machine-isolation-exempt, section 8) | E4 in-loop latent env-var reconstruction ratio vs the 8-16% collapse baseline |
+| E-obs | student observability retrain: +velocity (heave-first) obs channel +/- longer TCN history, WITH-vs-WITHOUT A/B, deterministic encoder (carries `closed_loop_latent_collapse` + `on_policy_dagger` handoff). **DEFERRED 2026-07-27 (user): teacher-first** — the student track (E-obs and the C4 pack) starts only AFTER the final teacher baseline exists, and distills from THAT teacher (E-int output), not the buoyfix anchor | DGX (cuDNN works; distillation is machine-isolation-exempt, section 8) — after E-int | E4 in-loop latent env-var reconstruction ratio vs the 8-16% collapse baseline |
 | E-lat | latency-DR — REMOTIVATED: blocker 1 (eval instrument) resolved 2026-07-24; blocker 2 (off-DORAEMON stall) now has a validated template = the `fault_severity` nominal-0 DORAEMON-dim pattern (mode 0.00, no stall, FaultDR-AB). Precondition: the anchor delay-sweep verdict from the Z4 instrument | workstation | error-vs-delay response, then a DR arm only if the sweep shows fragility |
 | E-t200 | ~~thruster nonlinear curve / deadband~~ **CORRECTED 2026-07-27: DEFER behind a bench measurement** — the wiki page's own 2026-07-02 decision is keep `enable_thrust_curve=False` until the real command->thrust curve is bench-measured; the curve is a PLANT MODEL (not a DR perturbation), and an unverified curve can manufacture a worse plant gap than the known linear one. The backlog's "unblocked" field overstates it; roster entry 12.2 as first written repeated that overstatement | — | bench-measure first, then re-propose |
 
-Sequencing: E-ftc1 precedes E-int (its winner may BE the fault-DR half of the final
-config). E-obs is student-side and DGX-hosted — runs in parallel with any workstation
-work. E-lat/E-t200 queue behind E-ftc1. Two-machine split explicit: workstation =
-E-ftc1/E-int (campaign-compared), DGX = E-obs, Stonefish machine = P1/yaw diagnostic
-(handoff pack delivered 2026-07-27, in motion).
+Sequencing (REVISED 2026-07-27, user: teacher-first): finalize the TEACHER first, then
+optimize the student against that baseline. Order = E-int (final teacher; E-ftc1 only if
+the user revives it first) -> C4 distillation + E-obs A/B on the E-int teacher -> E-lat
+(sweep first). E-t200 deferred behind a bench measurement (corrected row above). The
+earlier "E-obs runs in parallel" note is SUPERSEDED — the student track is serialized
+behind the final teacher by user decision. Two-machine split explicit: workstation =
+E-int (campaign-compared); DGX = idle-by-decision until the student track opens (then
+hosts distillation/E-obs); Stonefish machine = P1/yaw diagnostic (handoff pack delivered
+2026-07-27, in motion).
 
 ### 12.3 Zero-GPU work
 
