@@ -655,7 +655,7 @@ Human-facing consolidated PDF: `/workspace/.sp/reports/fault-dr-ab-260727/`.
 
 | gate | decision | interaction |
 |:--|:--|:--|
-| D-b (NEW) | adopt fault-DR (Arm A config) into the final teacher? Analysis recommends ADOPT; single-seed screening caveat (11.6 item 5) applies — a screening verdict, not a paper number | if adopted, the final teacher changes -> re-distill C4 + re-run the C4a/E4 latent diagnostic |
+| D-b | **DECIDED 2026-07-27: ADOPT (user)** — fault-DR (Arm A config family) enters the final teacher config; single-seed screening caveat (11.6 item 5) still applies to any paper claim. Final checkpoint pends E-ftc1 (its winner may supersede Arm A) and gate D-a (E-int if D-a also adopts) | final teacher changes -> re-distill C4 + re-run the C4a/E4 latent diagnostic |
 | D-a | B0c max_thrust band ADOPT-vs-KEEP (open since 2026-07-24, section 7) | if D-a AND D-b both adopt, neither existing checkpoint carries both changes -> E-int integration retrain becomes the final teacher |
 | D-c | cuDNN cu12 image fix vs DGX-hosted distillation (unchanged from section 5) | throughput-only; blocks nothing else |
 
