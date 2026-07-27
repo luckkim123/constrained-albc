@@ -5,8 +5,10 @@
     "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md",
     "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md"
   ],
+  "approved_at": "2026-07-27T16:09:13",
   "gpu_gate": "Workstation GPU0 idle (1.4 GB display-only, no training procs). Branches MUST be constrained-albc exp/fault-dr-training and marinelab exp/max-thrust-dr (f45d612; plant fix 7d45c2c verified as ancestor -- checking out marinelab main silently reverts the buoyancy correction). tests/test_max_thrust_identity.py: 2 passed (pre-flight, band still OFF). ~5 h at ~3.6 s/iter for 5000 iters.",
   "launch_delta": "E-int: integration retrain composing the two changes the human ADOPTED 2026-07-27 into the FINAL TEACHER. Two knobs vs anchor trpo_buoyanchor_s30_260722_134743, deliberate two-variable exception (each was already screened single-variable against that same anchor): (1) CODE EDIT constrained_albc/envs/main/config.py:250 max_thrust_scale (1.0,1.0)->(0.85,1.15) [gate D-a, no CLI flag exists]; (2) CLI --fault [gate D-b, Arm A]. --privileged-fault-obs intentionally ABSENT (Arm B rejected under H2). Everything else identical to the anchor: task Isaac-ConstrainedALBC-TRPO-v0, seed 30 ONLY, 4096 envs, 5000 iters, workstation GPU0. run_group=log_project=teacher_final (PROPOSED new purpose; keeping teacher_baseline_buoyfix is the alternative -- naming is the approver's call). agent.run_name=eint_s30. Verified no other plant drift since anchor commit baa1391: integral_gate_threshold default (0.10,0.10,0.10) equals the old hardcoded att_rp.sigma=yaw_vel.sigma=0.10 (rewards.py:108,110), Arm-B code paths all gated off, marinelab delta is the ceiling clamp only. Stated for the record and NOT byte-identical: DORAEMON NDIMS 20->21 (fault_severity), an unavoidable consequence of knob 2, already present in the FaultDR-AB baseline. VERDICT RULE (pre-registered, exhaustive, verified over the full instrument grid): (1) any none-level nominal floor breached (|d ss_error|>=0.10 deg or |d os_env_mean|>=10 pp, roll/pitch) OR thruster_util J_C/d_k>0.95 OR m4-dead advantage<2x at none/medium/hard -> H2 super-additive interaction; (2) else m4-dead in [2x,5x) -> ADOPT-WITH-CAVEAT; (3) else thruster_util<=0.91 -> H1 sub-additive, in (0.91,0.95] -> H1 with that instrument inconclusive (exact additivity computes to 0.950 = 0.805+0.048+0.097). soft level carries NO m4 threshold (Arm A was only 1.2-2.5x there). If H1: this checkpoint IS the final teacher and the student track (C4 + E-obs) opens against it. Seeds 31/32 are NOT in scope (single-seed screening).",
+  "launched_run_id": "trpo_eint_s30_260727_160913",
   "open_leads": [
     "closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md",
     "curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md",
@@ -22,5 +24,5 @@
   "queued_at": "2026-07-27T07:06:29.973453+00:00",
   "queued_commit": "f87618920eafbbd7c48125904577a5691c90ac49",
   "schema_version": 1,
-  "status": "pending approval"
+  "status": "approved and launched"
 }
