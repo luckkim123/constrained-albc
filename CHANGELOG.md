@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Analysis-engine upgrades from the fault-DR A/B analysis gaps (G1-G7, 2026-07-27;
+  commits `5a28c64..970fb0e`, review-fixed): (1) `analyze_training.py` interpreter
+  preflight (actionable `[PREFLIGHT]` exit 2 instead of the raw numpy-2/scipy
+  ImportError) plus an explicit `--deep` backend banner (CUSUM fallback vs PELT, HMM
+  skipped); (2) `.omx/profile/tb_final.py` -- the supported TB last-window reducer on
+  this machine (`omx reduce tb-final` resolves to system python3 without tensorboard);
+  (3) per-parameter DORAEMON curriculum table + `[DIAGNOSIS]` aggregation
+  (SATURATED/EXPANDING/STALLED/CONTRACTED per dim; reproduces the hand-derived
+  `fault_severity` 7.7%-of-range EXPANDING call); (4) `compare.py paired` --
+  paired-condition (healthy-vs-fault style) delta table with pre-registered decision
+  floors and a first-class injection bite-check that fails on byte-identical or absent
+  condition arrays; (5) eval npz always records a `fault_injection` scalar flag
+  (static/segmented/periodic) while healthy evals keep fault_* keys absent-by-design;
+  (6) enhanced `summary.json` now self-labels with `units` + `decision_floors` blocks
+  (the pre-G6 "no new key" byte-identity invariant was deliberately retired -- metric
+  values unchanged); (7) `analyze_training.py` accepts experiments-tree run dirs via
+  the `train/` symlink. Also: `_analyze/export.py`'s module-level `scipy.io` import
+  made lazy so the `_analyze` package imports on plain python3.
+
 - The 4 attitude-only ablation arms are registered (2026-07-23):
   `Isaac-ConstrainedALBC-{NoEncoder,PPO,TRPO-NoIPO,PPO-Enc}-v0` under `envs/main`,
   mirroring the `Full-*` id scheme. The runner cfgs, `ALBCNoConstraintEnvCfg` and the
