@@ -21,6 +21,36 @@ import os
 import sys
 from pathlib import Path
 
+
+def _preflight():
+    """Fail fast with an actionable message when this interpreter cannot run the engine.
+
+    System python3 (numpy 2.x + pre-numpy-2 scipy) dies inside scipy with
+    "cannot import name 'Inf' from 'numpy'", and lacks tensorboard entirely.
+    Only the Isaac Sim interpreter has a compatible numpy/scipy/tensorboard stack.
+    """
+    problems = []
+    try:
+        import scipy.optimize  # noqa: F401
+    except Exception as exc:
+        problems.append(f"scipy unusable: {type(exc).__name__}: {exc}")
+    try:
+        import tensorboard  # noqa: F401
+    except Exception as exc:
+        problems.append(f"tensorboard unusable: {type(exc).__name__}: {exc}")
+    if problems:
+        sys.stderr.write(
+            "[PREFLIGHT] this interpreter cannot run the analysis engine:\n"
+            + "".join(f"  - {p}\n" for p in problems)
+            + f"  interpreter: {sys.executable} (python {sys.version.split()[0]})\n"
+            + "Run under the Isaac Sim interpreter instead:\n"
+            + f"  /isaac-sim/python.sh {Path(__file__).resolve()} ...\n"
+        )
+        sys.exit(2)
+
+
+_preflight()
+
 import numpy as np
 import yaml
 
@@ -1074,6 +1104,12 @@ def format_deep(data):
     Uses detect_plateau instead of fit_convergence for more robust results.
     """
     lines = []
+    # Name the backend that actually produced the results: a silent fallback is a
+    # correctness trap for anyone citing "PELT changepoints" / "HMM regimes".
+    if not tslib.HAS_RUPTURES:
+        lines.append("[DEEP] ruptures unavailable -> changepoints via CUSUM fallback (not PELT)")
+    if not tslib.HAS_HMMLEARN:
+        lines.append("[DEEP] hmmlearn unavailable -> HMM regime detection skipped")
     for label, tag, _increasing in _resolve_full_analysis_metrics(data):
         vals = _values(data, tag)
         if not vals:
