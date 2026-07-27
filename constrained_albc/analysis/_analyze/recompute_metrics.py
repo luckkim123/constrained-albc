@@ -33,6 +33,73 @@ from common import (
 
 from ._shared import _load_npz
 
+# ---------------- Units + decision floors (G6, 2026-07-27) ----------------
+# Machine-readable unit contract for the enhanced summary.json. The mislabel
+# ("deg" printed on percent-of-step os values) has propagated into reports and
+# planning docs twice; downstream tables label themselves from here, not from
+# the author's memory. os/us are PERCENT OF THE COMMANDED STEP (pp), so
+# deg = pp x step_mag (roll/pitch step 30 deg -> deg = pp * 0.30); n_gt20
+# counts envs over 20 pp, NOT 20 deg.
+
+AXIS_UNITS = {"roll": "deg", "pitch": "deg", "att_norm": "deg",
+              "vx": "m/s", "vy": "m/s", "vz": "m/s", "yaw": "rad/s"}
+
+# "axis" = inherit the axis unit from AXIS_UNITS.
+FIELD_UNITS = {
+    "ss_error": "axis", "ss_error_std": "axis",
+    "ss_jitter": "axis", "ss_jitter_std": "axis",
+    "rise_time": "s", "rise_time_std": "s",
+    "os_env_mean": "pp_of_step", "os_env_std": "pp_of_step",
+    "os_env_median": "pp_of_step", "os_env_q90": "pp_of_step",
+    "us_env_mean": "pp_of_step", "us_env_std": "pp_of_step",
+    "n_gt20": "envs", "n_gt40": "envs", "n_us_lt_minus20": "envs",
+    "survival_pct": "%",
+}
+
+
+def unit_for(axis: str, field: str) -> str:
+    """Unit string for metrics[level][axis][field] ('' when unknown)."""
+    u = FIELD_UNITS.get(field, "")
+    return AXIS_UNITS.get(axis, "") if u == "axis" else u
+
+
+def units_block() -> dict:
+    """The `units` block embedded in the enhanced summary.json."""
+    return {
+        "axis_units": dict(AXIS_UNITS),
+        "field_units": dict(FIELD_UNITS),
+        "note": "field_units 'axis' inherits axis_units; os/us fields are percent of "
+                "the commanded step (deg = pp x step_mag; roll/pitch step 30 deg -> "
+                "deg = pp * 0.30); n_gt20 counts envs over 20 pp, not 20 deg.",
+    }
+
+
+# Pre-registered decision floors (screening protocol: n=1 paired, same machine):
+# a paired delta below its floor is machine/seed noise, not a finding. Unit-bound:
+# ss_error in deg (attitude axes only), os_env_mean in pp of step (10 pp = 3.0 deg
+# on a 30 deg step), n_gt20 in envs (of 64). Flat numeric dict on purpose --
+# export.py's CSV flattener skips non-dict level values, so this block never
+# leaks into long-format rows.
+DECISION_FLOORS = {"ss_error": 0.10, "os_env_mean": 10.0, "n_gt20": 15.0}
+DECISION_FLOORS_PROTOCOL = "screening n=1 paired same-machine; |delta| below floor = noise"
+
+
+def floor_verdict(field: str, delta: float, axis: str | None = None) -> str:
+    """REAL / BELOW-FLOOR / NO-FLOOR verdict for a paired delta on `field`.
+
+    ss_error's floor is registered in deg, so it applies to attitude axes only
+    (yaw ss_error is rad/s -> NO-FLOOR). NaN deltas are NO-FLOOR.
+    """
+    floor = DECISION_FLOORS.get(field)
+    if floor is None:
+        return "NO-FLOOR"
+    if field == "ss_error" and axis is not None and AXIS_UNITS.get(axis) != "deg":
+        return "NO-FLOOR"
+    if not np.isfinite(delta):
+        return "NO-FLOOR"
+    return "REAL" if abs(delta) >= floor else "BELOW-FLOOR"
+
+
 _AX_LIN = [("lin_vel_x", "target_vx", "vx"),
            ("lin_vel_y", "target_vy", "vy"),
            ("lin_vel_z", "target_vz", "vz")]

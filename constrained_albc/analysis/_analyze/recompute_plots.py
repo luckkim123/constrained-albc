@@ -176,13 +176,22 @@ def _write_run_json(run_dir: str, metrics: dict, data_subdir: str = "eval_dr") -
     # present. A 4-level (no-ood) summary gains NO new key (byte-identical). Build
     # a shallow copy so the caller's in-memory metrics dict (used for plotting)
     # is not mutated.
-    from .recompute_metrics import _compute_generalization_gap
+    from .recompute_metrics import (
+        DECISION_FLOORS,
+        DECISION_FLOORS_PROTOCOL,
+        _compute_generalization_gap,
+        units_block,
+    )
 
-    payload = metrics
+    payload = dict(metrics)
     gap = _compute_generalization_gap(metrics)
     if gap:
-        payload = dict(metrics)
         payload["generalization_gap"] = gap
+    # G6: self-labelling summary -- units + pre-registered decision floors travel
+    # with the numbers so no downstream table relies on the author's memory.
+    payload["units"] = units_block()
+    payload["decision_floors"] = dict(DECISION_FLOORS)
+    payload["decision_floors_protocol"] = DECISION_FLOORS_PROTOCOL
     with open(out, "w") as f:
         json.dump(payload, f, indent=2,
                   default=lambda o: None if (isinstance(o, float) and np.isnan(o)) else o)
