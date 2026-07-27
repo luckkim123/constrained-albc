@@ -686,8 +686,11 @@ hosts distillation/E-obs); Stonefish machine = P1/yaw diagnostic (handoff pack d
 
 ### 12.3 Zero-GPU work
 
-- B0c formal exp-analyze report: the run has `eval/static_260724_073758` and a section-7
-  verdict but NO `analysis/` dir (verified on disk 2026-07-27) — close the SSOT gap.
+- B0c formal exp-analyze report: **DONE 2026-07-27** — `analysis/diagnose-20260727-151917`
+  (13 findings, coverage 7/7 + cross-run refs green, independent review: revise -> fixes
+  verified -> approve). NULL-on-nominal reproduced on the section-7 pairing and robust to
+  the anchor-eval choice; watch items for E-int: pitch hard DC/CV, thruster_util binding
+  0.805->0.853, cost-critic +25% (priv-obs-invisible parameter).
 - Ledger hygiene: mark FTC-m4 / FaultDR-AB proposal outcomes in the `teacher_baseline_buoyfix`
   plan (both still `derived_status: planned`) and attach the `fault_dr` campaign to this program.
 

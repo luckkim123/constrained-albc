@@ -1,16 +1,16 @@
 ---
 title: "FTC investigation 2026-07-25: m4 loss halves pure-yaw ceiling (util x2) while roll/pitch stay buoyancy-dominated; literature + composition risks; verdict MEASURE-FIRST (deterministic m4-kill eval before any FTC training)"
-tags: ["fault-tolerant-control", "ftc", "thruster-fault", "authority-gap", "TAM", "yaw", "buoyancy", "thruster_util", "doraemon", "literature-review", "measure-first", "handoff"]
+tags: ["fault-tolerant-control", "ftc", "thruster-fault", "authority-gap", "TAM", "yaw", "buoyancy", "thruster_util", "doraemon", "literature-review", "measure-first", "handoff", "closed"]
 created: 2026-07-25T06:49:57.904689
-updated: 2026-07-27T03:40:34.759626
-sources: ["handoff-2026-07-24-ftc", "authority_gap.py-260725", "oms-scholar-researcher-surveys-260725"]
-links: ["real_robot_has_2_faulted_thrusters_user_judges_buoyancy_restorin.md", "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md", "tam_columns_must_match_robot_firmware_esc_channel_order_reorder.md", "plant_fix_needs_apply_before_retrain_main_hull_volume_0_009_0_00.md", "thruster_util_is_the_binding_constrainttrpo_constraint_in_7_of_7.md", "per_env_heavy_tail_analysis_current_capability_hard_ceiling_and.md", "an_off_doraemon_channel_that_costs_return_stalls_the_curriculum.md", "eval_metric_units_and_decision_floors_os_env_mean_is_percent_of.md"]
+updated: 2026-07-27T05:07:35.167958
+sources: ["handoff-2026-07-24-ftc", "authority_gap.py-260725", "oms-scholar-researcher-surveys-260725", "diagnose-20260727-140324"]
+links: ["real_robot_has_2_faulted_thrusters_user_judges_buoyancy_restorin.md", "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md", "tam_columns_must_match_robot_firmware_esc_channel_order_reorder.md", "plant_fix_needs_apply_before_retrain_main_hull_volume_0_009_0_00.md", "thruster_util_is_the_binding_constrainttrpo_constraint_in_7_of_7.md", "per_env_heavy_tail_analysis_current_capability_hard_ceiling_and.md", "an_off_doraemon_channel_that_costs_return_stalls_the_curriculum.md", "eval_metric_units_and_decision_floors_os_env_mean_is_percent_of.md", "ftc_fault_dr_a_b_result_2026_07_27_fault_dr_adopted_5_12x_less_m.md"]
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
-status: needs-experiment
+qualityScore: 80
+qualityReasons: ["no-source-marker"]
+status: resolved
 blocked-on: "IN FLIGHT (bg job badhwgm9z): fault eval of Arm A/B vs anchor (concurrent). Deploy dry-run = anchor pack (verified, no retrain). Post-compaction: A/B eval comparison + Stonefish deploy guide"
 ---
 
@@ -129,3 +129,24 @@ Both under all-6-channel thruster-health faults on the new DORAEMON fault-severi
 
 [NEXT -- pending, post-compaction] (1) When badhwgm9z finishes: verify 4 eval dirs, bite-check fault_thruster_4==0 on the dead arms, build the A/B/anchor comparison table + PNG, report H1/H2. (2) Stream A remaining: write the consolidated Stonefish deployment guide (source: DEPLOYMENT_NOTES.md + the plant-conventions reconciliation above); actual Stonefish RUN needs the separate Stonefish machine (I prepare pack+guide only).
 
+---
+
+## Update (2026-07-27T05:07:14.983590)
+
+
+
+---
+
+## CLOSED 2026-07-27 — the FTC lead this page opened is resolved
+
+The measure-first eval ran, the fault-DR A/B trained and was analysed, and the deploy dry-run pack + Stonefish handoff are prepared. Outcome, in one line: **fault-DR ADOPTED (5-12x less m4-dead degradation, zero fault-induced terminations, mechanism = heavy-tail removal); privileged fault obs NOT adopted (H2, no floor-clearing advantage on either axis); the fault_severity curriculum ended UNDER-EXPANDED at 8-10% of its range, so the ceiling is unmeasured.** Full result page: [[ftc_fault_dr_a_b_result_2026_07_27_fault_dr_adopted_5_12x_less_m]]. Analysis SSOT: experiments/rsl_rl/albc_trpo_teacher/fault_dr/trpo_faultdr_agnostic_s30_260725_183121/analysis/diagnose-20260727-140324/. Human-facing consolidated PDF: /workspace/.sp/reports/fault-dr-ab-260727/.
+
+Two of this page's own composition risks are now settled by data: risk (1) DORAEMON stall did NOT materialise (the nominal-0 curriculum-knob design worked, mode=0.00 on both arms) and risk (3) discrete-fault representation resolved AGAINST the privileged-obs remedy at the teacher level (Arm B's conditioning took hold mechanically -- 2x encoder gradient, unstretched thruster_util -- but did not convert). Risk (2) thruster_util fighting compensation is CONFIRMED and now the sharpest open lever: the fault-blind arm spends 0.902 of its budget against the anchor's 0.805, margin halved. Risk (4) the student channel remains untested and is where Xu et al.'s prediction actually applies.
+
+The remaining open work from this lead is NO LONGER the A/B: it is (a) the curriculum-budget probe (same config, longer or faster severity schedule, to find where the fault-robustness curve turns over), (b) a thruster_util budget redesign now that it can be varied without confounding the A/B, and (c) vertical-fault fidelity, still blocked on [[tam_vertical_single_motor_dual_esc_measured_2026_07_05]] (sim models m0/m3 as two independent channels; the real robot has one motor on dual ESC, so only horizontal faults can be injected faithfully -- which is why the eval was m4-only).
+
+---
+
+## Update (2026-07-27T05:07:35.167958)
+
+[STATUS 2026-07-27] RESOLVED. The measure-first eval, the fault-DR A/B and the deploy pack are all done; see the CLOSED section above and the result page [[ftc_fault_dr_a_b_result_2026_07_27_fault_dr_adopted_5_12x_less_m]]. Successor open work is tracked there (curriculum-budget probe, thruster_util redesign, vertical-fault fidelity), not here.

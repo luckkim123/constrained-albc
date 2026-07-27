@@ -1,15 +1,15 @@
 ---
 title: "DORAEMON reactivity makes every single-variable probe two-variable: the curriculum is the uncontrolled second variable (p7_tail e1/e3/e4)"
-tags: ["doraemon", "curriculum", "confound", "experiment-design", "p7_tail", "comparability", "performance_lb", "alpha-floor"]
+tags: ["doraemon", "curriculum", "confound", "experiment-design", "p7_tail", "comparability", "performance_lb", "alpha-floor", "b0c"]
 created: 2026-07-20T05:15:15.337690
-updated: 2026-07-20T05:16:10.114042
-sources: ["trpo_e1_latdr_260713_124923", "trpo_e3_extend10k_260713_224822", "trpo_e4_xyprune_260714_090201", "trpo_baseline_260713_031325"]
+updated: 2026-07-27T06:43:06.022569
+sources: ["trpo_e1_latdr_260713_124923", "trpo_e3_extend10k_260713_224822", "trpo_e4_xyprune_260714_090201", "trpo_baseline_260713_031325", "diagnose-20260727-151917"]
 links: ["eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md", "an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md", "doraemon_over_widens_then_oscillates_when_a_converged_teacher_is.md", "xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e.md", "doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md", "cross_run_dr_comparability_eval_py_doraemon_dr_from_already_prov.md"]
 category: convention
 confidence: high
 schemaVersion: 1
-qualityScore: 70
-qualityReasons: ["no-numeric-token", "generic-only-tags"]
+qualityScore: 80
+qualityReasons: ["no-source-marker"]
 ---
 
 # DORAEMON reactivity makes every single-variable probe two-variable: the curriculum is the uncontrolled second variable (p7_tail e1/e3/e4)
@@ -90,3 +90,8 @@ Link-target correction for the references above, whose slugs end in a character 
 [[an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md]] and the root concept is
 [[doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md]].
 
+---
+
+## Update (2026-07-27T06:43:06.022569)
+
+B0c example (2026-07-27): even an OFF-curriculum uniform DR axis feeds back through the success gate. The max_thrust +/-15% band is uniform per-env DR (not a DORAEMON dim, none-collapsed at eval), yet the paired B0c run ended with doraemon_success_rate 0.81 -> 0.73, DORAEMON/entropy_before -22.77 -> -24.68 (tb_final.py window=10), and the driven dims at 9-11% of range vs the anchor's 13-14% (engine TIER 2 DORAEMON table, both runs). So the band's tiny eval deltas are partly curriculum-mediated -- the two-variable caveat applies even when the added axis is outside DORAEMON. Source: B0c analysis diagnose-20260727-151917, doraemon section.

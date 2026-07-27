@@ -6743,3 +6743,387 @@
 - **Pages:** engine_gap_analyze_training_py_needs_the_logs_run_dir_not_the_ex.md
 - **Summary:** updated 'engine-gap: analyze_training.py needs the logs/ run dir, not the experiments/ run dir (events under train symlink)'
 
+## [2026-07-27T05:06:53.609682] add
+- **Pages:** ftc_fault_dr_a_b_result_2026_07_27_fault_dr_adopted_5_12x_less_m.md
+- **Summary:** created 'FTC fault-DR A/B result 2026-07-27: fault-DR adopted (5-12x less m4-dead degradation, zero terminations, tail removal); privileged fault obs NOT adopted (H2); fault_severity curriculum ended under-expanded at 8-10% of range'
+
+## [2026-07-27T05:07:14.983590] add
+- **Pages:** ftc_investigation_2026_07_25_m4_loss_halves_pure_yaw_ceiling_uti.md
+- **Summary:** updated 'FTC investigation 2026-07-25: m4 loss halves pure-yaw ceiling (util x2) while roll/pitch stay buoyancy-dominated; literature + composition risks; verdict MEASURE-FIRST (deterministic m4-kill eval before any FTC training)'
+
+## [2026-07-27T05:07:35.167958] add
+- **Pages:** ftc_investigation_2026_07_25_m4_loss_halves_pure_yaw_ceiling_uti.md
+- **Summary:** updated 'FTC investigation 2026-07-25: m4 loss halves pure-yaw ceiling (util x2) while roll/pitch stay buoyancy-dominated; literature + composition risks; verdict MEASURE-FIRST (deterministic m4-kill eval before any FTC training)'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** fault_dr_does_not_cost_healthy_attitude_steady_state_accuracy_on.md
+- **Summary:** created 'Fault-DR does NOT cost healthy attitude steady-state accuracy on this plant — bo'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** the_nominal_cost_that_is_real_sits_on_arm_a_s_roll_transient_and.md
+- **Summary:** created "The nominal cost that IS real sits on Arm A's roll transient, and it is Arm-A-sp"
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** at_hard_dr_the_anchor_s_healthy_yaw_error_is_already_4_5x_the_ar.md
+- **Summary:** created "At `hard` DR the anchor's healthy yaw error is already 4-5x the arms' (0.0438 vs"
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** fault_dr_training_reduces_m4_dead_attitude_degradation_by_5_12x_.md
+- **Summary:** created 'Fault-DR training reduces m4-dead attitude degradation by 5-12x versus the ancho'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** the_dominant_failure_mode_the_anchor_suffers_is_a_heavy_tail_not.md
+- **Summary:** created 'The dominant failure mode the anchor suffers is a HEAVY TAIL, not a DC bias — an'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** h1_privileged_fault_obs_helps_is_not_supported_arm_b_leads_at_no.md
+- **Summary:** created 'H1 (privileged fault obs helps) is NOT supported: Arm B leads at none/soft/mediu'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** the_hard_level_reversal_has_a_mechanism_visible_in_the_tail_stat.md
+- **Summary:** created 'The hard-level reversal has a mechanism visible in the tail statistics: Arm B de'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** yaw_is_the_one_axis_where_arm_a_is_consistently_if_slightly_ahea.md
+- **Summary:** created 'Yaw is the one axis where Arm A is consistently (if slightly) ahead of Arm B und'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** the_entire_cost_of_fault_dr_concentrates_on_the_yaw_tracking_ter.md
+- **Summary:** created 'The entire cost of fault-DR concentrates on the YAW tracking term, not on attitu'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** arm_b_pays_about_a_third_of_arm_a_s_yaw_reward_cost_which_is_the.md
+- **Summary:** created "Arm B pays about a third of Arm A's yaw-reward cost, which is the one place the "
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** optimisation_health_is_indistinguishable_across_all_three_runs_t.md
+- **Summary:** created "Optimisation health is indistinguishable across all three runs; the engine's `en"
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** both_arms_carry_more_residual_entropy_than_the_anchor_i_e_fault_.md
+- **Summary:** created 'Both arms carry MORE residual entropy than the anchor, i.e. fault-DR slightly sl'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** pelt_changepoints_are_near_identical_across_runs_so_the_added_cu.md
+- **Summary:** created 'PELT changepoints are near-identical across runs, so the added curriculum dimens'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** the_asymmetric_critic_absorbed_the_fault_dimension_without_degra.md
+- **Summary:** created 'The asymmetric critic absorbed the fault dimension without degrading: the value '
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** arm_b_s_critic_converges_better_than_arm_a_s_on_both_losses_cons.md
+- **Summary:** created "Arm B's critic converges better than Arm A's on both losses, consistent with the"
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** the_privileged_fault_input_measurably_increases_encoder_learning.md
+- **Summary:** created "The privileged fault input measurably increases encoder learning signal: Arm B's"
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** no_latent_collapse_and_no_softsign_saturation_in_any_run_z_std_s.md
+- **Summary:** created 'No latent collapse and no softsign saturation in any run: `z_std` sits at 0.39-0'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** thruster_util_remains_the_single_binding_constraint_in_all_three.md
+- **Summary:** created '`thruster_util` remains the single binding constraint in all three runs — this i'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** the_binding_constraint_asymmetry_is_the_clearest_training_side_d.md
+- **Summary:** created 'The binding-constraint asymmetry is the clearest training-side difference betwee'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** no_barrier_pathology_anywhere_zero_spikes_above_0_01_in_all_thre.md
+- **Summary:** created 'No barrier pathology anywhere: zero spikes above 0.01 in all three runs and the '
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** the_doraemon_stall_this_design_was_built_to_avoid_did_not_happen.md
+- **Summary:** created 'The DORAEMON stall this design was built to avoid did NOT happen. Neither arm en'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** but_the_curriculum_also_never_saturated_fault_severity_reached_o.md
+- **Summary:** created 'But the curriculum also never SATURATED: `fault_severity` reached only 7.7% (Arm'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** consequently_the_robustness_reported_above_was_bought_with_a_ver.md
+- **Summary:** created 'Consequently the robustness reported above was bought with a very small fault ex'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** arm_b_s_curriculum_ran_24_further_than_arm_a_s_which_confounds_t.md
+- **Summary:** created "Arm B's curriculum ran ~24% further than Arm A's, which confounds the arm compar"
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** fault_dr_does_not_cost_healthy_attitude_steady_state_accuracy_on.md
+- **Summary:** updated 'Fault-DR does NOT cost healthy attitude steady-state accuracy on this plant — bo'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** the_nominal_cost_that_is_real_sits_on_arm_a_s_roll_transient_and.md
+- **Summary:** updated "The nominal cost that IS real sits on Arm A's roll transient, and it is Arm-A-sp"
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** at_hard_dr_the_anchor_s_healthy_yaw_error_is_already_4_5x_the_ar.md
+- **Summary:** updated "At `hard` DR the anchor's healthy yaw error is already 4-5x the arms', so fault-"
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** fault_dr_training_reduces_m4_dead_attitude_degradation_by_4_12x_.md
+- **Summary:** created 'Fault-DR training reduces m4-dead attitude degradation by 4-12x versus the ancho'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** the_dominant_failure_mode_the_anchor_suffers_is_a_heavy_tail_not.md
+- **Summary:** updated 'The dominant failure mode the anchor suffers is a HEAVY TAIL, not a DC bias — an'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** h1_privileged_fault_obs_helps_is_not_supported_on_the_attitude_a.md
+- **Summary:** created 'H1 (privileged fault obs helps) is NOT supported on the attitude axes: Arm B lea'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** the_hard_level_reversal_has_a_mechanism_visible_in_the_tail_stat.md
+- **Summary:** updated 'The hard-level reversal has a mechanism visible in the tail statistics: Arm B de'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** on_yaw_steady_state_arm_a_is_consistently_ahead_of_arm_b_under_f.md
+- **Summary:** created 'On yaw steady state Arm A is consistently ahead of Arm B under fault, on the axi'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** on_yaw_transient_not_steady_state_arm_a_beats_arm_b_at_all_four_.md
+- **Summary:** created 'On yaw TRANSIENT — not steady state — Arm A beats Arm B at all four DR levels by'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** the_same_ordering_holds_on_the_yaw_heavy_tail_count_and_there_ar.md
+- **Summary:** created 'The same ordering holds on the yaw heavy-tail count, and there Arm A stays under'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** the_entire_cost_of_fault_dr_concentrates_on_the_yaw_tracking_ter.md
+- **Summary:** updated 'The entire cost of fault-DR concentrates on the YAW tracking term, not on attitu'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** arm_b_pays_about_a_third_of_arm_a_s_yaw_reward_cost_which_is_the.md
+- **Summary:** updated "Arm B pays about a third of Arm A's yaw-reward cost, which is the one place the "
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** optimisation_health_is_indistinguishable_across_all_three_runs_t.md
+- **Summary:** updated "Optimisation health is indistinguishable across all three runs; the engine's `en"
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** both_arms_carry_more_residual_entropy_than_the_anchor_i_e_fault_.md
+- **Summary:** updated 'Both arms carry MORE residual entropy than the anchor, i.e. fault-DR slightly sl'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** pelt_changepoints_are_near_identical_across_runs_so_the_added_cu.md
+- **Summary:** updated 'PELT changepoints are near-identical across runs, so the added curriculum dimens'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** the_asymmetric_critic_absorbed_the_fault_dimension_without_degra.md
+- **Summary:** updated 'The asymmetric critic absorbed the fault dimension without degrading: the value '
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** arm_b_s_critic_converges_better_than_arm_a_s_on_both_losses_cons.md
+- **Summary:** updated "Arm B's critic converges better than Arm A's on both losses, consistent with the"
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** the_privileged_fault_input_measurably_increases_encoder_learning.md
+- **Summary:** updated "The privileged fault input measurably increases encoder learning signal: Arm B's"
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** no_latent_collapse_and_no_softsign_saturation_in_any_run_and_arm.md
+- **Summary:** created "No latent collapse and no softsign saturation in any run, and Arm B's latent is "
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** thruster_util_remains_the_single_binding_constraint_in_all_three.md
+- **Summary:** updated '`thruster_util` remains the single binding constraint in all three runs — now 8 '
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** the_binding_constraint_asymmetry_is_the_clearest_training_side_d.md
+- **Summary:** updated 'The binding-constraint asymmetry is the clearest training-side difference betwee'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** no_barrier_pathology_anywhere_zero_spikes_above_0_01_in_all_thre.md
+- **Summary:** updated 'No barrier pathology anywhere: zero spikes above 0.01 in all three runs and the '
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** the_doraemon_stall_this_design_was_built_to_avoid_did_not_happen.md
+- **Summary:** updated 'The DORAEMON stall this design was built to avoid did NOT happen — neither arm e'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** but_the_curriculum_also_never_saturated_fault_severity_reached_o.md
+- **Summary:** updated 'But the curriculum also never SATURATED: `fault_severity` reached only 7.7% (Arm'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** consequently_the_robustness_reported_above_was_bought_with_a_ver.md
+- **Summary:** updated 'Consequently the robustness reported above was bought with a very small fault ex'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** arm_b_s_curriculum_ran_24_further_than_arm_a_s_which_confounds_t.md
+- **Summary:** updated "Arm B's curriculum ran ~24% further than Arm A's, which confounds the arm compar"
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** fault_dr_does_not_cost_healthy_attitude_steady_state_accuracy_on.md
+- **Summary:** updated 'Fault-DR does NOT cost healthy attitude steady-state accuracy on this plant — bo'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** the_nominal_cost_that_is_real_sits_on_arm_a_s_roll_transient_and.md
+- **Summary:** updated "The nominal cost that IS real sits on Arm A's roll transient, and it is Arm-A-sp"
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** at_hard_dr_the_anchor_s_healthy_yaw_error_is_already_4_5x_the_ar.md
+- **Summary:** updated "At `hard` DR the anchor's healthy yaw error is already 4-5x the arms', so fault-"
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** fault_dr_training_reduces_m4_dead_attitude_degradation_by_5_12x_.md
+- **Summary:** updated 'Fault-DR training reduces m4-dead attitude degradation by 5-12x versus the ancho'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** the_dominant_failure_mode_the_anchor_suffers_is_a_heavy_tail_not.md
+- **Summary:** updated 'The dominant failure mode the anchor suffers is a HEAVY TAIL, not a DC bias — an'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** h1_privileged_fault_obs_helps_is_not_supported_on_the_attitude_a.md
+- **Summary:** updated 'H1 (privileged fault obs helps) is NOT supported on the attitude axes: Arm B lea'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** the_hard_level_reversal_has_a_mechanism_visible_in_the_tail_stat.md
+- **Summary:** updated 'The hard-level reversal has a mechanism visible in the tail statistics: Arm B de'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** on_yaw_steady_state_arm_a_is_consistently_ahead_of_arm_b_under_f.md
+- **Summary:** updated 'On yaw steady state Arm A is consistently ahead of Arm B under fault, on the axi'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** on_the_yaw_transient_the_arm_ordering_does_not_reverse_arm_a_is_.md
+- **Summary:** created 'On the yaw TRANSIENT the arm ordering does NOT reverse — Arm A is ahead at all f'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** the_same_picture_holds_on_the_yaw_heavy_tail_count_arm_a_is_ahea.md
+- **Summary:** created 'The same picture holds on the yaw heavy-tail count: Arm A is ahead 4/4 and is th'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** the_entire_cost_of_fault_dr_concentrates_on_the_yaw_tracking_ter.md
+- **Summary:** updated 'The entire cost of fault-DR concentrates on the YAW tracking term, not on attitu'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** arm_b_pays_about_a_third_of_arm_a_s_yaw_reward_cost_which_is_the.md
+- **Summary:** updated "Arm B pays about a third of Arm A's yaw-reward cost, which is the one place the "
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** optimisation_health_is_indistinguishable_across_all_three_runs_t.md
+- **Summary:** updated "Optimisation health is indistinguishable across all three runs; the engine's `en"
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** both_arms_carry_more_residual_entropy_than_the_anchor_i_e_fault_.md
+- **Summary:** updated 'Both arms carry MORE residual entropy than the anchor, i.e. fault-DR slightly sl'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** pelt_changepoints_are_near_identical_across_runs_so_the_added_cu.md
+- **Summary:** updated 'PELT changepoints are near-identical across runs, so the added curriculum dimens'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** the_asymmetric_critic_absorbed_the_fault_dimension_without_degra.md
+- **Summary:** updated 'The asymmetric critic absorbed the fault dimension without degrading: the value '
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** arm_b_s_critic_converges_better_than_arm_a_s_on_both_losses_cons.md
+- **Summary:** updated "Arm B's critic converges better than Arm A's on both losses, consistent with the"
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** the_privileged_fault_input_measurably_increases_encoder_learning.md
+- **Summary:** updated "The privileged fault input measurably increases encoder learning signal: Arm B's"
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** no_latent_collapse_and_no_softsign_saturation_in_any_run_and_arm.md
+- **Summary:** updated "No latent collapse and no softsign saturation in any run, and Arm B's latent is "
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** thruster_util_remains_the_single_binding_constraint_in_all_three.md
+- **Summary:** updated '`thruster_util` remains the single binding constraint in all three runs — now 8 '
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** the_binding_constraint_asymmetry_is_the_clearest_training_side_d.md
+- **Summary:** updated 'The binding-constraint asymmetry is the clearest training-side difference betwee'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** no_barrier_pathology_anywhere_zero_spikes_above_0_01_in_all_thre.md
+- **Summary:** updated 'No barrier pathology anywhere: zero spikes above 0.01 in all three runs and the '
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** the_doraemon_stall_this_design_was_built_to_avoid_did_not_happen.md
+- **Summary:** updated 'The DORAEMON stall this design was built to avoid did NOT happen — neither arm e'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** but_the_curriculum_also_never_saturated_fault_severity_reached_o.md
+- **Summary:** updated 'But the curriculum also never SATURATED: `fault_severity` reached only 7.7% (Arm'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** consequently_the_robustness_reported_above_was_bought_with_a_ver.md
+- **Summary:** updated 'Consequently the robustness reported above was bought with a very small fault ex'
+
+## [2026-07-27T05:49:10.587769] add
+- **Pages:** arm_b_s_curriculum_ran_24_further_than_arm_a_s_which_confounds_t.md
+- **Summary:** updated "Arm B's curriculum ran ~24% further than Arm A's, which confounds the arm compar"
+
+## [2026-07-27T05:59:03.564266] query
+- **Pages:** ftc_fault_dr_a_b_result_2026_07_27_fault_dr_adopted_5_12x_less_m.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md, engine_gap_doraemon_per_parameter_curriculum_expansion_is_invisi.md, failure_dr_join_now_covers_fault_channels_not_just_dr_per_env_fa.md, teacher_dr_harder_doraemon_curriculum_froze_before_run_end_unuse.md, dr_curriculum_is_still_opening_at_iter_5000_dr_difficulty_is_ite.md, extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_.md, frontier_seeking_dr_curriculum_literature_survey_adr_currot_acce.md, kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md, stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload_.md, but_the_curriculum_also_never_saturated_fault_severity_reached_o.md, cross_run_dr_comparability_eval_py_doraemon_dr_from_already_prov.md, eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md, kl_ub_0_12_trades_attitude_for_translation_e1_dr_harder.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite.md, doraemon_reactivity_makes_every_single_variable_probe_two_variab.md
+- **Summary:** query 'fault DR adoption result curriculum under-expanded severity' -> 20 of 209
+
+## [2026-07-27T06:13:45.985524] query
+- **Pages:** adding_a_dr_axis_is_half_a_change_dr_config_s_dr_tuple_fields_tr.md, reward_penalty_terms_thruster_smoothness_bias_block_3_temporal_b.md, safety_rail_constraints_fire_hard_at_init_go_quiet_and_re_fire_a.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, canonical_final_teacher_baseline_buoyfix_anchor_trpo_buoyanchor_.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md, dr_harder_ood_verdict_e2_best_survives_ood_the_harder_curriculum.md, e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite.md, extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_.md, our_doraemon_original_both_entropy_max_center_can_move_kl_ub_is_.md, seed_noise_floor_on_none_level_attitude_is_huge_75_peak_to_peak_.md, stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, step_interval_250_400_probe_separate_dr_width_from_optimisation_.md, added_mass_scale_upper_half_is_attenuated_not_inert_the_0_95_i_c.md, constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md, doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md, eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md, experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md, frontier_seeking_dr_curriculum_literature_survey_adr_currot_acce.md
+- **Summary:** query 'max_thrust DR band B0c screening verdict' -> 20 of 206
+
+## [2026-07-27T06:28:20.510246] add
+- **Pages:** sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md
+- **Summary:** updated 'sim hydro nominal is analytical (not measured); IMU+pressure can anchor rotation/heave but not surge/sway/TAM'
+
+## [2026-07-27T06:42:48.885806] add
+- **Pages:** the_manipulation_was_applied_and_the_eval_was_fair_the_run_train.md
+- **Summary:** created 'The manipulation was applied and the eval was fair: the run trained with a per-e'
+
+## [2026-07-27T06:42:48.885806] add
+- **Pages:** null_on_nominal_confirmed_at_none_no_screening_floor_d_ss_error_.md
+- **Summary:** created 'NULL-on-nominal confirmed: at `none`, no screening floor (|d ss_error| >= 0.10 d'
+
+## [2026-07-27T06:42:48.885806] add
+- **Pages:** the_null_has_an_axis_split_microstructure_a_single_axis_read_wou.md
+- **Summary:** created 'The null has an axis-split microstructure a single-axis read would miss: roll ss'
+
+## [2026-07-27T06:42:48.885806] add
+- **Pages:** transient_the_roll_overshoot_cost_is_small_but_real_looking_2_03.md
+- **Summary:** created 'Transient: the roll overshoot cost is small but real-looking (+2.03 pp = +0.61 d'
+
+## [2026-07-27T06:42:48.885806] add
+- **Pages:** heavy_tail_structure_moves_with_the_axis_split_env_to_env_cv_ana.md
+- **Summary:** created 'Heavy-tail structure moves WITH the axis split (env-to-env CV analysis): roll di'
+
+## [2026-07-27T06:42:48.885806] add
+- **Pages:** the_only_floor_crossing_cell_in_the_whole_delta_matrix_is_pitch_.md
+- **Summary:** created 'The only floor-crossing cell in the whole delta matrix is pitch ss_error at `har'
+
+## [2026-07-27T06:42:48.885806] add
+- **Pages:** delta_magnitude_does_not_scale_monotonically_with_dr_level_on_th.md
+- **Summary:** created 'Delta magnitude does not scale monotonically with DR level on the roll transient'
+
+## [2026-07-27T06:42:48.885806] add
+- **Pages:** the_per_step_reward_decomposition_is_essentially_unchanged_the_b.md
+- **Summary:** created 'The per-step reward decomposition is essentially unchanged — the band does not r'
+
+## [2026-07-27T06:42:48.885806] add
+- **Pages:** trpo_health_carries_the_in_family_signature_unchanged_by_the_ban.md
+- **Summary:** created 'TRPO health carries the in-family signature, unchanged by the band: entropy COLL'
+
+## [2026-07-27T06:42:48.885806] add
+- **Pages:** the_critic_pair_is_the_largest_training_side_delta_loss_value_fu.md
+- **Summary:** created 'The critic pair is the largest training-side delta: Loss/value_function 0.44 -> '
+
+## [2026-07-27T06:42:48.885806] add
+- **Pages:** encoder_tb_health_is_unchanged_encoder_z_std_0_40_0_38_z_range_s.md
+- **Summary:** created 'Encoder TB-health is unchanged: Encoder/z_std 0.40 -> 0.38, z range symmetric an'
+
+## [2026-07-27T06:42:48.885806] add
+- **Pages:** thruster_util_remains_the_binding_constraint_in_both_runs_and_it.md
+- **Summary:** created 'thruster_util remains the binding constraint in both runs and its binding intens'
+
+## [2026-07-27T06:42:48.885806] add
+- **Pages:** doraemon_reactivity_makes_this_like_every_probe_a_two_variable_e.md
+- **Summary:** created 'DORAEMON reactivity makes this (like every probe) a two-variable experiment: wit'
+
+## [2026-07-27T06:43:06.022569] add
+- **Pages:** doraemon_reactivity_makes_every_single_variable_probe_two_variab.md
+- **Summary:** updated 'DORAEMON reactivity makes every single-variable probe two-variable: the curriculum is the uncontrolled second variable (p7_tail e1/e3/e4)'
+
