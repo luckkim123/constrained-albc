@@ -636,3 +636,75 @@ pool; the proposed repeatability run adds 5 h if approved.
   the forward path (the anchor family retains the biasema config).
 - The pure retrain term of B1a's C-B leg (machine-confounded); moot — the plant never
   reverts, so no decision consumes it.
+
+## 12. Post-fault-DR roster (2026-07-27) — open human gates and remaining experiments
+
+Context: the FaultDR-AB campaign (group `fault_dr`, proposals `next-20260725-155325`
+FTC-m4 and `next-20260725-175508` FaultDR-AB) concluded 2026-07-27. Verdict (report
+`fault_dr/trpo_faultdr_agnostic_s30_260725_183121/analysis/diagnose-20260727-140324`;
+wiki `ftc_fault_dr_a_b_result_2026_07_27_...`): fault-DR **recommend-ADOPT** (5-12x less
+m4-dead attitude degradation at none/medium/hard, zero fault terminations, mechanism =
+heavy-tail removal; `soft` excepted at 1.2-2.5x), privileged fault obs **NOT adopted**
+(H2, resting on the absence of a floor-clearing Arm-B advantage; n=1 seed per arm).
+Most consequential open finding: the `fault_severity` curriculum ended at 7.7% (Arm A) /
+9.6% (Arm B) of its [0,1] range and was still rising at iter 4750 — under 6% of envs
+ever carried a degraded thruster, so fault-DR's ceiling on this plant is UNMEASURED.
+Human-facing consolidated PDF: `/workspace/.sp/reports/fault-dr-ab-260727/`.
+
+### 12.1 Open human gates (decisions, zero GPU)
+
+| gate | decision | interaction |
+|:--|:--|:--|
+| D-b (NEW) | adopt fault-DR (Arm A config) into the final teacher? Analysis recommends ADOPT; single-seed screening caveat (11.6 item 5) applies — a screening verdict, not a paper number | if adopted, the final teacher changes -> re-distill C4 + re-run the C4a/E4 latent diagnostic |
+| D-a | B0c max_thrust band ADOPT-vs-KEEP (open since 2026-07-24, section 7) | if D-a AND D-b both adopt, neither existing checkpoint carries both changes -> E-int integration retrain becomes the final teacher |
+| D-c | cuDNN cu12 image fix vs DGX-hosted distillation (unchanged from section 5) | throughput-only; blocks nothing else |
+
+Queue hygiene: all four `.omx/runs/` pending artifacts are STALE, none is a live gate —
+`trpo_b0cmaxthrust_s30_PLACEHOLDER` (launched 2026-07-24 as `..._260724_024326`),
+`trpo_stepint400_260720_180208` and `trpo_baseline_260713_031325` (both launched on
+their dates), `trpo_buoyanchordgx_s30_PLACEHOLDER` (user-DROPPED 2026-07-23).
+
+### 12.2 Training candidates (all human-gated; priority order)
+
+| id | one variable | machine / cost | readout |
+|:--|:--|:--|:--|
+| **E-ftc1** (head of queue) | `fault_severity` exposure budget: faster severity schedule at the FIXED 5000-iter budget (NOT an 8k extension — twice-net-negative lever, sections 5/11.5); exact lever (initial Beta spread vs per-dim pacing) pinned at proposal time | workstation, ~5 h, seed 30 paired vs Arm A | achieved `fault_severity` mean (engine G3 table) + the same paired healthy/m4-dead eval via `compare.py paired`, floors 11.6 item 3. WATCH: `thruster_util` (Arm A already at 0.902 of budget) — if it binds at higher severity, budget redesign becomes its own follow-up arm rather than a confound inside this one |
+| E-int | integration retrain (anchor + B0c band + fault-DR); fires ONLY if D-a and D-b both adopt | workstation, ~5 h | becomes the final teacher -> C4 |
+| E-obs | student observability retrain: +velocity (heave-first) obs channel +/- longer TCN history, WITH-vs-WITHOUT A/B, deterministic encoder (carries `closed_loop_latent_collapse` + `on_policy_dagger` handoff) | DGX (cuDNN works; distillation is machine-isolation-exempt, section 8) | E4 in-loop latent env-var reconstruction ratio vs the 8-16% collapse baseline |
+| E-lat | latency-DR — REMOTIVATED: blocker 1 (eval instrument) resolved 2026-07-24; blocker 2 (off-DORAEMON stall) now has a validated template = the `fault_severity` nominal-0 DORAEMON-dim pattern (mode 0.00, no stall, FaultDR-AB). Precondition: the anchor delay-sweep verdict from the Z4 instrument | workstation | error-vs-delay response, then a DR arm only if the sweep shows fragility |
+| E-t200 | thruster nonlinear curve / deadband (wiki lead now marked unblocked) — same sim-fidelity family as B0c/fault-DR | workstation | paired screening per 11.6 |
+
+Sequencing: E-ftc1 precedes E-int (its winner may BE the fault-DR half of the final
+config). E-obs is student-side and DGX-hosted — runs in parallel with any workstation
+work. E-lat/E-t200 queue behind E-ftc1. Two-machine split explicit: workstation =
+E-ftc1/E-int (campaign-compared), DGX = E-obs, Stonefish machine = P1/yaw diagnostic
+(handoff pack delivered 2026-07-27, in motion).
+
+### 12.3 Zero-GPU work
+
+- B0c formal exp-analyze report: the run has `eval/static_260724_073758` and a section-7
+  verdict but NO `analysis/` dir (verified on disk 2026-07-27) — close the SSOT gap.
+- Ledger hygiene: mark FTC-m4 / FaultDR-AB proposal outcomes in the `teacher_baseline_buoyfix`
+  plan (both still `derived_status: planned`) and attach the `fault_dr` campaign to this program.
+
+### 12.4 Backlog reconciliation (13 live leads, re-checked 2026-07-27)
+
+| lead | disposition |
+|:--|:--|
+| `closed_loop_latent_collapse...` | CARRY -> E-obs |
+| `on_policy_dagger...` | fold into E-obs (page's own handoff) |
+| `experiment_idea_latency...` | CARRY -> E-lat (remotivated, see 12.2) |
+| `thruster_nonlinear_curve_t200...` | CARRY -> E-t200 (unblocked) |
+| `curriculum_recalibration...` | unchanged: B0b behind the 8k+ edge; TAM-arm span unsourced |
+| `roll_transient_...none_dr...` | DEFER behind C3 (unchanged, 11.7) |
+| `stonefish_yaw_gap...` (P1) | in motion — Stonefish handoff delivered 2026-07-27 |
+| `joint1_stage_1_gate...` | DEFER (prerequisite checkpoint absent) |
+| `reward_sigma_integral_obs_gate...` | DEFER (R1 not in code, no consumer) |
+| `container_cudnn_is_cu13...` | = gate D-c |
+| `imu_45deg_offset...` | DEFER (robot bring-up, user 2026-07-20) |
+| `sim_hydro_nominal...` | max_thrust half = gate D-a; TAM moment-arm cannot-close |
+| `tam_vertical_single_motor...` | DEFER (m4 HW fault); consequence: fault eval stays m4-only, vertical-fault fidelity blocked |
+
+C3 (paper phase), B0b/B2 (8k+ edge) and the section-9 cannot-close list are unchanged.
+No proposal artifacts were written for 12.2 — each candidate gets its lint-clean
+`next-*` proposal (exp-design, independent review) only when the human picks it.
