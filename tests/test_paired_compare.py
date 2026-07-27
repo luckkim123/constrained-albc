@@ -35,8 +35,7 @@ def _mk_eval_dir(root, name, ss_error, os_mean, fault_health):
 
 
 def _ns(**kw):
-    defaults = dict(axes=["roll"], fields=["ss_error", "os_env_mean"],
-                    bite=None, allow_no_bite=False)
+    defaults = dict(axes=["roll"], fields=["ss_error", "os_env_mean"], bite=None)
     defaults.update(kw)
     return argparse.Namespace(**defaults)
 
@@ -61,5 +60,25 @@ def test_bite_check_fails_on_identical_arrays(tmp_path):
 def test_bite_check_reports_missing_key(tmp_path):
     base = _mk_eval_dir(tmp_path, "healthy", 1.0, 5.0, 1.0)
     treat = _mk_eval_dir(tmp_path, "fault", 1.2, 6.0, 0.0)
-    fails = bite_check([("P", base, treat)], "fault_thruster_9", ["none"])
+    fails, n_checked = bite_check([("P", base, treat)], "fault_thruster_9", ["none"])
     assert fails and "lacks" in fails[0]
+    assert n_checked == 1
+
+
+def test_bite_check_fails_on_zero_npz(tmp_path):
+    """M1 review fix: no data_*.npz at all must FAIL, not certify vacuously."""
+    base = _mk_eval_dir(tmp_path, "healthy", 1.0, 5.0, 1.0)
+    treat = _mk_eval_dir(tmp_path, "fault", 1.2, 6.0, 0.0)
+    os.remove(os.path.join(treat, "data_none.npz"))
+    fails, n_checked = bite_check([("P", base, treat)], "fault_thruster_4", ["none"])
+    assert n_checked == 0
+    assert fails and "0 levels" in fails[0]
+    with pytest.raises(SystemExit):
+        cmd_paired(_ns(pair=[f"P:{base}:{treat}"], bite="fault_thruster_4"))
+
+
+def test_duplicate_pair_labels_rejected(tmp_path):
+    base = _mk_eval_dir(tmp_path, "healthy", 1.0, 5.0, 1.0)
+    treat = _mk_eval_dir(tmp_path, "fault", 1.2, 6.0, 0.0)
+    with pytest.raises(SystemExit):
+        cmd_paired(_ns(pair=[f"P:{base}:{treat}", f"P:{base}:{treat}"]))

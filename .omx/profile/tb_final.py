@@ -9,8 +9,9 @@ interpreter:
     /isaac-sim/python.sh .omx/profile/tb_final.py <run_dir>... \
         --tags Train/mean_reward Loss/kl [--window 200]
 
-Prints JSON: {run_dir: {tag: mean-of-last-<window>-points | null}}.
-Use --list-tags to discover available scalar tags per run.
+Prints JSON: {run_dir: {tag: mean-of-last-<window>-points | null}}; a run dir
+with no event file maps to null at the run level. Use --list-tags to discover
+available scalar tags per run.
 """
 import argparse
 import glob
@@ -28,6 +29,8 @@ def main():
     args = ap.parse_args()
     if not args.list_tags and not args.tags:
         ap.error("--tags is required unless --list-tags")
+    if args.window < 1:
+        ap.error("--window must be >= 1")
 
     try:
         import numpy as np
@@ -54,10 +57,14 @@ def main():
         if args.list_tags:
             out[run] = sorted(avail)
         else:
-            out[run] = {
-                t: (float(np.mean([s.value for s in ea.Scalars(t)][-args.window:])) if t in avail else None)
-                for t in args.tags
-            }
+
+            def _mean(tag):
+                if tag not in avail:
+                    return None
+                vals = [s.value for s in ea.Scalars(tag)][-args.window:]
+                return float(np.mean(vals)) if vals else None
+
+            out[run] = {t: _mean(t) for t in args.tags}
     json.dump(out, sys.stdout, indent=1)
     print()
 

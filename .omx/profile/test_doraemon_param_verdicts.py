@@ -49,6 +49,21 @@ def test_stalled_below_bound():
     assert v["verdict"] == "STALLED"
 
 
+def test_flat_at_nominal_bound_is_stalled_not_saturated():
+    # M2 review fix: a one-sided dim (nominal at lo) that never left nominal is
+    # STALLED; only the far bound (frac >= 0.98) saturates.
+    v = _one("fault_severity", [0.005] * 100, [0.004] * 100, (0.0, 1.0))
+    assert v["verdict"] == "STALLED"
+
+
+def test_missing_std_tag_reports_mean_channel():
+    # m3 review fix: no DORAEMON/std tag -> trend channel must not claim "std".
+    data = {"DORAEMON/mean/p": _series([0.3] * 100)}
+    out = at._doraemon_param_verdicts(data, {"p": (0.0, 1.0)})
+    assert out[0]["trend_channel"] == "mean"
+    assert out[0]["std"] is None
+
+
 def test_contracted_back_toward_start():
     rise = [0.005 * i for i in range(60)]           # 0 -> 0.295
     fall = [0.295 - 0.004 * i for i in range(40)]   # heading back to nominal

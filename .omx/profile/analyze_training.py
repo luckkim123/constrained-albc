@@ -220,7 +220,10 @@ def _doraemon_param_verdicts(data, bounds):
         s_flat = abs(s_moved) < 0.01 * scale
 
         frac = (means[-1] - lo_hi[0]) / rng if rng else None
-        at_bound = frac is not None and min(frac, 1.0 - frac) <= 0.02
+        # Saturation is the FAR bound only (M2 review fix): every one-sided dim
+        # in this env has its nominal at lo, so a mean flat at frac ~ 0 means the
+        # curriculum never started -> STALLED, the exact opposite of saturated.
+        at_bound = frac is not None and frac >= 0.98
         # width relative to a uniform distribution over the bounds (std_uniform = rng/sqrt(12))
         wide = rng is not None and std_f is not None and std_f >= 0.9 * (rng / np.sqrt(12.0))
         away = (means[-1] - means[0]) * m_slope > 0
@@ -231,8 +234,10 @@ def _doraemon_param_verdicts(data, bounds):
             verdict = "EXPANDING"
         else:
             verdict = "CONTRACTED"
-        trend_ch = "mean" if not m_flat else "std"
-        trend = (m_slope if not m_flat else s_slope) * 1000.0
+        # Name the std channel only when a std series actually exists (m3 review
+        # fix): a flat mean with no DORAEMON/std tag reports the mean channel.
+        trend_ch = "std" if (m_flat and std_f is not None) else "mean"
+        trend = (s_slope if trend_ch == "std" else m_slope) * 1000.0
         out.append({"param": param, "mean": float(means[-1]), "frac": frac, "std": std_f,
                     "trend_per_1k": trend, "trend_channel": trend_ch, "verdict": verdict})
     return out

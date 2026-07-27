@@ -1858,10 +1858,13 @@ def run_periodic(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         device=device,
     )
 
-    # Save raw data
+    # Save raw data (G5: carry the same fault contract as the other modes)
+    per_env_fault = _read_per_env_fault(raw_env)
     np.savez_compressed(
         os.path.join(output_dir, "data_periodic.npz"),
         **{k: v for k, v in data.items() if isinstance(v, np.ndarray)},
+        **per_env_fault,
+        fault_injection=np.array(bool(per_env_fault)),
     )
 
     # Compute metrics
@@ -2233,7 +2236,13 @@ def run_segmented(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
             step_dt=step_dt, num_envs=num_envs, device=device, master_seed=args_cli.seed,
         )
         all_data[level] = data
-        write_eval_npz(output_dir, level, {k: v for k, v in data.items() if isinstance(v, np.ndarray)})
+        # G5: same fault contract as static mode -- per-env fault_ keys plus the
+        # explicit fault_injection flag (values reflect the last reset state).
+        per_env_fault = _read_per_env_fault(raw_env)
+        seg_arrays = {k: v for k, v in data.items() if isinstance(v, np.ndarray)}
+        seg_arrays.update(per_env_fault)
+        seg_arrays["fault_injection"] = np.array(bool(per_env_fault))
+        write_eval_npz(output_dir, level, seg_arrays)
         all_metrics[level] = compute_seg_metrics(data)
 
     # Plots

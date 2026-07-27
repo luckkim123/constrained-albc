@@ -125,13 +125,17 @@ def _read_summary(d):
 
 
 def test_write_run_json_four_level_has_no_gap_key(tmp_path):
-    # Byte-identity guard: a 4-level (no-ood) summary must NOT gain any new key.
+    # Contract guard (revised for G6, 2026-07-27): a 4-level (no-ood) summary
+    # gains NO gap key; the only non-level keys are the G6 self-labelling blocks
+    # (units / decision_floors / decision_floors_protocol). The pre-G6
+    # byte-identity invariant was deliberately retired.
     sub = tmp_path / "eval_dr"
     sub.mkdir()
     metrics = _mk_summary(list(_RC_DR_LEVELS))
     _write_run_json(str(tmp_path), metrics, data_subdir="eval_dr")
     out = _read_summary(str(sub))
-    assert set(out.keys()) == set(_RC_DR_LEVELS)
+    g6_keys = {"units", "decision_floors", "decision_floors_protocol"}
+    assert set(out.keys()) == set(_RC_DR_LEVELS) | g6_keys
     assert "generalization_gap" not in out
 
 

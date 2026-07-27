@@ -63,15 +63,14 @@ def unit_for(axis: str, field: str) -> str:
     return AXIS_UNITS.get(axis, "") if u == "axis" else u
 
 
-def units_block() -> dict:
-    """The `units` block embedded in the enhanced summary.json."""
-    return {
-        "axis_units": dict(AXIS_UNITS),
-        "field_units": dict(FIELD_UNITS),
-        "note": "field_units 'axis' inherits axis_units; os/us fields are percent of "
-                "the commanded step (deg = pp x step_mag; roll/pitch step 30 deg -> "
-                "deg = pp * 0.30); n_gt20 counts envs over 20 pp, not 20 deg.",
-    }
+# The `units` block embedded in the enhanced summary.json.
+UNITS_BLOCK = {
+    "axis_units": AXIS_UNITS,
+    "field_units": FIELD_UNITS,
+    "note": "field_units 'axis' inherits axis_units; os/us fields are percent of "
+            "the commanded step (deg = pp x step_mag; roll/pitch step 30 deg -> "
+            "deg = pp * 0.30); n_gt20 counts envs over 20 pp, not 20 deg.",
+}
 
 
 # Pre-registered decision floors (screening protocol: n=1 paired, same machine):
@@ -88,7 +87,9 @@ def floor_verdict(field: str, delta: float, axis: str | None = None) -> str:
     """REAL / BELOW-FLOOR / NO-FLOOR verdict for a paired delta on `field`.
 
     ss_error's floor is registered in deg, so it applies to attitude axes only
-    (yaw ss_error is rad/s -> NO-FLOOR). NaN deltas are NO-FLOOR.
+    (yaw ss_error is rad/s -> NO-FLOOR). Passing axis=None asserts a deg-axis
+    context: the deg floor is applied unchecked, so pass the axis whenever the
+    field is axis-scoped. NaN deltas are NO-FLOOR.
     """
     floor = DECISION_FLOORS.get(field)
     if floor is None:

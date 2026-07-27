@@ -35,21 +35,25 @@ def _load_summary(eval_dir: str) -> dict:
         return json.load(f)
 
 
-def bite_check(pairs: list[tuple[str, str, str]], key: str, levels: list[str]) -> list[str]:
+def bite_check(pairs: list[tuple[str, str, str]], key: str, levels: list[str]) -> tuple[list[str], int]:
     """Assert the treatment condition actually differs in the recorded npz.
 
     For each pair x level: the treatment npz must contain `key`, and its values
     must differ from the baseline's. The baseline may legitimately lack the key
     (absent-by-design for healthy evals, see G5). Byte-identical arrays mean a
     silent no-op injector -- the exact failure mode the E2 delay sweep hit.
-    Returns a list of failure strings (empty = bite confirmed).
+    Returns (failure strings, number of levels actually checked). Zero checked
+    levels is itself a failure: certifying a bite on no evidence is the same
+    trap this function exists to close.
     """
     failures = []
+    n_checked = 0
     for label, base_dir, treat_dir in pairs:
         for lvl in levels:
             tp = os.path.join(treat_dir, f"data_{lvl}.npz")
             if not os.path.exists(tp):
                 continue
+            n_checked += 1
             with np.load(tp) as tz:
                 if key not in tz.files:
                     failures.append(f"{label}/{lvl}: treatment npz lacks '{key}'")
@@ -65,7 +69,11 @@ def bite_check(pairs: list[tuple[str, str, str]], key: str, levels: list[str]) -
                             f"{label}/{lvl}: '{key}' byte-identical between conditions "
                             "(silent no-op injector)"
                         )
-    return failures
+    if n_checked == 0:
+        failures.append(
+            "bite-check ran on 0 levels: no data_<level>.npz under any treatment dir"
+        )
+    return failures, n_checked
 
 
 def _val(summary: dict, lvl: str, ax: str, field: str):
@@ -81,6 +89,9 @@ def cmd_paired(args: argparse.Namespace) -> None:
         if len(parts) != 3:
             raise SystemExit(f"--pair must be LABEL:BASELINE_DIR:TREATMENT_DIR, got {spec!r}")
         pairs.append((parts[0], parts[1], parts[2]))
+    labels = [p[0] for p in pairs]
+    if len(set(labels)) != len(labels):
+        raise SystemExit(f"duplicate --pair labels: {labels}")
 
     summaries = {lbl: (_load_summary(b), _load_summary(t)) for lbl, b, t in pairs}
     levels = [lvl for lvl in DR_LEVELS
@@ -89,23 +100,22 @@ def cmd_paired(args: argparse.Namespace) -> None:
         raise SystemExit("no common DR level across all summaries")
 
     if args.bite:
-        failures = bite_check(pairs, args.bite, levels)
+        failures, n_checked = bite_check(pairs, args.bite, levels)
         if failures:
             print("[BITE-CHECK FAILED]")
             for f in failures:
                 print(f"  {f}")
-            if not args.allow_no_bite:
-                raise SystemExit(2)
-        else:
-            print(f"[BITE-CHECK OK] '{args.bite}' differs between conditions everywhere it applies")
+            raise SystemExit(2)
+        print(f"[BITE-CHECK OK] '{args.bite}' differs between conditions on {n_checked} pair-level(s)")
 
-    labels = [p[0] for p in pairs]
-    print(f"\nPaired delta = treatment - baseline, per DR level. Floors: "
-          f"REAL / BELOW-FLOOR from _analyze.recompute_metrics.DECISION_FLOORS "
-          f"(NO-FLOOR = no registered floor for that field/axis).")
+    print("\nPaired delta = treatment - baseline, per DR level. Floors: "
+          "REAL / BELOW-FLOOR from _analyze.recompute_metrics.DECISION_FLOORS "
+          "(NO-FLOOR = no registered floor for that field/axis).")
     for field in args.fields:
         axes = ["-"] if field == "survival_pct" else list(args.axes)
         for ax in axes:
+            # a delta of a percent value is percentage points, hence "pp" while
+            # FIELD_UNITS carries "%" for the level value itself
             unit = "pp" if field == "survival_pct" else unit_for(ax, field)
             print(f"\n-- delta {field}" + (f" [{ax}]" if ax != "-" else "")
                   + f" ({unit or 'unitless'})")

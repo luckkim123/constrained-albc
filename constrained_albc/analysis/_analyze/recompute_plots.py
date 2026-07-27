@@ -173,14 +173,16 @@ def _print_run_summary(run_name: str, metrics: dict) -> None:
 def _write_run_json(run_dir: str, metrics: dict, data_subdir: str = "eval_dr") -> None:
     out = os.path.join(run_dir, data_subdir, "summary.json")
     # GAP 1 (2c): attach generalization_gap = ood - hard when an OOD level is
-    # present. A 4-level (no-ood) summary gains NO new key (byte-identical). Build
-    # a shallow copy so the caller's in-memory metrics dict (used for plotting)
-    # is not mutated.
+    # present (absent on a 4-level summary). Since G6 (2026-07-27) EVERY summary
+    # also carries units/decision_floors/decision_floors_protocol -- the old
+    # "no new key" byte-identity invariant was deliberately retired; metric
+    # values under the level keys are unchanged. Build a shallow copy so the
+    # caller's in-memory metrics dict (used for plotting) is not mutated.
     from .recompute_metrics import (
         DECISION_FLOORS,
         DECISION_FLOORS_PROTOCOL,
+        UNITS_BLOCK,
         _compute_generalization_gap,
-        units_block,
     )
 
     payload = dict(metrics)
@@ -189,7 +191,7 @@ def _write_run_json(run_dir: str, metrics: dict, data_subdir: str = "eval_dr") -
         payload["generalization_gap"] = gap
     # G6: self-labelling summary -- units + pre-registered decision floors travel
     # with the numbers so no downstream table relies on the author's memory.
-    payload["units"] = units_block()
+    payload["units"] = UNITS_BLOCK
     payload["decision_floors"] = dict(DECISION_FLOORS)
     payload["decision_floors_protocol"] = DECISION_FLOORS_PROTOCOL
     with open(out, "w") as f:

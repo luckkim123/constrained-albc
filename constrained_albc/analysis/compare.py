@@ -318,7 +318,6 @@ def main() -> None:
         help="Injection bite-check: npz key that must exist in treatment and differ "
         "from baseline (e.g. fault_thruster_4). Fails the run on a silent no-op.",
     )
-    p_pd.add_argument("--allow-no-bite", action="store_true", help="Downgrade a failed bite-check to a warning.")
     p_pd.set_defaults(func=cmd_paired)
 
     args = parser.parse_args()
