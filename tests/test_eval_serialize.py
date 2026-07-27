@@ -37,3 +37,14 @@ def test_write_eval_npz_roundtrips(tmp_path):
     write_eval_npz(str(tmp_path), "none", data)
     loaded = np.load(str(tmp_path / "data_none.npz"))
     np.testing.assert_array_equal(loaded["roll"], data["roll"])
+
+
+def test_fault_injection_flag_roundtrips(tmp_path):
+    """G5: healthy evals carry fault_injection=False (0-d bool) instead of nothing,
+    so consumers branch on the flag rather than on a KeyError for fault_* keys."""
+    data = {"roll": np.zeros((10, 4)), "fault_injection": np.array(False)}
+    write_eval_npz(str(tmp_path), "none", data)
+    loaded = np.load(str(tmp_path / "data_none.npz"))
+    assert "fault_injection" in loaded.files
+    assert bool(loaded["fault_injection"]) is False
+    assert "fault_thruster_0" not in loaded.files

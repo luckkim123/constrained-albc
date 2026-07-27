@@ -621,7 +621,9 @@ def _read_per_env_fault(raw_env) -> dict[str, np.ndarray]:
     sensor FAILURE, not a DR physical-parameter spread, so it gets its own axis for the
     failing-env join. Every buffer is read defensively with getattr -- if fault injection
     is disabled (or this env predates the fault buffers) the channel is simply absent and
-    no fault_ key is emitted, leaving the npz byte-identical to the fault-free case.
+    no fault_ key is emitted. The npz still records the contract explicitly via the scalar
+    ``fault_injection`` flag (True iff any fault_ key was captured), so consumers branch
+    on the flag rather than on a KeyError.
 
     Buffer locations:
         thruster_health  raw_env._thruster._thruster_health  (N, 6) -- in the marinelab model
@@ -900,6 +902,9 @@ def run_evaluation(
         **per_env_dr,
         # Per-env fault values (fault_<name>[num_envs]); empty when fault disabled.
         **per_env_fault,
+        # G5: explicit contract flag. fault_<name> keys are absent-by-design on a
+        # healthy eval, so consumers branch on this scalar instead of a KeyError.
+        "fault_injection": np.array(bool(per_env_fault)),
     }
     # lin-vel arrays/targets only when the env tracks lin-vel (attitude_only omits
     # them -> compute_metrics sees no lin_vel keys and the npz stays lin-vel-free).
