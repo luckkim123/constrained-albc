@@ -413,6 +413,23 @@ def find_runs(root=LOGS_ROOT):
     return runs
 
 
+def _resolve_events_dir(run_path):
+    """Accept an experiments-tree run dir by following its train/ symlink.
+
+    The experiments mirror (experiments/.../<run_id>) holds config/eval/train but
+    no events.out.tfevents.* at top level, so the engine used to exit 'No metrics
+    found' on it. The train/ symlink points at the logs/ run dir that has the
+    events (rule03 convention); logs-dir inputs pass through unchanged.
+    """
+    run_path = Path(run_path)
+    if list(run_path.glob("events.out.tfevents.*")):
+        return run_path
+    train = run_path / "train"
+    if train.is_dir() and list(train.glob("events.out.tfevents.*")):
+        return train.resolve()
+    return run_path
+
+
 def load_events(run_path):
     """Load all scalar metrics from TensorBoard event files."""
     ea = EventAccumulator(str(run_path))
@@ -1946,6 +1963,8 @@ def main():
             print("ERROR: No runs found in " + LOGS_ROOT)
             sys.exit(1)
         run_path = runs[0]
+
+    run_path = _resolve_events_dir(run_path)
 
     # Header
     print(f"=== {run_path.parent.name}/{run_path.name} ===")
