@@ -656,7 +656,7 @@ Human-facing consolidated PDF: `/workspace/.sp/reports/fault-dr-ab-260727/`.
 | gate | decision | interaction |
 |:--|:--|:--|
 | D-b | **DECIDED 2026-07-27: ADOPT (user)** — fault-DR (Arm A config family) enters the final teacher config; single-seed screening caveat (11.6 item 5) still applies to any paper claim. Final checkpoint pends E-ftc1 (its winner may supersede Arm A) and gate D-a (E-int if D-a also adopts) | final teacher changes -> re-distill C4 + re-run the C4a/E4 latent diagnostic |
-| D-a | B0c max_thrust band ADOPT-vs-KEEP (open since 2026-07-24, section 7) | if D-a AND D-b both adopt, neither existing checkpoint carries both changes -> E-int integration retrain becomes the final teacher |
+| D-a | **DECIDED 2026-07-27: ADOPT (user)** — the sourced +/-15% max_thrust band enters the final config as a sim-fidelity correction (section 7 reframe); closes the `sim_hydro` max_thrust apply-gate | both gates now adopted -> E-int integration retrain becomes the final-teacher path |
 | D-c | cuDNN cu12 image fix vs DGX-hosted distillation (unchanged from section 5) | throughput-only; blocks nothing else |
 
 Queue hygiene: all four `.omx/runs/` pending artifacts are STALE, none is a live gate —
@@ -669,7 +669,7 @@ their dates), `trpo_buoyanchordgx_s30_PLACEHOLDER` (user-DROPPED 2026-07-23).
 | id | one variable | machine / cost | readout |
 |:--|:--|:--|:--|
 | **E-ftc1** (head of queue) | `fault_severity` exposure budget: faster severity schedule at the FIXED 5000-iter budget (NOT an 8k extension — twice-net-negative lever, sections 5/11.5); exact lever (initial Beta spread vs per-dim pacing) pinned at proposal time | workstation, ~5 h, seed 30 paired vs Arm A | achieved `fault_severity` mean (engine G3 table) + the same paired healthy/m4-dead eval via `compare.py paired`, floors 11.6 item 3. WATCH: `thruster_util` (Arm A already at 0.902 of budget) — if it binds at higher severity, budget redesign becomes its own follow-up arm rather than a confound inside this one |
-| E-int | integration retrain (anchor + B0c band + fault-DR); fires ONLY if D-a and D-b both adopt | workstation, ~5 h | becomes the final teacher -> C4 |
+| E-int | integration retrain (anchor + B0c band + fault-DR); **ARMED 2026-07-27 — D-a and D-b both adopted (user)**; whether E-ftc1 precedes it pends the user's re-judgment of E-ftc1 (the user declined an "8k extension" reading 2026-07-27; the as-designed probe is 5k-fixed, see 12.2 E-ftc1) | workstation, ~5 h | becomes the final teacher -> C4 |
 | E-obs | student observability retrain: +velocity (heave-first) obs channel +/- longer TCN history, WITH-vs-WITHOUT A/B, deterministic encoder (carries `closed_loop_latent_collapse` + `on_policy_dagger` handoff) | DGX (cuDNN works; distillation is machine-isolation-exempt, section 8) | E4 in-loop latent env-var reconstruction ratio vs the 8-16% collapse baseline |
 | E-lat | latency-DR — REMOTIVATED: blocker 1 (eval instrument) resolved 2026-07-24; blocker 2 (off-DORAEMON stall) now has a validated template = the `fault_severity` nominal-0 DORAEMON-dim pattern (mode 0.00, no stall, FaultDR-AB). Precondition: the anchor delay-sweep verdict from the Z4 instrument | workstation | error-vs-delay response, then a DR arm only if the sweep shows fragility |
 | E-t200 | thruster nonlinear curve / deadband (wiki lead now marked unblocked) — same sim-fidelity family as B0c/fault-DR | workstation | paired screening per 11.6 |
