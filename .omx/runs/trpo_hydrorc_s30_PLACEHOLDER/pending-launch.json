@@ -24,6 +24,7 @@
   "proposal_id": "next-20260727-174905",
   "queued_at": "2026-07-27T08:52:16.646202+00:00",
   "queued_commit": "7e6dab92eaf386a8d036c75d6991ccf408c3ce11",
+  "readout": "report analysis/diagnose-20260728-081953; ledger discarded event 2026-07-27T23:22:49Z; Stonefish readout not entered per the pre-registered rule",
   "schema_version": 1,
-  "status": "approved and launched"
+  "status": "launched, analyzed: Isaac gate FAIL (recenter not adopted)"
 }
