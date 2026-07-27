@@ -7127,3 +7127,87 @@
 - **Pages:** doraemon_reactivity_makes_every_single_variable_probe_two_variab.md
 - **Summary:** updated 'DORAEMON reactivity makes every single-variable probe two-variable: the curriculum is the uncontrolled second variable (p7_tail e1/e3/e4)'
 
+## [2026-07-27T06:56:43.469679] query
+- **Pages:** ftc_fault_dr_a_b_result_2026_07_27_fault_dr_adopted_5_12x_less_m.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, doraemon_reactivity_makes_every_single_variable_probe_two_variab.md, decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema.md
+- **Summary:** query 'above achieved adopted advantage affordable against already ancestor' -> 5 of 137
+
+## [2026-07-27T06:58:14.040909] query
+- **Pages:** ftc_fault_dr_a_b_result_2026_07_27_fault_dr_adopted_5_12x_less_m.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, doraemon_reactivity_makes_every_single_variable_probe_two_variab.md, decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema.md
+- **Summary:** query 'above achieved adopted advantage affordable against already ancestor' -> 5 of 137
+
+## [2026-07-27T07:06:48.310550] query
+- **Pages:** stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, added_mass_scale_upper_half_is_attenuated_not_inert_the_0_95_i_c.md, hydro_dr_train_eval_sampling_mismatch_is_real_but_left_as_is_opt.md, buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload_.md, diagnosis_md_2026_05_25_retirement_open_item_ledger.md, onboard_measured_2026_07_06_arm_step_response_valid_sim_zeta_0_7.md, pelt_changepoints_are_near_identical_across_runs_so_the_added_cu.md, xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md, closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md, doraemon_over_widens_then_oscillates_when_a_converged_teacher_is.md, encoder_priv_obs_normalization_bounds_must_be_dr_derived_not_har.md, performance_lb_doraemon_gate_is_causally_independent_of_the_acto.md, posttam_encoder_is_alive_and_specialized_z_sweep_exploration_col.md, bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md, april_2026_entropy_collapse_campaign_machinery_bug_solved_conver.md, perflb200_final_dr_anatomy_17_bulk_params_at_config_ceiling_unif.md
+- **Summary:** query 'hydrodynamics damping added mass drag coefficient' -> 20 of 59
+
+## [2026-07-27T08:42:33.953196] add
+- **Pages:** stonefish_base_hull_effective_hydro_measured_2026_07_27_damping_.md
+- **Summary:** created 'Stonefish base-hull effective hydro MEASURED (2026-07-27): damping is the gap axis (yaw ~45-100x, pitch-linear ~10x, translational 3-8x under nominal); effective added inertia already matches; nominals recentered on marinelab exp/hydro-recenter'
+
+## [2026-07-27T08:44:26.899887] query
+- **Pages:** seed_noise_floor_on_none_level_attitude_is_huge_75_peak_to_peak_.md, stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, added_mass_scale_upper_half_is_attenuated_not_inert_the_0_95_i_c.md, canonical_final_teacher_baseline_buoyfix_anchor_trpo_buoyanchor_.md, stonefish_base_hull_effective_hydro_measured_2026_07_27_damping_.md
+- **Summary:** query 'added_mass adopt against albc albchydrodynamicscfg allocation anchor attitude' -> 5 of 201
+
+## [2026-07-27T08:45:13.464722] query
+- **Pages:** seed_noise_floor_on_none_level_attitude_is_huge_75_peak_to_peak_.md, stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, added_mass_scale_upper_half_is_attenuated_not_inert_the_0_95_i_c.md, canonical_final_teacher_baseline_buoyfix_anchor_trpo_buoyanchor_.md, stonefish_base_hull_effective_hydro_measured_2026_07_27_damping_.md
+- **Summary:** query 'added_mass adopt against albc albchydrodynamicscfg allocation anchor attitude' -> 5 of 201
+
+## [2026-07-27T10:30:03.859588] add
+- **Pages:** the_manipulation_was_applied_and_the_eval_was_fair_the_run_train.md
+- **Summary:** updated 'The manipulation was applied and the eval was fair: the run trained with a per-e'
+
+## [2026-07-27T10:30:03.859588] add
+- **Pages:** null_on_nominal_confirmed_at_none_no_screening_floor_d_ss_error_.md
+- **Summary:** updated 'NULL-on-nominal confirmed: at `none`, no screening floor (|d ss_error| >= 0.10 d'
+
+## [2026-07-27T10:30:03.859588] add
+- **Pages:** the_null_has_an_axis_split_microstructure_a_single_axis_read_wou.md
+- **Summary:** updated 'The null has an axis-split microstructure a single-axis read would miss: roll ss'
+
+## [2026-07-27T10:30:03.859588] add
+- **Pages:** transient_the_roll_overshoot_cost_is_small_but_real_looking_2_03.md
+- **Summary:** updated 'Transient: the roll overshoot cost is small but real-looking (+2.03 pp = +0.61 d'
+
+## [2026-07-27T10:30:03.859588] add
+- **Pages:** heavy_tail_structure_moves_with_the_axis_split_env_to_env_cv_ana.md
+- **Summary:** updated 'Heavy-tail structure moves WITH the axis split (env-to-env CV analysis): roll di'
+
+## [2026-07-27T10:30:03.859588] add
+- **Pages:** the_only_floor_crossing_cell_in_the_whole_delta_matrix_is_pitch_.md
+- **Summary:** updated 'The only floor-crossing cell in the whole delta matrix is pitch ss_error at `har'
+
+## [2026-07-27T10:30:03.859588] add
+- **Pages:** delta_magnitude_does_not_scale_monotonically_with_dr_level_on_th.md
+- **Summary:** updated 'Delta magnitude does not scale monotonically with DR level on the roll transient'
+
+## [2026-07-27T10:30:03.859588] add
+- **Pages:** the_per_step_reward_decomposition_is_essentially_unchanged_the_b.md
+- **Summary:** updated 'The per-step reward decomposition is essentially unchanged — the band does not r'
+
+## [2026-07-27T10:30:03.859588] add
+- **Pages:** trpo_health_carries_the_in_family_signature_unchanged_by_the_ban.md
+- **Summary:** updated 'TRPO health carries the in-family signature, unchanged by the band: entropy COLL'
+
+## [2026-07-27T10:30:03.859588] add
+- **Pages:** the_critic_pair_is_the_largest_training_side_delta_loss_value_fu.md
+- **Summary:** updated 'The critic pair is the largest training-side delta: Loss/value_function 0.44 -> '
+
+## [2026-07-27T10:30:03.859588] add
+- **Pages:** encoder_tb_health_is_unchanged_encoder_z_std_0_40_0_38_z_range_s.md
+- **Summary:** updated 'Encoder TB-health is unchanged: Encoder/z_std 0.40 -> 0.38, z range symmetric an'
+
+## [2026-07-27T10:30:03.859588] add
+- **Pages:** thruster_util_remains_the_binding_constraint_in_both_runs_and_it.md
+- **Summary:** updated 'thruster_util remains the binding constraint in both runs and its binding intens'
+
+## [2026-07-27T10:30:03.859588] add
+- **Pages:** doraemon_reactivity_makes_this_like_every_probe_a_two_variable_e.md
+- **Summary:** updated 'DORAEMON reactivity makes this (like every probe) a two-variable experiment: wit'
+
+## [2026-07-27T11:28:16.019417] query
+- **Pages:** added_mass_scale_upper_half_is_attenuated_not_inert_the_0_95_i_c.md, stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md, onboard_measured_2026_07_06_arm_step_response_valid_sim_zeta_0_7.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, stonefish_base_hull_effective_hydro_measured_2026_07_27_damping_.md, canonical_final_teacher_baseline_buoyfix_anchor_trpo_buoyanchor_.md, plant_fix_needs_apply_before_retrain_main_hull_volume_0_009_0_00.md, dr_curriculum_is_still_opening_at_iter_5000_dr_difficulty_is_ite.md, arm_a_measured_angle_joint1_constraint_recovers_not_diverges_the.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, doraemon_kl_step_final_value_0_0000_is_a_sparse_logging_artifact.md, encoder_priv_obs_normalization_bounds_must_be_dr_derived_not_har.md, on_policy_dagger_correction_for_the_buoyfix_student.md, posttam_encoder_is_alive_and_specialized_z_sweep_exploration_col.md, real_robot_has_2_faulted_thrusters_user_judges_buoyancy_restorin.md, seed_noise_floor_on_none_level_attitude_is_huge_75_peak_to_peak_.md, ftc_investigation_2026_07_25_m4_loss_halves_pure_yaw_ceiling_uti.md, actuator_hardware_identification_arm_xw540_t260_board_measured_p.md, closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md
+- **Summary:** query 'buoy link3 hydro not measured HydroRC half recentering' -> 20 of 203
+
+## [2026-07-27T11:28:30.027308] add
+- **Pages:** hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md
+- **Summary:** created "HydroRC IS half-recentered (buoy/link3 nominals untouched) -- but the '10x under added mass' framing dies to the effective-vs-effective correction (~2.4x); the lead survives on a different mechanism: HydroRC drops hull yaw damping 45x, so unmeasured analytical buoy damping becomes 1.8x hull's and DOMINATES the retrained plant"
+
