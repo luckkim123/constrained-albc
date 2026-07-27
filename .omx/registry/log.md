@@ -7211,3 +7211,23 @@
 - **Pages:** hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md
 - **Summary:** created "HydroRC IS half-recentered (buoy/link3 nominals untouched) -- but the '10x under added mass' framing dies to the effective-vs-effective correction (~2.4x); the lead survives on a different mechanism: HydroRC drops hull yaw damping 45x, so unmeasured analytical buoy damping becomes 1.8x hull's and DOMINATES the retrained plant"
 
+## [2026-07-27T23:24:29.885457] add
+- **Pages:** roll_transient_is_worst_at_none_dr_and_improves_monotonically_as.md
+- **Summary:** updated 'roll transient is WORST at none DR and improves monotonically as DR hardens (inverted, both runs)'
+
+## [2026-07-27T23:24:46.808798] add
+- **Pages:** hydrorc_recenter_gate_result_2026_07_28_isaac_paired_gate_fail_r.md
+- **Summary:** created 'HydroRC recenter gate result 2026-07-28: Isaac paired gate FAIL (roll n_gt20 0->18.7 envs, yaw ss +18.8%) -- transient-tail regression at all DR levels, hard-corner collapse, 7-17x fault-robustness loss; recenter not adopted, Stonefish readout not entered'
+
+## [2026-07-27T23:24:46.899467] add
+- **Pages:** sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md
+- **Summary:** updated 'sim hydro nominal is analytical (not measured); IMU+pressure can anchor rotation/heave but not surge/sway/TAM'
+
+## [2026-07-27T23:24:46.982508] add
+- **Pages:** stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md
+- **Summary:** updated 'Stonefish yaw-gap claim review: main-body hydro yaw torque structurally zero (symmetric added mass kills Munk); PhysX DOES model arm reaction; real gaps = buoy added-mass ~10x under, no arm-link hydro, no yaw-torque DR axis'
+
+## [2026-07-27T23:24:47.066924] add
+- **Pages:** hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md
+- **Summary:** updated "HydroRC IS half-recentered (buoy/link3 nominals untouched) -- but the '10x under added mass' framing dies to the effective-vs-effective correction (~2.4x); the lead survives on a different mechanism: HydroRC drops hull yaw damping 45x, so unmeasured analytical buoy damping becomes 1.8x hull's and DOMINATES the retrained plant"
+

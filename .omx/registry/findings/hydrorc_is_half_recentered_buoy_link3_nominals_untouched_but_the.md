@@ -2,14 +2,14 @@
 title: "HydroRC IS half-recentered (buoy/link3 nominals untouched) -- but the '10x under added mass' framing dies to the effective-vs-effective correction (~2.4x); the lead survives on a different mechanism: HydroRC drops hull yaw damping 45x, so unmeasured analytical buoy damping becomes 1.8x hull's and DOMINATES the retrained plant"
 tags: ["stonefish", "hydrodynamics", "buoy", "link3", "added-mass", "domain-randomization", "sim-to-real", "hydro-recenter", "yaw", "system-id"]
 created: 2026-07-27T11:28:30.027308
-updated: 2026-07-27T11:28:30.027308
-sources: ["marinelab:exp/hydro-recenter@016d1b1", "marinelab@f45d612", "next-20260727-174905", "code-review-20260727"]
+updated: 2026-07-27T23:24:47.066924
+sources: ["marinelab:exp/hydro-recenter@016d1b1", "marinelab@f45d612", "next-20260727-174905", "code-review-20260727", "diagnose-20260728-081953"]
 links: ["stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md", "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md", "stonefish_base_hull_effective_hydro_measured_2026_07_27_damping.md"]
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 status: needs-experiment
 blocked-on: "probe design undecided (link3 has no thruster, Stonefish has no external-wrench service); and per rebuttal 2 the deliverable may be a guard-structure decision rather than a measured coefficient"
 ---
@@ -124,3 +124,15 @@ Cross-links: [[stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct]
 [[buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy]],
 [[stonefish_base_hull_effective_hydro_measured_2026_07_27_damping_]]
 
+---
+
+## Update (2026-07-27T23:24:47.066924)
+
+UPDATE 2026-07-28: the half-recenter shipped and FAILED the Isaac paired gate (HydroRC probe,
+trpo_hydrorc_s30_260728_013136 -- roll n_gt20 0 -> 18.67 envs, yaw ss +18.8%, hard-corner collapse).
+Consistent with this page's mechanism: with hull yaw damping cut 45x while the analytical buoy hydro
+stays untouched, the unmeasured buoy damping dominates the retrained plant -- and the retrained policy
+regresses on transients across all DR levels. The gate FAIL adds evidence that a partial/guarded
+recenter (or a measured buoy correction) is required before the plant can move toward the Stonefish
+values. Probe design for buoy/link3 measurement remains undecided (unchanged).
+[EVIDENCE: report diagnose-20260728-081953 under trpo_hydrorc_s30_260728_013136/analysis]

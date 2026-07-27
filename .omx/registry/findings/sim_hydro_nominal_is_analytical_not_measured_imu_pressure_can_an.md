@@ -2,14 +2,14 @@
 title: "sim hydro nominal is analytical (not measured); IMU+pressure can anchor rotation/heave but not surge/sway/TAM"
 tags: ["measurement", "system-id", "domain-randomization", "sim-to-real", "damping", "free-decay", "TAM", "sensors", "fault-tolerant-control", "thruster", "load-cell", "arm-step-response", "max_thrust", "systematic-bias", "user-decision", "batch-pass", "apply-gate", "decision"]
 created: 2026-06-14T07:38:12.841674
-updated: 2026-07-27T06:28:20.510246
-sources: ["envs/main/config.py:139", "envs/main/mdp/events.py", "user-input-2026-07-23", "B0c-implementation-260723", "diagnose-20260723-134359", "next-20260723-203114", "static_260724_073758", "diagnose-20260727-151917"]
+updated: 2026-07-27T23:24:46.899467
+sources: ["envs/main/config.py:139", "envs/main/mdp/events.py", "user-input-2026-07-23", "B0c-implementation-260723", "diagnose-20260723-134359", "next-20260723-203114", "static_260724_073758", "diagnose-20260727-151917", "diagnose-20260728-081953"]
 links: ["curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md", "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md", "adding_a_dr_axis_is_half_a_change_dr_config_s_dr_tuple_fields_tr.md"]
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 80
-qualityReasons: ["no-source-marker"]
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 status: needs-apply-before-retrain
 blocked-on: "max_thrust band SOURCED (+/-15%) and rostered as campaign B0c (the pending apply); battery voltage window CONFIRMED 4S LiPo ~14-16.8 V (2026-07-23 Z6 memo) — narrower than the 14-18 V source window, band conservative; TAM moment-arm band still blocked on a real geometric-tolerance source (CAD stack-up / bracket spec)"
 ---
@@ -208,3 +208,16 @@ Battery-voltage window confirmed 4S LiPo ~14-16.8 V (Z6 memo, band conservative)
 ## Update (2026-07-27T06:28:20.510246)
 
 D-a DECIDED 2026-07-27: the user ADOPTED the max_thrust +/-15% band into the final teacher config (PLAN.md section 12.1, commit f2296ed), together with fault-DR (D-b). The band's formal screening analysis now exists (B0c run analysis diagnose-20260727-151917: NULL-on-nominal reproduced; watch items = pitch hard DC/CV, thruster_util binding 0.805->0.853, cost-critic +25% from the priv-obs-invisible parameter). The apply happens at the E-int integration retrain (anchor + band + fault-DR); this page stays needs-apply-before-retrain until E-int actually trains with the band. TAM moment-arm half unchanged (no source).
+
+---
+
+## Update (2026-07-27T23:24:46.899467)
+
+UPDATE 2026-07-28: the Stonefish-anchor arm of this lead was TESTED (HydroRC probe,
+trpo_hydrorc_s30_260728_013136) and produced an Isaac-side paired-gate FAIL (roll n_gt20 0 -> 18.67
+envs, yaw ss_error +18.8% at none and worse at higher levels; hard-corner collapse att_norm 1.691 vs
+0.719 deg). Recentering the nominals wholesale onto the Stonefish-measured values is NOT adopted. This
+page's own caveat -- real-vehicle anchoring stays the band strategy, Stonefish is NOT ground truth --
+is reinforced by data: the plant family cannot absorb a 10-100x rotational-damping recenter under the
+unchanged relative DR band. TAM moment-arm band remains blocked on a tolerance source (unchanged).
+[EVIDENCE: report diagnose-20260728-081953 under trpo_hydrorc_s30_260728_013136/analysis]

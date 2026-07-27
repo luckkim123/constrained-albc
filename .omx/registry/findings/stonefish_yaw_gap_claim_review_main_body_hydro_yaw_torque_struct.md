@@ -2,8 +2,8 @@
 title: "Stonefish yaw-gap claim review: main-body hydro yaw torque structurally zero (symmetric added mass kills Munk); PhysX DOES model arm reaction; real gaps = buoy added-mass ~10x under, no arm-link hydro, no yaw-torque DR axis"
 tags: ["sim-to-real", "stonefish", "yaw", "hydrodynamics", "munk-moment", "added-mass", "domain-randomization", "arm-reaction"]
 created: 2026-07-16T12:56:49.986664
-updated: 2026-07-24T07:18:08.018271
-sources: ["next-20260724-033200", "static_260724_092023", "static_260724_100219"]
+updated: 2026-07-27T23:24:46.982508
+sources: ["next-20260724-033200", "static_260724_092023", "static_260724_100219", "diagnose-20260728-081953"]
 links: ["sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "teacher_dr_harder_yaw_is_the_only_heavy_tail_axis_roll_is_dc_bia.md", "buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md", "yaw_command_is_rate_not_angle_inherited_design_defensible_only_i.md"]
 category: reference
 confidence: high
@@ -92,3 +92,13 @@ ceiling is compared against.
 
 [MEASURED 2026-07-24] P2-yaw eval sweep DONE (anchor s30, constant body-frame Mz injected at none level, instrument `--inject-yaw-torque` on exp/latency-eval-instrument). Break criterion = yaw ss_error > 10x its Mz=0 base (0.0057 -> 0.057) OR attitude-fail >5% envs. Result per Mz {0.5,1.0,2.0,3.5,5.0} N.m: yaw ss_error = 0.0058 / 0.0090 / 0.0158 / 0.0268 / 0.0364 deg (1.0x/1.6x/2.8x/4.7x/6.4x base), survival 100% at every Mz. NO BREAK through 5.0 N.m (= 3.5x the max training-world steady disturbance ~1.4 N.m). VERDICT: H1 (HIGH ceiling, Lane 2) CONFIRMED -- yaw rejection ceiling >= 5 N.m; a constant Mz maps to a small thruster trim the policy holds. CONSEQUENCE: the policy side is NOT the weak link; a Stonefish yaw failure would point at disturbance magnitude/modeling, not missing rejection training -> no training-side yaw-torque DR axis justified unless Stonefish/tank demand exceeds ~5 N.m. This measured yaw ss_error vs Mz curve is the standing "rejection ceiling" reference for the C4 -> Stonefish diagnostic. P2 half of the lead CLOSED; P1 (cross-sim joint1 swing) still deferred (needs Stonefish machine). Data: experiments/.../trpo_buoyanchor_s30_260722_134743/sweeps/p2_yaw/mz_*/summary.json.
 
+---
+
+## Update (2026-07-27T23:24:46.982508)
+
+UPDATE 2026-07-28: P1 (cross-sim joint1 swing) is now the GATING pre-step for any hydro-recenter v2.
+The HydroRC wholesale recenter failed the Isaac paired gate (roll n_gt20 0 -> 18.67, yaw ss +18.8%),
+so the next recenter must choose HOW FAR to move the rotational damping -- exactly the number P1
+measures (which closed-loop rotational damping/yaw torque the deployment sim actually exerts). Still
+needs the Stonefish machine; zero GPU; zero training-code change.
+[EVIDENCE: HydroRC gate result page (hydrorc recenter gate result 2026-07-28); report diagnose-20260728-081953]
