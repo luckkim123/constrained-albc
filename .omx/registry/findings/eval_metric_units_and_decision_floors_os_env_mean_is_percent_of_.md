@@ -2,7 +2,7 @@
 title: "Eval metric units and decision floors: os_env_mean is percent-of-step (roll steps 30 deg), ss_error is degrees; paired screening floors and the machine-isolation rule"
 tags: ["units", "os_env_mean", "ss_error", "decision-floor", "machine-isolation", "paired-seed", "methodology", "audit"]
 created: 2026-07-23T07:08:05.945326
-updated: 2026-07-23T08:41:31.063757
+updated: 2026-07-27T04:40:58.149140
 sources: ["diagnose-20260723-134359", "teacher-campaign-plan.md#11"]
 links: []
 category: convention
@@ -40,3 +40,9 @@ UNSETTLED: the true same-machine paired repeatability floor; measured directly b
 ## Update (2026-07-23T08:41:31.063757)
 
 UPDATE 2026-07-23: the audit SSOT document moved to constrained-albc/.omx/programs/teacher-final-closeout/PLAN.md (omx v0.9.0 program layer); section 11 content unchanged. Redirect stub remains at docs/reference/teacher-campaign-plan.md.
+
+---
+
+## Update (2026-07-27T04:40:58.149140)
+
+CODIFIED IN CODE (2026-07-27, commit 7b4fb5c): the enhanced summary.json now carries a machine-readable 'units' block (axis_units: roll/pitch/att_norm deg, vx/vy/vz m/s, yaw rad/s; field_units: ss_* inherit axis, os_*/us_* pp_of_step, n_gt* envs, rise_time s) plus 'decision_floors' {ss_error: 0.10, os_env_mean: 10.0, n_gt20: 15} and its protocol string, written by _analyze/recompute_plots._write_run_json. Downstream tables should label from summary.json['units'] via _analyze.recompute_metrics.unit_for(axis, field), and judge paired deltas via floor_verdict(field, delta, axis) -> REAL/BELOW-FLOOR/NO-FLOOR (yaw ss_error = NO-FLOOR, floor is deg-bound). Hand-labelling units from memory is now a defect.

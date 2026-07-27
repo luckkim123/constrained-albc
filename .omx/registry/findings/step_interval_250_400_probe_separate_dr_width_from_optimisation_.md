@@ -1,15 +1,15 @@
 ---
 title: "step_interval 250->400 probe: separate DR-WIDTH from OPTIMISATION-STEPS as the cause of extend8k's nominal roll transient regression (pending approval, not launched)"
-tags: ["doraemon", "step_interval", "dr-width", "transient-overshoot", "thruster-util", "probe", "teacher_baseline_posttam", "pending-approval", "correction", "result", "h1-refuted"]
+tags: ["doraemon", "step_interval", "dr-width", "transient-overshoot", "thruster-util", "probe", "teacher_baseline_posttam", "pending-approval", "correction", "result", "h1-refuted", "dgx", "scale-up", "bounds-widening", "dwell-time", "scope-correction", "forward-scope", "over-generalization-guard"]
 created: 2026-07-20T04:17:04.272956
-updated: 2026-07-23T07:42:45.019743
+updated: 2026-07-24T08:30:50.403121
 sources: ["diagnose-20260720-124259", "next-20260720-131526", "marinelab/marinelab/algorithms/doraemon.py", "diagnose-20260721-020253", "static_260721_014808"]
-links: ["extend8k_saturated_the_dr_config_box_at_iter_7000_all_20_params_.md"]
+links: ["extend8k_saturated_the_dr_config_box_at_iter_7000_all_20_params_.md", "curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md", "doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step.md"]
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 40
-qualityReasons: ["body-under-120-chars", "no-source-marker", "generic-only-tags"]
+qualityScore: 80
+qualityReasons: ["no-source-marker"]
 status: resolved
 blocked-on: "RESOLVED 2026-07-21: probe launched and concluded -- H1 refuted, step_interval=400 rejected. No longer pending-approval/not-launched. (Title still reads 'pending approval, not launched'; retitle not applied here since it would fork the wiki slug -- flagging the stale title in this note.)"
 ---
@@ -193,3 +193,13 @@ demoted rather than being escalated as the fallback.
 ## Update (2026-07-23T07:42:45.019743)
 
 2026-07-23 curation: refreshed stale blocked-on -- probe ran 2026-07-21, H1 was refuted, step_interval=400 rejected.
+
+---
+
+## Update (2026-07-24T08:30:50.403121)
+
+FORWARD SCOPE (2026-07-24, user Q on over-generalization): A1's "step_interval=400 NOT adoptable" is scoped to FIXED config bounds at the 5k-plant settings search, single-seed. It is NOT a standing "step_interval=250 at all scales" rule. In the CURRENT regime the campaign keeps 250 only because the iteration budget -- not step_interval -- is the binding limit on DR width (box saturates at iter 7000). A1 raised step_interval=400 as a CONTROL instrument to hold the DR-width endpoint while varying iterations, not as an adoption candidate; its verdict is about the optimisation-steps role, not step_interval's optimal value.
+
+[FINDING] step_interval REOPENS as a live lever in the bounds-widened DGX regime and A1 does NOT foreclose it. Mechanism: A1 held config bounds fixed, so extra dwell-per-difficulty bought nothing -- the box saturates regardless and extra iterations only apply optimisation pressure against the binding thruster_util (the +13.5pt transient hit). But WIDENING the config bounds (P-A6 / campaign B0c) creates the OPPOSITE risk: each now-harder difficulty is UNDER-trained -- the same kl_ub-up -> attitude-collapse failure mode E1 measured -- whose direct remedy is MORE dwell = HIGHER step_interval. So in the widened arm step_interval must be a DESIGN VARIABLE, not pre-fixed at 250. Caveat: raising step_interval at fixed max_iterations LOWERS reach (n_expansions = max_iterations / step_interval), so it must be co-raised WITH max_iterations -- a declared 2-knob move per [[curriculum_recalibration_protocol_widening_the_dr_box_requires_r]] and [[doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_]]. A1's own decomposition is single-seed with a marginal row-1 manip-check leak (~15%), so even within its scope the magnitude is MED confidence.
+[CONFIDENCE: MED -- mechanistic prediction, not measured in the widened regime]
+
