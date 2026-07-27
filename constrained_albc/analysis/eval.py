@@ -85,6 +85,13 @@ def _add_common(sp: argparse.ArgumentParser) -> None:
         "values in [0,1] (e.g. '1,1,1,1,0,1' = thruster m4 dead, the FTC-m4 probe). Implies "
         "--fault and bypasses the Bernoulli sampler. Off -> Bernoulli path unchanged.",
     )
+    sp.add_argument(
+        "--privileged-fault-obs",
+        action="store_true",
+        help="Arm B (FaultDR-AB): build the env with use_privileged_fault_obs=True (28->34D "
+        "privileged obs). REQUIRED to eval an Arm-B checkpoint whose encoder was trained on 34D "
+        "privileged input -- omitting it dim-mismatches the encoder. No-op for Arm-A/anchor (28D).",
+    )
     cli_args.add_rsl_rl_args(sp)
 
 
@@ -95,6 +102,10 @@ def _apply_fault_cli(env_cfg, args_cli) -> None:
     deterministic per-thruster health vector across all envs (and implies enable=True).
     Shared by every eval mode so the two flags behave identically in each.
     """
+    # Arm-B privileged-fault-obs: set BEFORE any env build so state_space 28->34
+    # materializes (mirrors train.py). No-op when the cfg lacks the field.
+    if getattr(args_cli, "privileged_fault_obs", False) and hasattr(env_cfg, "use_privileged_fault_obs"):
+        env_cfg.use_privileged_fault_obs = True
     if not hasattr(env_cfg, "fault"):
         return
     if getattr(args_cli, "fault", False):
