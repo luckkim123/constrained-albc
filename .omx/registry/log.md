@@ -7527,3 +7527,7 @@
 - **Pages:** hydrorc_recenter_gate_result_2026_07_28_isaac_paired_gate_fail_r.md
 - **Summary:** updated 'HydroRC recenter gate result 2026-07-28: Isaac paired gate FAIL (roll n_gt20 0->18.7 envs, yaw ss +18.8%) -- transient-tail regression at all DR levels, hard-corner collapse, 7-17x fault-robustness loss; recenter not adopted, Stonefish readout not entered'
 
+## [2026-07-28T09:18:30.626131] query
+- **Pages:** bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, the_composed_configuration_is_sub_additive_on_the_shared_actuati.md
+- **Summary:** query 'about above absolute achieved actual actuation adapted additive' -> 5 of 132
+
