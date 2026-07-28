@@ -2,5 +2,13 @@
   "campaign_id": "fault_dr",
   "created": "2026-07-27T04:31:44.619472+00:00",
   "auto_initialized": true,
-  "source": "report-coverage"
+  "source": "report-coverage",
+  "planned": [
+    {
+      "proposal_id": "next-20260728-180215",
+      "summary": "E-ftc1: fault_severity initial Beta nominal 0.0 -> 0.0771 (escape the mean-preserving clamp Beta(1,99), concentration 100 -> configured 30); one of 21 dims, seed 30 paired vs Arm A, 5000 iter fixed. H1 pacing-limited (achieved severity >= 0.20, mode 0, success >= alpha, Beta a holds) vs H2 competence/authority-limited (< 0.15, or mode -2, or none-floor breach, or thruster_util binding from 0.902); [0.15,0.20) = H1-WEAK partial conversion. Reviewer-approved 0 major / 4 minor applied. Win is conditional on the Arm A plant -- confirm run at max_thrust_scale (0.85,1.15) required before entering the final teacher.",
+      "label": "E-ftc1",
+      "added_at": "2026-07-28T09:35:36.250583+00:00"
+    }
+  ]
 }

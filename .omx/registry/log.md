@@ -7535,3 +7535,7 @@
 - **Pages:** e_int_s_stitched_resume_offset_the_doraemon_update_grid_its_faul.md
 - **Summary:** created "E-int's stitched resume offset the DORAEMON update grid: its fault_severity reads 0.0770 iteration-matched (iter 4749) but 0.0901 at actual run end (iter 4999)"
 
+## [2026-07-28T09:28:26.133612] query
+- **Pages:** bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, the_composed_configuration_is_sub_additive_on_the_shared_actuati.md
+- **Summary:** query 'about above absolute achieved actual actuation adapted additive' -> 5 of 133
+
