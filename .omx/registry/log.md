@@ -7231,3 +7231,275 @@
 - **Pages:** hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md
 - **Summary:** updated "HydroRC IS half-recentered (buoy/link3 nominals untouched) -- but the '10x under added mass' framing dies to the effective-vs-effective correction (~2.4x); the lead survives on a different mechanism: HydroRC drops hull yaw damping 45x, so unmeasured analytical buoy damping becomes 1.8x hull's and DOMINATES the retrained plant"
 
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_composed_configuration_is_sub_additive_on_the_shared_actuati.md
+- **Summary:** created 'The composed configuration is sub-additive on the shared actuation budget: the b'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** all_twelve_roll_pitch_att_norm_ss_error_comparisons_moved_in_the.md
+- **Summary:** created 'All twelve roll/pitch/att_norm `ss_error` comparisons moved in the improving dir'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_only_non_trivial_nominal_regression_anywhere_in_the_healthy_.md
+- **Summary:** created 'The only non-trivial nominal regression anywhere in the healthy grid is yaw over'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_pre_registered_floor_wording_is_directionally_ambiguous_and_.md
+- **Summary:** created 'The pre-registered floor wording is directionally ambiguous and this run exposes'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** fault_robustness_is_not_merely_retained_under_composition_but_ex.md
+- **Summary:** created 'Fault robustness is not merely retained under composition but exceeds the single'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_attitude_verdict_is_not_an_artifact_of_the_aggregate_axis_ro.md
+- **Summary:** created 'The attitude verdict is not an artifact of the aggregate axis: roll and pitch in'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** yaw_is_the_weakest_fault_robustness_axis_and_sits_modestly_below.md
+- **Summary:** created 'Yaw is the weakest fault-robustness axis and sits modestly below Arm A, but this'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** fault_induced_terminations_remain_fully_eliminated_under_composi.md
+- **Summary:** created 'Fault-induced terminations remain fully eliminated under composition, reproducin'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_m4_dead_injector_genuinely_bit_in_every_measured_cell_so_the.md
+- **Summary:** created 'The m4-dead injector genuinely bit in every measured cell, so the advantage is n'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_two_arms_are_protocol_comparable_with_the_anchor_pair_despit.md
+- **Summary:** created 'The two arms are protocol-comparable with the anchor pair despite a CLI differen'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_reward_decomposition_shifts_toward_attitude_and_away_from_ya.md
+- **Summary:** created 'The reward decomposition shifts toward attitude and away from yaw-rate, and the '
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_trpo_optimiser_behaved_identically_to_the_anchor_the_trust_r.md
+- **Summary:** created 'The TRPO optimiser behaved identically to the anchor — the trust region never fa'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** entropy_collapse_with_a_floored_policy_mean_noise_std_is_a_pre_e.md
+- **Summary:** created 'Entropy collapse with a floored `Policy/mean_noise_std` is a pre-existing plant-'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_asymmetric_critic_pair_stayed_stable_through_the_composition.md
+- **Summary:** created 'The asymmetric critic pair stayed stable through the composition, and the cost-c'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_encoder_is_statistically_indistinguishable_from_the_anchor_o.md
+- **Summary:** created 'The encoder is statistically indistinguishable from the anchor on every logged l'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** thruster_util_remains_the_binding_constraint_and_every_constrain.md
+- **Summary:** created '`thruster_util` remains the binding constraint and every constraint stayed insid'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_single_barrier_penalty_spike_that_distinguishes_this_run_fro.md
+- **Summary:** created 'The single `barrier_penalty` spike that distinguishes this run from its referenc'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_lane_2_curriculum_tax_hypothesis_is_refuted_on_its_own_state.md
+- **Summary:** created 'The Lane-2 curriculum-tax hypothesis is refuted on its own stated metric: adding'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_curriculum_did_pay_a_measurable_entropy_price_for_the_extra_.md
+- **Summary:** created 'The curriculum did pay a measurable entropy price for the extra DR width even th'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_doraemon_curriculum_ended_under_converged_but_this_is_a_pre_.md
+- **Summary:** created 'The DORAEMON curriculum ended under-converged, but this is a pre-existing budget'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** training_converged_healthily_to_completion_with_no_crash_and_no_.md
+- **Summary:** created 'Training converged healthily to completion with no crash and no termination path'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_doraemon_curriculum_state_was_genuinely_restored_across_the_.md
+- **Summary:** created 'The DORAEMON curriculum state was genuinely restored across the process restart '
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_pre_registered_isaac_paired_non_regression_gate_fails_so_per.md
+- **Summary:** created 'The pre-registered Isaac paired non-regression gate FAILS, so per the proposal r'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** dc_steady_state_tracking_is_intact_at_none_while_the_breach_is_t.md
+- **Summary:** created 'DC steady-state tracking is intact at `none` while the breach is transient-shape'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** att_norm_ss_error_at_none_is_unchanged_0_525_0_507_deg_and_survi.md
+- **Summary:** created 'att_norm ss_error at `none` is unchanged (0.525 -> 0.507 deg) and survival is 10'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_roll_transient_regression_is_plant_wide_not_a_nominal_corner.md
+- **Summary:** created 'The roll transient regression is plant-wide, not a nominal-corner artifact: roll'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_hard_dr_level_broadly_collapses_on_the_recentered_plant_att_.md
+- **Summary:** created 'The `hard` DR level broadly collapses on the recentered plant: att_norm ss_error'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** fault_robustness_collapses_by_an_order_of_magnitude_on_the_recen.md
+- **Summary:** created 'Fault robustness collapses by an order of magnitude on the recentered plant: the'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_per_step_reward_decomposition_is_essentially_unchanged_by_th.md
+- **Summary:** created 'The per-step reward decomposition is essentially unchanged by the plant swap — R'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** trpo_optimizer_health_carries_the_in_family_signature_unchanged_.md
+- **Summary:** created 'TRPO optimizer health carries the in-family signature unchanged: Policy/entropy '
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** both_critics_fit_better_on_the_recentered_plant_loss_value_funct.md
+- **Summary:** created 'Both critics fit BETTER on the recentered plant: Loss/value_function 0.4281 vs 0'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** encoder_health_is_unchanged_by_the_plant_swap_encoder_z_std_0_39.md
+- **Summary:** created 'Encoder health is unchanged by the plant swap: Encoder/z_std 0.3964 vs 0.3931, E'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_binding_constraint_loosens_on_the_recentered_plant_constrain.md
+- **Summary:** created 'The binding constraint LOOSENS on the recentered plant: Constraint/margin/thrust'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_curriculum_runs_the_same_but_reaches_further_on_fault_exposu.md
+- **Summary:** created 'The curriculum runs the same but reaches further on fault exposure: DORAEMON/suc'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** training_itself_was_clean_end_to_end_5000_5000_iterations_with_n.md
+- **Summary:** created 'Training itself was clean end to end: 5000/5000 iterations with no crash (unlike'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** four_scope_limits_stand_1_the_stonefish_50_hz_h1_h2_discriminati.md
+- **Summary:** created 'Four scope limits stand: (1) the Stonefish 50 Hz H1/H2 discrimination was never '
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_pre_registered_isaac_paired_non_regression_gate_fails_so_per.md
+- **Summary:** updated 'The pre-registered Isaac paired non-regression gate FAILS, so per the proposal r'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** dc_steady_state_tracking_is_intact_at_none_while_the_breach_is_t.md
+- **Summary:** updated 'DC steady-state tracking is intact at `none` while the breach is transient-shape'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** att_norm_ss_error_at_none_is_unchanged_0_525_0_507_deg_and_survi.md
+- **Summary:** updated 'att_norm ss_error at `none` is unchanged (0.525 -> 0.507 deg) and survival is 10'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_roll_transient_regression_is_plant_wide_not_a_nominal_corner.md
+- **Summary:** updated 'The roll transient regression is plant-wide, not a nominal-corner artifact: roll'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_hard_dr_level_broadly_collapses_on_the_recentered_plant_att_.md
+- **Summary:** updated 'The `hard` DR level broadly collapses on the recentered plant: att_norm ss_error'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** fault_robustness_collapses_by_an_order_of_magnitude_on_the_recen.md
+- **Summary:** updated 'Fault robustness collapses by an order of magnitude on the recentered plant: the'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_per_step_reward_decomposition_is_essentially_unchanged_by_th.md
+- **Summary:** updated 'The per-step reward decomposition is essentially unchanged by the plant swap — R'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** trpo_optimizer_health_carries_the_in_family_signature_unchanged_.md
+- **Summary:** updated 'TRPO optimizer health carries the in-family signature unchanged: Policy/entropy '
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** both_critics_fit_better_on_the_recentered_plant_loss_value_funct.md
+- **Summary:** updated 'Both critics fit BETTER on the recentered plant: Loss/value_function 0.4281 vs 0'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** encoder_health_is_unchanged_by_the_plant_swap_encoder_z_std_0_39.md
+- **Summary:** updated 'Encoder health is unchanged by the plant swap: Encoder/z_std 0.3964 vs 0.3931, E'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_binding_constraint_loosens_on_the_recentered_plant_constrain.md
+- **Summary:** updated 'The binding constraint LOOSENS on the recentered plant: Constraint/margin/thrust'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_curriculum_runs_the_same_but_reaches_further_on_fault_exposu.md
+- **Summary:** updated 'The curriculum runs the same but reaches further on fault exposure: doraemon_suc'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** training_itself_was_clean_end_to_end_5000_5000_iterations_with_n.md
+- **Summary:** updated 'Training itself was clean end to end: 5000/5000 iterations with no crash (unlike'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** four_scope_limits_stand_1_the_stonefish_50_hz_h1_h2_discriminati.md
+- **Summary:** updated 'Four scope limits stand: (1) the Stonefish 50 Hz H1/H2 discrimination was never '
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_pre_registered_isaac_paired_non_regression_gate_fails_so_per.md
+- **Summary:** updated 'The pre-registered Isaac paired non-regression gate FAILS, so per the proposal r'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** dc_steady_state_tracking_is_intact_at_none_while_the_breach_is_t.md
+- **Summary:** updated 'DC steady-state tracking is intact at `none` while the breach is transient-shape'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** att_norm_ss_error_at_none_is_unchanged_0_525_0_507_deg_and_survi.md
+- **Summary:** updated 'att_norm ss_error at `none` is unchanged (0.525 -> 0.507 deg) and survival is 10'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_roll_transient_regression_is_plant_wide_not_a_nominal_corner.md
+- **Summary:** updated 'The roll transient regression is plant-wide, not a nominal-corner artifact: roll'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_hard_dr_level_broadly_collapses_on_the_recentered_plant_att_.md
+- **Summary:** updated 'The `hard` DR level broadly collapses on the recentered plant: att_norm ss_error'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** fault_robustness_collapses_by_an_order_of_magnitude_on_the_recen.md
+- **Summary:** updated 'Fault robustness collapses by an order of magnitude on the recentered plant: the'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_per_step_reward_decomposition_is_essentially_unchanged_by_th.md
+- **Summary:** updated 'The per-step reward decomposition is essentially unchanged by the plant swap — R'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** trpo_optimizer_health_carries_the_in_family_signature_unchanged_.md
+- **Summary:** updated 'TRPO optimizer health carries the in-family signature unchanged: Policy/entropy '
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** both_critics_fit_better_on_the_recentered_plant_loss_value_funct.md
+- **Summary:** updated 'Both critics fit BETTER on the recentered plant: Loss/value_function 0.4281 vs 0'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** encoder_health_is_unchanged_by_the_plant_swap_encoder_z_std_0_39.md
+- **Summary:** updated 'Encoder health is unchanged by the plant swap: Encoder/z_std 0.3964 vs 0.3931, E'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_binding_constraint_loosens_on_the_recentered_plant_constrain.md
+- **Summary:** updated 'The binding constraint LOOSENS on the recentered plant: Constraint/margin/thrust'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** the_curriculum_runs_the_same_but_reaches_further_on_fault_exposu.md
+- **Summary:** updated 'The curriculum runs the same but reaches further on fault exposure: doraemon_suc'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** training_itself_was_clean_end_to_end_5000_5000_iterations_with_n.md
+- **Summary:** updated 'Training itself was clean end to end: 5000/5000 iterations with no crash (unlike'
+
+## [2026-07-28T05:32:19.957559] add
+- **Pages:** four_scope_limits_stand_1_the_stonefish_50_hz_h1_h2_discriminati.md
+- **Summary:** updated 'Four scope limits stand: (1) the Stonefish 50 Hz H1/H2 discrimination was never '
+
+## [2026-07-28T08:56:39.206879] query
+- **Pages:** ftc_fault_dr_a_b_result_2026_07_27_fault_dr_adopted_5_12x_less_m.md, engine_gap_doraemon_per_parameter_curriculum_expansion_is_invisi.md, doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md, extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_.md, real_robot_has_2_faulted_thrusters_user_judges_buoyancy_restorin.md, the_doraemon_success_rate_peak_is_set_by_performance_lb_not_poli.md, kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md, reward_md_6_error_buffers_reward_call_site_dt_scaling_theory_rev.md, e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite.md, dr_harder_ood_verdict_e2_best_survives_ood_the_harder_curriculum.md, performance_lb_doraemon_gate_is_causally_independent_of_the_acto.md, p_a8_perflb200_more_iters_5000_8000_closed_the_deployment_ood_dr.md, e3_extend10k_regressed_the_policy_training_budget_is_not_the_p7_.md, safety_rail_constraints_fire_hard_at_init_go_quiet_and_re_fire_a.md, hydrorc_recenter_gate_result_2026_07_28_isaac_paired_gate_fail_r.md, perflb200_final_dr_anatomy_17_bulk_params_at_config_ceiling_unif.md, dr_harder_campaign_synthesis_speed_kills_attitude_center_shift_o.md, engine_gap_analyze_training_py_needs_the_logs_run_dir_not_the_ex.md, engine_gap_analyze_training_py_only_runs_under_isaac_sim_python_.md, engine_gap_omx_reduce_tb_final_unusable_here_cli_on_system_pytho.md
+- **Summary:** query 'fault_severity curriculum under-expanded DORAEMON pacing' -> 20 of 43
+
+## [2026-07-28T08:56:39.287205] query
+- **Pages:** an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md, teacher_dr_harder_doraemon_curriculum_froze_before_run_end_unuse.md, doraemon_over_widens_then_oscillates_when_a_converged_teacher_is.md, doraemon_is_trust_region_limited_not_feasibility_limited_kl_step.md, engine_generic_flags_entropy_collapse_barrier_spike_reward_plate.md, posttam_encoder_is_alive_and_specialized_z_sweep_exploration_col.md, constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md, roll_transient_is_worst_at_none_dr_and_improves_monotonically_as.md, student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md, constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md, joint1_cumulative_ipo_constraint_generalizes_drift_bounded_at_oo.md, sequential_overnight_campaign_wall_clock_budget_not_crashes_kill.md, student_distillation_converges_to_a_residual_that_rules_out_late.md, teacher_dr_harder_yaw_is_the_only_heavy_tail_axis_roll_is_dc_bia.md, teacher_encoder_0_dead_latent_dims_keys_on_lateral_cog_cob_offse.md, thruster_util_is_the_binding_constrainttrpo_constraint_in_7_of_7.md
+- **Summary:** query 'DORAEMON curriculum expansion rate saturation' -> 16 of 16
+
+## [2026-07-28T09:05:20.904705] query
+- **Pages:** bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, extend8k_saturated_the_dr_config_box_at_iter_7000_all_20_params_.md, absolute_degree_reference_scales_for_judging_attitude_deltas_sto.md
+- **Summary:** query 'about above absolute accuracy achieved actual actuation additionally' -> 5 of 134
+
+## [2026-07-28T09:09:23.471289] query
+- **Pages:** bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, the_composed_configuration_is_sub_additive_on_the_shared_actuati.md
+- **Summary:** query 'about above absolute achieved actual actuation adapted additive' -> 5 of 129
+
