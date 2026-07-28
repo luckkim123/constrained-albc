@@ -7523,3 +7523,7 @@
 - **Pages:** the_mean_preserving_beta_clamp_silently_triples_concentration_fo.md
 - **Summary:** created 'The mean-preserving Beta clamp silently triples concentration for nominal-0 DR dims (30 -> 100), and those 4 dims are exactly the ones that end under-expanded'
 
+## [2026-07-28T09:16:04.874601] add
+- **Pages:** hydrorc_recenter_gate_result_2026_07_28_isaac_paired_gate_fail_r.md
+- **Summary:** updated 'HydroRC recenter gate result 2026-07-28: Isaac paired gate FAIL (roll n_gt20 0->18.7 envs, yaw ss +18.8%) -- transient-tail regression at all DR levels, hard-corner collapse, 7-17x fault-robustness loss; recenter not adopted, Stonefish readout not entered'
+

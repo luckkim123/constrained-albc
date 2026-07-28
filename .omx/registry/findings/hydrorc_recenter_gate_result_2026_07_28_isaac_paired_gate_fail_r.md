@@ -2,14 +2,14 @@
 title: "HydroRC recenter gate result 2026-07-28: Isaac paired gate FAIL (roll n_gt20 0->18.7 envs, yaw ss +18.8%) -- transient-tail regression at all DR levels, hard-corner collapse, 7-17x fault-robustness loss; recenter not adopted, Stonefish readout not entered"
 tags: ["hydrorc", "gate", "recenter", "damping", "transient", "fault-dr"]
 created: 2026-07-27T23:24:46.808798
-updated: 2026-07-27T23:24:46.808798
+updated: 2026-07-28T09:16:04.874601
 sources: ["diagnose-20260728-081953"]
 links: []
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 status: resolved
 ---
 
@@ -38,3 +38,27 @@ recenter-v2 arm: (a) translational+heave-only recenter -- loses Lane-2 discrimin
 rotational limit-cycle axes; (b) rotational recenter + raised DR lower-corner floor -- adds a second
 variable; (c) log-mean rotational recenter -- arbitrary without P1. Branch exp/hydro-recenter kept as
 the v2 base; marinelab parked back on exp/max-thrust-dr.
+
+---
+
+## Update (2026-07-28T09:16:04.874601)
+
+# NUMERIC CORRECTION 2026-07-28: the hard-level yaw figure is +31.8%, not +31.9%
+
+This page's yaw-per-level series reads `+18.8/+23.4/+24.3/+31.9%`. The last figure is a
+hand-transcription drift. The SSOT report `diagnose-20260728-081953` states
+`+18.8/+23.4/+24.3/+31.8%`, and every copy taken verbatim from it agrees (the auto-captured finding
+page `the_pre_registered_isaac_paired_non_regression_gate_fails_so_per`, all three blocks, and the
+P1 cross-sim protocol spec).
+
+Only the two hand-authored summaries drifted: this page and PLAN `teacher-final-closeout`
+section 12.2, HydroRC row. PLAN has been corrected in the same pass.
+
+Nothing downstream changes — the gate verdict rests on the `none`-level +18.8% against the 16.8%
+bound and on roll `n_gt20` 0 -> 18.67 envs, neither of which is affected. Recorded so the value does
+not propagate further, per the workspace rule that run results are read from the experiments-tree
+report and not from a summary that copied it.
+
+[EVIDENCE: report diagnose-20260728-081953 line 12 ("+18.8/+23.4/+24.3/+31.8% at none/soft/medium/hard"); grep across .omx/registry/findings and /workspace/.sp/plans/2026-07-28-p1-cross-sim-joint1-swing-protocol.md returns 31.8 in every verbatim copy and 31.9 only in this page and PLAN 12.2]
+[CONFIDENCE: HIGH]
+
