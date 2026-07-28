@@ -2,7 +2,7 @@
 title: "sim hydro nominal is analytical (not measured); IMU+pressure can anchor rotation/heave but not surge/sway/TAM"
 tags: ["measurement", "system-id", "domain-randomization", "sim-to-real", "damping", "free-decay", "TAM", "sensors", "fault-tolerant-control", "thruster", "load-cell", "arm-step-response", "max_thrust", "systematic-bias", "user-decision", "batch-pass", "apply-gate", "decision"]
 created: 2026-06-14T07:38:12.841674
-updated: 2026-07-27T23:24:46.899467
+updated: 2026-07-28T09:12:17.947957
 sources: ["envs/main/config.py:139", "envs/main/mdp/events.py", "user-input-2026-07-23", "B0c-implementation-260723", "diagnose-20260723-134359", "next-20260723-203114", "static_260724_073758", "diagnose-20260727-151917", "diagnose-20260728-081953"]
 links: ["curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md", "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md", "adding_a_dr_axis_is_half_a_change_dr_config_s_dr_tuple_fields_tr.md"]
 category: reference
@@ -11,7 +11,7 @@ schemaVersion: 1
 qualityScore: 90
 qualityReasons: ["generic-only-tags"]
 status: needs-apply-before-retrain
-blocked-on: "max_thrust band SOURCED (+/-15%) and rostered as campaign B0c (the pending apply); battery voltage window CONFIRMED 4S LiPo ~14-16.8 V (2026-07-23 Z6 memo) — narrower than the 14-18 V source window, band conservative; TAM moment-arm band still blocked on a real geometric-tolerance source (CAD stack-up / bracket spec)"
+blocked-on: "max_thrust half CLOSED 2026-07-27: gate D-a ADOPTED (+/-15% band, 42.5-57.5 N) after campaign B0c ran (trpo_b0cmaxthrust_s30_260724_024326) and E-int composed it into the final teacher; battery window CONFIRMED 4S LiPo ~14-16.8 V (Z6 memo). REMAINING blocker is the TAM moment-arm band only, still without a real geometric-tolerance source (CAD stack-up / bracket spec) -- which is why this page keeps needs-apply-before-retrain."
 ---
 
 # sim hydro nominal is analytical (not measured); IMU+pressure can anchor rotation/heave but not surge/sway/TAM
@@ -221,3 +221,32 @@ page's own caveat -- real-vehicle anchoring stays the band strategy, Stonefish i
 is reinforced by data: the plant family cannot absorb a 10-100x rotational-damping recenter under the
 unchanged relative DR band. TAM moment-arm band remains blocked on a tolerance source (unchanged).
 [EVIDENCE: report diagnose-20260728-081953 under trpo_hydrorc_s30_260728_013136/analysis]
+
+---
+
+## Update (2026-07-28T09:12:17.947957)
+
+# STATUS UPDATE 2026-07-27/28: the max_thrust half of this lead is CLOSED; only the TAM moment-arm band still blocks
+
+This page's `blocked-on` still described the max_thrust band as "the pending apply". It is no longer
+pending — it has been sourced, run, judged and adopted:
+
+- Campaign B0c (`trpo_b0cmaxthrust_s30_260724_024326`) ran the +/-15% per-env band as a one-variable
+  probe and returned NULL on the nominal floors (report `analysis/diagnose-20260727-151917`).
+- Gate **D-a was DECIDED ADOPT by the user on 2026-07-27**: the band enters the final config as a
+  sim-fidelity correction.
+- E-int (`trpo_eint_s30_rs2350_260727_195102`) composed it with fault-DR into the final teacher and
+  measured the composition as sub-additive on the shared thruster budget (`thruster_util` J_C/d_k
+  0.821 against 0.950 for exact additivity).
+
+The page's actionable status stays `needs-apply-before-retrain` because the **TAM moment-arm band**
+half is untouched and still blocked on a real geometric-tolerance source (CAD stack-up or bracket
+spec). Only the blocker text is corrected, so the remaining half is not read as already-applied.
+
+Note for anyone reading this page from a launch checklist: a run that deliberately reverts the
+max_thrust band (e.g. to preserve one-variable pairing with a pre-band baseline) must acknowledge
+this gate explicitly at `omx queue-launch --ack-gate` rather than silently dropping it.
+
+[EVIDENCE: PLAN teacher-final-closeout section 12.1 gate D-a ("DECIDED 2026-07-27: ADOPT (user)"), section 12.2 E-int row (thruster_util 0.821 vs 0.950 exact-additivity, H2 refuted), section 12.3 (B0c formal report DONE 2026-07-27, diagnose-20260727-151917), section 12.4 row sim_hydro_nominal ("max_thrust half = gate D-a; TAM moment-arm cannot-close")]
+[CONFIDENCE: HIGH]
+

@@ -2,15 +2,16 @@
 title: "Thruster nonlinear curve (T200 sim-to-real): off-by-default deadband + signed-square toggle (d34debc)"
 tags: []
 created: 2026-07-01T10:05:27.006437
-updated: 2026-07-14T12:07:34.220227
+updated: 2026-07-28T09:11:52.534644
 sources: []
 links: ["actuator_hardware_identification_arm_xw540_t260_board_measured_p.md", "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md"]
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 70
-qualityReasons: ["no-source-marker", "generic-only-tags"]
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 status: needs-experiment
+blocked-on: "DEFER behind a bench measurement of the real command->thrust curve (PLAN teacher-final-closeout 12.2, corrected 2026-07-27). The page's own 2026-07-02 decision is to keep enable_thrust_curve=False until that curve is measured; the curve is a PLANT MODEL, not a DR perturbation, so an unverified curve can manufacture a worse plant gap than the known linear one. This lead carried NO blocked-on field, so the backlog rendered it as actionable/unblocked -- that overstated it."
 ---
 
 # Thruster nonlinear curve (T200 sim-to-real): off-by-default deadband + signed-square toggle (d34debc)
@@ -42,3 +43,26 @@ ADDENDUM 2026-07-02 (deploy analysis -> KEEP OFF until bench-measured). Decision
 ## Update (2026-07-14T12:07:34.220227)
 
 Backlog tag (Phase 0): open lead — real T200 curve implemented but off-by-default; bench-measure command->thrust before enabling. Not run-invalidating (feature off), so soft, not blocking.
+
+---
+
+## Update (2026-07-28T09:11:52.534644)
+
+# CORRECTION 2026-07-27/28: this lead is DEFERRED behind a bench measurement, not actionable
+
+The backlog enumeration was surfacing this lead as unblocked because the page carried no
+`blocked-on` annotation at all. That is now corrected in the frontmatter.
+
+Substance (PLAN `teacher-final-closeout` section 12.2, roster row E-t200): the roster entry as first
+written repeated the "unblocked" overstatement and has been corrected to **DEFER**. The reason is
+this page's own 2026-07-02 decision — keep `enable_thrust_curve=False` until the real
+command-to-thrust curve is bench-measured. The deadband and quadratic law are PLANT MODEL structure,
+not DR perturbations, so shipping an unverified curve can manufacture a larger sim-to-real gap than
+the known-linear model it replaces.
+
+Prerequisite to re-open: a bench measurement of the T200 command-to-thrust curve on the actual
+vehicle hardware. Until then this is not a candidate for any retrain.
+
+[EVIDENCE: PLAN teacher-final-closeout section 12.2, row E-t200 ("CORRECTED 2026-07-27: DEFER behind a bench measurement ... The backlog's 'unblocked' field overstates it; roster entry 12.2 as first written repeated that overstatement") and section 12.4, row thruster_nonlinear_curve]
+[CONFIDENCE: HIGH]
+

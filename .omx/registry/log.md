@@ -7503,3 +7503,23 @@
 - **Pages:** bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, the_composed_configuration_is_sub_additive_on_the_shared_actuati.md
 - **Summary:** query 'about above absolute achieved actual actuation adapted additive' -> 5 of 129
 
+## [2026-07-28T09:10:53.909208] add
+- **Pages:** the_per_step_reward_decomposition_is_essentially_unchanged_by_th.md
+- **Summary:** updated 'The per-step reward decomposition is essentially unchanged by the plant swap — R'
+
+## [2026-07-28T09:11:06.751628] add
+- **Pages:** training_itself_was_clean_end_to_end_5000_5000_iterations_with_n.md
+- **Summary:** updated 'Training itself was clean end to end: 5000/5000 iterations with no crash (unlike'
+
+## [2026-07-28T09:11:52.534644] add
+- **Pages:** thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md
+- **Summary:** updated 'Thruster nonlinear curve (T200 sim-to-real): off-by-default deadband + signed-square toggle (d34debc)'
+
+## [2026-07-28T09:12:17.947957] add
+- **Pages:** sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md
+- **Summary:** updated 'sim hydro nominal is analytical (not measured); IMU+pressure can anchor rotation/heave but not surge/sway/TAM'
+
+## [2026-07-28T09:12:53.564095] add
+- **Pages:** the_mean_preserving_beta_clamp_silently_triples_concentration_fo.md
+- **Summary:** created 'The mean-preserving Beta clamp silently triples concentration for nominal-0 DR dims (30 -> 100), and those 4 dims are exactly the ones that end under-expanded'
+

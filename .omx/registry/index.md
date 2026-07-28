@@ -1,6 +1,6 @@
 # Wiki Index
 
-> 266 pages | Last updated: 2026-07-28T05:32:19.957559
+> 267 pages | Last updated: 2026-07-28T09:12:53.564095
 
 ## convention
 
@@ -133,6 +133,7 @@
 - [teacher encoder: 0 dead latent dims, keys on lateral CoG/CoB offsets](teacher_encoder_0_dead_latent_dims_keys_on_lateral_cog_cob_offse.md) - # teacher encoder: 0 dead latent dims, keys on lateral CoG/CoB offsets
 - [teacher hard-DR: CV explodes without heavy-tail (DC-bias dispersion)](teacher_hard_dr_cv_explodes_without_heavy_tail_dc_bias_dispersio.md) - # teacher hard-DR: CV explodes without heavy-tail (DC-bias dispersion)
 - [teacher segmented: post-switch roll transient jumps under hard DR](teacher_segmented_post_switch_roll_transient_jumps_under_hard_dr.md) - # teacher segmented: post-switch roll transient jumps under hard DR
+- [The mean-preserving Beta clamp silently triples concentration for nominal-0 DR dims (30 -> 100), and those 4 dims are exactly the ones that end under-expanded](the_mean_preserving_beta_clamp_silently_triples_concentration_fo.md) - # The mean-preserving Beta clamp silently triples concentration for nominal-0...
 - [thruster_util is the binding ConstraintTRPO constraint in 7 of 7 runs -- A5 loosened non-binding ones](thruster_util_is_the_binding_constrainttrpo_constraint_in_7_of_7.md) - # thruster_util is the binding ConstraintTRPO constraint in 7 of 7 runs -- A5...
 
 ## reference
