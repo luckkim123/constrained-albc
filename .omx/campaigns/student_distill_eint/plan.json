@@ -1,0 +1,13 @@
+{
+  "campaign_id": "student_distill_eint",
+  "created": "2026-07-29T02:57:39.423571+00:00",
+  "predecessor": "teacher_baseline_buoyfix",
+  "planned": [
+    {
+      "proposal_id": "next-20260729-123751",
+      "summary": "",
+      "label": "",
+      "added_at": "2026-07-29T03:40:14.932295+00:00"
+    }
+  ]
+}

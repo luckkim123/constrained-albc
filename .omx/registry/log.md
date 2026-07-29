@@ -7539,3 +7539,31 @@
 - **Pages:** bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, the_composed_configuration_is_sub_additive_on_the_shared_actuati.md
 - **Summary:** query 'about above absolute achieved actual actuation adapted additive' -> 5 of 133
 
+## [2026-07-29T02:01:44.421519] query
+- **Pages:** container_cudnn_is_cu13_against_cu128_torch_every_conv1d_fails_s.md, student_distillation_converges_to_a_residual_that_rules_out_late.md, student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md, closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md, on_policy_dagger_correction_for_the_buoyfix_student.md, albc_stage_2_is_teacher_driven_off_policy_bc_with_mixed_latent_a.md, encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md, experiment_launch_checklist_run_id_wandb_latest_alias_naming.md, group_folder_name_equals_wandb_project_name_equals_experiment_pu.md, policy_head_design_rationale_and_literature_standing_encoder_inp.md, experiment_idea_feed_o_t_into_the_encoder_alongside_p_t_state_co.md, literature_map_how_rl_control_actually_handles_steady_state_erro.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md, analysis_engine_map_what_is_grow_able_vs_off_limits.md, encoder_priv_obs_normalization_bounds_must_be_dr_derived_not_har.md, engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md, experiment_output_directory_standard_logs_vs_experiments_index_t.md, ftc_fault_dr_a_b_result_2026_07_27_fault_dr_adopted_5_12x_less_m.md, train_py_run_group_creates_the_group_layer_no_more_manual_post_m.md, april_2026_entropy_collapse_campaign_machinery_bug_solved_conver.md
+- **Summary:** query 'student distillation' -> 20 of 21
+
+## [2026-07-29T02:14:57.377387] add
+- **Pages:** stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md
+- **Summary:** updated 'Stonefish yaw-gap claim review: main-body hydro yaw torque structurally zero (symmetric added mass kills Munk); PhysX DOES model arm reaction; real gaps = buoy added-mass ~10x under, no arm-link hydro, no yaw-torque DR axis'
+
+## [2026-07-29T02:50:43.604798] add
+- **Pages:** stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md
+- **Summary:** updated 'Stonefish yaw-gap claim review: main-body hydro yaw torque structurally zero (symmetric added mass kills Munk); PhysX DOES model arm reaction; real gaps = buoy added-mass ~10x under, no arm-link hydro, no yaw-torque DR axis'
+
+## [2026-07-29T03:35:29.611397] add
+- **Pages:** container_cudnn_is_cu13_against_cu128_torch_every_conv1d_fails_s.md
+- **Summary:** updated 'Container cuDNN is cu13 against cu128 torch: every conv1d fails, student distillation is 70x slower with the workaround'
+
+## [2026-07-29T03:35:54.855071] add
+- **Pages:** closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md
+- **Summary:** updated 'Closed-loop latent collapse suspicion: legacy student measured 11-17x worse in-loop, deployed student unverified'
+
+## [2026-07-29T03:36:16.750379] add
+- **Pages:** on_policy_dagger_correction_for_the_buoyfix_student.md
+- **Summary:** updated 'On-policy DAgger correction for the buoyfix student'
+
+## [2026-07-29T03:38:52.900098] query
+- **Pages:** ftc_fault_dr_a_b_result_2026_07_27_fault_dr_adopted_5_12x_less_m.md, canonical_final_teacher_baseline_buoyfix_anchor_trpo_buoyanchor_.md, closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, experiment_launch_checklist_run_id_wandb_latest_alias_naming.md
+- **Summary:** query 'a5a8b33 above absence acknowledgement across adopted against aggregate' -> 5 of 150
+

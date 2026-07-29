@@ -1,0 +1,26 @@
+{
+  "acknowledged_gates": [
+    "imu_45deg_offset_pitch_negation_sim_uncompensated_2026_07_05.md",
+    "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md",
+    "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md"
+  ],
+  "gpu_gate": "GPU1 (RTX 4060, 8 GB) only, pinned via CUDA_VISIBLE_DEVICES=1 since StudentCfg.device is hardcoded cuda:0. GPU0 is held by E-ftc1 trpo_ftc1sevinit_s30_260729_105510 until ~16:00 KST and must not be touched. 2048 envs sized from measurement: E-ftc1 runs 4096 at 10.67 GB => ~2.0 MB/env over a ~2.5 GB base => 2048 ~ 6.6 GB of 8 GB; fall back to 1024 (~4.5 GB) on OOM.",
+  "launch_delta": "A0 anchor of campaign student_distill_eint: first TCN distillation from the FINAL teacher E-int (trpo_eint_s30_rs2350_260727_195102, model_4999.pt) in E-int's own plant. No recipe variable. Code = worktree /workspace/constrained-albc-student @ exp/student-distill-eint (base 7e6dab9 = E-int's training sha, tag baseline-260729-student), which carries the E0 eval-instrument fix (38d979e) and --run_group plumbing (a5a8b33). 2048 envs, 1000 iters, seed 30, --run_group student_distill_eint, --enable_cudnn WITH the cu12 LD_LIBRARY_PATH (D-c1; without it the run silently takes the 80x-slower native-conv path).",
+  "open_leads": [
+    "closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md",
+    "curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md",
+    "experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md",
+    "hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md",
+    "joint1_stage_1_gate_go_drift_is_real_on_unlimited_physics_not_th.md",
+    "on_policy_dagger_correction_for_the_buoyfix_student.md",
+    "reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md",
+    "roll_transient_is_worst_at_none_dr_and_improves_monotonically_as.md",
+    "stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md",
+    "thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md"
+  ],
+  "proposal_id": "next-20260729-123751",
+  "queued_at": "2026-07-29T03:40:03.528622+00:00",
+  "queued_commit": "a5a8b3379f4126b6c1665b319abeaede1eb7fdbf",
+  "schema_version": 1,
+  "status": "pending approval"
+}

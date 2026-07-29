@@ -2,7 +2,7 @@
 title: "On-policy DAgger correction for the buoyfix student"
 tags: ["distillation", "student", "covariate-shift", "dagger", "albc", "sim-to-real", "next-experiment"]
 created: 2026-07-24T03:35:28.710539
-updated: 2026-07-24T08:18:41.484275
+updated: 2026-07-29T03:36:16.750379
 sources: []
 links: []
 category: decision
@@ -11,7 +11,7 @@ schemaVersion: 1
 qualityScore: 90
 qualityReasons: ["generic-only-tags"]
 status: needs-experiment
-blocked-on: "residual EXPLAINED as observability under-dispersion (2026-07-24); no correction-side experiment remains, hand off to observability retrain"
+blocked-on: "RETRACTED 2026-07-29 (E0): the 'no correction-side experiment remains' verdict rested on the broken eval instrument. Re-measured, DAgger WINS. Open arm is B4b -- a fixed-ratio DAgger distillation from E-int in the student_distill_eint campaign -- sequenced after the A0 anchor, human-gated launch."
 ---
 
 # On-policy DAgger correction for the buoyfix student
@@ -91,4 +91,43 @@ This characterizes WHAT the residual "partial adoption" floor is:
 - Therefore this lead's residual is CLOSED as "explained": the next move is the observability retrain
   (velocity channel +/- longer history), tracked under the closed_loop_latent_collapse lead. This DAgger
   lead needs no further correction-side experiment.
+
+---
+
+## Update (2026-07-29T03:36:16.750379)
+
+## 2026-07-29 VERDICT REVERSED by E0 -- DAgger is a win, not a null
+
+The C4b readout that closed this lead ("residual EXPLAINED as observability under-dispersion; no
+correction-side experiment remains") was produced by the broken `eval.py static` latent instrument
+(see `closed_loop_latent_collapse_suspicion_legacy_student_measured_11`, fix `38d979e`). Re-measuring
+the SAME DAgger checkpoint `trpo_buoyfix_dagger_s30_tcn_260724_133040` against the SAME plain-BC
+checkpoint `trpo_buoyfix_s30_tcn_260722_184632` with the corrected instrument reverses the reading.
+
+PAIRED CONTRAST, identical environments (per-env DR matched 23/23 at hard), single variable =
+rollout action source (`dagger_beta_end` 0.0 with 600-iter anneal vs the inert 1.0):
+
+| level | axis | plain BC | DAgger | factor | CV plain | CV DAgger |
+|:--|:--|--:|--:|--:|--:|--:|
+| hard | roll | 1.3441 deg | 0.5936 deg | 0.44x | 431% | 212% |
+| hard | pitch | 0.6861 deg | 0.4232 deg | 0.62x | 418% | 296% |
+| medium | roll | 0.7728 deg | 0.5427 deg | 0.70x | 184% | 90% |
+| medium | pitch | 0.3307 deg | 0.2717 deg | 0.82x | 151% | 48% |
+
+DAgger roughly halves hard-level roll error AND halves env-to-env dispersion. Its in-loop MSE relative
+to its own open-loop residual is 12.7x (0.06576 / 0.005178) against plain BC's 37.0x
+(0.07932 / 0.002145).
+
+THIS RESOLVES C4b's OWN PRE-REGISTERED DISCRIMINATION TOWARD H1 (covariate shift). C4b's H2 branch
+required a residual concentrated on lin-vel-driven dims that a history-only student cannot manufacture;
+instead the plain-BC student resolves all 9 latent dims at hard, so the information is present and the
+on-policy correction is what closes the gap.
+
+CAVEATS. n=1 seed per arm; the two students carry different open-loop bases (0.002145 vs 0.005178) so
+the MSE-ratio leg mixes in a training-fit difference -- the attitude contrast is the stronger leg. Both
+students were distilled from the buoyanchor teacher on the pre-gate-D-a plant, so these are relative
+readings, not the campaign baseline; A0 (fresh TCN from E-int) establishes that. Design note carried
+forward: prefer a FIXED mixing ratio over the annealed schedule (VIRAL/SLIM), which is what B4b tests.
+Report:
+`experiments/rsl_rl/albc_trpo_student/trpo_buoyfix_dagger_s30_tcn_260724_133040/analysis/diagnose-20260729-e0-instrument/report.md`.
 

@@ -2,15 +2,15 @@
 title: "Container cuDNN is cu13 against cu128 torch: every conv1d fails, student distillation is 70x slower with the workaround"
 tags: ["environment", "cudnn", "student", "distillation", "infra"]
 created: 2026-07-22T10:05:40.444434
-updated: 2026-07-23T08:10:24.034283
+updated: 2026-07-29T03:35:29.611397
 sources: []
 links: []
 category: convention
 confidence: high
 schemaVersion: 1
-qualityScore: 70
-qualityReasons: ["no-source-marker", "generic-only-tags"]
-status: needs-apply-before-retrain
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
+status: resolved
 blocked-on: "Image-level package change (replace nvidia-cudnn-cu13 with the cu12 build matching torch 2.7.0+cu128). Human-gated: modifies /isaac-sim site-packages. Workaround (cudnn disabled in scripts/train_student.py, commit 2888d49) keeps distillation CORRECT but ~70x slower. ALTERNATIVE 2026-07-23: DGX cuDNN probe PASSED (torch 2.9.0+cu130, cudnn 91300), so C4 distillation can be hosted there instead of waiting on the image fix -- human decision, does not close this lead."
 ---
 
@@ -79,4 +79,39 @@ image stays broken either way, which still costs every future conv1d workload he
 
 Evidence is a relayed report from the DGX session, not reproducible from the
 workstation. Re-run the probe on DGX before committing a distillation block to it.
+
+---
+
+## Update (2026-07-29T03:35:29.611397)
+
+## 2026-07-29 RESOLVED (D-c1) -- no package change, no DGX; it was a library-path ordering
+
+The matching cu12 build was already on disk the whole time. Isaac ships it at
+`/isaac-sim/exts/omni.isaac.ml_archive/pip_prebundle/nvidia/cudnn/lib` (`Required-by: torch`);
+`nvidia-cudnn-cu13 9.20.0.48` and `nvidia-cuda-runtime 13.0.96` sit in
+`/isaac-sim/kit/python/lib/python3.11/site-packages` with an EMPTY `Required-by:` -- orphans that
+merely shadow it. Prepending the prebundle to `LD_LIBRARY_PATH` fixes it per-process:
+
+    LD_LIBRARY_PATH=/isaac-sim/exts/omni.isaac.ml_archive/pip_prebundle/nvidia/cudnn/lib:$LD_LIBRARY_PATH
+
+MEASURED on this workstation (GPU1, RTX 4060, 2026-07-29): cuDNN version 92000 -> 90701; the conv1d
+probe at the TCN's first-layer shape (64,32,9) goes FAIL (`CUDNN_STATUS_NOT_INITIALIZED`) -> PASS.
+One TCN train step at the real training shapes (8192 minibatch, H=9, 72D obs, channels 32 ->
+64/128/128): 557.6 ms cudnn-off vs 7.0 ms cudnn-on = 80x, i.e. the train phase at 2048 envs goes
+~16.7 s/iter -> ~0.21 s/iter.
+
+WHY THIS BEATS BOTH RECORDED OPTIONS. `pip uninstall nvidia-cudnn-cu13` mutates /isaac-sim
+site-packages, is human-gated, and is unsafe while another run holds a GPU (a live process can still
+lazily dlopen). Hosting on the DGX moves hardware for what is a search-path ordering. The env var is
+process-local and instantly revertible, so it can be used while a teacher run occupies the other GPU.
+NEVER touch `nvidia-cudnn-cu12` -- that is the one torch actually depends on.
+
+CORRECTS A PROPAGATED FIGURE. The repo's "a 1000-iteration TCN distillation takes ~5 h" was entirely
+this bug. The companion belief that GRU distillation is comparably slow was never measured -- GRU has
+no conv and never hit this path at all. Only TCN runs were affected.
+
+APPLY TO: `scripts/train_student.py --enable_cudnn` (still default-OFF, guarding a host without the
+path set) AND every `eval.py static --student_ckpt` invocation, since the student encoder runs conv1d
+at inference too. Recorded in the train_student.py header comment (commit a5a8b33, branch
+exp/student-distill-eint).
 
