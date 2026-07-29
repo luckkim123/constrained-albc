@@ -21,6 +21,7 @@
   "proposal_id": "next-20260729-123751",
   "queued_at": "2026-07-29T03:40:03.528622+00:00",
   "queued_commit": "a5a8b3379f4126b6c1665b319abeaede1eb7fdbf",
+  "resolved_run_id": "trpo_sdeint_a0_tcn_s30_260729_130559",
   "schema_version": 1,
-  "status": "pending approval"
+  "status": "launched and analyzed 2026-07-29 (diagnose-20260729-a0-anchor): ANCHOR, kept as the campaign's comparison baseline. Hosting gate PASS with 3.1x margin (0.801 s/iter), so the whole campaign stayed on GPU1 and the DGX was never needed."
 }

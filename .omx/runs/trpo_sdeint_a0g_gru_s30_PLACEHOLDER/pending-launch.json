@@ -1,0 +1,26 @@
+{
+  "acknowledged_gates": [
+    "imu_45deg_offset_pitch_negation_sim_uncompensated_2026_07_05.md",
+    "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md",
+    "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md"
+  ],
+  "gpu_gate": "GPU1 idle (A0 released it); GPU0 held by E-ftc1 trpo_ftc1sevinit_s30_260729_105510 -- user instruction: do not touch GPU0. A0 measured 0.801 s/iter so A0g costs ~13 min.",
+  "launch_delta": "A0g: single variable vs A0 = encoder TCN -> GRU (--encoder_type gru). Everything else byte-identical to A0: teacher E-int model_4999.pt, 2048 envs, 1000 iters, seed 30, GPU1, --enable_cudnn with the cuDNN LD_LIBRARY_PATH, branch exp/student-distill-eint. Settles (a) does an unbounded memory horizon help where a 9-step window does not, and (b) A0's one open P1 question -- whether the flat aggregate ratio is the E-int latent being uniformly resolvable or the none-level near-zero denominator inflating that level.",
+  "open_leads": [
+    "curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md",
+    "experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md",
+    "hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md",
+    "joint1_stage_1_gate_go_drift_is_real_on_unlimited_physics_not_th.md",
+    "on_policy_dagger_correction_for_the_buoyfix_student.md",
+    "reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md",
+    "roll_transient_is_worst_at_none_dr_and_improves_monotonically_as.md",
+    "stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md",
+    "thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md"
+  ],
+  "proposal_id": "next-20260729-a0g",
+  "queued_at": "2026-07-29T04:50:57.729409+00:00",
+  "queued_commit": "a5a8b3379f4126b6c1665b319abeaede1eb7fdbf",
+  "resolved_run_id": "trpo_sdeint_a0g_gru_s30_260729_151017",
+  "schema_version": 1,
+  "status": "launched and analyzed 2026-07-29 (diagnose-20260729-a0g-gru): ADOPTED as the carried-forward encoder. Decision-grade over A0 at 2 of 4 DR levels (none 0.1384, soft 0.1233 deg) once the eval's own 0.1 deg floor is applied; the recorded tail regression is sub-floor and retired."
+}
