@@ -942,10 +942,14 @@ def run_evaluation(
 class _InstrumentedStudentPolicy:
     """Wrap a StudentInLoopPolicy; log (l_hat, l_true) at every __call__.
 
-    Replicates StudentInLoopPolicy.__call__'s forward so the intermediate latents can be
-    captured WITHOUT calling the underlying __call__ (which would double-advance the TCN
-    ring buffer / GRU hidden state). The returned action is identical to the wrapped
-    policy's, so swapping it in is behavior-neutral for the rollout.
+    DELEGATES to the wrapped policy and reads the latent it publishes as `last_l_hat`.
+    An earlier version instead REPLICATED StudentInLoopPolicy.__call__'s forward (to avoid
+    double-advancing the TCN ring / GRU hidden state), and that copy silently dropped the
+    obs normalization on the TCN branch: every TCN in-loop number produced by `static`
+    between 2026-05-26 (096f5b8) and 2026-07-29 was measured with out-of-distribution
+    encoder inputs, which invalidated the "observability floor" and DAgger readouts.
+    Delegation makes that divergence class structurally impossible -- do NOT reintroduce a
+    second encoder forward here.
     """
 
     def __init__(self, student) -> None:
@@ -966,22 +970,9 @@ class _InstrumentedStudentPolicy:
     @torch.no_grad()
     def __call__(self, obs_td) -> torch.Tensor:
         s = self._s
-        obs = obs_td["policy"]
-        priv = obs_td["privileged"]
-        l_true = s.teacher.encode_privileged(priv)  # (B, 9)
-
-        if s.cfg.encoder_type == "tcn":
-            assert s.ring is not None
-            s.ring = torch.roll(s.ring, shifts=-1, dims=1)
-            s.ring[:, -1] = obs
-            l_hat = s.student(s.ring)
-        else:
-            obs_for_student = s.obs_normalizer(obs)
-            l_hat_seq, s.hidden = s.student(obs_for_student.unsqueeze(1), hidden=s.hidden)
-            l_hat = l_hat_seq[:, -1]
-
-        obs_normed = s.teacher.normalize_obs(obs)
-        action = s.teacher.actor_forward(obs_normed, l_hat)
+        l_true = s.teacher.encode_privileged(obs_td["privileged"])  # (B, 9)
+        action = s(obs_td)                                          # advances ring/hidden once
+        l_hat = s.last_l_hat                                        # (B, 9), published by __call__
 
         self.l_hat_log.append(l_hat.detach().cpu().numpy())
         self.l_true_log.append(l_true.detach().cpu().numpy())

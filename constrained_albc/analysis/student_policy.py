@@ -96,6 +96,10 @@ class StudentInLoopPolicy:
             self.ring = None
             self.hidden = self.student.init_hidden(num_envs, device)
 
+        # Latent produced by the most recent __call__. Exists so eval instrumentation can
+        # read the encoder output without running its own forward -- see __call__.
+        self.last_l_hat: torch.Tensor | None = None
+
     def reset(self, env_ids: torch.Tensor | None = None) -> None:
         """Clear history/hidden for the given envs (or all if None).
 
@@ -151,6 +155,12 @@ class StudentInLoopPolicy:
             obs_seq = obs_for_student.unsqueeze(1)  # (B, 1, 87)
             l_hat_seq, self.hidden = self.student(obs_seq, hidden=self.hidden)
             l_hat = l_hat_seq[:, -1]    # (B, 9)
+
+        # Publish the latent for eval instrumentation. Keeping ONE encoder forward in the
+        # codebase is deliberate: the eval wrapper used to replicate this method to capture
+        # l_hat, and that copy silently omitted the obs normalization above on the TCN
+        # branch. Read this attribute; never re-run the encoder.
+        self.last_l_hat = l_hat
 
         obs_normed = self.teacher.normalize_obs(obs)
         return self.teacher.actor_forward(obs_normed, l_hat)
