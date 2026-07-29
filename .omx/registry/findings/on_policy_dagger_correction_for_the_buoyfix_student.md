@@ -2,8 +2,8 @@
 title: "On-policy DAgger correction for the buoyfix student"
 tags: ["distillation", "student", "covariate-shift", "dagger", "albc", "sim-to-real", "next-experiment"]
 created: 2026-07-24T03:35:28.710539
-updated: 2026-07-29T07:26:51.837646
-sources: ["diagnose-20260729-161459"]
+updated: 2026-07-29T08:39:06.362590
+sources: ["diagnose-20260729-161459", "diagnose-20260729-172500"]
 links: []
 category: decision
 confidence: high
@@ -11,7 +11,7 @@ schemaVersion: 1
 qualityScore: 80
 qualityReasons: ["no-source-marker"]
 status: needs-experiment
-blocked-on: "RETRACTED 2026-07-29 (E0): the 'no correction-side experiment remains' verdict rested on the broken eval instrument. Re-measured, DAgger WINS. Open arm is B4b -- a fixed-ratio DAgger distillation from E-int in the student_distill_eint campaign -- sequenced after the A0 anchor, human-gated launch."
+blocked-on: "B4b RAN 2026-07-29 (trpo_sdeint_b4b_beta05_s30_260729_153436, analysis diagnose-20260729-161459) and was NOT ADOPTED -- a sub-floor null on control, see the result section in this page body. The lead is no longer waiting on an arm to be launched. What remains is a PROTOCOL blocker, not an experiment: the one signal that survived (lowest hard-level dispersion in the campaign, att_norm CV 148.2% vs A0 178.2%) sits on ss_error_std, for which the profile declares NO decision floor, so it cannot be adjudicated at n=1 with 64 envs. Closing this needs either a declared ss_error_std floor or a higher-resolution eval -- NOT another single-seed DAgger arm."
 ---
 
 # On-policy DAgger correction for the buoyfix student
@@ -148,3 +148,20 @@ For it (both unadjudicated): B4b has the lowest hard-level dispersion in the cam
 Cost: free. student/time_train 0.219250 s vs A0's 0.218941 s.
 
 So the lead's premise is now TESTED rather than untested, and the answer at screening resolution is 'no measurable effect'. It is NOT the same as 'DAgger does not work' -- the dispersion signal survives and the protocol simply cannot resolve it at n=1 with 64 envs. Closing this lead requires either a floor for ss_error_std or a higher-resolution eval, not another single-seed arm.
+
+---
+
+## Update (2026-07-29T08:39:06.362590)
+
+UPDATE 2026-07-29 (post-B1a/B1b): the lambda bracket run later the same day reinforces this page's
+conclusion from a different direction. lambda_latent 0 and 4 both produced sub-floor control nulls too,
+so THREE independent objective-side interventions (dagger_beta 0.5, lambda 0, lambda 4) have now failed
+to move control above the screening floor, while the one representational intervention (A0g, TCN -> GRU)
+cleared it at two of four levels. The reading is that on this plant the leverage is representational,
+not objective-shaped, and further DAgger tuning is a poor use of an arm.
+
+Note the shared measurement caveat: this page's covariate-shift multiplier and B1a's both have a
+denominator that is not like-for-like with the anchor's (a beta-mixed rollout loss here, an
+unoptimized monitored loss there). In both cases the comparison that survives is the ABSOLUTE in-loop
+latent MSE, and in both cases it points against the intervention.
+
