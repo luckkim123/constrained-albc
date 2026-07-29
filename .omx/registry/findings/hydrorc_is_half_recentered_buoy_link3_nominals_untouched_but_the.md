@@ -1,15 +1,15 @@
 ---
 title: "HydroRC IS half-recentered (buoy/link3 nominals untouched) -- but the '10x under added mass' framing dies to the effective-vs-effective correction (~2.4x); the lead survives on a different mechanism: HydroRC drops hull yaw damping 45x, so unmeasured analytical buoy damping becomes 1.8x hull's and DOMINATES the retrained plant"
-tags: ["stonefish", "hydrodynamics", "buoy", "link3", "added-mass", "domain-randomization", "sim-to-real", "hydro-recenter", "yaw", "system-id"]
+tags: ["stonefish", "hydrodynamics", "buoy", "link3", "added-mass", "domain-randomization", "sim-to-real", "hydro-recenter", "yaw", "system-id", "envs-main", "guard-policy", "handoff"]
 created: 2026-07-27T11:28:30.027308
-updated: 2026-07-27T23:24:47.066924
-sources: ["marinelab:exp/hydro-recenter@016d1b1", "marinelab@f45d612", "next-20260727-174905", "code-review-20260727", "diagnose-20260728-081953"]
+updated: 2026-07-29T08:50:56.367055
+sources: ["marinelab:exp/hydro-recenter@016d1b1", "marinelab@f45d612", "next-20260727-174905", "code-review-20260727", "diagnose-20260728-081953", "code-verify-20260729", "handoff-stonefish-servo-pc-20260729"]
 links: ["stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md", "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md", "stonefish_base_hull_effective_hydro_measured_2026_07_27_damping.md"]
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
+qualityScore: 100
+qualityReasons: []
 status: needs-experiment
 blocked-on: "probe design undecided (link3 has no thruster, Stonefish has no external-wrench service); and per rebuttal 2 the deliverable may be a guard-structure decision rather than a measured coefficient"
 ---
@@ -136,3 +136,15 @@ regresses on transients across all DR levels. The gate FAIL adds evidence that a
 recenter (or a measured buoy correction) is required before the plant can move toward the Stonefish
 values. Probe design for buoy/link3 measurement remains undecided (unchanged).
 [EVIDENCE: report diagnose-20260728-081953 under trpo_hydrorc_s30_260728_013136/analysis]
+
+---
+
+## Update (2026-07-29T08:50:56.367055)
+
+RE-VERIFIED 2026-07-29 AGAINST envs/main, AND THE SCOPE IS WIDER THAN THIS PAGE STATED. Every code citation on this page pointed at envs/full_dof paths, which invites the reading that the lead is legacy-only. It is not: the CURRENT teacher task envs/main wires the buoy identically. env._buoy_hydro is built at envs/main/albc_env.py:269, its wrench is applied every step, and envs/main/mdp/events.py:295 randomizes it through the same _randomize_hydro_model call as the hull, with the same post-sampling re-clamp at threshold = 0.95 (events.py:273). So rebuttal 2 binds on the plant the final teacher actually runs on. [CONFIDENCE: HIGH]
+
+ONE MORE ARGUMENT FOR REBUTTAL 2, FROM THE CONFIG ITSELF. The cap is not a subtle consequence to be discovered by arithmetic -- ALBCBuoyHydrodynamicsCfg already documents it in the comment above added_mass: "Capped for stability: M_a[i] < I_rigid[i]" and "surge/sway=0.7 (theory 2.67, capped)". The installed value is a KNOWN, DECLARED simplification, not an unexamined default. Numerically the DR cap is 0.95 * 0.93 = 0.8835 kg while theory sits at 2.01 kg (Ca 0.75, this pages rebuttal) to 2.67 kg (Ca 1.0, the config comment), i.e. 2.28x to 3.02x above the cap. No measured buoy added mass in that range is installable, which is exactly why the deliverable is a guard-structure decision and not a coefficient. [CONFIDENCE: HIGH]
+
+UNRESOLVED MINOR. The config comment and this pages rebuttal disagree on the theory number (2.67 vs 2.01 kg) because they use Ca 1.0 vs the Ca 0.75 short-cylinder value the same docstring cites. The conclusion is unaffected at either value; settle it only if the theory number is ever needed on its own.
+
+DISPATCHED 2026-07-29. A handoff to the Stonefish session asks the three questions that actually gate the measurement route -- can link3/ABPC be excited independently at all, is adding a force-application path cheap, and does the Stonefish buoy model even carry a separate added-mass term -- rather than commissioning a measurement. A no on the first two CLOSES the measurement route and converts this lead into an Isaac-side guard decision. Handoff at /workspace/.sp/plans/2026-07-29-handoff-stonefish-servo-pc.md (scratch, gitignored). It is bundled with the servo-gain fix because the servo chatter contaminates any arm-involving Stonefish measurement, and decay/oscillation measurement is exactly the class a high-frequency limit cycle corrupts.
