@@ -1,0 +1,26 @@
+{
+  "acknowledged_gates": [
+    "imu_45deg_offset_pitch_negation_sim_uncompensated_2026_07_05.md",
+    "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md",
+    "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md"
+  ],
+  "gpu_gate": "*** LAUNCH PRECONDITION: this entry is VOID unless E-ftc1 (trpo_ftc1sevinit_s30_260729_105510) returns H1, i.e. achieved DORAEMON/mean/fault_severity >= 0.20. On H1-WEAK [0.15,0.20) the pre-registered response is an analysis-only follow-up with NO new run; on H2 < 0.15 there is no gain to confirm. In both cases DISCARD this entry instead of launching. *** Machine: workstation GPU0 ONLY. GPU0 order is E-ftc1 (until ~16:31 KST) -> P1-isaac (~30 min) -> this run (~5 h, so ~17:00-22:00). GPU1 is reserved by user instruction 2026-07-29 for the concurrent student-track session (worktree /workspace/constrained-albc-student, branch exp/student-distill-eint) and must NOT be used. Host swap is at 16/16 GB, so never run this concurrently with another Isaac Sim instance.",
+  "launch_delta": "E-ftc1-confirm: ONE field vs E-ftc1 -- config.py max_thrust_scale (1.0, 1.0) -> (0.85, 1.15), the adopted D-a band. _NOMINAL_OVERRIDES[fault_severity] stays 0.0771. Branch exp/ftc1-confirm-band off exp/ftc1-severity-init @ 280222f with an annotated baseline tag; marinelab must stay exp/max-thrust-dr @ f45d6120b11d clean (same tree as all three other 2x2 cells). 5000 iter FIXED, 4096 envs, seed 30. Completes the seed-30 2x2: ArmA (1.0,1.0)/sev 0.0, E-int (0.85,1.15)/sev 0.0, E-ftc1 (1.0,1.0)/sev 0.0771, this run (0.85,1.15)/sev 0.0771 -- factor levels read from each run's as-run env.yaml. Blocking manipulation check at iter 0: curriculum_trajectory.json must record Beta(2.3130, 27.6870) for fault_severity AND env.yaml must show max_thrust_scale (0.85, 1.15). Readout identical to E-ftc1 (two eval.py static healthy/m4-dead, NO --output_dir, checkpoint via the train symlink, compare.py paired); cross-run claims restricted to none + within-run fault deltas. thruster_util J_C/d_k reported regardless -- binding means budget redesign is a separate arm, NOT that the severity init gave no benefit.",
+  "open_leads": [
+    "closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md",
+    "curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md",
+    "experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md",
+    "hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md",
+    "joint1_stage_1_gate_go_drift_is_real_on_unlimited_physics_not_th.md",
+    "on_policy_dagger_correction_for_the_buoyfix_student.md",
+    "reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md",
+    "roll_transient_is_worst_at_none_dr_and_improves_monotonically_as.md",
+    "stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md",
+    "thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md"
+  ],
+  "proposal_id": "next-20260729-125443",
+  "queued_at": "2026-07-29T03:55:34.234620+00:00",
+  "queued_commit": "8b5ada8629e4d67cbc72063105e9269af40f08c2",
+  "schema_version": 1,
+  "status": "pending approval"
+}

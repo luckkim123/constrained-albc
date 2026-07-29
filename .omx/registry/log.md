@@ -7571,3 +7571,7 @@
 - **Pages:** closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md, report_completeness_gate_must_run_before_writing_not_after.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, ftc_fault_dr_a_b_result_2026_07_27_fault_dr_adopted_5_12x_less_m.md, session_state_2026_07_12_constraint_deep_dive_q_a_covered_struct.md
 - **Summary:** query 'above absence acknowledged after against aggregate aggregated agree' -> 5 of 145
 
+## [2026-07-29T03:54:55.346979] query
+- **Pages:** ftc_fault_dr_a_b_result_2026_07_27_fault_dr_adopted_5_12x_less_m.md, seed_noise_floor_on_none_level_attitude_is_huge_75_peak_to_peak_.md, decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema.md, canonical_final_teacher_baseline_buoyfix_anchor_trpo_buoyanchor_.md, cross_run_dr_comparability_eval_py_doraemon_dr_from_already_prov.md
+- **Summary:** query 'above achieved acknowledged adopt adopted adoption again against' -> 5 of 120
+
