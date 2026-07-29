@@ -2,16 +2,16 @@
 title: "On-policy DAgger correction for the buoyfix student"
 tags: ["distillation", "student", "covariate-shift", "dagger", "albc", "sim-to-real", "next-experiment"]
 created: 2026-07-24T03:35:28.710539
-updated: 2026-07-29T08:39:06.362590
-sources: ["diagnose-20260729-161459", "diagnose-20260729-172500"]
+updated: 2026-07-29T09:41:58.612023
+sources: ["diagnose-20260729-161459", "diagnose-20260729-172500", "diagnose-20260729-184021"]
 links: []
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 80
-qualityReasons: ["no-source-marker"]
+qualityScore: 100
+qualityReasons: []
 status: needs-experiment
-blocked-on: "B4b RAN 2026-07-29 (trpo_sdeint_b4b_beta05_s30_260729_153436, analysis diagnose-20260729-161459) and was NOT ADOPTED -- a sub-floor null on control, see the result section in this page body. The lead is no longer waiting on an arm to be launched. What remains is a PROTOCOL blocker, not an experiment: the one signal that survived (lowest hard-level dispersion in the campaign, att_norm CV 148.2% vs A0 178.2%) sits on ss_error_std, for which the profile declares NO decision floor, so it cannot be adjudicated at n=1 with 64 envs. Closing this needs either a declared ss_error_std floor or a higher-resolution eval -- NOT another single-seed DAgger arm."
+blocked-on: "UNBLOCKED 2026-07-29 by probe C1-latsens (analysis diagnose-20260729-184021), which supplied both the mechanism and the payoff this lead was missing. MECHANISM: runner.py:260 mixes teacher and student ACTIONS (beta*a_teacher + (1-beta)*a_student) instead of stochastically SELECTING between the two policies, so B4b sampled a blend distribution that neither policy induces and never tested on-policy correction at all -- its docstring claims the opposite of what it implements. PAYOFF: latent fidelity is now measured to be a real control lever at hard DR specifically (1.070 deg per unit of latent perturbation there, 30-40x none/medium), and halving A0g's hard in-loop latent error projects to about -0.42 deg = 4x the decision floor. The next arm is therefore concrete: replace the blend at runner.py:260 with per-env Bernoulli policy selection at the same beta=0.5 -- ONE variable against B4b, with A0 as the shared beta=1 reference where the two mechanisms coincide. The old ss_error_std protocol blocker remains for the DISPERSION half of this page only; the control half is now testable against the declared ss_error floor."
 ---
 
 # On-policy DAgger correction for the buoyfix student
@@ -164,4 +164,29 @@ Note the shared measurement caveat: this page's covariate-shift multiplier and B
 denominator that is not like-for-like with the anchor's (a beta-mixed rollout loss here, an
 unoptimized monitored loss there). In both cases the comparison that survives is the ABSOLUTE in-loop
 latent MSE, and in both cases it points against the intervention.
+
+---
+
+## Update (2026-07-29T09:41:58.612023)
+
+UPDATE 2026-07-29 (C1-latsens): this lead is no longer speculative on either axis.
+
+WHY B4b UNDER-TESTED IT. `runner.py:260` returns `beta * a_teacher + (1.0 - beta) * a_student` -- a
+continuous blend of two 8-D thruster commands, not the stochastic policy selection DAgger's
+distribution argument requires. Where the two policies disagree the blend issues commands neither
+would (opposing thruster pairs averaging toward zero net thrust), so the rollout visits a third
+distribution belonging to neither. That is a sufficient explanation for B4b's otherwise puzzling
+result: its absolute in-loop latent MSE was WORSE than plain BC at every DR level (+40.3 / +31.4 /
++12.5 / +4.9%), which training on a blend-artifact distribution predicts and genuine DAgger does not.
+
+WHY IT IS NOW WORTH AN ARM. C1-latsens measured the frozen actor's transfer function and found the
+control lever is real but concentrated at hard DR: 1.070 deg per unit of latent perturbation at hard
+against 0.036 at none and 0.027 at medium. On-policy collection is precisely the mechanism that
+reduces in-loop error at hard, where the student's own trajectories diverge most from the teacher's.
+Halving A0g's hard in-loop latent error projects to roughly -0.42 deg, about 4x the decision floor.
+
+THE ARM. Replace the blend with per-env Bernoulli selection at the same beta = 0.5. One variable
+against B4b; A0 remains the shared beta = 1 reference, where blending and selection coincide exactly.
+Judge it on hard-level in-loop latent MSE first (the quantity the sensitivity curve says matters) and
+on att_norm at hard second.
 
