@@ -100,6 +100,37 @@ class StudentInLoopPolicy:
         # read the encoder output without running its own forward -- see __call__.
         self.last_l_hat: torch.Tensor | None = None
 
+        # C1-latsens probe: optional controlled perturbation of the latent handed to the
+        # frozen actor. Off by default (k == 0) so every existing eval is byte-identical.
+        # set_latent_noise() is called per DR level by eval.py, because the sigma that makes
+        # k interpretable ("k times the error the student already has") is level-dependent.
+        self.latent_noise_k: float = 0.0
+        self.latent_noise_sigma: torch.Tensor | None = None
+        self._noise_norm_sum: float = 0.0
+        self._noise_calls: int = 0
+
+    def set_latent_noise(self, k: float, sigma: torch.Tensor | None) -> None:
+        """Arm the latent perturbation for the level about to be evaluated."""
+        self.latent_noise_k = float(k)
+        self.latent_noise_sigma = sigma
+        self._noise_norm_sum = 0.0
+        self._noise_calls = 0
+
+    def noise_report(self) -> str:
+        """Realized perturbation magnitude -- the bite check for this instrument.
+
+        An injector that 'ran' is not the same as one that took effect: a prior eval-side
+        delay probe was a silent no-op. Report the mean per-step L2 norm actually added, so
+        a flat control result cannot be confused with an injector that did nothing.
+        """
+        if self._noise_calls == 0:
+            return "latent_noise: not armed (k=0)"
+        return (
+            f"latent_noise: k={self.latent_noise_k} "
+            f"mean||delta l_hat||={self._noise_norm_sum / self._noise_calls:.6f} "
+            f"over {self._noise_calls} steps"
+        )
+
     def reset(self, env_ids: torch.Tensor | None = None) -> None:
         """Clear history/hidden for the given envs (or all if None).
 
@@ -161,6 +192,14 @@ class StudentInLoopPolicy:
         # l_hat, and that copy silently omitted the obs normalization above on the TCN
         # branch. Read this attribute; never re-run the encoder.
         self.last_l_hat = l_hat
+
+        # C1-latsens: perturb ONLY what the actor consumes. last_l_hat above stays the true
+        # encoder output so the latent diagnostic keeps measuring the encoder, not the probe.
+        if self.latent_noise_k and self.latent_noise_sigma is not None:
+            delta = self.latent_noise_k * self.latent_noise_sigma * torch.randn_like(l_hat)
+            self._noise_norm_sum += float(delta.norm(dim=-1).mean())
+            self._noise_calls += 1
+            l_hat = l_hat + delta
 
         obs_normed = self.teacher.normalize_obs(obs)
         return self.teacher.actor_forward(obs_normed, l_hat)

@@ -243,6 +243,15 @@ sp_static.add_argument("--teacher_ckpt", type=str, default=None,
                        help="Teacher model_*.pt path (required when --student_ckpt is given).")
 sp_static.add_argument("--encoder_type", type=str, choices=["tcn", "gru"], default=None,
                        help="Student encoder type (required when --student_ckpt is given).")
+# C1-latsens probe: how sensitive is the frozen actor to error in the latent it is handed?
+# Perturbs ONLY the actor's input, in units of the error the student already exhibits, so
+# k=1 means 'double the latent error this student already has, in the shape it already has'.
+# k=0 (default) is byte-identical to every existing eval.
+sp_static.add_argument("--latent_noise_k", type=float, default=0.0,
+                       help="Latent perturbation multiplier for the C1-latsens sweep (0 = off).")
+sp_static.add_argument("--latent_noise_sigma_from", type=str, default=None,
+                       help="summary_latent.json whose per-level per_dim_mse sets the per-dim sigma "
+                            "(sigma = sqrt(per_dim_mse)); required when --latent_noise_k > 0.")
 sp_static.add_argument(
     "--z_ablation",
     type=str,
@@ -1068,6 +1077,7 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     # resume_path = student_ckpt so eval output lands under the STUDENT's run_id tree, while
     # params / DORAEMON DR resolve from the teacher's run dir.
     is_student_mode = getattr(args_cli, "student_ckpt", None) is not None
+    _latent_sigma_by_level: dict[str, torch.Tensor] | None = None  # C1-latsens, armed below
     if is_student_mode:
         if args_cli.teacher_ckpt is None or args_cli.encoder_type is None:
             raise ValueError("--student_ckpt requires both --teacher_ckpt and --encoder_type.")
@@ -1279,6 +1289,21 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         policy = _InstrumentedStudentPolicy(student_policy)
         policy_nn = policy
         print(f"[INFO] Loaded student ({args_cli.encoder_type}) + frozen teacher actor (latent diagnostic on)")
+        # C1-latsens: build the per-level per-dim sigma table from a previous summary_latent.json.
+        # sigma_d = sqrt(per_dim_mse_d) = the RMSE this student already has on dim d at that level.
+        if args_cli.latent_noise_k:
+            if not args_cli.latent_noise_sigma_from:
+                raise ValueError("--latent_noise_k > 0 requires --latent_noise_sigma_from")
+            with open(args_cli.latent_noise_sigma_from) as _f:
+                _lat = json.load(_f)
+            _latent_sigma_by_level = {
+                lv: torch.sqrt(torch.tensor(v["per_dim_mse"], dtype=torch.float32, device=device))
+                for lv, v in _lat["levels"].items()
+            }
+            print(f"[INFO] C1-latsens armed: k={args_cli.latent_noise_k} "
+                  f"sigma from {args_cli.latent_noise_sigma_from}")
+            for _lv, _s in _latent_sigma_by_level.items():
+                print(f"[INFO]   sigma[{_lv}] = {[round(float(x), 4) for x in _s]}")
     elif use_checkpoint and resume_path:
         # Encoder policies build at the env's real obs width (69->72 with use_bias_ema_obs);
         # stock OnPolicyRunner has no sync of its own (PPO-Enc arm), so sync here for every path.
@@ -1376,6 +1401,11 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
 
         if is_student_mode:
             policy.reset_logs()  # per-level latent logs (don't carry across DR levels)
+            # C1-latsens: arm the latent perturbation for THIS level. sigma is level-dependent
+            # because it is the student's own measured per-dim in-loop RMSE at that level, which
+            # is what makes k interpretable as a multiple of the error the student already has.
+            if _latent_sigma_by_level is not None:
+                policy._s.set_latent_noise(args_cli.latent_noise_k, _latent_sigma_by_level.get(level))
 
         data = run_evaluation(
             env=env,
@@ -1393,6 +1423,11 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
             save_action_std=args_cli.save_action_std,
         )
         all_data[level] = data
+
+        if is_student_mode and args_cli.latent_noise_k:
+            # Bite check: a flat control result must be distinguishable from an injector that
+            # silently did nothing (a previous eval-side delay probe was exactly that no-op).
+            print(f"[C1-latsens] {level}: {policy._s.noise_report()}")
 
         array_data = {k: v for k, v in data.items() if isinstance(v, np.ndarray)}
         write_eval_npz(output_dir, level, array_data)
