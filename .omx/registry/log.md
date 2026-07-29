@@ -7567,3 +7567,7 @@
 - **Pages:** ftc_fault_dr_a_b_result_2026_07_27_fault_dr_adopted_5_12x_less_m.md, canonical_final_teacher_baseline_buoyfix_anchor_trpo_buoyanchor_.md, closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, experiment_launch_checklist_run_id_wandb_latest_alias_naming.md
 - **Summary:** query 'a5a8b33 above absence acknowledgement across adopted against aggregate' -> 5 of 150
 
+## [2026-07-29T03:46:35.794963] query
+- **Pages:** closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md, report_completeness_gate_must_run_before_writing_not_after.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, ftc_fault_dr_a_b_result_2026_07_27_fault_dr_adopted_5_12x_less_m.md, session_state_2026_07_12_constraint_deep_dive_q_a_covered_struct.md
+- **Summary:** query 'above absence acknowledged after against aggregate aggregated agree' -> 5 of 145
+
