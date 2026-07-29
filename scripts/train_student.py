@@ -52,7 +52,23 @@ parser.add_argument("--gru_head_hidden", type=int, default=None,
                     help="GRU head intermediate dim (0=disable, default: StudentCfg.gru_head_hidden).")
 parser.add_argument("--seed", type=int, default=42)
 parser.add_argument("--logger", type=str, default="wandb", choices=["wandb", "tensorboard"])
-parser.add_argument("--wandb_project", type=str, default="attitude_only_student")
+parser.add_argument(
+    "--run_group",
+    type=str,
+    default=None,
+    help="Campaign/purpose group inserted as logs/rsl_rl/<exp>/<group>/<run_id>/ (the "
+    "experiment-dir standard's <group> segment, e.g. student_distill_eint). Mirrored into "
+    "the experiments/ tree, and used as the wandb project unless --wandb_project overrides "
+    "it (convention: group name == wandb project == the experiment purpose). Omit for the "
+    "original <exp>/<run_id>/ layout.",
+)
+parser.add_argument(
+    "--wandb_project",
+    type=str,
+    default=None,
+    help="Override the wandb project. Default: --run_group when given, else "
+    "StudentCfg.wandb_project.",
+)
 AppLauncher.add_app_launcher_args(parser)
 args_cli, hydra_args = parser.parse_known_args()
 
@@ -100,14 +116,23 @@ logger = logging.getLogger("train_student")
 # by ~1e-4). Cost is SPEED: time_train goes 0.243s -> ~17s per iteration (~70x), so
 # a 1000-iteration distillation takes ~4.9h instead of ~13min.
 #
-# Upgrade path: replace nvidia-cudnn-cu13 with the cu12 build matching torch's
-# CUDA 12.8, verify `python -c "import torch,torch.nn as nn;
-# nn.Conv1d(32,64,3).cuda()(torch.randn(64,32,9,device='cuda'))"`, then delete this.
+# RESOLVED 2026-07-29 (D-c1), no package change needed. The matching cu12 build is ALREADY
+# on disk in Isaac's own prebundle; the cu13 packages merely shadow it on the library path.
+# Putting the prebundle first fixes it process-locally:
 #
-# --enable_cudnn (default OFF) keeps this workstation-safe disable. On a host with healthy
-# cuDNN (the DGX: torch 2.9.0+cu130, conv1d probe PASSED 2026-07-23) pass --enable_cudnn to run
-# conv at full speed. DAgger adds a student conv1d to the COLLECTION path too, so without this
-# the ~70x penalty would apply to both phases -- host DAgger on the DGX with --enable_cudnn.
+#   LD_LIBRARY_PATH=/isaac-sim/exts/omni.isaac.ml_archive/pip_prebundle/nvidia/cudnn/lib:$LD_LIBRARY_PATH \
+#       python scripts/train_student.py ... --enable_cudnn
+#
+# Measured on this workstation (RTX 4060): cudnn version 92000 -> 90701, conv1d FAIL -> PASS,
+# and one TCN train step at the real shapes (8192 minibatch, H=9, 72D) 557.6 ms -> 7.0 ms (80x),
+# i.e. the train phase at 2048 envs goes ~16.7 s/iter -> ~0.21 s/iter. Prefer this over
+# uninstalling nvidia-cudnn-cu13: it is per-process, instantly revertible, and cannot disturb a
+# training run already using the GPU. GRU students never hit this at all (no conv), which is why
+# only TCN distillations looked slow.
+#
+# --enable_cudnn (default OFF) still guards a host WITHOUT that library path set, where cuDNN
+# would fail hard. DAgger puts a student conv1d in the COLLECTION path too, so both phases pay
+# the penalty when cuDNN is off -- always launch DAgger runs with the path above.
 if not args_cli.enable_cudnn:
     torch.backends.cudnn.enabled = False
 
@@ -133,7 +158,9 @@ def main(env_cfg: DirectRLEnvCfg, _agent_cfg) -> None:
     cfg.dagger_anneal_iters = args_cli.dagger_anneal_iters
     cfg.seed = args_cli.seed
     cfg.logger = args_cli.logger
-    cfg.wandb_project = args_cli.wandb_project
+    # group == wandb project == the experiment purpose (one string, self-documenting), so
+    # --run_group sets both unless --wandb_project is given explicitly.
+    cfg.wandb_project = args_cli.wandb_project or args_cli.run_group or cfg.wandb_project
     cfg.task = args_cli.task
     cfg.run_name = args_cli.run_name or f"student_{args_cli.encoder_type}"
     if args_cli.gru_hidden is not None:
@@ -149,7 +176,13 @@ def main(env_cfg: DirectRLEnvCfg, _agent_cfg) -> None:
     from constrained_albc.analysis.paths import RUN_TS_FORMAT, make_run_id
 
     stamp = datetime.now().strftime(RUN_TS_FORMAT)
-    log_dir = os.path.join(cfg.log_dir_root, make_run_id(cfg.task, tag=cfg.run_name, ts=stamp))
+    run_id = make_run_id(cfg.task, tag=cfg.run_name, ts=stamp)
+    # Optional <group> layer, mirroring train.py: logs/rsl_rl/<exp>/<group>/<run_id>/. The
+    # script creates the layer itself so a campaign never needs a manual post-move.
+    if args_cli.run_group:
+        log_dir = os.path.join(cfg.log_dir_root, args_cli.run_group, run_id)
+    else:
+        log_dir = os.path.join(cfg.log_dir_root, run_id)
     os.makedirs(log_dir, exist_ok=True)
     logger.info("log_dir=%s", log_dir)
 
@@ -189,11 +222,13 @@ def main(env_cfg: DirectRLEnvCfg, _agent_cfg) -> None:
             experiments_root=experiments_root,
             kind="student",
             parent_run_id=parent,
+            group=args_cli.run_group,
             config={
                 "num_envs": cfg.num_envs,
                 "seed": cfg.seed,
                 "experiment_name": cfg.experiment_name,
                 "teacher_run_dir": cfg.teacher_run_dir,
+                "run_group": args_cli.run_group,
             },
         )
         logger.info("run_id tree: experiments/%s (student, parent=%s)", run.run_id, parent)
