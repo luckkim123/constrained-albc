@@ -2,14 +2,14 @@
 title: "On-policy DAgger correction for the buoyfix student"
 tags: ["distillation", "student", "covariate-shift", "dagger", "albc", "sim-to-real", "next-experiment"]
 created: 2026-07-24T03:35:28.710539
-updated: 2026-07-29T03:36:16.750379
-sources: []
+updated: 2026-07-29T07:26:51.837646
+sources: ["diagnose-20260729-161459"]
 links: []
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
+qualityScore: 80
+qualityReasons: ["no-source-marker"]
 status: needs-experiment
 blocked-on: "RETRACTED 2026-07-29 (E0): the 'no correction-side experiment remains' verdict rested on the broken eval instrument. Re-measured, DAgger WINS. Open arm is B4b -- a fixed-ratio DAgger distillation from E-int in the student_distill_eint campaign -- sequenced after the A0 anchor, human-gated launch."
 ---
@@ -131,3 +131,20 @@ forward: prefer a FIXED mixing ratio over the annealed schedule (VIRAL/SLIM), wh
 Report:
 `experiments/rsl_rl/albc_trpo_student/trpo_buoyfix_dagger_s30_tcn_260724_133040/analysis/diagnose-20260729-e0-instrument/report.md`.
 
+---
+
+## Update (2026-07-29T07:26:51.837646)
+
+UPDATE 2026-07-29 -- first direct measurement of a fixed-ratio DAgger against the FINAL (E-int) teacher, campaign student_distill_eint arm B4b (run trpo_sdeint_b4b_beta05_s30_260729_153436, analysis diagnose-20260729-161459).
+
+Setup: dagger_beta held at 0.5 for all 1000 iters (bite verified: student/dagger_beta first=last=0.500000, n=1000), encoder deliberately left at TCN so beta is the single variable against the A0 anchor.
+
+Result: a sub-floor NULL on control. att_norm ss_error deltas vs A0 = 0.0245/0.0316/0.0570/0.0776 deg (none/soft/medium/hard), all below the eval's declared 0.1 deg screening floor. Direction is consistent (better at none/soft/hard, worse at medium) but no level is decision-grade at n=1.
+
+Against it: absolute in-loop latent MSE is WORSE than plain BC at every level -- 0.046257/0.040382/0.045696/0.071386 vs A0's 0.032975/0.030741/0.040636/0.068040 (+40.3%/+31.4%/+12.5%/+4.9%). This is the only eval-side comparison in the arm that is comfortably above measurement noise, and it points the wrong way.
+
+For it (both unadjudicated): B4b has the lowest hard-level dispersion in the campaign, teacher included (att_norm CV 148.2% vs A0 178.2%, A0g 168.3%, teacher 177.9%) -- the exact place DAgger theory predicts a gain; and the covariate-shift multiplier at hard falls 22.4x -> 18.7x, though that denominator is a beta-0.5 mixed-rollout loss, not an open-loop one, so it is inflated by construction.
+
+Cost: free. student/time_train 0.219250 s vs A0's 0.218941 s.
+
+So the lead's premise is now TESTED rather than untested, and the answer at screening resolution is 'no measurable effect'. It is NOT the same as 'DAgger does not work' -- the dispersion signal survives and the protocol simply cannot resolve it at n=1 with 64 envs. Closing this lead requires either a floor for ss_error_std or a higher-resolution eval, not another single-seed arm.
