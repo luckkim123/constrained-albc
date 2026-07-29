@@ -2,8 +2,8 @@
 title: "On-policy DAgger correction for the buoyfix student"
 tags: ["distillation", "student", "covariate-shift", "dagger", "albc", "sim-to-real", "next-experiment"]
 created: 2026-07-24T03:35:28.710539
-updated: 2026-07-29T09:41:58.612023
-sources: ["diagnose-20260729-161459", "diagnose-20260729-172500", "diagnose-20260729-184021"]
+updated: 2026-07-29T10:22:54.711181
+sources: ["diagnose-20260729-161459", "diagnose-20260729-172500", "diagnose-20260729-184021", "diagnose-20260729-192128"]
 links: []
 category: decision
 confidence: high
@@ -11,7 +11,7 @@ schemaVersion: 1
 qualityScore: 100
 qualityReasons: []
 status: needs-experiment
-blocked-on: "UNBLOCKED 2026-07-29 by probe C1-latsens (analysis diagnose-20260729-184021), which supplied both the mechanism and the payoff this lead was missing. MECHANISM: runner.py:260 mixes teacher and student ACTIONS (beta*a_teacher + (1-beta)*a_student) instead of stochastically SELECTING between the two policies, so B4b sampled a blend distribution that neither policy induces and never tested on-policy correction at all -- its docstring claims the opposite of what it implements. PAYOFF: latent fidelity is now measured to be a real control lever at hard DR specifically (1.070 deg per unit of latent perturbation there, 30-40x none/medium), and halving A0g's hard in-loop latent error projects to about -0.42 deg = 4x the decision floor. The next arm is therefore concrete: replace the blend at runner.py:260 with per-env Bernoulli policy selection at the same beta=0.5 -- ONE variable against B4b, with A0 as the shared beta=1 reference where the two mechanisms coincide. The old ss_error_std protocol blocker remains for the DISPERSION half of this page only; the control half is now testable against the declared ss_error floor."
+blocked-on: "MEASURED 2026-07-29 by arm C2 (trpo_sdeint_c2_daggersel_s30_260729_185634, analysis diagnose-20260729-192128). The mechanism half of this lead is CLOSED: replacing the action blend with per-env-per-step Bernoulli policy selection reverses the sign of B4b's latent regression and beats it at every DR level (-31.4/-30.5/-9.5/-8.7% in-loop latent MSE). dagger_mix=select is ADOPTED as the default mechanism. What remains open is the CONTROL half at screening resolution: C2 improves on the anchor at all four levels but every delta is sub-floor (max 0.0904 vs the 0.1 deg floor), and the dispersion signal (C2 has the campaign's lowest medium CV 63.6% and hard tail n_gt20 4.00) still sits on ss_error_std, for which the profile declares no floor. Next arm: select mixing on a GRU encoder -- C2 and A0g win on DIFFERENT axes (C2 roll at medium/hard, A0g pitch everywhere), so combining them is the first proposal in this campaign with two independent reasons to expect a gain."
 ---
 
 # On-policy DAgger correction for the buoyfix student
@@ -189,4 +189,35 @@ THE ARM. Replace the blend with per-env Bernoulli selection at the same beta = 0
 against B4b; A0 remains the shared beta = 1 reference, where blending and selection coincide exactly.
 Judge it on hard-level in-loop latent MSE first (the quantity the sensitivity curve says matters) and
 on att_norm at hard second.
+
+---
+
+## Update (2026-07-29T10:22:54.711181)
+
+RESOLVED (mechanism half) 2026-07-29 by arm C2. The blend-vs-select question this page raised after
+C1-latsens is now measured, and the answer is unambiguous.
+
+| in-loop latent MSE vs the plain-BC anchor A0 | none | soft | medium | hard |
+|:--|--:|--:|--:|--:|
+| B4b, action blending | +40.3% | +31.4% | +12.5% | +4.9% |
+| C2, policy selection | -3.7% | -8.6% | +1.7% | -4.2% |
+| C2 vs B4b | -31.4% | -30.5% | -9.5% | -8.7% |
+
+Single variable between the two arms is `dagger_mix`. Bite check used a mechanism-EXCLUSIVE metric,
+`student/dagger_teacher_frac` = 0.500072, because a logged `dagger_beta` reads 0.5 under either
+mechanism and therefore proves nothing about which ran.
+
+The decisive structural observation: open-loop training is INDISTINGUISHABLE between the two
+(`loss_latent` 0.003799 vs 0.003809, `loss_total` 0.004018 vs 0.004016), and the arms separate only
+in-loop. That is exactly the signature a covariate-shift correction should have, and it rules out the
+difference being a generic optimization effect.
+
+So B4b's null was never evidence that on-policy correction fails on this plant. It was evidence that a
+convex blend of two 8-D action vectors is not on-policy correction: where the policies disagree the
+blend issues commands neither would (opposing thruster pairs averaging toward zero net thrust) and
+visits states neither induces.
+
+Control did NOT reach decision grade: C2 beats the anchor at all four DR levels, a first for the
+campaign, but every delta is under the declared 0.1 deg floor (max 0.0904). A0g keeps the adoption
+because its advantage sits in pitch, which drives att_norm.
 
