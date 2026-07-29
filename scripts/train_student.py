@@ -41,6 +41,11 @@ parser.add_argument("--dagger_beta_start", type=float, default=1.0,
 parser.add_argument("--dagger_beta_end", type=float, default=1.0,
                     help="DAgger: teacher-action mix after anneal. Default 1.0 = INERT "
                          "(pure teacher-driven rollout == current recipe). Set 0.0 for on-policy.")
+parser.add_argument("--dagger_mix", type=str, default="blend", choices=["blend", "select"],
+                    help="How beta combines the policies. blend = beta*a_teacher+(1-beta)*a_student "
+                         "(pre-2026-07-29 behaviour, kept so B4b reproduces; visits states neither "
+                         "policy induces). select = per-env-per-step Bernoulli(beta) choice between "
+                         "the two policies, which is what DAgger's distribution argument requires.")
 parser.add_argument("--dagger_anneal_iters", type=int, default=0,
                     help="DAgger: iters to anneal beta_start->beta_end. 0 = constant beta_end.")
 parser.add_argument("--enable_cudnn", action="store_true",
@@ -156,6 +161,7 @@ def main(env_cfg: DirectRLEnvCfg, _agent_cfg) -> None:
     cfg.dagger_beta_start = args_cli.dagger_beta_start
     cfg.dagger_beta_end = args_cli.dagger_beta_end
     cfg.dagger_anneal_iters = args_cli.dagger_anneal_iters
+    cfg.dagger_mix = args_cli.dagger_mix
     cfg.seed = args_cli.seed
     cfg.logger = args_cli.logger
     # group == wandb project == the experiment purpose (one string, self-documenting), so

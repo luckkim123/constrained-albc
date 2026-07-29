@@ -81,6 +81,15 @@ class StudentCfg:
     dagger_beta_start: float = 1.0
     dagger_beta_end: float = 1.0
     dagger_anneal_iters: int = 0
+    # How beta combines the two policies. "blend" executes beta*a_teacher + (1-beta)*a_student,
+    # a convex mix of two action VECTORS -- which is what runs before 2026-07-29 did, and which
+    # visits states NEITHER policy induces (where the policies disagree, e.g. opposing thruster
+    # pairs, the average is a command neither would issue). DAgger's distribution argument needs
+    # stochastic SELECTION between the policies, which is "select": per env per step, execute the
+    # teacher's action with probability beta, else the student's. Default stays "blend" so the
+    # B4b arm (trpo_sdeint_b4b_beta05_s30_260729_153436) remains reproducible; "select" is the
+    # correct semantics and should be preferred for any new DAgger arm.
+    dagger_mix: str = "blend"  # "blend" | "select"
 
     # Logging. log_dir_root is ABSOLUTE (anchored to the constrained-albc repo) so student
     # output does not leak into the isaaclab cwd train_student.py runs from. It mirrors the

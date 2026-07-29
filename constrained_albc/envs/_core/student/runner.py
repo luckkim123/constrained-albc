@@ -140,6 +140,8 @@ class StudentRunner:
         # Allocated at the teacher-synced obs width (cfg.policy_obs_dim was set above from
         # the teacher checkpoint). Only TCN needs it, and only when DAgger will actually drive
         # the rollout (beta dips below 1) -- a pure teacher-only run allocates nothing.
+        self._teacher_frac_sum = 0.0
+        self._teacher_frac_n = 0
         dagger_active = cfg.dagger_beta_start < 1.0 or cfg.dagger_beta_end < 1.0
         if cfg.encoder_type == "tcn" and dagger_active:
             self.collect_ring: torch.Tensor | None = torch.zeros(
@@ -257,6 +259,19 @@ class StudentRunner:
             l_hat = l_hat_seq[:, -1]
         obs_normed = self.teacher.normalize_obs(obs)
         a_student = self.teacher.actor_forward(obs_normed, l_hat)
+        if self.cfg.dagger_mix == "select":
+            # DAgger's mixture policy: per env, per step, execute ONE policy's action chosen with
+            # probability beta. Every executed action is then a real action of a real policy, so
+            # the visited states are reachable by the mixture -- which is what the covariate-shift
+            # argument requires. Contrast "blend" below, which averages the two action vectors and
+            # can issue commands neither policy would.
+            use_teacher = torch.rand(a_teacher.shape[0], 1, device=a_teacher.device) < beta
+            # Bite check for this arm: with "select" the realized teacher fraction must land on
+            # beta. A logged beta only proves the flag parsed -- it says nothing about which
+            # mixing path ran, and the two paths are indistinguishable from beta alone.
+            self._teacher_frac_sum += float(use_teacher.float().mean())
+            self._teacher_frac_n += 1
+            return torch.where(use_teacher, a_teacher, a_student)
         return beta * a_teacher + (1.0 - beta) * a_student
 
     def _compute_loss_tcn(self, batch) -> dict[str, torch.Tensor]:
@@ -391,6 +406,11 @@ class StudentRunner:
                 "student/iter": it,
                 "student/dagger_beta": beta,
             }
+            if self._teacher_frac_n:
+                # Realized fraction of steps the TEACHER actually drove. Only the "select" path
+                # produces this; it must land on beta, and its absence means blend ran.
+                metrics["student/dagger_teacher_frac"] = self._teacher_frac_sum / self._teacher_frac_n
+                self._teacher_frac_sum, self._teacher_frac_n = 0.0, 0
             self._log(it, metrics)
 
             if it % 10 == 0:
