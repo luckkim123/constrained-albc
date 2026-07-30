@@ -1,8 +1,8 @@
 ---
 title: "On-policy DAgger correction for the buoyfix student"
-tags: ["distillation", "student", "covariate-shift", "dagger", "albc", "sim-to-real", "next-experiment"]
+tags: ["distillation", "student", "covariate-shift", "dagger", "albc", "sim-to-real", "next-experiment", "c3-gruselect"]
 created: 2026-07-24T03:35:28.710539
-updated: 2026-07-29T10:22:54.711181
+updated: 2026-07-30T05:02:58.713679
 sources: ["diagnose-20260729-161459", "diagnose-20260729-172500", "diagnose-20260729-184021", "diagnose-20260729-192128"]
 links: []
 category: decision
@@ -10,7 +10,7 @@ confidence: high
 schemaVersion: 1
 qualityScore: 100
 qualityReasons: []
-status: needs-experiment
+status: resolved
 blocked-on: "MEASURED 2026-07-29 by arm C2 (trpo_sdeint_c2_daggersel_s30_260729_185634, analysis diagnose-20260729-192128). The mechanism half of this lead is CLOSED: replacing the action blend with per-env-per-step Bernoulli policy selection reverses the sign of B4b's latent regression and beats it at every DR level (-31.4/-30.5/-9.5/-8.7% in-loop latent MSE). dagger_mix=select is ADOPTED as the default mechanism. What remains open is the CONTROL half at screening resolution: C2 improves on the anchor at all four levels but every delta is sub-floor (max 0.0904 vs the 0.1 deg floor), and the dispersion signal (C2 has the campaign's lowest medium CV 63.6% and hard tail n_gt20 4.00) still sits on ss_error_std, for which the profile declares no floor. Next arm: select mixing on a GRU encoder -- C2 and A0g win on DIFFERENT axes (C2 roll at medium/hard, A0g pitch everywhere), so combining them is the first proposal in this campaign with two independent reasons to expect a gain."
 ---
 
@@ -220,4 +220,26 @@ visits states neither induces.
 Control did NOT reach decision grade: C2 beats the anchor at all four DR levels, a first for the
 campaign, but every delta is under the declared 0.1 deg floor (max 0.0904). A0g keeps the adoption
 because its advantage sits in pitch, which drives att_norm.
+
+---
+
+## Update (2026-07-30T05:02:58.713679)
+
+## CLOSED 2026-07-30: the "next arm" this lead proposed already ran as C3, and it produced the campaign's only decision-grade win over the teacher
+
+[FINDING] The recommendation at the end of the 2026-07-29 C2 entry -- "next arm: select mixing on a GRU encoder, because C2 and A0g win on DIFFERENT axes" -- was already executed as arm C3 before this lead was re-read; the arm question is therefore closed, and the result is stronger than "combine two partial wins": C3 is the first arm in the campaign to beat the TEACHER by a decision-grade margin at any DR level.
+
+[EVIDENCE] Arm C3 = trpo_sdeint_c3_gruselect_s30_260729_193732, ran 2026-07-29, analysis diagnose-20260729-200134. Its checkpoint cfg confirms the exact proposed combination (encoder_type gru, dagger_mix select, gru_hidden 128, gru_head_hidden 64), verified by loading student_999.pt on 2026-07-30. Report findings: hard att_norm 0.5652 vs teacher 0.7189 = -0.1537 deg against the declared 0.1 deg floor (next-best student margin over the teacher at hard is A0g's -0.0693, sub-floor); the hard win is carried by BOTH axes independently (C3 roll 0.4469 and pitch 0.2540 are each the campaign's lowest and each below the teacher's 0.5999 / 0.2803, where C2 owned roll but lost pitch and A0g owned pitch but lost roll -- exactly the two-axis argument this lead predicted); best in-loop latent tracking at EVERY level (C3 vs A0g -22.5/-36.0/-31.5/-18.2%, C3 vs C2 -25.8/-42.0/-18.5/-7.0%), so the encoder change and the mixing change compound rather than trade off; survival 100% at all four levels; and it is the campaign's CHEAPEST arm (time_train 0.082394 s vs A0g 0.088227 and C2 0.218553).
+
+[CONFIDENCE] HIGH
+
+Why C3 nonetheless did not displace the adopted A0g: the two baselines answer different questions. Against the TEACHER at hard the margin is decision-grade (-0.1537 deg, above the 0.1 floor). Against the INCUMBENT A0g every level is sub-floor and the easy end is marginally adverse: C3 - A0g = +0.0331 / +0.0108 / +0.0004 / -0.0844 deg across none/soft/medium/hard. C3 also gives ground on dispersion where A0g is strongest -- att_norm CV at none 53.5% vs A0g 33.2%, at medium 108.8% vs A0g 78.9% (both the campaign's worst) -- while owning the hard end (CV 132.4% and ss_jitter 0.1877 deg, each better than the teacher's 177.9% / 0.2337). So "A0g adopted, C3 a hard-only improvement" is the accurate reading; do NOT restate it as "C3 failed".
+
+Two collateral results worth carrying, because they were produced by this arm and are not recorded on the C2 entry:
+- C1-latsens's hard-level sensitivity slope, measured independently on a different arm by perturbation injection, PREDICTS C3's observed hard control gain to within 4% (C1: 1.070 deg per unit ||delta l_hat|| at hard; C3's hard in-loop MSE 0.060606 vs A0g's 0.074132 implies about 0.076 units, predicting about 0.081 deg; observed 0.0844 deg). The level ORDERING matches too, independently of magnitude. That is a cross-arm prediction confirmation of the latent-sensitivity instrument, not just another arm result.
+- Under the PRE-correction reading of the P1 ratio metric C3 would have been rejected as the campaign's worst arm (lowest ratio at all four levels, 3 of 9 dims below the 0.1 threshold at none). Under the corrected reading (ratio == R2, so the target is R2) it is the best-tracking AND best-calibrated arm: aggregate R2 at hard +0.1108 vs C2 +0.0459 and A0g -0.0887, with the smallest ratio-to-R2 gap (0.188 vs 0.436 / 0.433). This arm is the sharpest single demonstration of why that metric correction mattered.
+
+What is NOT closed by this, and where the training thread actually continues: the dispersion signal still sits on ss_error_std, for which the profile declares NO floor -- that is a profile floor-declaration decision, not an arm. And the campaign's next TRAINING arm is the nominal-corner exposure lead (roll_transient_is_worst_at_none_dr...), whose blocked-on read "sequenced after C3" and is now unblocked. C3's none-level dispersion being the campaign's worst is direct evidence for that lead, since the nominal corner is exactly where it degrades.
+
+Status moved to resolved: no arm remains for the DAgger-mechanism question. The mechanism (dagger_mix=select) was adopted from C2, and the GRU+select combination this lead proposed has been measured.
 

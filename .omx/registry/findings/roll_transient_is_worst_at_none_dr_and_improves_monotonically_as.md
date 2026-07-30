@@ -1,17 +1,17 @@
 ---
 title: "roll transient is WORST at none DR and improves monotonically as DR hardens (inverted, both runs)"
-tags: ["roll", "overshoot", "transient", "dr-scaling", "os_env_mean", "open-lead"]
+tags: ["roll", "overshoot", "transient", "dr-scaling", "os_env_mean", "open-lead", "nominal-corner", "doraemon"]
 created: 2026-07-21T07:58:14.787774
-updated: 2026-07-27T23:24:29.885457
+updated: 2026-07-30T05:03:17.174116
 sources: ["diagnose-20260721-164331", "next-20260724-033159", "static_260724_040413", "static_260723_091813", "diagnose-20260728-081953"]
 links: ["eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md"]
 category: pattern
 confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
+qualityScore: 100
+qualityReasons: []
 status: needs-experiment
-blocked-on: "follow-up = nominal-corner exposure (DORAEMON nominal sampling floor), a training-side experiment sequenced after C3"
+blocked-on: "UNBLOCKED 2026-07-30 for sequencing: the 'after C3' prerequisite is met (student C3 ran 2026-07-29, campaign roster exhausted) and this is now the front of the training queue. Remaining gate is only the launch approval itself (omx queue-launch). One ambiguity first: confirm whether the original 'after C3' meant student-C3 (which ran) or teacher-C3 (which did not)."
 ---
 
 # roll transient is WORST at none DR and improves monotonically as DR hardens (inverted, both runs)
@@ -126,3 +126,20 @@ medium) with a hard bounce (13.93). Passive plant damping is now the leading can
 transient tail was missing -- the policy family can hold DC without it but overshoots the step without
 it. [EVIDENCE: trpo_hydrorc_s30_260728_013136 eval static_260728_075343 vs trpo_eint_s30_rs2350 eval
 static_260727_235736, roll os_env_mean/n_gt20 all levels; report diagnose-20260728-081953]
+
+---
+
+## Update (2026-07-30T05:03:17.174116)
+
+## UNBLOCKED 2026-07-30: the "sequenced after C3" prerequisite is met, and C3 supplied direct evidence for this lead
+
+[FINDING] This lead's blocker was sequencing only -- "follow-up = nominal-corner exposure (DORAEMON nominal sampling floor), a training-side experiment sequenced after C3". C3 ran on 2026-07-29 (trpo_sdeint_c3_gruselect_s30_260729_193732, analysis diagnose-20260729-200134) and the student campaign roster is exhausted, so the prerequisite is met and this is now the front of the training queue.
+
+[EVIDENCE] C3's report independently strengthens the nominal-corner case: C3 has the campaign's WORST dispersion at the none level (att_norm CV 53.5% vs A0g 33.2% and C2 37.0%) and at medium (108.8% vs C2 63.6% and A0g 78.9%), while owning the hard end (CV 132.4% and ss_jitter 0.1877 deg, both better than the teacher's 177.9% / 0.2337). That is the same inverted none-vs-hard shape this page records for the roll transient, now visible on a second metric family (dispersion, not just os_env_mean) and on the campaign's best-tracking arm -- so the nominal corner is where the current best latent tracking still fails to convert.
+
+[CONFIDENCE] MED
+
+Status stays needs-experiment: the follow-up IS a training run (DORAEMON nominal sampling floor), so it is launch-gated like every other arm -- queue via omx queue-launch, never auto-run. What changed is only that nothing sequences ahead of it any more.
+
+One ambiguity to resolve before designing it, carried over from the closeout plan: the original "after C3" note does not say whether it meant teacher-C3 or student-C3. The student C3 is what just ran. If the intended prerequisite was a teacher-side C3, this lead is NOT actually unblocked and the sequencing note needs a correction instead -- check which before proposing the arm.
+

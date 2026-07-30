@@ -8311,3 +8311,15 @@
 - **Pages:** group_folder_name_equals_wandb_project_name_equals_experiment_pu.md
 - **Summary:** updated 'Group folder name equals wandb project name equals experiment purpose (unified naming, 2026-07-14 revision)'
 
+## [2026-07-30T05:02:58.713679] add
+- **Pages:** on_policy_dagger_correction_for_the_buoyfix_student.md
+- **Summary:** updated 'On-policy DAgger correction for the buoyfix student'
+
+## [2026-07-30T05:03:17.174116] add
+- **Pages:** roll_transient_is_worst_at_none_dr_and_improves_monotonically_as.md
+- **Summary:** updated 'roll transient is WORST at none DR and improves monotonically as DR hardens (inverted, both runs)'
+
+## [2026-07-30T05:03:34.314667] add
+- **Pages:** e0_eval_latent_instrument_fix_38d979e_lives_only_on_the_student_.md
+- **Summary:** updated 'E0 eval latent instrument fix 38d979e lives only on the student branch, not main'
+
