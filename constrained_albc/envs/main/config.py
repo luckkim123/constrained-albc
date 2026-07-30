@@ -251,13 +251,7 @@ class DomainRandomizationCfg:
     # E-int (proposal next-20260727-155500), the integration retrain that becomes the
     # final teacher. Runs trained before that date used (1.0, 1.0); comparisons against
     # the anchor are fair only at the eval `none` level, which collapses this to 1.0.
-    # E-ftc1 (proposal next-20260728-180215): reverted to OFF for this experiment ONLY.
-    # This is BASELINE RESTORATION, not a treatment -- Arm A
-    # (trpo_faultdr_agnostic_s30_260725_183121), the paired baseline, trained at (1.0, 1.0),
-    # so the band must be off for fault_severity to be the single variable. Restore to
-    # (0.85, 1.15) when merging back; a severity win measured here is CONDITIONAL on this
-    # plant and needs a confirm run at (0.85, 1.15) before entering the final teacher.
-    max_thrust_scale: tuple[float, float] = (1.0, 1.0)
+    max_thrust_scale: tuple[float, float] = (0.85, 1.15)
 
     # Control-action transport delay (discrete N-step lag on the applied
     # action) as integer control steps; 1 step = 20 ms @ 50 Hz.

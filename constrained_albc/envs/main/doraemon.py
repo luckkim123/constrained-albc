@@ -91,13 +91,7 @@ _NOMINAL_OVERRIDES: dict[str, float] = {
     "ocean_current_strength": 0.0,
     "payload_cog_offset_xy_u": 0.0,  # start with no XY offset, widen as policy masters it
     "obs_noise_scale": 0.0,  # start with no extra sensor noise, widen as policy masters it
-    # E-ftc1 (proposal next-20260728-180215): start at Arm A's MEASURED endpoint, not 0.0.
-    # Nominal 0.0 hits the mean-preserving clamp in BetaDistribution.__init__
-    # (marinelab doraemon.py:131-142) -> Beta(1, 99), i.e. effective concentration 100
-    # against the configured init_concentration=30, so the dim starts 3.3x narrower than
-    # configured and the fixed KL budget is spent climbing back. 0.0771 clears the clamp
-    # (a = 2.313 > _MIN_BETA_PARAM) -> Beta(2.313, 27.687).
-    "fault_severity": 0.0771,
+    "fault_severity": 0.0,  # start fault-free, widen as policy masters simpler fault variants
 }
 
 # Default specs (base bounds) for callers without a DR cfg; matches pre-promotion PARAM_SPECS.
