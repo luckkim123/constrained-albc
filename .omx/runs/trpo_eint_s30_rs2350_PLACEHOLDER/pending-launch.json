@@ -21,6 +21,7 @@
   "proposal_id": "next-20260727-155500",
   "queued_at": "2026-07-27T10:42:28.703103+00:00",
   "queued_commit": "7e6dab92eaf386a8d036c75d6991ccf408c3ce11",
+  "reconciled_at": "2026-07-30",
   "schema_version": 1,
-  "status": "pending approval"
+  "status": "launched and analyzed -- landed trpo_eint_s30_rs2350_260727_195102, the RESUME that completed E-int to model_4999.pt after the original died at iter ~2350 on an Isaac Sim carb.tasking assertion. Proposal next-20260727-155500 closed kept: this run IS the final teacher."
 }

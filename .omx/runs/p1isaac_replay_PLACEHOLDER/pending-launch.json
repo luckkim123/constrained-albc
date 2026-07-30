@@ -21,6 +21,7 @@
   "proposal_id": "next-20260729-124437",
   "queued_at": "2026-07-29T03:47:43.145266+00:00",
   "queued_commit": "d5b6a80784206f070fd4e29c6c0d60fa22d50f54",
+  "reconciled_at": "2026-07-30",
   "schema_version": 1,
-  "status": "pending approval"
+  "status": "executed 2026-07-29, eval-only -- no training run dir by design. Isaac-side joint1-swing replay, 5 profiles x 3 reps = 15 CSVs (1001 rows each), verified and committed 2026-07-30 at tools/p1_joint_swing/isaac_csv/ with scripts/isaac_p1_replay.py. Proposal next-20260729-124437 closed kept; arm-reaction yaw channel eliminated in both sims."
 }

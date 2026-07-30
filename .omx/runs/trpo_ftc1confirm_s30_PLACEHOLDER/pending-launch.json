@@ -21,6 +21,7 @@
   "proposal_id": "next-20260729-125443",
   "queued_at": "2026-07-29T03:55:34.234620+00:00",
   "queued_commit": "8b5ada8629e4d67cbc72063105e9269af40f08c2",
+  "reconciled_at": "2026-07-30",
   "schema_version": 1,
-  "status": "pending approval"
+  "status": "NEVER RAN and now moot -- no run directory exists. queue-launch recorded the conditional launch when E-ftc1 returned H1-WEAK, but the parent treatment was rejected, so there is nothing left to confirm. Proposal next-20260729-125443 closed discarded 2026-07-30."
 }

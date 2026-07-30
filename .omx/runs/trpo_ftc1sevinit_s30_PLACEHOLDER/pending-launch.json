@@ -22,6 +22,7 @@
   "proposal_id": "next-20260728-180215",
   "queued_at": "2026-07-28T09:35:10.349798+00:00",
   "queued_commit": "1f97e1f40cc969c92fdb824613bbeefa6498d0c6",
+  "reconciled_at": "2026-07-30",
   "schema_version": 1,
-  "status": "pending approval"
+  "status": "launched and analyzed -- landed trpo_ftc1sevinit_s30_260729_105510 (analysis diagnose-20260729-171553). Proposal next-20260728-180215 closed DISCARDED: H1-WEAK, and the within-run m4-dead penalty came out 2.9-5.5x LARGER than Arm A at every DR level, so the severity head start made fault rejection worse. fault_severity stays at the Arm A nominal."
 }
