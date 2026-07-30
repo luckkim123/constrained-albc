@@ -8279,3 +8279,11 @@
 - **Pages:** baseline_consolidated_main_reference_trpo_baseline_260713_031325.md, session_state_2026_07_12_constraint_deep_dive_q_a_covered_struct.md, doraemon_optimize_entropy_accept_can_leak_the_success_floor_late.md, dr_harder_campaign_index.md, engine_gap_status_board.md
 - **Summary:** deleted 5, merged 12 source(s)
 
+## [2026-07-30T03:56:27.347898] query
+- **Pages:** real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md, real_robot_has_2_faulted_thrusters_user_judges_buoyancy_restorin.md, bias_ema_obs_is_deployment_safe_computed_from_command_minus_meas.md, stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, imu_45deg_offset_pitch_negation_sim_uncompensated_2026_07_05.md, hydrorc_016d1b1_recentered_nine_hull_hydro_numbers_onto_a_broken.md, incident_post_mortem_teacher_baseline_opt_e1_e4_trained_on_a_tam.md, buoy_added_mass_is_wrong_in_both_sims_and_in_opposite_directions.md, open_actionable_ledger_read_before_any_sim_plant_code_change_or_.md, plant_change_batch_v2_four_isaac_plant_corrections_are_now_pendi.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, thruster_static_gain_gap_stonefish_quadratic_rated_20_03_n_vs_is.md, experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, onboard_measured_2026_07_06_arm_step_response_valid_sim_zeta_0_7.md, bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md, penalty_vs_objective_exchange_rate_deg_of_attitude_error_bought_.md, arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md, hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md, thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md
+- **Summary:** query 'real robot state estimate rate imu odom hz deployment' -> 20 of 218
+
+## [2026-07-30T04:01:17.467011] add
+- **Pages:** plan_consolidation_2026_07_23_canonical_ids_z_a_b_c_one_campaign.md
+- **Summary:** updated 'Plan consolidation 2026-07-23: canonical ids Z/A/B/C + one-campaign-per-group; master doc docs/reference/teacher-campaign-plan.md'
+

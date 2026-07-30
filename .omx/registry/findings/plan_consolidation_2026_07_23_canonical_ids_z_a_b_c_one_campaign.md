@@ -2,7 +2,7 @@
 title: "Plan consolidation 2026-07-23: canonical ids Z/A/B/C + one-campaign-per-group; master doc docs/reference/teacher-campaign-plan.md"
 tags: ["consolidation", "campaign", "naming", "plan", "ssot"]
 created: 2026-07-23T06:38:05.683798
-updated: 2026-07-23T08:41:30.977876
+updated: 2026-07-30T04:01:17.467011
 sources: []
 links: []
 category: decision
@@ -21,3 +21,22 @@ The scattered plan corpus (60 .sp/plans docs, 2 handoff dirs, abandoned campaign
 ## Update (2026-07-23T08:41:30.977876)
 
 UPDATE 2026-07-23 (later same day): the master doc MOVED into the omx program layer — now at constrained-albc/.omx/programs/teacher-final-closeout/PLAN.md (omx v0.9.0; program.json lists the 4 member campaigns; the authoritative contract is now that PLAN.md + omx program-status). A redirect stub remains at docs/reference/teacher-campaign-plan.md, so historical references in this page's title and body still resolve.
+
+---
+
+## Update (2026-07-30T04:01:17.467011)
+
+[DEAD POINTER 2026-07-30] This page's closing sentence says the superseded .sp documents
+were moved to /workspace/.trash/sp-plans-cleanup-260723/. That batch was PERMANENTLY
+DELETED on 2026-07-30 with explicit user approval, so the pointer no longer resolves. It
+was verified unreferenced by any live doc or open lead before deletion; the page's own
+knowledge (the canonical id scheme, the one-campaign-per-group decision, the storage
+convention) is unaffected.
+
+Also note for anyone following this page's master-doc reference: the plan moved again on
+2026-07-23 to .omx/programs/teacher-final-closeout/PLAN.md, with a redirect stub left at
+docs/reference/teacher-campaign-plan.md.
+
+A second .sp purge happened the same day (20 stale scaffolding files) and IS still
+recoverable at /workspace/.trash/sp-plans-cleanup-260730/.
+
