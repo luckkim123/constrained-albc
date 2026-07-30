@@ -1,9 +1,9 @@
 ---
 title: "The per-step reward decomposition is essentially unchanged by the plant swap — R"
-tags: ["auto-captured", "correction", "e-int", "hydrorc", "withdrawn-draft"]
+tags: ["auto-captured", "correction", "e-int", "hydrorc", "withdrawn-draft", "trpo_b0cmaxthrust_s30_260724_024326"]
 created: 2026-07-28T05:32:19.957559
-updated: 2026-07-28T09:10:53.909208
-sources: ["/workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_hydrorc_s30_260728_013136/analysis/diagnose-20260728-081212/report.md", "/workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_hydrorc_s30_260728_013136/analysis/diagnose-20260728-081242/report.md", "/workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_hydrorc_s30_260728_013136/analysis/diagnose-20260728-081953/report.md", "diagnose-20260728-081953"]
+updated: 2026-07-30T03:54:24.726456
+sources: ["/workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_hydrorc_s30_260728_013136/analysis/diagnose-20260728-081212/report.md", "/workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_hydrorc_s30_260728_013136/analysis/diagnose-20260728-081242/report.md", "/workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_hydrorc_s30_260728_013136/analysis/diagnose-20260728-081953/report.md", "diagnose-20260728-081953", "experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_b0cmaxthrust_s30_260724_024326/analysis/diagnose-20260727-151917/report.md", "/workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_b0cmaxthrust_s30_260724_024326/analysis/diagnose-20260727-151917/report.md"]
 links: []
 category: session-log
 confidence: high
@@ -67,3 +67,26 @@ withdrawn figure implied.
 [EVIDENCE: independent report-reviewer round 1 on diagnose-20260728-081953 raised this exact defect (E-int final reward cited as the crash-time 260.5 instead of the true 263.98); it was fixed by re-authoring the report from the generator, and round 2 returned APPROVE with 0 findings. Recorded in PLAN teacher-final-closeout section 12.2, HydroRC row]
 [CONFIDENCE: HIGH]
 
+---
+
+## Merged from the_per_step_reward_decomposition_is_essentially_unchanged_the_b.md (2026-07-30T03:54:24.726456)
+
+# The per-step reward decomposition is essentially unchanged — the band does not r
+
+The per-step reward decomposition is essentially unchanged — the band does not redistribute reward across channels; the episode return gap is -2.5% with identical episode length. | term | anchor | B0c | |---|---|---| | Reward/att_rp | 6.69 | 6.73 | | Reward/yaw_vel | 2.12 | 2.06 | | Reward/bias | -0.01 | -0.01 | | Reward/smoothness | -0.02 | -0.02 | | Reward/thruster | -0.02 | -0.02 | | Reward/torque | -0.07 | -0.06 | | per-step total | 8.69 | 8.68 | | Train/mean_reward (episode) | 265.98 | 259.20 | | ep_len | 1424 | 1424 |
+
+[EVIDENCE: engine TIER 3 Rewards and TIER 1 rows, b0c_engine.txt and anchor_engine.txt]
+[CONFIDENCE: HIGH]
+
+source report: experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_b0cmaxthrust_s30_260724_024326/analysis/diagnose-20260727-151917/report.md
+
+---
+
+## Update (2026-07-27T10:30:03.859588)
+
+The per-step reward decomposition is essentially unchanged — the band does not redistribute reward across channels; the episode return gap is -2.5% with identical episode length. | term | anchor | B0c | |---|---|---| | Reward/att_rp | 6.69 | 6.73 | | Reward/yaw_vel | 2.12 | 2.06 | | Reward/bias | -0.01 | -0.01 | | Reward/smoothness | -0.02 | -0.02 | | Reward/thruster | -0.02 | -0.02 | | Reward/torque | -0.07 | -0.06 | | per-step total | 8.69 | 8.68 | | Train/mean_reward (episode) | 265.98 | 259.20 | | ep_len | 1424 | 1424 |
+
+[EVIDENCE: engine TIER 3 Rewards and TIER 1 rows, b0c_engine.txt and anchor_engine.txt]
+[CONFIDENCE: HIGH]
+
+source report: /workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_b0cmaxthrust_s30_260724_024326/analysis/diagnose-20260727-151917/report.md

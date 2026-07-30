@@ -8271,3 +8271,11 @@
 - **Pages:** student_distillation_converges_to_a_residual_that_rules_out_late.md
 - **Summary:** updated 'Student distillation converges to a residual that rules out latent multimodality (teacher-visited distribution only)'
 
+## [2026-07-30T03:52:45.578919] query
+- **Pages:** stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md, bias_ema_obs_is_deployment_safe_computed_from_command_minus_meas.md, obs_noise_model_history_channels_are_re_noised_every_step_sim_pa.md, thruster_static_gain_gap_stonefish_quadratic_rated_20_03_n_vs_is.md, buoy_added_mass_is_wrong_in_both_sims_and_in_opposite_directions.md, reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md, stonefish_rotational_drag_is_a_distributed_integral_with_no_sepa.md, perflb200_final_dr_anatomy_17_bulk_params_at_config_ceiling_unif.md, bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md, attitude_only_ablation_arms_registered_policy_obs_dim_sync_must_.md, bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, engine_gap_omx_reduce_tb_final_unusable_here_cli_on_system_pytho.md, experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md, ftc_fault_dr_a_b_result_2026_07_27_fault_dr_adopted_5_12x_less_m.md, hydrorc_016d1b1_recentered_nine_hull_hydro_numbers_onto_a_broken.md, imu_45deg_offset_pitch_negation_sim_uncompensated_2026_07_05.md, policy_head_design_rationale_and_literature_standing_encoder_inp.md, stonefish_base_hull_effective_hydro_measured_2026_07_27_damping_.md, p_a8_perflb200_more_iters_5000_8000_closed_the_deployment_ood_dr.md
+- **Summary:** query 'stonefish deployment pack obs spec bridge' -> 20 of 147
+
+## [2026-07-30T03:54:24.726456] gc-apply
+- **Pages:** baseline_consolidated_main_reference_trpo_baseline_260713_031325.md, session_state_2026_07_12_constraint_deep_dive_q_a_covered_struct.md, doraemon_optimize_entropy_accept_can_leak_the_success_floor_late.md, dr_harder_campaign_index.md, engine_gap_status_board.md
+- **Summary:** deleted 5, merged 12 source(s)
+
