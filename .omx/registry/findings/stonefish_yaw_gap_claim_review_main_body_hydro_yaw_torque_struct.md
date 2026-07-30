@@ -2,14 +2,14 @@
 title: "Stonefish yaw-gap claim review: main-body hydro yaw torque structurally zero (symmetric added mass kills Munk); PhysX DOES model arm reaction; real gaps = buoy added-mass ~10x under, no arm-link hydro, no yaw-torque DR axis"
 tags: ["sim-to-real", "stonefish", "yaw", "hydrodynamics", "munk-moment", "added-mass", "domain-randomization", "arm-reaction", "servo-velocity-cap", "cross-sim-measurement"]
 created: 2026-07-16T12:56:49.986664
-updated: 2026-07-30T02:29:55.722594
+updated: 2026-07-30T03:09:24.073837
 sources: ["next-20260724-033200", "static_260724_092023", "static_260724_100219", "diagnose-20260728-081953", "p1-stonefish-20260728", "p1-stonefish-20260729", "p1-isaac-20260729", "servo-chatter-probe-20260729", "servo-deployed-20260729", "servo-applied-20260730", "stonefish-reply-20260730"]
 links: ["sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "teacher_dr_harder_yaw_is_the_only_heavy_tail_axis_roll_is_dc_bia.md", "buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md", "yaw_command_is_rate_not_angle_inherited_design_defensible_only_i.md", "actuator_hardware_identification_arm_xw540_t260_board_measured_p.md"]
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
 status: needs-experiment
 blocked-on: "Deployed Stonefish albc.scn servo gains APPLIED 2026-07-30 (1.0/1.0 -> 0.1/0.1, Kv nonzero, recorded INTERIM in-file). Remaining: XW540-T260 step response, the shared response target that should retune BOTH sims arm actuators; and the T200 bench curve for the thruster static-gain item. Buoy measurement route is closed -- what is left there is an Isaac-side guard-structure decision, not a Stonefish probe."
 ---
@@ -566,4 +566,27 @@ sections 2.1, 2.2, 3 and the correction section of docs/stonefish-hydro-measurem
 stationary-arm figures from this page's own update 2026-07-29T10:13; ratio arithmetic re-derived
 2026-07-30 code-exec] [CONFIDENCE: HIGH on the applied fix and the retractions, which are the
 Stonefish side's own repeat measurements; HIGH on the invariance-immunity reasoning]
+
+---
+
+## Update (2026-07-30T03:09:24.073837)
+
+[ARTIFACT LOCATION VERIFIED 2026-07-30] The P1 Isaac-side raw data is real and now has a
+path that resolves in THIS repo. Earlier updates on this page recorded the CSVs at
+tools/p1_joint_swing/isaac_csv/, which is VAULT-relative -- the vault is not reachable from
+the Isaac container, so a Phase 0 audit of this repo read the artifacts as missing and the
+P1-isaac proposal as unclosed. What actually existed: 15 CSVs in the container's /tmp/p1_isaac
+only, one restart from loss, plus an untracked replay script.
+
+Verified and committed on exp/ftc1-severity-init: 15 files (5 profiles x 3 reps), each exactly
+1001 rows = a 20 s window at the 50 Hz control rate, all md5-identical to the /tmp originals,
+at constrained-albc tools/p1_joint_swing/isaac_csv/ together with scripts/isaac_p1_replay.py
+and a README carrying the two usage constraints (aggregate with P1_STENCIL=3 because Isaac logs
+at 50 Hz against Stonefish's 100 Hz; with DR off the 3-rep sd is exactly 0, which is not an
+anomaly). The vault keeps the write-up and the Stonefish half; the Isaac half now lives where
+the Isaac code does.
+
+Ledger consequence: proposal next-20260729-124437 (P1-isaac) is closed kept in campaign
+teacher_baseline_buoyfix. This page KEEPS needs-experiment -- its remaining open item is the
+buoy added-mass one, which needs the P-C measurement, not P1.
 

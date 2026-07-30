@@ -8243,3 +8243,11 @@
 - **Pages:** buoy_added_mass_is_wrong_in_both_sims_and_in_opposite_directions.md, stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, thruster_static_gain_gap_stonefish_quadratic_rated_20_03_n_vs_is.md, eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md, baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md, experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md, joint1_stage_1_gate_go_drift_is_real_on_unlimited_physics_not_th.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, onboard_measured_2026_07_06_arm_step_response_valid_sim_zeta_0_7.md, plant_change_batch_v2_four_isaac_plant_corrections_are_now_pendi.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, engine_gap_analyze_training_py_only_runs_under_isaac_sim_python_.md, hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md, imu_45deg_offset_pitch_negation_sim_uncompensated_2026_07_05.md, joint1_centering_reward_is_removed_on_main_6_term_but_alive_on_e.md, obs_noise_model_history_channels_are_re_noised_every_step_sim_pa.md, static_eval_plots_regenerate_sim_free_from_npz_reconstruct_segme.md, hydrorc_recenter_gate_result_2026_07_28_isaac_paired_gate_fail_r.md, real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md, analysis_engine_map_what_is_grow_able_vs_off_limits.md
 - **Summary:** query 'P1 joint1 swing cross-sim Isaac replay' -> 20 of 193
 
+## [2026-07-30T03:08:04.356936] add
+- **Pages:** stonefish_rotational_drag_is_a_distributed_integral_with_no_sepa.md
+- **Summary:** created 'Stonefish rotational drag is a distributed integral with no separate rotational term, so hull yaw pressure drag is exactly zero by construction -- the 45.5x yaw damping gap is an artifact and roll/pitch is corrupted by a force-derived torque correction'
+
+## [2026-07-30T03:09:24.073837] add
+- **Pages:** stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md
+- **Summary:** updated 'Stonefish yaw-gap claim review: main-body hydro yaw torque structurally zero (symmetric added mass kills Munk); PhysX DOES model arm reaction; real gaps = buoy added-mass ~10x under, no arm-link hydro, no yaw-torque DR axis'
+
