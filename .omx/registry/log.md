@@ -8303,3 +8303,11 @@
 - **Pages:** deploy_export_was_tcn_only_so_it_shipped_the_non_adopted_student.md
 - **Summary:** created 'Deploy export was TCN-only so it shipped the non-adopted student arm; StudentGRUSpec closes GRU parity (latent 1.2e-07, hidden 1.6e-07 over 9 steps) and rejects shallow-head / multi-layer geometries'
 
+## [2026-07-30T04:45:13.221326] query
+- **Pages:** group_folder_name_equals_wandb_project_name_equals_experiment_pu.md, experiment_launch_checklist_run_id_wandb_latest_alias_naming.md, experiment_output_directory_standard_logs_vs_experiments_index_t.md, train_py_run_group_creates_the_group_layer_no_more_manual_post_m.md, experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md, next_experiment_workflow_pick_a_baseline_train_once_then_re_tune.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, experiment_idea_feed_o_t_into_the_encoder_alongside_p_t_state_co.md, baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md, constrained_albc_experiment_conventions.md, experiment_result_recording_location_experiments_tree_is_ssot_no.md, yaw_command_is_rate_not_angle_inherited_design_defensible_only_i.md, reward_md_6_error_buffers_reward_call_site_dt_scaling_theory_rev.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md, eval_command_box_was_half_the_trained_envelope_from_2026_04_06_t.md, on_policy_dagger_correction_for_the_buoyfix_student.md, reward_cost_parallel_structure_mostly_mirroring_two_real_couplin.md, reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md, plant_fix_needs_apply_before_retrain_main_hull_volume_0_009_0_00.md
+- **Summary:** query 'group folder name equals wandb project name experiment purpose' -> 20 of 283
+
+## [2026-07-30T04:46:28.970075] add
+- **Pages:** group_folder_name_equals_wandb_project_name_equals_experiment_pu.md
+- **Summary:** updated 'Group folder name equals wandb project name equals experiment purpose (unified naming, 2026-07-14 revision)'
+
