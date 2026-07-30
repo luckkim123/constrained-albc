@@ -14,10 +14,15 @@ import pytest
 import torch
 import torch.nn as nn
 
-from constrained_albc.deploy.golden import export_golden_tcn, export_golden_teacher
+from constrained_albc.deploy.golden import (
+    export_golden_gru,
+    export_golden_tcn,
+    export_golden_teacher,
+)
 from constrained_albc.deploy.pack import copy_npforward, self_close, write_manifest
 
 _D, _C, _H, _LAT, _ACT = 6, 4, 9, 3, 2
+_GH, _HH, _T = 5, 4, 7   # GRU hidden, head hidden, golden sequence length
 
 
 class _TinyTCN(nn.Module):
@@ -39,6 +44,20 @@ class _TinyTCN(nn.Module):
         x = self.channel_transform(win.reshape(b * h, d)).reshape(b, h, -1)
         x = self.conv(x.transpose(1, 2))
         return torch.nn.functional.softsign(self.head(x.reshape(b, -1)))
+
+
+class _TinyGRU(nn.Module):
+    """Mirrors StudentEncoderGRU's module names so state_dict keys match npforward."""
+
+    def __init__(self):
+        super().__init__()
+        self.gru = nn.GRU(_D, _GH, 1, batch_first=True)
+        self.head = nn.Sequential(
+            nn.Linear(_GH, _HH), nn.ELU(), nn.LayerNorm(_HH), nn.Linear(_HH, _LAT))
+
+    def forward(self, seq, hidden=None):
+        out, h = self.gru(seq, hidden)
+        return torch.nn.functional.softsign(self.head(out)), h
 
 
 class _Normalizer(nn.Module):
@@ -78,6 +97,79 @@ def _make_pack(out_dir: str) -> None:
     )
     export_golden_tcn(tcn, out_dir, history=_H, obs_dim=_D)
     export_golden_teacher(teacher, out_dir, obs_dim=_D, latent_dim=_LAT)
+
+
+def _make_gru_pack(out_dir: str) -> None:
+    """Assemble a consistent tiny GRU pack: weights + goldens from the SAME instances."""
+    torch.manual_seed(0)
+    gru, teacher = _TinyGRU().eval(), _TinyTeacher().eval()
+    _save_f32(os.path.join(out_dir, "weights_gru.npz"), dict(gru.state_dict()))
+    _save_f32(
+        os.path.join(out_dir, "weights_teacher.npz"),
+        {k.replace("actor_obs_normalizer.", "normalizer."): v for k, v in teacher.state_dict().items()},
+    )
+    export_golden_gru(gru, out_dir, steps=_T, obs_dim=_D)
+    export_golden_teacher(teacher, out_dir, obs_dim=_D, latent_dim=_LAT)
+
+
+def test_gru_self_close_passes_on_consistent_pack(tmp_path):
+    """Torch runs the whole sequence in one nn.GRU call; numpy steps through carrying
+    its own hidden. Agreement over T steps is what makes the board runtime trustworthy."""
+    out = str(tmp_path)
+    _make_gru_pack(out)
+    parity = self_close(out, arch="gru")
+    assert parity["closed_in_container"] is True
+    assert parity["gru_closed"] is True and parity["teacher_closed"] is True
+    assert parity["gru_latent_max_err"] <= 1e-5
+    assert parity["gru_hidden_max_err"] <= 1e-5
+
+
+def test_gru_self_close_fails_on_perturbed_recurrent_weight(tmp_path):
+    """weight_hh_l0 only acts through the hidden carry -- perturbing it is the check a
+    single-step golden would pass blind."""
+    out = str(tmp_path)
+    _make_gru_pack(out)
+    wpath = os.path.join(out, "weights_gru.npz")
+    w = dict(np.load(wpath))
+    w["gru.weight_hh_l0"] = w["gru.weight_hh_l0"] + 0.05
+    np.savez(wpath, **w)
+    parity = self_close(out, arch="gru")
+    assert parity["closed_in_container"] is False
+    assert parity["gru_closed"] is False
+    assert parity["teacher_closed"] is True  # only the student was perturbed
+
+
+def test_gru_golden_refuses_a_single_step(tmp_path):
+    with pytest.raises(ValueError, match="hidden carry"):
+        export_golden_gru(_TinyGRU().eval(), str(tmp_path), steps=1, obs_dim=_D)
+
+
+def test_gru_write_manifest_records_gru_dims_and_payload(tmp_path):
+    out = str(tmp_path / "pack_tinygru_260730_000000")
+    os.makedirs(out)
+    _make_gru_pack(out)
+    copy_npforward(out)
+    parity = self_close(out, arch="gru")
+    ckpts = {"student_gru": {"file": "s.pt", "iter": 1, "path": "logs/s.pt"},
+             "teacher": {"file": "t.pt", "iter": 2, "path": "logs/t.pt"}}
+    m = json.load(open(write_manifest(out, checkpoints=ckpts, parity=parity, arch="gru")))
+    assert m["student_arch"] == "gru"
+    assert m["dims"] == {"obs": _D, "action": _ACT, "latent": _LAT,
+                         "teacher_input": _D + _LAT,
+                         "gru_hidden": _GH, "gru_golden_steps": _T}
+    assert set(m["files"]) == {"weights_teacher.npz", "weights_gru.npz", "npforward.py",
+                               "golden/golden_gru.npz", "golden/golden_teacher.npz"}
+    assert m["parity"]["closed_in_container"] is True
+
+
+def test_gru_golden_internal_sanity_gate_raises_on_path_mismatch(tmp_path):
+    class _BrokenGRU(_TinyGRU):
+        def forward(self, seq, hidden=None):
+            out, h = super().forward(seq, hidden)
+            return out + 1.0, h  # diverges from softsign(head(...))
+
+    with pytest.raises(RuntimeError, match="diverged"):
+        export_golden_gru(_BrokenGRU().eval(), str(tmp_path), steps=_T, obs_dim=_D)
 
 
 def test_self_close_passes_on_consistent_pack(tmp_path):

@@ -53,6 +53,41 @@ def _ckpt_iter(path: str):
     return torch.load(path, map_location="cpu", weights_only=False).get("iter", "?")
 
 
+def _student_cfg(path: str) -> dict:
+    """Read the student checkpoint's stored cfg dict (empty if the ckpt predates it)."""
+    import torch
+
+    cfg = torch.load(path, map_location="cpu", weights_only=False).get("cfg", {})
+    return cfg if isinstance(cfg, dict) else {}
+
+
+def _build_student_spec(cfg: dict, obs_dim: int, latent_dim: int):
+    """Pick and size the student spec from the checkpoint's OWN declared architecture.
+
+    The checkpoint is the authority on which encoder it holds (same discipline as
+    engine._infer_teacher_dims); guessing here is what shipped a TCN-shaped pack for
+    a GRU student. obs_dim/latent_dim come from the TEACHER so a student distilled
+    against a different-geometry teacher fails at the contract instead of shipping.
+
+    Returns (spec, arch) where arch is the 'tcn'/'gru' tag the golden + pack take.
+    """
+    from constrained_albc.deploy.specs import STUDENT_SPEC_BY_ENCODER
+
+    arch = cfg.get("encoder_type", "tcn")
+    if arch not in STUDENT_SPEC_BY_ENCODER:
+        raise SystemExit(
+            f"student checkpoint declares encoder_type={arch!r}, which has no export spec "
+            f"(known: {sorted(STUDENT_SPEC_BY_ENCODER)})"
+        )
+    spec_cls = STUDENT_SPEC_BY_ENCODER[arch]
+    if arch == "gru":
+        spec = spec_cls(obs_dim=obs_dim, hidden=cfg.get("gru_hidden", 128),
+                        head_hidden=cfg.get("gru_head_hidden", 64), latent_dim=latent_dim)
+    else:
+        spec = spec_cls(obs_dim=obs_dim)
+    return spec, arch
+
+
 def resolve_out_dir(args: argparse.Namespace) -> str:
     """Resolve the export output dir per the deploy artifacts convention.
 
@@ -89,7 +124,7 @@ def main(argv: list[str] | None = None) -> int:
         build_teacher_model,
         export_from_state_dict,
     )
-    from constrained_albc.deploy.specs import StudentTCNSpec, TeacherActorSpec
+    from constrained_albc.deploy.specs import TeacherActorSpec
 
     if args.batch == "attitude_only_5000":
         assert args.student_ckpt and args.teacher_ckpt, \
@@ -101,7 +136,8 @@ def main(argv: list[str] | None = None) -> int:
         t_model = build_teacher_model(args.teacher_ckpt, args.device)
         obs_dim = t_model.actor_obs_normalizer._mean.shape[1]
         latent_dim = t_model.actor[0].weight.shape[1] - obs_dim
-        s_spec = StudentTCNSpec(obs_dim=obs_dim)
+        s_spec, arch = _build_student_spec(
+            _student_cfg(args.student_ckpt), obs_dim=obs_dim, latent_dim=latent_dim)
         t_spec = TeacherActorSpec(obs_dim=obs_dim, latent_dim=latent_dim)
         s_model = build_student_model(s_spec, args.student_ckpt, args.device)
         s_rep = export_from_state_dict(s_spec, s_model, out_dir)
@@ -110,9 +146,9 @@ def main(argv: list[str] | None = None) -> int:
             from constrained_albc.deploy.report import build_report
 
             chosen = {
-                "student_tcn": {"file": os.path.basename(args.student_ckpt),
-                                "iter": _ckpt_iter(args.student_ckpt),
-                                "rationale": "last student checkpoint"},
+                s_spec.name: {"file": os.path.basename(args.student_ckpt),
+                              "iter": _ckpt_iter(args.student_ckpt),
+                              "rationale": "last student checkpoint"},
                 "teacher_actor": {"file": os.path.basename(args.teacher_ckpt),
                                   "iter": _ckpt_iter(args.teacher_ckpt),
                                   "rationale": "final teacher checkpoint"},
@@ -128,37 +164,45 @@ def main(argv: list[str] | None = None) -> int:
                 "(input -> output pairs from the real model) on the Mac/ksm-nas path "
                 "during board integration."
             )
-            md = build_report({"student_tcn": s_rep, "teacher_actor": t_rep}, chosen,
+            md = build_report({s_spec.name: s_rep, "teacher_actor": t_rep}, chosen,
                               out_dir=out_dir, mount_status="overlay (docker cp)",
                               golden_status=golden_status)
             with open(os.path.join(out_dir, "EXPORT_REPORT.md"), "w") as f:
                 f.write(md)
 
         if args.golden:
-            from constrained_albc.deploy.golden import export_golden_tcn, export_golden_teacher
+            from constrained_albc.deploy.golden import (
+                export_golden_gru,
+                export_golden_tcn,
+                export_golden_teacher,
+            )
             from constrained_albc.deploy.pack import copy_npforward, self_close, write_manifest
 
             # Goldens MUST be CPU-generated: GPU cuDNN conv differs from the
             # standard conv (~1e-4) the board numpy runtime implements (golden.py).
             s_model.to("cpu")
             t_model.to("cpu")
-            export_golden_tcn(s_model, out_dir)
+            if arch == "gru":
+                export_golden_gru(s_model, out_dir)
+            else:
+                export_golden_tcn(s_model, out_dir)
             export_golden_teacher(t_model, out_dir)
             copy_npforward(out_dir)
-            parity = self_close(out_dir)
+            parity = self_close(out_dir, arch=arch)
             if not parity["closed_in_container"]:
                 raise SystemExit(f"parity self-close FAILED: {parity}")
             write_manifest(
                 out_dir,
                 checkpoints={
-                    "student_tcn": {"file": os.path.basename(args.student_ckpt),
-                                    "iter": _ckpt_iter(args.student_ckpt),
-                                    "path": args.student_ckpt},
+                    s_spec.name: {"file": os.path.basename(args.student_ckpt),
+                                  "iter": _ckpt_iter(args.student_ckpt),
+                                  "path": args.student_ckpt},
                     "teacher": {"file": os.path.basename(args.teacher_ckpt),
                                 "iter": _ckpt_iter(args.teacher_ckpt),
                                 "path": args.teacher_ckpt},
                 },
                 parity=parity,
+                arch=arch,
             )
             logger = logging.getLogger("deploy.export")
             logger.info("pack complete: parity self-close CLOSED, MANIFEST written -> %s", out_dir)
@@ -167,11 +211,20 @@ def main(argv: list[str] | None = None) -> int:
     if args.spec:
         assert args.ckpt, "--spec needs --ckpt"
         out_dir = resolve_out_dir(args)
-        spec_cls = SPEC_REGISTRY[args.spec]
-        spec = spec_cls()
         if args.spec == "teacher_actor":
+            spec = SPEC_REGISTRY[args.spec]()
             model = build_teacher_model(args.ckpt, args.device)
         else:
+            # No teacher here to cross-check against, so size the student contract from
+            # its own cfg -- but still refuse a --spec that contradicts the checkpoint.
+            cfg = _student_cfg(args.ckpt)
+            spec, arch = _build_student_spec(cfg, obs_dim=cfg.get("policy_obs_dim", 72),
+                                             latent_dim=cfg.get("latent_dim", 9))
+            if spec.name != args.spec:
+                raise SystemExit(
+                    f"--spec {args.spec} contradicts the checkpoint, which declares "
+                    f"encoder_type={arch!r} (spec {spec.name}). Pass --spec {spec.name}."
+                )
             model = build_student_model(spec, args.ckpt, args.device)
         export_from_state_dict(spec, model, out_dir)
         return 0
