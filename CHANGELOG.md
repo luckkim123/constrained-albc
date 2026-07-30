@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- GRU student deploy export (2026-07-30, commit `2f057b9`): the deploy pack could export
+  only the TCN student, so it shipped the arm the campaign did NOT adopt. `deploy/specs/
+  student_gru.py` adds `StudentGRUSpec` with the key contract derived from cfg rather than
+  hardcoded (`torch.nn.GRU` packs gates `[r, z, n]` on the row axis, so weights are
+  `3*hidden` rows), plus `export_golden_gru` (refuses `steps < 2` -- a single step leaves
+  the hidden carry and the gate order unchecked) and an arch-routed `self_close` that
+  compares BOTH the latent sequence and the final hidden state (measured 1.2e-07 /
+  1.6e-07 over 9 steps). The batch CLI now picks the spec from the checkpoint's declared
+  `encoder_type` and refuses an explicit `--spec` that contradicts it. Two board-runtime
+  geometries are rejected loudly at export: multi-layer GRU (`gru_cell` reads only
+  `*_l0`) and a shallow head (`npforward` reads `head.2`/`head.3`). TCN behaviour is
+  unchanged -- verified by a byte-identical sha256 re-export. Also adds
+  `scripts/export_deploy_pack.py`, the repo-root launcher `deploy/_isolation.py`'s
+  docstring named but that never existed (`python -m constrained_albc.deploy` runs the
+  gym-registering package `__init__` and dies on `pxr` before the stub can be injected).
 - Analysis-engine upgrades from the fault-DR A/B analysis gaps (G1-G7, 2026-07-27;
   commits `5a28c64..970fb0e`, review-fixed): (1) `analyze_training.py` interpreter
   preflight (actionable `[PREFLIGHT]` exit 2 instead of the raw numpy-2/scipy
