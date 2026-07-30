@@ -1,0 +1,5 @@
+{
+  "campaign_id": "buoyfix_s30_tcn",
+  "created": "2026-07-30T03:46:53.411855+00:00",
+  "goal": "Buoyfix-anchor TCN student distillation (2026-07-22/24): the first student pair on the buoyancy-fixed teacher plus its DAgger-blend correction. Grouped 2026-07-30 from loose runs. CLOSED: superseded by student_distill_eint, whose C2 arm adopted dagger_mix=select over this group's action blend."
+}
