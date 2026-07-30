@@ -2,14 +2,14 @@
 title: "Plant-change batch v2: four Isaac plant corrections are now pending and each alone forces a teacher retrain, so they are batched behind one sizing gate instead of decided individually"
 tags: ["plant", "batch", "retrain", "buoy", "added-mass", "damping", "thruster", "actuator", "sim-to-real", "guard-structure", "sequencing"]
 created: 2026-07-29T11:46:55.315005
-updated: 2026-07-29T11:46:55.315005
-sources: ["stonefish-reply-20260729", "buoy-hydro-rig-20260729", "thruster-static-gain-20260729", "servo-chatter-p1-correction-20260729"]
+updated: 2026-07-30T02:29:55.632589
+sources: ["stonefish-reply-20260729", "buoy-hydro-rig-20260729", "thruster-static-gain-20260729", "servo-chatter-p1-correction-20260729", "stonefish-reply-20260730", "code-verify-20260730"]
 links: []
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 80
-qualityReasons: ["no-source-marker"]
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 ---
 
 # Plant-change batch v2: four Isaac plant corrections are now pending and each alone forces a teacher retrain, so they are batched behind one sizing gate instead of decided individually
@@ -32,3 +32,41 @@ WHY NOT JUST ITEM 2, WHICH HITS NO GUARD. Because the cost is the retrain, not t
 DOWNSTREAM COST TO STATE PLAINLY. The student campaign student_distill_eint distills from E-int. A plant change obsoletes every student arm run against that teacher, not just the teacher itself. Either the student track finishes first, or the batch is launched knowing it invalidates that work. This is the single largest hidden cost of the batch and it should be decided explicitly, not discovered afterwards.
 
 NOT IN THE BATCH, deliberately. HydroRC recenter-v2 is a separate question and its own page records that recentering Isaac onto the Stonefish buoy value would move the policy FURTHER from reality, so v2 cannot be designed until item 1 picks a target. IMU 45 deg offset and the TAM moment-arm band stay gated on real-robot measurements. The thruster nonlinear-curve lead is the same measurement as the item 3 gate, not a separate item.
+
+---
+
+## Update (2026-07-30T02:29:55.632589)
+
+BATCH REVISED 2026-07-30 after the Stonefish reply. The four items stand; one candidate that was
+circling the batch is retired, one has its magnitude retargeted, and a new blocker appears.
+
+Item 1 (buoy added mass) UNCHANGED, and it is now the ONLY place the guard question arises. Recomputed
+this session: the hull per-reset cap is 0.95*9.18 = 8.721 kg against a geometric maximum of 7.885 kg,
+so the hull has headroom and needs no guard decision. The buoy still binds, geometric broadside
+2.674 kg and axial disc 1.634 kg against a cap of 0.95*0.93 = 0.8835 kg.
+
+Item 2 (buoy damping anisotropy) DIRECTION UNCHANGED, MAGNITUDE RETARGETED. The 2.09x axial-to-
+broadside quadratic ratio measured in Stonefish is not geometry-derived: it is a hardcoded
+Cd(0.5, 0.5, 1.0) applied to every cylinder regardless of L/D, times a 1.13x frontal-area ratio.
+Geometry alone gives 1.13x. Fix the ordering from the area argument and take the magnitude from
+geometry or literature, not from the Stonefish rig.
+
+Items 3 (thruster static gain) and 4 (arm actuator response) UNCHANGED and still blocked on the T200
+bench curve and the XW540-T260 step response respectively, neither of which is ours to schedule.
+
+RETIRED, NEVER WAS A GAP: hull heave added mass 1.0 -> 8.0. The 22.6-23.3 kg effective mass it was
+derived from is the engine's isotropic average of a dimensionally broken axial term, not a heave
+measurement. Applying it would put heave 4.12x above geometry. Verified not on mainline
+(git merge-base --is-ancestor 016d1b1 exp/max-thrust-dr is false), so nothing needs reverting; it
+must simply not be reinstalled.
+
+NEW BLOCKER ON HYDRORC-V2, not on this batch. Rebuilding HydroRC as 016d1b1 minus the heave line is
+not safe. That commit recentered nine hull hydro numbers off the same contaminated engine, and the
+damage concentrates on yaw (linear 75x, quadratic 45x) which is the axis where the 2026-07-28 paired
+gate actually failed. Each axis needs re-derivation from geometry or literature before HydroRC-v2 is
+proposed. Detail and prescription in wiki
+hydrorc_016d1b1_recentered_nine_hull_hydro_numbers_onto_a_broken.
+
+[EVIDENCE: Stonefish reply 2026-07-30; git show 016d1b1; arithmetic re-derived 2026-07-30 code-exec;
+marinelab/assets/albc/albc.py:52,85,115,141] [CONFIDENCE: HIGH]
+
