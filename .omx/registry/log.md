@@ -7575,3 +7575,671 @@
 - **Pages:** ftc_fault_dr_a_b_result_2026_07_27_fault_dr_adopted_5_12x_less_m.md, seed_noise_floor_on_none_level_attitude_is_huge_75_peak_to_peak_.md, decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema.md, canonical_final_teacher_baseline_buoyfix_anchor_trpo_buoyanchor_.md, cross_run_dr_comparability_eval_py_doraemon_dr_from_already_prov.md
 - **Summary:** query 'above achieved acknowledged adopt adopted adoption again against' -> 5 of 120
 
+## [2026-07-29T04:49:25.549040] add
+- **Pages:** closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md
+- **Summary:** updated 'Closed-loop latent collapse suspicion: legacy student measured 11-17x worse in-loop, deployed student unverified'
+
+## [2026-07-29T07:01:29.490641] query
+- **Pages:** eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md, p_b1_shared_exam_on_reference_dr_hard_roll_floor_was_exam_artifa.md, extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, cross_run_dr_comparability_eval_py_doraemon_dr_from_already_prov.md, eval_command_box_was_half_the_trained_envelope_from_2026_04_06_t.md, roll_transient_is_worst_at_none_dr_and_improves_monotonically_as.md, cross_run_reference_values_must_be_re_extracted_fresh_never_carr.md, extend8k_saturated_the_dr_config_box_at_iter_7000_all_20_params_.md, stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite.md, xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e.md, hmm_regime_count_separates_dr_harder_runs_overfit_vs_healthy.md, teacher_dr_harder_doraemon_curriculum_froze_before_run_end_unuse.md, doraemon_reactivity_makes_every_single_variable_probe_two_variab.md, e_int_s_stitched_resume_offset_the_doraemon_update_grid_its_faul.md, experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md, kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md, train_py_run_group_creates_the_group_layer_no_more_manual_post_m.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md
+- **Summary:** query 'learned DR box self-grading exam comparability cross-run' -> 20 of 257
+
+## [2026-07-29T07:01:30.659385] query
+- **Pages:** curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, the_mean_preserving_beta_clamp_silently_triples_concentration_fo.md, doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md, kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md, doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md, doraemon_is_trust_region_limited_not_feasibility_limited_kl_step.md, e_int_s_stitched_resume_offset_the_doraemon_update_grid_its_faul.md, ftc_fault_dr_a_b_result_2026_07_27_fault_dr_adopted_5_12x_less_m.md, our_doraemon_original_both_entropy_max_center_can_move_kl_ub_is_.md, engine_gap_doraemon_per_parameter_curriculum_expansion_is_invisi.md, doraemon_kl_step_final_value_0_0000_is_a_sparse_logging_artifact.md, doraemon_over_widens_then_oscillates_when_a_converged_teacher_is.md, kl_ub_0_12_trades_attitude_for_translation_e1_dr_harder.md, doraemon_reactivity_makes_every_single_variable_probe_two_variab.md, eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md, extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_.md, an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md, teacher_dr_harder_doraemon_curriculum_froze_before_run_end_unuse.md, uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload_.md, e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite.md
+- **Summary:** query 'fault_severity DORAEMON curriculum expansion budget kl_ub' -> 20 of 217
+
+## [2026-07-29T07:08:21.420890] query
+- **Pages:** training_log_analysis_engine_reference_adapter.md, analysis_engine_map_what_is_grow_able_vs_off_limits.md, exp_analyze_must_run_analyze_training_py_for_training_side_diagn.md, engine_gap_analyze_training_py_only_runs_under_isaac_sim_python_.md, student_distillation_converges_to_a_residual_that_rules_out_late.md, student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md, engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md, on_policy_dagger_correction_for_the_buoyfix_student.md, engine_gap_analyze_training_py_needs_the_logs_run_dir_not_the_ex.md, engine_gap_omx_cli_gaps_found_re_analyzing_teacher_2026_06_06_ro.md, eval_analysis_core_does_stats_adapter_does_heavy_tail.md, engine_gap_eval_adapter_heavy_tail_lacks_median_based_tail_ratio.md, engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md, closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md, engine_gap_doraemon_per_parameter_curriculum_expansion_is_invisi.md, engine_generic_flags_entropy_collapse_barrier_spike_reward_plate.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, coverage_lint_ok_is_a_floor_not_a_quality_gate_re_analysis_uses_.md, engine_gap_omx_reduce_tb_final_unusable_here_cli_on_system_pytho.md, failure_dr_join_now_covers_fault_channels_not_just_dr_per_env_fa.md
+- **Summary:** query 'analysis engine reference adapter how to analyze student distillation' -> 20 of 268
+
+## [2026-07-29T07:08:50.988090] query
+- **Pages:** on_policy_dagger_correction_for_the_buoyfix_student.md, closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md, student_distillation_converges_to_a_residual_that_rules_out_late.md, student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md, albc_stage_2_is_teacher_driven_off_policy_bc_with_mixed_latent_a.md, container_cudnn_is_cu13_against_cu128_torch_every_conv1d_fails_s.md, doraemon_mean_and_doraemon_std_tb_tags_are_raw_physical_units_no.md, policy_head_design_rationale_and_literature_standing_encoder_inp.md, the_mean_preserving_beta_clamp_silently_triples_concentration_fo.md, ftc_investigation_2026_07_25_m4_loss_halves_pure_yaw_ceiling_uti.md, encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md, april_2026_entropy_collapse_campaign_machinery_bug_solved_conver.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md, analysis_engine_map_what_is_grow_able_vs_off_limits.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md, dr_curriculum_is_still_opening_at_iter_5000_dr_difficulty_is_ite.md, dr_harder_campaign_synthesis_speed_kills_attitude_center_shift_o.md, encoder_priv_obs_normalization_bounds_must_be_dr_derived_not_har.md, ftc_fault_dr_a_b_result_2026_07_27_fault_dr_adopted_5_12x_less_m.md
+- **Summary:** query 'DAgger beta distillation student covariate shift closed loop' -> 20 of 105
+
+## [2026-07-29T07:25:05.571851] add
+- **Pages:** every_b4b_vs_a0_attitude_difference_is_smaller_than_the_decision.md
+- **Summary:** created 'Every B4b-vs-A0 attitude difference is smaller than the decision floor the eval '
+
+## [2026-07-29T07:25:05.571851] add
+- **Pages:** the_per_axis_picture_is_internally_consistent_even_though_it_is_.md
+- **Summary:** created 'The per-axis picture is internally consistent even though it is sub-floor: B4b i'
+
+## [2026-07-29T07:25:05.571851] add
+- **Pages:** jitter_and_rise_time_are_unchanged_by_the_beta_mixing_which_rule.md
+- **Summary:** created 'Jitter and rise time are unchanged by the beta mixing, which rules out the inter'
+
+## [2026-07-29T07:25:05.571851] add
+- **Pages:** b4b_beats_the_teacher_at_hard_and_loses_to_it_at_the_other_three.md
+- **Summary:** created 'B4b beats the teacher at hard and loses to it at the other three levels, the sam'
+
+## [2026-07-29T07:25:05.571851] add
+- **Pages:** the_floor_test_also_re_scopes_the_a0g_adoption_this_campaign_alr.md
+- **Summary:** created 'The floor test also re-scopes the A0g adoption this campaign already made: only '
+
+## [2026-07-29T07:25:05.571851] add
+- **Pages:** b4b_s_medium_regression_is_dispersion_driven_not_a_dc_shift_its_.md
+- **Summary:** created "B4b's medium regression is dispersion-driven, not a DC shift: its medium att_nor"
+
+## [2026-07-29T07:25:05.571851] add
+- **Pages:** b4b_has_the_lowest_hard_level_dispersion_of_any_run_in_the_campa.md
+- **Summary:** created 'B4b has the lowest hard-level dispersion of any run in the campaign, the teacher'
+
+## [2026-07-29T07:25:05.571851] add
+- **Pages:** the_per_env_tail_counts_carry_no_signal_in_this_campaign_in_eith.md
+- **Summary:** created 'The per-env tail counts carry no signal in this campaign in either direction, an'
+
+## [2026-07-29T07:25:05.571851] add
+- **Pages:** the_one_measurable_eval_side_effect_of_beta_0_5_points_against_i.md
+- **Summary:** created 'The one measurable eval-side effect of beta 0.5 points against it: absolute in-l'
+
+## [2026-07-29T07:25:05.571851] add
+- **Pages:** the_aggregate_env_variance_ratio_nonetheless_favours_b4b_at_hard.md
+- **Summary:** created 'The aggregate env-variance ratio nonetheless favours B4b at hard, where it is th'
+
+## [2026-07-29T07:25:05.571851] add
+- **Pages:** the_campaign_s_blanket_exclusion_of_the_none_level_from_per_dim_.md
+- **Summary:** created "The campaign's blanket exclusion of the `none` level from per-dim collapse count"
+
+## [2026-07-29T07:25:05.571851] add
+- **Pages:** the_covariate_shift_multiplier_at_hard_falls_from_22_4x_to_18_7x.md
+- **Summary:** created 'The covariate-shift multiplier at hard falls from 22.4x to 18.7x, but this compa'
+
+## [2026-07-29T07:25:05.571851] add
+- **Pages:** the_intervention_demonstrably_bit_dagger_beta_is_exactly_0_500_a.md
+- **Summary:** created 'The intervention demonstrably bit: dagger_beta is exactly 0.500 at the first and'
+
+## [2026-07-29T07:25:05.571851] add
+- **Pages:** beta_mixing_is_free_in_wall_clock_terms_so_the_arm_s_cost_is_ide.md
+- **Summary:** created "Beta mixing is free in wall-clock terms, so the arm's cost is identical to the a"
+
+## [2026-07-29T07:25:05.571851] add
+- **Pages:** the_higher_training_losses_are_expected_rather_than_a_defect_at_.md
+- **Summary:** created 'The higher training losses are expected rather than a defect: at beta 0.5 the lo'
+
+## [2026-07-29T07:25:05.571851] add
+- **Pages:** the_profile_s_diagnostic_engine_produces_no_diagnosis_for_a_dist.md
+- **Summary:** created "The profile's diagnostic engine produces no diagnosis for a distillation run and"
+
+## [2026-07-29T07:25:05.571851] add
+- **Pages:** five_of_the_profile_s_seven_diagnostic_groups_are_genuinely_inap.md
+- **Summary:** created "Five of the profile's seven diagnostic groups are genuinely inapplicable to this"
+
+## [2026-07-29T07:25:58.151005] add
+- **Pages:** eval_decision_floors_are_the_binding_standard_for_student_arm_co.md
+- **Summary:** created 'Eval decision floors are the binding standard for student-arm comparisons (0.1 deg / 15 envs)'
+
+## [2026-07-29T07:26:10.998573] add
+- **Pages:** latent_dim_d4_collapses_at_none_dr_in_every_student_arm_and_the_.md
+- **Summary:** created 'Latent dim d4 collapses at none-DR in every student arm and the blanket none-exclusion hides it'
+
+## [2026-07-29T07:26:31.168314] add
+- **Pages:** engine_gap_the_analysis_engine_and_omx_reduce_are_both_unusable_.md
+- **Summary:** created 'engine-gap: the analysis engine and omx reduce are both unusable on student distillation runs'
+
+## [2026-07-29T07:26:51.837646] add
+- **Pages:** on_policy_dagger_correction_for_the_buoyfix_student.md
+- **Summary:** updated 'On-policy DAgger correction for the buoyfix student'
+
+## [2026-07-29T07:37:32.726928] add
+- **Pages:** stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md
+- **Summary:** updated 'Stonefish yaw-gap claim review: main-body hydro yaw torque structurally zero (symmetric added mass kills Munk); PhysX DOES model arm reaction; real gaps = buoy added-mass ~10x under, no arm-link hydro, no yaw-torque DR axis'
+
+## [2026-07-29T08:03:09.288302] query
+- **Pages:** student_distillation_converges_to_a_residual_that_rules_out_late.md, engine_gap_the_analysis_engine_and_omx_reduce_are_both_unusable_.md, latent_dim_d4_collapses_at_none_dr_in_every_student_arm_and_the_.md, albc_stage_2_is_teacher_driven_off_policy_bc_with_mixed_latent_a.md, closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md, on_policy_dagger_correction_for_the_buoyfix_student.md, student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md, bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, eval_decision_floors_are_the_binding_standard_for_student_arm_co.md, container_cudnn_is_cu13_against_cu128_torch_every_conv1d_fails_s.md, bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md, encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md, next_experiment_workflow_pick_a_baseline_train_once_then_re_tune.md, policy_head_design_rationale_and_literature_standing_encoder_inp.md, posttam_encoder_is_alive_and_specialized_z_sweep_exploration_col.md, experiment_idea_feed_o_t_into_the_encoder_alongside_p_t_state_co.md, reward_cost_parallel_structure_mostly_mirroring_two_real_couplin.md, ftc_investigation_2026_07_25_m4_loss_halves_pure_yaw_ceiling_uti.md, tracking_kernel_exp_quad_tanh_dead_zone_diagnosis_correct_but_fi.md, real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md
+- **Summary:** query 'latent loss weight lambda tracking ratio student distillation' -> 20 of 188
+
+## [2026-07-29T08:09:56.860648] query
+- **Pages:** training_log_analysis_engine_reference_adapter.md, analysis_engine_map_what_is_grow_able_vs_off_limits.md, exp_analyze_must_run_analyze_training_py_for_training_side_diagn.md, engine_gap_analyze_training_py_only_runs_under_isaac_sim_python_.md, engine_gap_analyze_training_py_needs_the_logs_run_dir_not_the_ex.md, engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md, engine_gap_omx_cli_gaps_found_re_analyzing_teacher_2026_06_06_ro.md, engine_gap_the_analysis_engine_and_omx_reduce_are_both_unusable_.md, eval_analysis_core_does_stats_adapter_does_heavy_tail.md, engine_gap_eval_adapter_heavy_tail_lacks_median_based_tail_ratio.md, engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md, engine_gap_doraemon_per_parameter_curriculum_expansion_is_invisi.md, engine_generic_flags_entropy_collapse_barrier_spike_reward_plate.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, coverage_lint_ok_is_a_floor_not_a_quality_gate_re_analysis_uses_.md, engine_gap_omx_reduce_tb_final_unusable_here_cli_on_system_pytho.md, failure_dr_join_now_covers_fault_channels_not_just_dr_per_env_fa.md, engine_gap_flat_target_eval_records_joint1_trajectory_but_render.md, engine_gap_analyze_training_deep_plot_has_2_blank_panels_inconsi.md, engine_gap_heavy_tail_json_pct_peak_gt_thresh_exceeds_100_at_ood.md
+- **Summary:** query 'analysis engine reference adapter how to analyze' -> 20 of 288
+
+## [2026-07-29T08:10:09.057700] query
+- **Pages:** ftc_fault_dr_a_b_result_2026_07_27_fault_dr_adopted_5_12x_less_m.md, real_robot_has_2_faulted_thrusters_user_judges_buoyancy_restorin.md, failure_dr_join_now_covers_fault_channels_not_just_dr_per_env_fa.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, fault_dr_training_reduces_m4_dead_attitude_degradation_by_4_12x_.md, fault_dr_training_reduces_m4_dead_attitude_degradation_by_5_12x_.md, safety_rail_constraints_fire_hard_at_init_go_quiet_and_re_fire_a.md, ftc_investigation_2026_07_25_m4_loss_halves_pure_yaw_ceiling_uti.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, hydrorc_recenter_gate_result_2026_07_28_isaac_paired_gate_fail_r.md, e_int_s_stitched_resume_offset_the_doraemon_update_grid_its_faul.md, reward_penalty_terms_thruster_smoothness_bias_block_3_temporal_b.md, the_mean_preserving_beta_clamp_silently_triples_concentration_fo.md, thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md, engine_gap_omx_reduce_tb_final_unusable_here_cli_on_system_pytho.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, canonical_final_teacher_baseline_buoyfix_anchor_trpo_buoyanchor_.md, constraint_viol_trajectory_barrier_sign_metrics_4_10_starts_at_d.md, dr_harder_campaign_synthesis_speed_kills_attitude_center_shift_o.md
+- **Summary:** query 'fault rejection m4 dead thruster FTC fault-DR delta attitude degradation' -> 20 of 259
+
+## [2026-07-29T08:10:11.498685] query
+- **Pages:** the_mean_preserving_beta_clamp_silently_triples_concentration_fo.md, ftc_fault_dr_a_b_result_2026_07_27_fault_dr_adopted_5_12x_less_m.md, dr_curriculum_is_still_opening_at_iter_5000_dr_difficulty_is_ite.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, e_int_s_stitched_resume_offset_the_doraemon_update_grid_its_faul.md, teacher_dr_harder_doraemon_curriculum_froze_before_run_end_unuse.md, uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload_.md, added_mass_scale_upper_half_is_attenuated_not_inert_the_0_95_i_c.md, an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md, doraemon_reactivity_makes_every_single_variable_probe_two_variab.md, stonefish_base_hull_effective_hydro_measured_2026_07_27_damping_.md, e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite.md, doraemon_mean_and_doraemon_std_tb_tags_are_raw_physical_units_no.md, engine_gap_doraemon_per_parameter_curriculum_expansion_is_invisi.md, stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, p_a8_perflb200_more_iters_5000_8000_closed_the_deployment_ood_dr.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md, constraint_viol_trajectory_barrier_sign_metrics_4_10_starts_at_d.md, constrainttrpo_faithful_norbc_modified_ipo_kim_2024_arxiv_2308_1.md, doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md
+- **Summary:** query 'mean preserving Beta clamp nominal-0 dims under-expanded curriculum head start' -> 20 of 288
+
+## [2026-07-29T08:24:32.720137] add
+- **Pages:** nominal_cost_at_none_is_not_free_and_not_a_uniform_regression_it.md
+- **Summary:** created 'Nominal cost at `none` is not free and not a uniform regression — it is an axis '
+
+## [2026-07-29T08:24:32.720137] add
+- **Pages:** the_within_run_m4_dead_penalty_is_2_9x_5_5x_larger_for_e_ftc1_at.md
+- **Summary:** created 'The within-run m4-dead penalty is 2.9x-5.5x larger for E-ftc1 at every DR level,'
+
+## [2026-07-29T08:24:32.720137] add
+- **Pages:** the_loss_reproduces_on_roll_and_pitch_separately_so_it_is_a_whol.md
+- **Summary:** created 'The loss reproduces on roll and pitch separately, so it is a whole-attitude effe'
+
+## [2026-07-29T08:24:32.720137] add
+- **Pages:** the_fault_cost_concentrates_on_yaw_in_both_runs_exactly_as_the_a.md
+- **Summary:** created 'The fault cost concentrates on yaw in both runs, exactly as the authority analys'
+
+## [2026-07-29T08:24:32.720137] add
+- **Pages:** the_injection_verifiably_bit_fault_thruster_4_is_0_0_in_64_64_en.md
+- **Summary:** created 'The injection verifiably bit — `fault_thruster_4` is 0.0 in 64/64 envs at all 4 '
+
+## [2026-07-29T08:24:32.720137] add
+- **Pages:** the_e_ftc1_fault_penalty_is_a_uniform_mean_shift_across_envs_not.md
+- **Summary:** created 'The E-ftc1 fault penalty is a uniform mean shift across envs, not a heavy tail —'
+
+## [2026-07-29T08:24:32.720137] add
+- **Pages:** absolute_soft_medium_hard_are_not_admissible_cross_run_evidence_.md
+- **Summary:** created 'Absolute soft/medium/hard are NOT admissible cross-run evidence here, because `-'
+
+## [2026-07-29T08:24:32.720137] add
+- **Pages:** the_learned_fault_severity_dimension_is_dropped_when_the_eval_bu.md
+- **Summary:** created 'The learned `fault_severity` dimension is dropped when the eval builds its DR le'
+
+## [2026-07-29T08:24:32.720137] add
+- **Pages:** e_ftc1_s_own_healthy_ladder_degrades_monotonically_and_turns_hea.md
+- **Summary:** created "E-ftc1's own healthy ladder degrades monotonically and turns heavy-tailed at har"
+
+## [2026-07-29T08:24:32.720137] add
+- **Pages:** survival_is_unaffected_by_the_fault_in_both_runs_the_single_non_.md
+- **Summary:** created 'Survival is unaffected by the fault in both runs; the single non-100% cell is E-'
+
+## [2026-07-29T08:24:32.720137] add
+- **Pages:** e_ftc1_ends_ahead_on_every_reward_term_so_its_worse_fault_reject.md
+- **Summary:** created 'E-ftc1 ends ahead on every reward term, so its worse fault rejection is not a tr'
+
+## [2026-07-29T08:24:32.720137] add
+- **Pages:** both_runs_plateau_early_and_stay_flat_so_the_extra_severity_expo.md
+- **Summary:** created 'Both runs plateau early and stay flat, so the extra severity exposure did not de'
+
+## [2026-07-29T08:24:32.720137] add
+- **Pages:** the_trpo_machinery_is_healthy_and_essentially_identical_across_t.md
+- **Summary:** created 'The TRPO machinery is healthy and essentially identical across the two runs; not'
+
+## [2026-07-29T08:24:32.720137] add
+- **Pages:** e_ftc1_s_noise_floor_sits_exactly_on_min_std_so_exploration_is_f.md
+- **Summary:** created "E-ftc1's noise floor sits exactly on `min_std`, so exploration is floor-clamped "
+
+## [2026-07-29T08:24:32.720137] add
+- **Pages:** both_critics_converge_e_ftc1_s_value_critic_is_better_and_its_co.md
+- **Summary:** created "Both critics converge; E-ftc1's value critic is better and its cost critic worse"
+
+## [2026-07-29T08:24:32.720137] add
+- **Pages:** loss_cost_value_staying_converged_matters_for_the_verdict_s_admi.md
+- **Summary:** created "`Loss/cost_value` staying converged matters for the verdict's admissibility — a "
+
+## [2026-07-29T08:24:32.720137] add
+- **Pages:** the_encoder_is_alive_and_unsaturated_in_both_runs_so_the_fault_r.md
+- **Summary:** created 'The encoder is alive and unsaturated in both runs, so the fault-rejection loss i'
+
+## [2026-07-29T08:24:32.720137] add
+- **Pages:** per_metrics_yaml_tb_liveness_proves_update_applied_not_meaningfu.md
+- **Summary:** created 'Per `metrics.yaml`, TB liveness proves "update applied", not "meaningful learnin'
+
+## [2026-07-29T08:24:32.720137] add
+- **Pages:** thruster_util_remains_the_binding_constraint_in_both_runs_but_e_.md
+- **Summary:** created '`thruster_util` remains the binding constraint in both runs, but E-ftc1 is LESS '
+
+## [2026-07-29T08:24:32.720137] add
+- **Pages:** every_violation_term_equals_the_negation_of_its_margin_in_both_r.md
+- **Summary:** created 'Every violation term equals the negation of its margin in both runs, i.e. all te'
+
+## [2026-07-29T08:24:32.720137] add
+- **Pages:** e_ftc1_took_one_barrier_spike_that_arm_a_never_took_and_the_engi.md
+- **Summary:** created 'E-ftc1 took one barrier spike that Arm A never took, and the engine raises it as'
+
+## [2026-07-29T08:24:32.720137] add
+- **Pages:** the_binding_constraint_is_the_mechanism_that_would_suppress_faul.md
+- **Summary:** created 'The binding constraint is the mechanism that would suppress fault compensation i'
+
+## [2026-07-29T08:24:32.720137] add
+- **Pages:** the_achieved_doraemon_mean_fault_severity_is_0_1929_which_is_2_5.md
+- **Summary:** created "The achieved `DORAEMON/mean/fault_severity` is 0.1929, which is 2.50x Arm A's 0."
+
+## [2026-07-29T08:24:32.720137] add
+- **Pages:** the_curriculum_was_still_accelerating_at_run_end_and_is_nowhere_.md
+- **Summary:** created 'The curriculum was still accelerating at run end and is nowhere near saturated, '
+
+## [2026-07-29T08:24:32.720137] add
+- **Pages:** the_pacing_diagnosis_holds_the_trust_region_not_feasibility_set_.md
+- **Summary:** created 'The pacing diagnosis holds: the trust region, not feasibility, set the expansion'
+
+## [2026-07-29T08:24:32.720137] add
+- **Pages:** the_feasibility_gate_never_bound_after_warm_up_and_e_ftc1_held_a.md
+- **Summary:** created 'The feasibility gate never bound after warm-up, and E-ftc1 held a HIGHER success'
+
+## [2026-07-29T08:24:32.720137] add
+- **Pages:** the_pre_registered_a_drift_h2_signature_does_not_fire_exactly_as.md
+- **Summary:** created 'The pre-registered `a`-drift H2 signature does not fire, exactly as the DESIGN.m'
+
+## [2026-07-29T08:24:32.720137] add
+- **Pages:** blocked_curriculum_updates_were_comparable_not_the_limiter_e_ftc.md
+- **Summary:** created 'Blocked curriculum updates were comparable, not the limiter — E-ftc1 lost 3 of 2'
+
+## [2026-07-29T08:24:32.720137] add
+- **Pages:** scaling_the_last_observed_per_update_growth_the_one_treatment_at.md
+- **Summary:** created 'Scaling the last observed per-update growth, the one treatment-attributable lost'
+
+## [2026-07-29T08:24:52.913601] add
+- **Pages:** the_mean_preserving_beta_clamp_silently_triples_concentration_fo.md
+- **Summary:** updated 'The mean-preserving Beta clamp silently triples concentration for nominal-0 DR dims (30 -> 100), and those 4 dims are exactly the ones that end under-expanded'
+
+## [2026-07-29T08:25:27.751562] add
+- **Pages:** severity_init_head_start_converts_to_curriculum_2_50x_but_makes_.md
+- **Summary:** created 'Severity-init head start converts to curriculum (2.50x) but makes m4-dead fault rejection 2.9-5.5x WORSE -- raising trained fault severity is not a route to fault tolerance on this plant'
+
+## [2026-07-29T08:25:55.051979] add
+- **Pages:** severity_init_head_start_converts_to_curriculum_2_50x_but_makes_.md
+- **Summary:** updated 'Severity-init head start converts to curriculum (2.50x) but makes m4-dead fault rejection 2.9-5.5x WORSE -- raising trained fault severity is not a route to fault tolerance on this plant'
+
+## [2026-07-29T08:26:09.673242] add
+- **Pages:** engine_gap_omx_plot_is_unusable_on_this_workspace_tb_blocked_by_.md
+- **Summary:** created 'engine-gap: omx plot is unusable on this workspace -- TB blocked by system-python tensorboard, eval npz blocked by 1-D-only series'
+
+## [2026-07-29T08:30:12.380402] add
+- **Pages:** latent_dim_d4_collapses_at_none_dr_in_every_student_arm_and_the_.md
+- **Summary:** updated 'Latent dim d4 collapses at none-DR in every student arm and the blanket none-exclusion hides it'
+
+## [2026-07-29T08:30:37.609173] add
+- **Pages:** lambda_latent_is_bracketed_and_closed_no_decision_grade_control_.md
+- **Summary:** created 'Lambda_latent is bracketed and CLOSED: no decision-grade control effect in [0,4] and lambda=1 is a measured local optimum'
+
+## [2026-07-29T08:35:09.917629] query
+- **Pages:** container_cudnn_is_cu13_against_cu128_torch_every_conv1d_fails_s.md, engine_gap_the_analysis_engine_and_omx_reduce_are_both_unusable_.md, on_policy_dagger_correction_for_the_buoyfix_student.md, student_distillation_converges_to_a_residual_that_rules_out_late.md, student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md, albc_stage_2_is_teacher_driven_off_policy_bc_with_mixed_latent_a.md, closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md, the_profile_s_diagnostic_engine_produces_no_diagnosis_for_a_dist.md, lambda_latent_is_bracketed_and_closed_no_decision_grade_control_.md, eval_decision_floors_are_the_binding_standard_for_student_arm_co.md, latent_dim_d4_collapses_at_none_dr_in_every_student_arm_and_the_.md, encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md, experiment_launch_checklist_run_id_wandb_latest_alias_naming.md, group_folder_name_equals_wandb_project_name_equals_experiment_pu.md, onboard_measured_2026_07_06_arm_step_response_valid_sim_zeta_0_7.md, policy_head_design_rationale_and_literature_standing_encoder_inp.md, stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, experiment_idea_feed_o_t_into_the_encoder_alongside_p_t_state_co.md, ftc_investigation_2026_07_25_m4_loss_halves_pure_yaw_ceiling_uti.md, literature_map_how_rl_control_actually_handles_steady_state_erro.md
+- **Summary:** query 'container cudnn cu13 distillation throughput' -> 20 of 20
+
+## [2026-07-29T08:39:06.362590] add
+- **Pages:** on_policy_dagger_correction_for_the_buoyfix_student.md
+- **Summary:** updated 'On-policy DAgger correction for the buoyfix student'
+
+## [2026-07-29T08:40:39.924042] add
+- **Pages:** stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md
+- **Summary:** updated 'Stonefish yaw-gap claim review: main-body hydro yaw torque structurally zero (symmetric added mass kills Munk); PhysX DOES model arm reaction; real gaps = buoy added-mass ~10x under, no arm-link hydro, no yaw-torque DR axis'
+
+## [2026-07-29T08:41:33.091940] add
+- **Pages:** thruster_static_gain_gap_stonefish_quadratic_rated_20_03_n_vs_is.md
+- **Summary:** created 'Thruster static gain gap: Stonefish quadratic rated 20.03 N vs Isaac linear 40 N per unit command; 2.0x at full command and 4.65x in the policy operating band, with zero DR coverage; rotor time constant IS aligned'
+
+## [2026-07-29T08:45:14.650617] query
+- **Pages:** stonefish_base_hull_effective_hydro_measured_2026_07_27_damping_.md, stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md, thruster_static_gain_gap_stonefish_quadratic_rated_20_03_n_vs_is.md, real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, imu_45deg_offset_pitch_negation_sim_uncompensated_2026_07_05.md, obs_noise_model_history_channels_are_re_noised_every_step_sim_pa.md, onboard_measured_2026_07_06_arm_step_response_valid_sim_zeta_0_7.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, engine_gap_analyze_training_py_only_runs_under_isaac_sim_python_.md, added_mass_scale_upper_half_is_attenuated_not_inert_the_0_95_i_c.md, analysis_engine_map_what_is_grow_able_vs_off_limits.md, arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md, experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md, static_eval_plots_regenerate_sim_free_from_npz_reconstruct_segme.md, bias_ema_obs_is_deployment_safe_computed_from_command_minus_meas.md, buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md, on_policy_dagger_correction_for_the_buoyfix_student.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md
+- **Summary:** query 'stonefish isaac sim-to-sim gap damping added mass deployment' -> 20 of 321
+
+## [2026-07-29T08:48:16.859015] add
+- **Pages:** e0_eval_latent_instrument_fix_38d979e_lives_only_on_the_student_.md
+- **Summary:** created 'E0 eval latent instrument fix 38d979e lives only on the student branch, not main'
+
+## [2026-07-29T08:50:56.367055] add
+- **Pages:** hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md
+- **Summary:** updated "HydroRC IS half-recentered (buoy/link3 nominals untouched) -- but the '10x under added mass' framing dies to the effective-vs-effective correction (~2.4x); the lead survives on a different mechanism: HydroRC drops hull yaw damping 45x, so unmeasured analytical buoy damping becomes 1.8x hull's and DOMINATES the retrained plant"
+
+## [2026-07-29T08:54:22.454451] add
+- **Pages:** e0_eval_latent_instrument_fix_38d979e_lives_only_on_the_student_.md
+- **Summary:** updated 'E0 eval latent instrument fix 38d979e lives only on the student branch, not main'
+
+## [2026-07-29T08:58:35.625981] query
+- **Pages:** bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md, engine_gap_the_analysis_engine_and_omx_reduce_are_both_unusable_.md, a5_budgetslack_rp_vel_settling_manipulability_budgets_x100_learn.md, on_policy_dagger_correction_for_the_buoyfix_student.md, reward_md_6_error_buffers_reward_call_site_dt_scaling_theory_rev.md, bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md, lambda_latent_is_bracketed_and_closed_no_decision_grade_control_.md, canonical_final_teacher_baseline_buoyfix_anchor_trpo_buoyanchor_.md, ftc_fault_dr_a_b_result_2026_07_27_fault_dr_adopted_5_12x_less_m.md, severity_init_head_start_converts_to_curriculum_2_50x_but_makes_.md, april_2026_entropy_collapse_campaign_machinery_bug_solved_conver.md, bias_ema_observability_p_b1_confirmed_at_the_fair_none_point_68_.md, incident_post_mortem_teacher_baseline_opt_e1_e4_trained_on_a_tam.md, reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md, yaw_command_is_rate_not_angle_inherited_design_defensible_only_i.md, engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md, engine_gap_omx_reduce_tb_final_unusable_here_cli_on_system_pytho.md, joint1_stage_1_gate_go_drift_is_real_on_unlimited_physics_not_th.md, tam_plant_correctness_fix_collapses_the_void_hard_dr_roll_heavy_.md
+- **Summary:** query 'student latent observability floor in-loop tracking deployable input channels' -> 20 of 57
+
+## [2026-07-29T08:58:35.721456] query
+- **Pages:** latent_dim_d4_collapses_at_none_dr_in_every_student_arm_and_the_.md, student_distillation_converges_to_a_residual_that_rules_out_late.md, an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md, student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md, thruster_util_is_the_binding_constrainttrpo_constraint_in_7_of_7.md, engine_generic_flags_entropy_collapse_barrier_spike_reward_plate.md, roll_transient_is_worst_at_none_dr_and_improves_monotonically_as.md, sequential_overnight_campaign_wall_clock_budget_not_crashes_kill.md, constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md, constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md, dr_harder_reward_decomposition_confirms_eval_trades_on_the_train.md, joint1_cumulative_ipo_constraint_generalizes_drift_bounded_at_oo.md, joint1_cumulative_rotation_constraint_never_binds_policy_parks_a.md, the_mean_preserving_beta_clamp_silently_triples_concentration_fo.md, doraemon_is_trust_region_limited_not_feasibility_limited_kl_step.md, doraemon_over_widens_then_oscillates_when_a_converged_teacher_is.md, posttam_encoder_is_alive_and_specialized_z_sweep_exploration_col.md, teacher_encoder_0_dead_latent_dims_keys_on_lateral_cog_cob_offse.md, roll_error_is_dc_bias_dominated_ss_jitter_ss_error_pitch_carries.md, teacher_dr_harder_doraemon_curriculum_froze_before_run_end_unuse.md
+- **Summary:** query 'student latent observability floor in-loop tracking deployable input channels' -> 20 of 25
+
+## [2026-07-29T09:01:06.191774] add
+- **Pages:** buoy_added_mass_is_wrong_in_both_sims_and_in_opposite_directions.md
+- **Summary:** created 'Buoy added mass is wrong in BOTH sims and in opposite directions: Isaac 3.8-8.2x below the geometric value, Stonefish 3.5-5.7x above it via an isotropic average of a dimensionally broken axial term; recentering Isaac onto Stonefish moves it further from reality'
+
+## [2026-07-29T09:02:26.433965] query
+- **Pages:** analysis_engine_map_what_is_grow_able_vs_off_limits.md, reward_md_6_error_buffers_reward_call_site_dt_scaling_theory_rev.md, engine_gap_m1_critic_side_encoder_gradient_is_not_logged_policy_.md, performance_lb_doraemon_gate_is_causally_independent_of_the_acto.md, real_robot_has_2_faulted_thrusters_user_judges_buoyancy_restorin.md
+- **Summary:** query 'a0g actor actor_forward additionally against already alternative analysis' -> 5 of 296
+
+## [2026-07-29T09:41:35.895551] add
+- **Pages:** the_frozen_actor_s_sensitivity_to_latent_error_is_strongly_level.md
+- **Summary:** created "The frozen actor's sensitivity to latent error is strongly level-dependent: hard crosses the control floor at a 4x smaller perturbation than none/soft/medium"
+
+## [2026-07-29T09:41:58.612023] add
+- **Pages:** on_policy_dagger_correction_for_the_buoyfix_student.md
+- **Summary:** updated 'On-policy DAgger correction for the buoyfix student'
+
+## [2026-07-29T10:13:45.363153] add
+- **Pages:** stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md
+- **Summary:** updated 'Stonefish yaw-gap claim review: main-body hydro yaw torque structurally zero (symmetric added mass kills Munk); PhysX DOES model arm reaction; real gaps = buoy added-mass ~10x under, no arm-link hydro, no yaw-torque DR axis'
+
+## [2026-07-29T10:13:55.607781] add
+- **Pages:** buoy_added_mass_is_wrong_in_both_sims_and_in_opposite_directions.md
+- **Summary:** updated 'Buoy added mass is wrong in BOTH sims and in opposite directions: Isaac 3.8-8.2x below the geometric value, Stonefish 3.5-5.7x above it via an isotropic average of a dimensionally broken axial term; recentering Isaac onto Stonefish moves it further from reality'
+
+## [2026-07-29T10:22:54.711181] add
+- **Pages:** on_policy_dagger_correction_for_the_buoyfix_student.md
+- **Summary:** updated 'On-policy DAgger correction for the buoyfix student'
+
+## [2026-07-29T11:45:30.843552] query
+- **Pages:** student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md, latent_dim_d4_collapses_at_none_dr_in_every_student_arm_and_the_.md, student_distillation_converges_to_a_residual_that_rules_out_late.md, the_frozen_actor_s_sensitivity_to_latent_error_is_strongly_level.md, albc_stage_2_is_teacher_driven_off_policy_bc_with_mixed_latent_a.md, e0_eval_latent_instrument_fix_38d979e_lives_only_on_the_student_.md, eval_decision_floors_are_the_binding_standard_for_student_arm_co.md, on_policy_dagger_correction_for_the_buoyfix_student.md, closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md, canonical_final_teacher_baseline_buoyfix_anchor_trpo_buoyanchor_.md, encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md, engine_gap_the_analysis_engine_and_omx_reduce_are_both_unusable_.md, stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, teacher_encoder_0_dead_latent_dims_keys_on_lateral_cog_cob_offse.md, lambda_latent_is_bracketed_and_closed_no_decision_grade_control_.md, experiment_idea_feed_o_t_into_the_encoder_alongside_p_t_state_co.md, doraemon_optimize_entropy_accept_can_leak_the_success_floor_late.md, bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, cross_run_reference_values_must_be_re_extracted_fresh_never_carr.md, ftc_fault_dr_a_b_result_2026_07_27_fault_dr_adopted_5_12x_less_m.md
+- **Summary:** query 'GRU select compound best arm student latent tracking teacher' -> 20 of 293
+
+## [2026-07-29T11:46:10.396683] add
+- **Pages:** gru_memory_and_corrected_dagger_mixing_compound_c3_is_the_campai.md
+- **Summary:** created "GRU memory and corrected DAgger mixing COMPOUND: C3 is the campaign's best latent tracker at every level and the first student to beat the teacher by a decision-grade margin"
+
+## [2026-07-29T11:46:55.315005] add
+- **Pages:** plant_change_batch_v2_four_isaac_plant_corrections_are_now_pendi.md
+- **Summary:** created 'Plant-change batch v2: four Isaac plant corrections are now pending and each alone forces a teacher retrain, so they are batched behind one sizing gate instead of decided individually'
+
+## [2026-07-29T11:47:19.746521] add
+- **Pages:** buoy_added_mass_is_wrong_in_both_sims_and_in_opposite_directions.md
+- **Summary:** updated 'Buoy added mass is wrong in BOTH sims and in opposite directions: Isaac 3.8-8.2x below the geometric value, Stonefish 3.5-5.7x above it via an isotropic average of a dimensionally broken axial term; recentering Isaac onto Stonefish moves it further from reality'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** nominal_cost_at_none_is_not_free_and_not_a_uniform_regression_it.md
+- **Summary:** updated 'Nominal cost at `none` is not free and not a uniform regression — it is an axis '
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_within_run_m4_dead_penalty_is_2_9x_5_5x_larger_for_e_ftc1_at.md
+- **Summary:** updated 'The within-run m4-dead penalty is 2.9x-5.5x larger for E-ftc1 at every DR level,'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_loss_reproduces_on_roll_and_pitch_separately_so_it_is_a_whol.md
+- **Summary:** updated 'The loss reproduces on roll and pitch separately, so it is a whole-attitude effe'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_fault_cost_concentrates_on_yaw_in_both_runs_exactly_as_the_a.md
+- **Summary:** updated 'The fault cost concentrates on yaw in both runs, exactly as the authority analys'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_injection_verifiably_bit_fault_thruster_4_is_0_0_in_64_64_en.md
+- **Summary:** updated 'The injection verifiably bit — `fault_thruster_4` is 0.0 in 64/64 envs at all 4 '
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_e_ftc1_fault_penalty_is_a_uniform_mean_shift_across_envs_not.md
+- **Summary:** updated 'The E-ftc1 fault penalty is a uniform mean shift across envs, not a heavy tail —'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** absolute_soft_medium_hard_are_not_admissible_cross_run_evidence_.md
+- **Summary:** updated 'Absolute soft/medium/hard are NOT admissible cross-run evidence here, because `-'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_learned_fault_severity_dimension_is_dropped_when_the_eval_bu.md
+- **Summary:** updated 'The learned `fault_severity` dimension is dropped when the eval builds its DR le'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** e_ftc1_s_own_healthy_ladder_degrades_monotonically_and_turns_hea.md
+- **Summary:** updated "E-ftc1's own healthy ladder degrades monotonically and turns heavy-tailed at har"
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** survival_is_unaffected_by_the_fault_in_both_runs_the_single_non_.md
+- **Summary:** updated 'Survival is unaffected by the fault in both runs; the single non-100% cell is E-'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** e_ftc1_ends_ahead_on_every_reward_term_so_its_worse_fault_reject.md
+- **Summary:** updated 'E-ftc1 ends ahead on every reward term, so its worse fault rejection is not a tr'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** both_runs_plateau_early_and_stay_flat_so_the_extra_severity_expo.md
+- **Summary:** updated 'Both runs plateau early and stay flat, so the extra severity exposure did not de'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_trpo_machinery_is_healthy_and_essentially_identical_across_t.md
+- **Summary:** updated 'The TRPO machinery is healthy and essentially identical across the two runs; not'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** e_ftc1_s_noise_floor_sits_exactly_on_min_std_so_exploration_is_f.md
+- **Summary:** updated "E-ftc1's noise floor sits exactly on `min_std`, so exploration is floor-clamped "
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** both_critics_converge_e_ftc1_s_value_critic_is_better_and_its_co.md
+- **Summary:** updated "Both critics converge; E-ftc1's value critic is better and its cost critic worse"
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** loss_cost_value_staying_converged_matters_for_the_verdict_s_admi.md
+- **Summary:** updated "`Loss/cost_value` staying converged matters for the verdict's admissibility — a "
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_encoder_is_alive_and_unsaturated_in_both_runs_so_the_fault_r.md
+- **Summary:** updated 'The encoder is alive and unsaturated in both runs, so the fault-rejection loss i'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** per_metrics_yaml_tb_liveness_proves_update_applied_not_meaningfu.md
+- **Summary:** updated 'Per `metrics.yaml`, TB liveness proves "update applied", not "meaningful learnin'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** thruster_util_remains_the_binding_constraint_in_both_runs_but_e_.md
+- **Summary:** updated '`thruster_util` remains the binding constraint in both runs, but E-ftc1 is LESS '
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** every_violation_term_equals_the_negation_of_its_margin_in_both_r.md
+- **Summary:** updated 'Every violation term equals the negation of its margin in both runs, i.e. all te'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** e_ftc1_took_one_barrier_spike_that_arm_a_never_took_and_the_engi.md
+- **Summary:** updated 'E-ftc1 took one barrier spike that Arm A never took, and the engine raises it as'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_binding_constraint_is_the_mechanism_that_would_suppress_faul.md
+- **Summary:** updated 'The binding constraint is the mechanism that would suppress fault compensation i'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_achieved_doraemon_mean_fault_severity_is_0_1929_which_is_2_5.md
+- **Summary:** updated "The achieved `DORAEMON/mean/fault_severity` is 0.1929, which is 2.50x Arm A's 0."
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_curriculum_was_still_accelerating_at_run_end_and_is_nowhere_.md
+- **Summary:** updated 'The curriculum was still accelerating at run end and is nowhere near saturated, '
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_pacing_diagnosis_holds_the_trust_region_not_feasibility_set_.md
+- **Summary:** updated 'The pacing diagnosis holds: the trust region, not feasibility, set the expansion'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_feasibility_gate_never_bound_after_warm_up_and_e_ftc1_held_a.md
+- **Summary:** updated 'The feasibility gate never bound after warm-up, and E-ftc1 held a HIGHER success'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_pre_registered_a_drift_h2_signature_does_not_fire_exactly_as.md
+- **Summary:** updated 'The pre-registered `a`-drift H2 signature does not fire, exactly as the DESIGN.m'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** blocked_curriculum_updates_were_comparable_not_the_limiter_e_ftc.md
+- **Summary:** updated 'Blocked curriculum updates were comparable, not the limiter — E-ftc1 lost 3 of 2'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** scaling_the_last_observed_per_update_growth_the_one_treatment_at.md
+- **Summary:** updated 'Scaling the last observed per-update growth, the one treatment-attributable lost'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** quadrupling_the_latent_loss_weight_leaves_every_attitude_differe.md
+- **Summary:** created 'Quadrupling the latent loss weight leaves every attitude difference against A0 b'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_per_axis_picture_is_inconsistent_between_roll_and_pitch_unli.md
+- **Summary:** created "The per-axis picture is inconsistent between roll and pitch, unlike B1a's, which"
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** b1a_s_hard_level_jitter_regression_does_not_reproduce_at_lambda_.md
+- **Summary:** created "B1a's hard-level jitter regression does NOT reproduce at lambda 4, which localiz"
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** rise_time_and_overshoot_are_unchanged_so_nothing_was_traded_for_.md
+- **Summary:** created 'Rise time and overshoot are unchanged, so nothing was traded for the (absent) st'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** after_five_student_arms_the_only_decision_grade_control_differen.md
+- **Summary:** created 'After five student arms the only decision-grade control differences in the campa'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** no_tail_or_survival_effect_is_resolvable_and_the_dispersion_read.md
+- **Summary:** created 'No tail or survival effect is resolvable, and the dispersion reading repeats the'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** in_loop_latent_mse_is_u_shaped_in_lambda_with_its_minimum_at_the.md
+- **Summary:** created "In-loop latent MSE is U-shaped in lambda with its minimum at the campaign's defa"
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_aggregate_ratio_is_nearly_flat_between_lambda_1_and_lambda_4.md
+- **Summary:** created 'The aggregate ratio is nearly flat between lambda 1 and lambda 4 while in-loop M'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_dimension_the_campaign_recorded_as_collapsed_in_every_studen.md
+- **Summary:** created 'The dimension the campaign recorded as "collapsed in every student arm" is in fa'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** d4_s_ratio_falls_monotonically_with_lambda_while_its_mse_is_flat.md
+- **Summary:** created "d4's ratio falls monotonically with lambda while its MSE is flat, which is the t"
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** in_deployment_conditions_the_student_latent_is_worse_than_a_cons.md
+- **Summary:** created 'In deployment conditions the student latent is worse than a constant mean predic'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_intervention_is_confirmed_by_the_loss_identity_rather_than_b.md
+- **Summary:** created 'The intervention is confirmed by the loss identity rather than by a config value'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** quadrupling_the_weight_and_nearly_quadrupling_the_gradient_norm_.md
+- **Summary:** created 'Quadrupling the weight and nearly quadrupling the gradient norm improves the lat'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_action_term_pays_a_small_measurable_price_for_the_extra_late.md
+- **Summary:** created 'The action term pays a small, measurable price for the extra latent weight, comp'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_arm_is_free_in_wall_clock_so_the_campaign_pays_nothing_to_ke.md
+- **Summary:** created 'The arm is free in wall clock, so the campaign pays nothing to keep lambda at it'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_absence_is_confirmed_against_the_run_s_actual_tag_set_rather.md
+- **Summary:** created "The absence is confirmed against the run's actual tag set rather than assumed fr"
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_profile_s_diagnostic_engine_produces_no_diagnosis_for_this_r.md
+- **Summary:** created "The profile's diagnostic engine produces no diagnosis for this run either, so no"
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_profile_s_p1_metric_definition_needs_an_amendment_not_just_a.md
+- **Summary:** created "The profile's P1 metric definition needs an amendment, not just a caveat: the ag"
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_decision_floors_block_remains_field_keyed_while_units_are_ax.md
+- **Summary:** created 'The `decision_floors` block remains field-keyed while units are axis-keyed, so y'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_frozen_actor_is_measurably_sensitive_to_latent_error_at_ever.md
+- **Summary:** created 'The frozen actor is measurably sensitive to latent error at every DR level, and '
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_level_at_which_that_lever_bites_is_hard_and_by_a_wide_margin.md
+- **Summary:** created 'The level at which that lever bites is hard, and by a wide margin: hard crosses '
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_hard_level_sensitivity_is_not_an_artifact_of_hard_receiving_.md
+- **Summary:** created 'The hard-level sensitivity is not an artifact of hard receiving a larger absolut'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_level_asymmetry_is_a_small_perturbation_property_that_disapp.md
+- **Summary:** created 'The level asymmetry is a small-perturbation property that disappears under large'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** latent_error_shows_up_as_oscillation_as_well_as_steady_state_off.md
+- **Summary:** created 'Latent error shows up as oscillation as well as steady-state offset, and jitter '
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_campaign_s_objective_side_interventions_moved_latent_error_a.md
+- **Summary:** created "The campaign's objective-side interventions moved latent error almost exclusivel"
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** no_tail_effect_accompanies_the_degradation_the_damage_is_a_stead.md
+- **Summary:** created 'No tail effect accompanies the degradation — the damage is a steady-state and di'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** yaw_moves_proportionally_more_than_attitude_under_latent_perturb.md
+- **Summary:** created 'Yaw moves proportionally more than attitude under latent perturbation but remain'
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_probe_measures_the_actor_s_transfer_function_not_the_encoder.md
+- **Summary:** created "The probe measures the actor's transfer function, not the encoder's quality, and"
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_perturbation_is_large_in_latent_terms_even_at_k_1_which_boun.md
+- **Summary:** created 'The perturbation is large in latent terms even at k=1, which bounds how much of '
+
+## [2026-07-29T12:20:47.836515] add
+- **Pages:** the_profile_s_diagnostic_engine_still_returns_no_diagnosis_for_t.md
+- **Summary:** created "The profile's diagnostic engine still returns no diagnosis for this subject run,"
+
+## [2026-07-30T02:08:37.204783] query
+- **Pages:** buoy_added_mass_is_wrong_in_both_sims_and_in_opposite_directions.md, stonefish_base_hull_effective_hydro_measured_2026_07_27_damping_.md, stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, thruster_static_gain_gap_stonefish_quadratic_rated_20_03_n_vs_is.md, four_scope_limits_stand_1_the_stonefish_50_hz_h1_h2_discriminati.md, hydrorc_recenter_gate_result_2026_07_28_isaac_paired_gate_fail_r.md, hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md, plant_change_batch_v2_four_isaac_plant_corrections_are_now_pendi.md, roll_transient_is_worst_at_none_dr_and_improves_monotonically_as.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, the_pre_registered_isaac_paired_non_regression_gate_fails_so_per.md, baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md, ftc_investigation_2026_07_25_m4_loss_halves_pure_yaw_ceiling_uti.md, tracking_kernel_exp_quad_tanh_dead_zone_diagnosis_correct_but_fi.md
+- **Summary:** query 'stonefish' -> 14 of 14
+
+## [2026-07-30T02:08:40.134995] query
+- **Pages:** experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md, the_frozen_actor_s_sensitivity_to_latent_error_is_strongly_level.md, e0_eval_latent_instrument_fix_38d979e_lives_only_on_the_student_.md, posttam_encoder_is_alive_and_specialized_z_sweep_exploration_col.md, on_policy_dagger_correction_for_the_buoyfix_student.md, blocked_curriculum_updates_were_comparable_not_the_limiter_e_ftc.md, both_critics_converge_e_ftc1_s_value_critic_is_better_and_its_co.md, e_ftc1_ends_ahead_on_every_reward_term_so_its_worse_fault_reject.md, e_ftc1_s_noise_floor_sits_exactly_on_min_std_so_exploration_is_f.md, e_ftc1_s_own_healthy_ladder_degrades_monotonically_and_turns_hea.md, e_ftc1_took_one_barrier_spike_that_arm_a_never_took_and_the_engi.md, the_e_ftc1_fault_penalty_is_a_uniform_mean_shift_across_envs_not.md, the_feasibility_gate_never_bound_after_warm_up_and_e_ftc1_held_a.md, the_within_run_m4_dead_penalty_is_2_9x_5_5x_larger_for_e_ftc1_at.md, thruster_util_remains_the_binding_constraint_in_both_runs_but_e_.md, per_metrics_yaml_tb_liveness_proves_update_applied_not_meaningfu.md, an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md, encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md, severity_init_head_start_converts_to_curriculum_2_50x_but_makes_.md, teacher_encoder_0_dead_latent_dims_keys_on_lateral_cog_cob_offse.md
+- **Summary:** query 'C1-latsens delay sweep instrument' -> 20 of 93
+
+## [2026-07-30T02:08:41.602107] query
+- **Pages:** gru_memory_and_corrected_dagger_mixing_compound_c3_is_the_campai.md, the_floor_test_also_re_scopes_the_a0g_adoption_this_campaign_alr.md, on_policy_dagger_correction_for_the_buoyfix_student.md, b4b_has_the_lowest_hard_level_dispersion_of_any_run_in_the_campa.md, eval_decision_floors_are_the_binding_standard_for_student_arm_co.md, every_b4b_vs_a0_attitude_difference_is_smaller_than_the_decision.md, the_campaign_s_blanket_exclusion_of_the_none_level_from_per_dim_.md, the_per_env_tail_counts_carry_no_signal_in_this_campaign_in_eith.md, the_aggregate_env_variance_ratio_nonetheless_favours_b4b_at_hard.md, engine_gap_the_analysis_engine_and_omx_reduce_are_both_unusable_.md, latent_dim_d4_collapses_at_none_dr_in_every_student_arm_and_the_.md, b4b_beats_the_teacher_at_hard_and_loses_to_it_at_the_other_three.md, b4b_s_medium_regression_is_dispersion_driven_not_a_dc_shift_its_.md, the_per_axis_picture_is_internally_consistent_even_though_it_is_.md, the_profile_s_diagnostic_engine_produces_no_diagnosis_for_a_dist.md, student_distillation_converges_to_a_residual_that_rules_out_late.md, student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md, closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md, beta_mixing_is_free_in_wall_clock_terms_so_the_arm_s_cost_is_ide.md, five_of_the_profile_s_seven_diagnostic_groups_are_genuinely_inap.md
+- **Summary:** query 'student_distill_eint campaign roster A0 A0g B4b C2' -> 20 of 164
+
+## [2026-07-30T02:08:41.948808] query
+- **Pages:** p_b1_shared_exam_on_reference_dr_hard_roll_floor_was_exam_artifa.md, roll_transient_is_worst_at_none_dr_and_improves_monotonically_as.md, extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_.md, the_roll_transient_regression_is_plant_wide_not_a_nominal_corner.md, eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md, teacher_segmented_post_switch_roll_transient_jumps_under_hard_dr.md, hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md, hydrorc_recenter_gate_result_2026_07_28_isaac_paired_gate_fail_r.md, the_nominal_cost_that_is_real_sits_on_arm_a_s_roll_transient_and.md, added_mass_scale_upper_half_is_attenuated_not_inert_the_0_95_i_c.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md, doraemon_reactivity_makes_every_single_variable_probe_two_variab.md, experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, step_interval_250_400_probe_separate_dr_width_from_optimisation_.md, canonical_final_teacher_baseline_buoyfix_anchor_trpo_buoyanchor_.md, e5_alpha075_ood_per_axis_generalization_gap_universal_failure_ro.md, incident_post_mortem_teacher_baseline_opt_e1_e4_trained_on_a_tam.md
+- **Summary:** query 'RT-a shared exam nominal corner roll transient' -> 20 of 356
+
+## [2026-07-30T02:08:42.640111] query
+- **Pages:** stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md, teacher_dr_harder_yaw_is_the_only_heavy_tail_axis_roll_is_dc_bia.md, yaw_command_is_rate_not_angle_inherited_design_defensible_only_i.md, ftc_investigation_2026_07_25_m4_loss_halves_pure_yaw_ceiling_uti.md, constraint_threshold_budget_tuning_thresholds_split_into_hard_ph.md, eval_command_box_was_half_the_trained_envelope_from_2026_04_06_t.md, stonefish_base_hull_effective_hydro_measured_2026_07_27_damping_.md, severity_init_head_start_converts_to_curriculum_2_50x_but_makes_.md, arm_b_pays_about_a_third_of_arm_a_s_yaw_reward_cost_which_is_the.md, at_hard_dr_the_anchor_s_healthy_yaw_error_is_already_4_5x_the_ar.md, on_the_yaw_transient_the_arm_ordering_does_not_reverse_arm_a_is_.md, on_yaw_steady_state_arm_a_is_consistently_ahead_of_arm_b_under_f.md, on_yaw_transient_not_steady_state_arm_a_beats_arm_b_at_all_four_.md, the_entire_cost_of_fault_dr_concentrates_on_the_yaw_tracking_ter.md, the_fault_cost_concentrates_on_yaw_in_both_runs_exactly_as_the_a.md, the_only_non_trivial_nominal_regression_anywhere_in_the_healthy_.md, the_reward_decomposition_shifts_toward_attitude_and_away_from_ya.md, the_same_ordering_holds_on_the_yaw_heavy_tail_count_and_there_ar.md
+- **Summary:** query 'P2-yaw external Mz injection yaw rejection' -> 20 of 142
+
+## [2026-07-30T02:08:42.671482] query
+- **Pages:** container_cudnn_is_cu13_against_cu128_torch_every_conv1d_fails_s.md, constraint_threshold_budget_tuning_thresholds_split_into_hard_ph.md, training_anomaly_thresholds_tb_tag_alert_table.md, adding_a_dr_axis_is_half_a_change_dr_config_s_dr_tuple_fields_tr.md, coverage_lint_ok_is_a_floor_not_a_quality_gate_re_analysis_uses_.md, reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md, reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md, reward_md_6_error_buffers_reward_call_site_dt_scaling_theory_rev.md, training_converged_healthily_to_completion_with_no_crash_and_no_.md, absolute_degree_reference_scales_for_judging_attitude_deltas_sto.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md, actuator_hardware_identification_arm_xw540_t260_board_measured_p.md, engine_gap_m1_critic_side_encoder_gradient_is_not_logged_policy_.md, group_folder_name_equals_wandb_project_name_equals_experiment_pu.md, session_state_2026_07_12_constraint_deep_dive_q_a_covered_struct.md, stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, thruster_static_gain_gap_stonefish_quadratic_rated_20_03_n_vs_is.md, doraemon_optimize_entropy_accept_can_leak_the_success_floor_late.md, literature_map_how_rl_control_actually_handles_steady_state_erro.md, no_barrier_pathology_anywhere_zero_spikes_above_0_01_in_all_thre.md
+- **Summary:** query 'cuDNN LD_LIBRARY_PATH' -> 20 of 190
+
+## [2026-07-30T02:08:50.481724] query
+- **Pages:** baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md, doraemon_is_trust_region_limited_not_feasibility_limited_kl_step.md, e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite.md, step_interval_250_400_probe_separate_dr_width_from_optimisation_.md, a5_budgetslack_rp_vel_settling_manipulability_budgets_x100_learn.md, canonical_final_teacher_baseline_buoyfix_anchor_trpo_buoyanchor_.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, engine_generic_flags_entropy_collapse_barrier_spike_reward_plate.md, eval_metric_units_and_decision_floors_os_env_mean_is_percent_of_.md, extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_.md, on_policy_dagger_correction_for_the_buoyfix_student.md, plan_consolidation_2026_07_23_canonical_ids_z_a_b_c_one_campaign.md, posttam_encoder_is_alive_and_specialized_z_sweep_exploration_col.md, safety_rail_constraints_fire_hard_at_init_go_quiet_and_re_fire_a.md, seed_noise_floor_on_none_level_attitude_is_huge_75_peak_to_peak_.md, thruster_util_is_the_binding_constrainttrpo_constraint_in_7_of_7.md, closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md, container_cudnn_is_cu13_against_cu128_torch_every_conv1d_fails_s.md, extend8k_saturated_the_dr_config_box_at_iter_7000_all_20_params_.md, penalty_vs_objective_exchange_rate_deg_of_attitude_error_bought_.md
+- **Summary:** query 'dgx' -> 20 of 21
+
+## [2026-07-30T02:08:51.001255] query
+- **Pages:** arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md, reward_md_6_error_buffers_reward_call_site_dt_scaling_theory_rev.md, e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite.md, hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md, bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md, added_mass_scale_upper_half_is_attenuated_not_inert_the_0_95_i_c.md, eval_command_box_was_half_the_trained_envelope_from_2026_04_06_t.md, next_experiment_workflow_pick_a_baseline_train_once_then_re_tune.md, reward_absolute_scale_is_invariant_to_the_constrainttrpo_actor_o.md, reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md, safety_rail_constraints_fire_hard_at_init_go_quiet_and_re_fire_a.md, eval_decision_floors_are_the_binding_standard_for_student_arm_co.md, student_distillation_converges_to_a_residual_that_rules_out_late.md, the_e_ftc1_fault_penalty_is_a_uniform_mean_shift_across_envs_not.md, leaky_integral_and_ema_bias_carry_over_the_mid_episode_command_r.md, absolute_degree_reference_scales_for_judging_attitude_deltas_sto.md, buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, joint1_centering_reward_is_removed_on_main_6_term_but_alive_on_e.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md
+- **Summary:** query 'num_envs scale envs' -> 20 of 170
+
+## [2026-07-30T02:08:53.492420] query
+- **Pages:** p_b1_shared_exam_on_reference_dr_hard_roll_floor_was_exam_artifa.md, roll_transient_is_worst_at_none_dr_and_improves_monotonically_as.md, extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_.md, doraemon_kl_step_final_value_0_0000_is_a_sparse_logging_artifact.md, eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md, experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md, absolute_degree_reference_scales_for_judging_attitude_deltas_sto.md, canonical_final_teacher_baseline_buoyfix_anchor_trpo_buoyanchor_.md, on_policy_dagger_correction_for_the_buoyfix_student.md, dr_curriculum_is_still_opening_at_iter_5000_dr_difficulty_is_ite.md, engine_generic_flags_entropy_collapse_barrier_spike_reward_plate.md, incident_post_mortem_teacher_baseline_opt_e1_e4_trained_on_a_tam.md, posttam_encoder_is_alive_and_specialized_z_sweep_exploration_col.md, roll_error_is_dc_bias_dominated_ss_jitter_ss_error_pitch_carries.md, seed_noise_floor_on_none_level_attitude_is_huge_75_peak_to_peak_.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, thruster_util_is_the_binding_constrainttrpo_constraint_in_7_of_7.md, extend8k_saturated_the_dr_config_box_at_iter_7000_all_20_params_.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md
+- **Summary:** query 'next-20260724-033159 RT-a anchor s30 shared exam extend8k' -> 20 of 356
+
+## [2026-07-30T02:08:53.594955] query
+- **Pages:** stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md, yaw_command_is_rate_not_angle_inherited_design_defensible_only_i.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md, teacher_dr_harder_yaw_is_the_only_heavy_tail_axis_roll_is_dc_bia.md, ftc_investigation_2026_07_25_m4_loss_halves_pure_yaw_ceiling_uti.md, constraint_threshold_budget_tuning_thresholds_split_into_hard_ph.md, eval_command_box_was_half_the_trained_envelope_from_2026_04_06_t.md, baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md, stonefish_base_hull_effective_hydro_measured_2026_07_27_damping_.md, the_entire_cost_of_fault_dr_concentrates_on_the_yaw_tracking_ter.md, the_reward_decomposition_shifts_toward_attitude_and_away_from_ya.md, buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md, next_experiment_workflow_pick_a_baseline_train_once_then_re_tune.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, on_policy_dagger_correction_for_the_buoyfix_student.md, posttam_encoder_is_alive_and_specialized_z_sweep_exploration_col.md, roll_transient_is_worst_at_none_dr_and_improves_monotonically_as.md, thruster_static_gain_gap_stonefish_quadratic_rated_20_03_n_vs_is.md, constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md
+- **Summary:** query 'next-20260724-033200 P2-yaw yaw torque injection sweep' -> 20 of 178
+
+## [2026-07-30T02:09:13.902612] query
+- **Pages:** imu_45deg_offset_pitch_negation_sim_uncompensated_2026_07_05.md, incident_post_mortem_teacher_baseline_opt_e1_e4_trained_on_a_tam.md, open_actionable_ledger_read_before_any_sim_plant_code_change_or_.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md, posttam_encoder_is_alive_and_specialized_z_sweep_exploration_col.md, reward_penalty_terms_thruster_smoothness_bias_block_3_temporal_b.md, teacher_encoder_0_dead_latent_dims_keys_on_lateral_cog_cob_offse.md, in_loop_latent_mse_is_u_shaped_in_lambda_with_its_minimum_at_the.md, absolute_degree_reference_scales_for_judging_attitude_deltas_sto.md, buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md, e_int_s_stitched_resume_offset_the_doraemon_update_grid_its_faul.md, eval_metric_units_and_decision_floors_os_env_mean_is_percent_of_.md, n_gt20_and_os_env_are_overshoot_percent_of_step_magnitude_not_de.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, plant_change_batch_v2_four_isaac_plant_corrections_are_now_pendi.md, stonefish_base_hull_effective_hydro_measured_2026_07_27_damping_.md, stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, lambda_latent_is_bracketed_and_closed_no_decision_grade_control_.md, p_a8_perflb200_more_iters_5000_8000_closed_the_deployment_ood_dr.md
+- **Summary:** query 'IMU 45 degree mounting offset' -> 20 of 156
+
+## [2026-07-30T02:09:14.006209] query
+- **Pages:** onboard_measured_2026_07_06_arm_step_response_valid_sim_zeta_0_7.md, actuator_hardware_identification_arm_xw540_t260_board_measured_p.md, arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md, constraint_threshold_budget_tuning_thresholds_split_into_hard_ph.md, plant_change_batch_v2_four_isaac_plant_corrections_are_now_pendi.md, joint_dr_params_kp_kd_effort_friction_need_no_dedicated_measurem.md, e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite.md, step_interval_250_400_probe_separate_dr_width_from_optimisation_.md, doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md, doraemon_kl_step_final_value_0_0000_is_a_sparse_logging_artifact.md, thruster_static_gain_gap_stonefish_quadratic_rated_20_03_n_vs_is.md, curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md, eval_metric_units_and_decision_floors_os_env_mean_is_percent_of_.md, experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md, thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md, leaky_integral_and_ema_bias_carry_over_the_mid_episode_command_r.md, reward_md_6_error_buffers_reward_call_site_dt_scaling_theory_rev.md
+- **Summary:** query 'XW540 arm actuator step response' -> 20 of 233
+
+## [2026-07-30T02:09:37.471535] query
+- **Pages:** arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, latent_dim_d4_collapses_at_none_dr_in_every_student_arm_and_the_.md, bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md, incident_post_mortem_teacher_baseline_opt_e1_e4_trained_on_a_tam.md, next_experiment_workflow_pick_a_baseline_train_once_then_re_tune.md, plant_change_batch_v2_four_isaac_plant_corrections_are_now_pendi.md, stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, leaky_integral_and_ema_bias_carry_over_the_mid_episode_command_r.md, real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md, tam_columns_must_match_robot_firmware_esc_channel_order_reorder_.md, constraint_threshold_budget_tuning_thresholds_split_into_hard_ph.md, on_policy_dagger_correction_for_the_buoyfix_student.md, open_actionable_ledger_read_before_any_sim_plant_code_change_or_.md, bias_ema_observability_p_b1_confirmed_at_the_fair_none_point_68_.md, plant_fix_needs_apply_before_retrain_main_hull_volume_0_009_0_00.md, an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md, failure_dr_join_now_covers_fault_channels_not_just_dr_per_env_fa.md, imu_45deg_offset_pitch_negation_sim_uncompensated_2026_07_05.md
+- **Summary:** query 'observability retrain velocity channel' -> 20 of 81
+
+## [2026-07-30T02:09:55.258394] query
+- **Pages:** gpu_memory_4096_env_albc_training_needs_11_3_gb_rtx_4060_8gb_can.md, group_folder_name_equals_wandb_project_name_equals_experiment_pu.md, gru_memory_and_corrected_dagger_mixing_compound_c3_is_the_campai.md, teacher_dr_harder_doraemon_curriculum_froze_before_run_end_unuse.md, real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md, closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md, container_cudnn_is_cu13_against_cu128_torch_every_conv1d_fails_s.md, actuator_hardware_identification_arm_xw540_t260_board_measured_p.md, an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md, arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md, constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md, constraint_threshold_budget_tuning_thresholds_split_into_hard_ph.md, constraint_viol_trajectory_barrier_sign_metrics_4_10_starts_at_d.md, diagnosis_md_2026_05_25_retirement_open_item_ledger.md, doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md, eval_metric_units_and_decision_floors_os_env_mean_is_percent_of_.md, experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md, frontier_seeking_dr_curriculum_literature_survey_adr_currot_acce.md, hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md, imu_45deg_offset_pitch_negation_sim_uncompensated_2026_07_05.md
+- **Summary:** query 'VRAM OOM memory GB10 unified' -> 20 of 30
+
+## [2026-07-30T02:17:19.388898] add
+- **Pages:** stonefish_base_hull_effective_hydro_measured_2026_07_27_damping_.md
+- **Summary:** updated 'Stonefish base-hull effective hydro MEASURED (2026-07-27): damping is the gap axis (yaw ~45-100x, pitch-linear ~10x, translational 3-8x under nominal); effective added inertia already matches; nominals recentered on marinelab exp/hydro-recenter'
+
+## [2026-07-30T02:17:30.526819] add
+- **Pages:** stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md
+- **Summary:** updated 'Stonefish yaw-gap claim review: main-body hydro yaw torque structurally zero (symmetric added mass kills Munk); PhysX DOES model arm reaction; real gaps = buoy added-mass ~10x under, no arm-link hydro, no yaw-torque DR axis'
+
+## [2026-07-30T02:28:59.725325] add
+- **Pages:** hydrorc_016d1b1_recentered_nine_hull_hydro_numbers_onto_a_broken.md
+- **Summary:** created 'HydroRC 016d1b1 recentered nine hull hydro numbers onto a broken engine approximation, and the damage concentrates on yaw -- the axis where the 2026-07-28 paired gate failed; retire the commit rather than rebuild it minus one line'
+
+## [2026-07-30T02:29:55.535066] add
+- **Pages:** stonefish_base_hull_effective_hydro_measured_2026_07_27_damping_.md
+- **Summary:** updated 'Stonefish base-hull effective hydro MEASURED (2026-07-27): damping is the gap axis (yaw ~45-100x, pitch-linear ~10x, translational 3-8x under nominal); effective added inertia already matches; nominals recentered on marinelab exp/hydro-recenter'
+
+## [2026-07-30T02:29:55.632589] add
+- **Pages:** plant_change_batch_v2_four_isaac_plant_corrections_are_now_pendi.md
+- **Summary:** updated 'Plant-change batch v2: four Isaac plant corrections are now pending and each alone forces a teacher retrain, so they are batched behind one sizing gate instead of decided individually'
+
+## [2026-07-30T02:29:55.722594] add
+- **Pages:** stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md
+- **Summary:** updated 'Stonefish yaw-gap claim review: main-body hydro yaw torque structurally zero (symmetric added mass kills Munk); PhysX DOES model arm reaction; real gaps = buoy added-mass ~10x under, no arm-link hydro, no yaw-torque DR axis'
+
+## [2026-07-30T02:57:23.288899] query
+- **Pages:** buoy_added_mass_is_wrong_in_both_sims_and_in_opposite_directions.md, stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, thruster_static_gain_gap_stonefish_quadratic_rated_20_03_n_vs_is.md, eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md, baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md, experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md, joint1_stage_1_gate_go_drift_is_real_on_unlimited_physics_not_th.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, onboard_measured_2026_07_06_arm_step_response_valid_sim_zeta_0_7.md, plant_change_batch_v2_four_isaac_plant_corrections_are_now_pendi.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, engine_gap_analyze_training_py_only_runs_under_isaac_sim_python_.md, hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md, imu_45deg_offset_pitch_negation_sim_uncompensated_2026_07_05.md, joint1_centering_reward_is_removed_on_main_6_term_but_alive_on_e.md, obs_noise_model_history_channels_are_re_noised_every_step_sim_pa.md, static_eval_plots_regenerate_sim_free_from_npz_reconstruct_segme.md, hydrorc_recenter_gate_result_2026_07_28_isaac_paired_gate_fail_r.md, real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md, analysis_engine_map_what_is_grow_able_vs_off_limits.md
+- **Summary:** query 'P1 joint1 swing cross-sim Isaac replay' -> 20 of 193
+
