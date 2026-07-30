@@ -1,0 +1,28 @@
+{
+  "acknowledged_gates": [
+    "container_cudnn_is_cu13_against_cu128_torch_every_conv1d_fails_s.md",
+    "imu_45deg_offset_pitch_negation_sim_uncompensated_2026_07_05.md",
+    "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md",
+    "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md"
+  ],
+  "gpu_gate": "workstation GPU0 idle; ~5 h; no concurrent teacher run",
+  "launch_delta": "E-ftc1 (reviewer-approved next-20260728-180215). CHANGE 1: envs/main/doraemon.py:94 _NOMINAL_OVERRIDES[fault_severity] 0.0 -> 0.0771 -- escapes the mean-preserving Beta clamp, Beta(1,99) -> Beta(2.313,27.687), i.e. concentration 100 -> the configured 30; one of 21 dims, other 20 bit-identical. CHANGE 2 (baseline restoration, not a treatment): envs/main/config.py:254 max_thrust_scale (0.85,1.15) -> (1.0,1.0) to match the Arm A plant. All else byte-identical to Arm A trpo_faultdr_agnostic_s30_260725_183121: 5000 iter FIXED (extension is the twice-net-negative lever, out of scope), 4096 envs, seed 30, --run_group fault_dr --log_project_name fault_dr, agent.run_name=ftc1sevinit_s30. Git: branch exp/ftc1-severity-init off Arm A commit cb06646 + annotated tag baseline-260728-ftc1; marinelab stays on exp/max-thrust-dr (B0c inert at scale 1.0) and its HEAD sha MUST be written into DESIGN.md at launch -- manifest.json records constrained-albc only. BLOCKING manipulation checks: iter-0 Beta(2.313,27.687) in curriculum_trajectory.json (verifiable before the run ends); achieved DORAEMON/mean/fault_severity >= 2x Arm A 0.0771; kl_step still pinned at the 0.12 cap; mode >= 0 and success >= alpha 0.5; per-update Beta a NOT drifting back toward 1.0. VERDICT: H1 >= 0.20 / H1-WEAK [0.15,0.20) analysis-only follow-up / H2 < 0.15. Robustness = paired healthy vs m4-dead (--fault --fault_fixed_health 1,1,1,1,0,1) via compare.py paired (within-run delta, cancels the DR-box difference); nominal cost at none ONLY against PLAN 11.6 floors; soft/medium/hard inadmissible cross-run without --doraemon-dr-from Arm A. thruster_util binding (Arm A already 0.902) reads as budget-redesign-needed, NOT as no-benefit. A win is CONDITIONAL on the Arm A plant: confirm run at max_thrust_scale (0.85,1.15) required before the severity init enters the final teacher. Single-seed screening, never a paper number. ACK RATIONALE -- sim_hydro: its adopted max_thrust band is DELIBERATELY reverted to preserve one-variable pairing with Arm A (TAM half untouched, still blocked). cudnn: student-side distillation throughput only, does not gate a teacher run. imu_45deg and tam_vertical: both deferred by standing user decision (robot bring-up / m4 HW fault), zero sim-side impact on this probe.",
+  "open_leads": [
+    "closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md",
+    "curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md",
+    "experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md",
+    "hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md",
+    "joint1_stage_1_gate_go_drift_is_real_on_unlimited_physics_not_th.md",
+    "on_policy_dagger_correction_for_the_buoyfix_student.md",
+    "reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md",
+    "roll_transient_is_worst_at_none_dr_and_improves_monotonically_as.md",
+    "stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md",
+    "thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md"
+  ],
+  "proposal_id": "next-20260728-180215",
+  "queued_at": "2026-07-28T09:35:10.349798+00:00",
+  "queued_commit": "1f97e1f40cc969c92fdb824613bbeefa6498d0c6",
+  "reconciled_at": "2026-07-30",
+  "schema_version": 1,
+  "status": "launched and analyzed -- landed trpo_ftc1sevinit_s30_260729_105510 (analysis diagnose-20260729-171553). Proposal next-20260728-180215 closed DISCARDED: H1-WEAK, and the within-run m4-dead penalty came out 2.9-5.5x LARGER than Arm A at every DR level, so the severity head start made fault rejection worse. fault_severity stays at the Arm A nominal."
+}

@@ -1,0 +1,27 @@
+{
+  "acknowledged_gates": [
+    "imu_45deg_offset_pitch_negation_sim_uncompensated_2026_07_05.md",
+    "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md",
+    "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md"
+  ],
+  "gpu_gate": "workstation GPU0 ONLY, sequenced AFTER trpo_ftc1sevinit_s30_260729_105510 releases it (~16:31 KST). GPU1 is reserved by user instruction 2026-07-29 for the concurrent student-track session (worktree /workspace/constrained-albc-student, branch exp/student-distill-eint) and must NOT be used. GPU0 cannot be shared now: E-ftc1 holds 11.4 of 12.3 GB, leaving too little for an Isaac Sim instance (~2-3 GB). Host swap is at 16/16 GB (100%), so run one case at a time, never in parallel.",
+  "launch_delta": "P1-isaac: Isaac-side open-loop replay of the 5 shared joint1-swing profiles (S5/S2/S1ff/S3/S4), joint2 pinned 0, ZERO action (no thrust), randomization.enable=False + fault.enable=False, episode_length_s raised to 30s. ZERO TRAINING -- runner scripts/isaac_p1_replay.py (untracked, sha256 d9acb55b...5dda0 verified on disk); no repo code modified, so no exp branch or baseline tag. Outputs 15 CSVs to /workspace/constrained-albc/experiments/p1_isaac (WS_ROOT bind, so no docker cp needed). Aggregate with P1_STENCIL=3 (Isaac 50Hz vs Stonefish 100Hz). Blocking manipulation check: S5 null peak base |wz| must be small vs the S2/S3 reaction, else the base is driven by something other than the arm and no cross-sim claim is admissible. Verdict gates the HydroRC recenter-v2 arm choice (a translational-only / b rotational+raised-floor / c log-mean).",
+  "open_leads": [
+    "closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md",
+    "curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md",
+    "experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md",
+    "hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md",
+    "joint1_stage_1_gate_go_drift_is_real_on_unlimited_physics_not_th.md",
+    "on_policy_dagger_correction_for_the_buoyfix_student.md",
+    "reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md",
+    "roll_transient_is_worst_at_none_dr_and_improves_monotonically_as.md",
+    "stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md",
+    "thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md"
+  ],
+  "proposal_id": "next-20260729-124437",
+  "queued_at": "2026-07-29T03:47:43.145266+00:00",
+  "queued_commit": "d5b6a80784206f070fd4e29c6c0d60fa22d50f54",
+  "reconciled_at": "2026-07-30",
+  "schema_version": 1,
+  "status": "executed 2026-07-29, eval-only -- no training run dir by design. Isaac-side joint1-swing replay, 5 profiles x 3 reps = 15 CSVs (1001 rows each), verified and committed 2026-07-30 at tools/p1_joint_swing/isaac_csv/ with scripts/isaac_p1_replay.py. Proposal next-20260729-124437 closed kept; arm-reaction yaw channel eliminated in both sims."
+}

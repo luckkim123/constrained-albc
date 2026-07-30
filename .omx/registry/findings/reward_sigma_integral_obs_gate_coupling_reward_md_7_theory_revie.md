@@ -1,17 +1,17 @@
 ---
 title: "reward-sigma / integral-obs-gate coupling (reward.md 7) theory review: conditionally sound; shared-sigma ALIASING is the defect (decouple gate threshold), gate is a settling-band accumulator not anti-windup, clamp is dead code in gated mode, Hwangbo-2017 citation is wrong (use Yu&Lee 2023)"
-tags: ["albc", "envs-main", "reward", "integral-obs", "error-gate", "leaky-integrator", "sigma-coupling", "anti-windup", "settling-band", "doe-confounding", "aliasing", "theory-review", "literature", "experiment-lead"]
+tags: ["albc", "envs-main", "reward", "integral-obs", "error-gate", "leaky-integrator", "sigma-coupling", "anti-windup", "settling-band", "doe-confounding", "aliasing", "theory-review", "literature", "experiment-lead", "gate", "sigma", "r1", "applied"]
 created: 2026-07-11T07:09:55.881613
-updated: 2026-07-24T01:20:04.835298
+updated: 2026-07-30T05:22:44.654801
 sources: ["fea5974"]
 links: ["bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md", "leaky_integral_and_ema_bias_carry_over_the_mid_episode_command_r.md"]
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
+qualityScore: 100
+qualityReasons: []
 status: needs-experiment
-blocked-on: "R1 is a zero-GPU code change; R6 training probe parked under the 2026-07-20 batch-pass decision."
+blocked-on: "R1 (gate/sigma decouple) is APPLIED on main since fea5974 with a per-axis threshold and a byte-identical default -- do NOT cherry-pick 3a6a4b7 off preserved/r1-integral-gate-impl, that version is a weaker scalar-with-None-default and would regress it. What remains open here is ONLY the R6 training probe, parked under the 2026-07-20 batch-pass decision."
 ---
 
 # reward-sigma / integral-obs-gate coupling (reward.md 7) theory review: conditionally sound; shared-sigma ALIASING is the defect (decouple gate threshold), gate is a settling-band accumulator not anti-windup, clamp is dead code in gated mode, Hwangbo-2017 citation is wrong (use Yu&Lee 2023)
@@ -67,4 +67,22 @@ from-scratch checkpoint; design-only, exp-design gate, DO NOT launch; fold into 
 retrain batch). R2-R5 are doc-only (Hwangbo->Yu&Lee 2023 citation fix, relabel the gate as a
 settling-band accumulator not anti-windup, note the clamp is inert in gated mode) and are not yet
 applied.
+
+---
+
+## Update (2026-07-30T05:22:44.654801)
+
+## R1 IS APPLIED ON MAIN 2026-07-30 (and the tagged commit is a WEAKER superseded version -- do not cherry-pick it)
+
+[FINDING] The R1 half of this lead -- decouple the integral-obs gate threshold from the tracking-reward sigma -- is DONE and has been on main since commit fea5974. The plan's standing instruction to recover R1 by cherry-picking 3a6a4b7 off the tag preserved/r1-integral-gate-impl is stale AND harmful: that commit's implementation is strictly weaker than what main already carries, so applying it would be a regression, not a recovery.
+
+[EVIDENCE] Verified 2026-07-30 by attempting the cherry-pick in a throwaway worktree off main and reading the conflict. main (commit fea5974, "feat(env): decouple integral-obs gate threshold from reward sigma (R1)") has `integral_gate_threshold: tuple[float, float, float] = (0.10, 0.10, 0.10)` -- PER-AXIS and unconditionally decoupled, with the config comment stating the default reproduces the historical shared-sigma value byte-identically (att_rp.sigma = yaw_vel.sigma = 0.10) so no behavioural change ships with the decoupling. It is consumed at albc_env.py:216-220 ("R1 decouple: read the independent per-axis integral_gate_threshold") and applied at albc_env.py:1194. main also carries tests/test_integral_gate_decouple.py. The tagged commit 3a6a4b7 (2026-07-21) instead has `integral_gate_threshold: float | None = None` -- a SCALAR override whose default None still reuses reward.att_rp.sigma / reward.yaw_vel.sigma, i.e. still aliased unless someone opts out. Same intent, worse implementation.
+
+[CONFIDENCE] HIGH
+
+Consequence for the tag: preserved/r1-integral-gate-impl still holds a legitimate piece of history (it also carried a 64-line test), but its stated purpose -- "the only reachable copy of the never-run R1 implementation" -- no longer holds, because R1 exists on main in a better form. Keep the tag as history; never cherry-pick from it. Anything referring to R1 as pending work should be read as already-shipped.
+
+Byte-identical-default discipline is what makes this safe to have landed without a retrain: the aliasing that confounded reward-kernel ablations is removed, but the numeric behaviour at the default is unchanged, so runs before and after fea5974 remain comparable on this axis. Retuning a tracking-kernel sigma no longer silently retunes the integral gate -- that was the actual defect this lead identified.
+
+Still open on this page (unchanged): the R6 training probe remains parked under the 2026-07-20 batch-pass decision. The citation correction (Hwangbo-2017 -> Yu & Lee 2023) and the dead-clamp-in-gated-mode observation are documentation/cleanup items, not experiments.
 

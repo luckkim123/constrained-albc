@@ -20,6 +20,7 @@
   "proposal_id": "next-20260723-203114",
   "queued_at": "2026-07-23T11:34:21.390095+00:00",
   "queued_commit": "766219eccc21e4c4556c050bc2fd27b70b73c7a4",
+  "reconciled_at": "2026-07-30",
   "schema_version": 1,
-  "status": "pending approval"
+  "status": "launched and analyzed -- landed trpo_b0cmaxthrust_s30_260724_024326. Proposal next-20260723-203114 (B0c revision 2) closed kept: the max_thrust +/-15% per-env band became adopted gate D-a and rides in the final teacher."
 }

@@ -1,0 +1,30 @@
+{
+  "acknowledged_gates": [
+    "container_cudnn_is_cu13_against_cu128_torch_every_conv1d_fails_s.md",
+    "imu_45deg_offset_pitch_negation_sim_uncompensated_2026_07_05.md",
+    "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md",
+    "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md"
+  ],
+  "gpu_gate": "E-int (trpo_eint_s30_260727_160913) finished AND analyzed; workstation GPU idle (nvidia-smi shows no other training); marinelab checked out on exp/hydro-recenter at launch time (currently parked on exp/max-thrust-dr to protect the in-flight E-int); expected ~16-22 h",
+  "launch_delta": "marinelab branch exp/hydro-recenter (016d1b1, parent = B0c f45d612): ALBCHydrodynamicsCfg nominals recentered to Stonefish-measured effective values \u2014 linear_damping (2,2,1.5,0.3,0.3,0.15)->(0.5,0.5,1.6,0.03,0.03,0.002); quadratic_damping (39,39,15,1,1,0.5)->(8,8,22.7,1.2,1.2,0.011); added_mass heave 1.0->8.0 (cap-bound). Single variable vs trpo_eint_s30_260727_160913: same constrained-albc state as the E-int launch, same stage-1 seed-30 config, SAME MACHINE (paired gate). Launch order: AFTER E-int completes+analyzes. Readout: paired Isaac gate (16.8% provisional bound) then Stonefish 50 Hz attitude-hold diagnostic vs buoyfix baseline (pitch RMS 6.1 deg / yaw-rate RMS 42 deg/s).",
+  "launch_note": "user-approved 2026-07-28 KST (overnight autonomy); Isaac-side paired gate to run right after training; Stonefish 50 Hz diagnostic deferred to the Stonefish machine",
+  "launched_at": "2026-07-27T16:31:36+00:00",
+  "launched_run_id": "trpo_hydrorc_s30_260728_013136",
+  "open_leads": [
+    "closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md",
+    "curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md",
+    "experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md",
+    "joint1_stage_1_gate_go_drift_is_real_on_unlimited_physics_not_th.md",
+    "on_policy_dagger_correction_for_the_buoyfix_student.md",
+    "reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md",
+    "roll_transient_is_worst_at_none_dr_and_improves_monotonically_as.md",
+    "stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md",
+    "thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md"
+  ],
+  "proposal_id": "next-20260727-174905",
+  "queued_at": "2026-07-27T08:52:16.646202+00:00",
+  "queued_commit": "7e6dab92eaf386a8d036c75d6991ccf408c3ce11",
+  "readout": "report analysis/diagnose-20260728-081953; ledger discarded event 2026-07-27T23:22:49Z; Stonefish readout not entered per the pre-registered rule",
+  "schema_version": 1,
+  "status": "launched, analyzed: Isaac gate FAIL (recenter not adopted)"
+}

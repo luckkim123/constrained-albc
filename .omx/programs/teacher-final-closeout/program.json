@@ -5,7 +5,8 @@
     "seed_floor_dgx",
     "teacher_baseline_buoyfix",
     "e3_dgxscale_buoyfix",
-    "fault_dr"
+    "fault_dr",
+    "student_distill_eint"
   ],
   "status": "active",
   "created": "2026-07-23T08:38:08.906552+00:00"

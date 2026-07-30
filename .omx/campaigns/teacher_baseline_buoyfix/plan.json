@@ -77,6 +77,18 @@
       "summary": "E-int: integration retrain composing the two adopted changes (max_thrust band D-a + fault-DR Arm A D-b) into the final teacher; H1 sub-additive vs H2 super-additive on the shared thruster actuation budget, with pre-registered ADOPT-WITH-CAVEAT middle zone",
       "label": "E-int",
       "added_at": "2026-07-27T07:06:45.568166+00:00"
+    },
+    {
+      "proposal_id": "next-20260727-174905",
+      "summary": "HydroRC: retrain with hydro DR nominals recentered to Stonefish-measured effective values (marinelab exp/hydro-recenter 016d1b1, damping is the gap: yaw ~45-100x/pitch-linear ~10x/translational 3-8x under old analytical nominal; heave added mass 1.0->8.0 cap-bound); single variable vs E-int, sequenced after E-int; H1 Stonefish limit cycle shrinks >=2x / H2 persists (seams dominate)",
+      "label": "HydroRC",
+      "added_at": "2026-07-27T08:52:16.580464+00:00"
+    },
+    {
+      "proposal_id": "next-20260729-124437",
+      "summary": "P1-isaac: Isaac-side open-loop joint1-swing replay (5 shared profiles, zero thrust, DR off) measuring base yaw reaction against the Stonefish CSVs completed 2026-07-29. ZERO TRAINING, workstation GPU0 after E-ftc1. H1 rotational plant-model gap REAL (Isaac less damped, outside the S5 null band on clip-free cases) -> selects v2 arm (b) rotational recenter + raised DR floor; H2 sims agree within the null band -> rotational recenter loses motivation, v2 collapses to arm (a) translational-only and the Stonefish limit cycle is re-attributed to Lane-1 seams. Blocking check: S5 null yaw must be small vs S2/S3.",
+      "label": "P1-isaac",
+      "added_at": "2026-07-29T03:47:56.617453+00:00"
     }
   ]
 }

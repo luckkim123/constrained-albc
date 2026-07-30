@@ -2,7 +2,7 @@
 title: "Closed-loop latent collapse suspicion: legacy student measured 11-17x worse in-loop, deployed student unverified"
 tags: ["experiment-lead", "distillation", "covariate-shift", "latent", "student", "sim-to-real", "eval", "albc", "priv-obs"]
 created: 2026-07-21T10:03:29.000311
-updated: 2026-07-24T08:18:41.399431
+updated: 2026-07-29T04:49:25.549040
 sources: []
 links: ["albc_stage_2_is_teacher_driven_off_policy_bc_with_mixed_latent_a.md", "experiment_idea_feed_o_t_into_the_encoder_alongside_p_t_state_co.md", "next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md", "student_distillation_converges_to_a_residual_that_rules_out_late.md", "engine_gap_eval_npz_saves_no_raw_obs_std_privileged_blocks_exact.md"]
 category: decision
@@ -10,8 +10,8 @@ confidence: high
 schemaVersion: 1
 qualityScore: 90
 qualityReasons: ["generic-only-tags"]
-status: needs-experiment
-blocked-on: "observability floor quantified per-dim (2026-07-24); open lead = observability retrain (velocity channel +/- longer history), a training experiment"
+status: resolved
+blocked-on: "SUPERSEDED 2026-07-29 (E0): the observability floor was an eval-instrument artifact, not physics. Open arm is now A0 -- a fresh TCN distillation from E-int in the E-int plant, re-measured with the fixed instrument -- NOT an observability retrain (velocity channel / longer history), whose motivation this page no longer supports."
 ---
 
 # Closed-loop latent collapse suspicion: legacy student measured 11-17x worse in-loop, deployed student unverified
@@ -317,4 +317,77 @@ shape T=7751 x E=64 x D=9). Analysis: `experiments/rsl_rl/albc_trpo_student/trpo
   is unobservable. Per-dim param naming NOT claimed (dim indices are per-seed permutations).
 - **Fix = observability retrain**: explicit velocity channel (heave-first) +/- longer TCN history window,
   as a WITH-vs-WITHOUT A/B. Deterministic encoder (multimodality already ruled out). This is the open lead.
+
+---
+
+## Update (2026-07-29T03:35:54.855071)
+
+## 2026-07-29 SUPERSEDED by E0 -- the floor was the instrument, not the plant
+
+Every in-loop number on this page (and the E4 result it cites) came from `eval.py static` student mode,
+whose `_InstrumentedStudentPolicy` REPLICATED `StudentInLoopPolicy.__call__`'s forward and omitted the
+`obs_normalizer` on the TCN branch. Training (`runner._compute_loss_tcn`), the deploy reference
+(`student_policy.py`) and even the same wrapper's GRU branch all normalized. So the TCN encoder was
+evaluated on out-of-distribution inputs -- E-int's actor_obs_normalizer spans 72 dims with 23 of
+std < 0.2. Fixed at the root in `38d979e` (the policy publishes `last_l_hat`, the instrument delegates;
+guard `tests/test_student_eval_latent_instrument.py`). `segmented` mode was never affected.
+
+DECISIVE A/B (same tree, same plant, same seed, only the instrument differs; DAgger student
+`trpo_buoyfix_dagger_s30_tcn_260724_133040`, 64 envs, GPU1). The pre-fix instrument reproduces this
+page's flat signature; the fixed one produces a rising trend:
+
+| level | ratio pre-fix | ratio fixed | factor |
+|:--|--:|--:|--:|
+| none | 0.1224 | 0.1205 | 0.98x |
+| soft | 0.1680 | 0.3328 | 1.98x |
+| medium | 0.1287 | 0.4344 | 3.37x |
+| hard | 0.1065 | 0.3958 | 3.72x |
+
+`none` is where the bug is invisible, and that is mechanistically consistent: at `none` the privileged
+vector is nearly constant, so a wrong latent costs almost nothing. The instrument's cost grows exactly
+as the latent starts to matter.
+
+THE 8/9-COLLAPSED CLAIM DOES NOT SURVIVE. The plain-BC student
+`trpo_buoyfix_s30_tcn_260722_184632`, re-measured, has ZERO of 9 dims collapsed at hard (per-dim
+ratios 0.844 0.715 0.221 0.664 0.627 0.462 0.419 0.669 0.105) and an aggregate ratio that RISES with
+DR: 0.219 / 0.459 / 0.655 / 0.626. Exclude `none`-level per-dim ratios from any reading -- `l_true` is
+near-constant there so the quotient divides by ~0 and returns values above 1.
+
+WHAT REMAINS TRUE. In-loop MSE is still far above the open-loop residual (37.0x for plain BC at hard,
+0.07932 vs 0.002145). That is covariate shift, which is a different failure from an observability
+floor and points at the DAgger/on-policy family, not at adding sensor channels. Report:
+`experiments/rsl_rl/albc_trpo_student/trpo_buoyfix_dagger_s30_tcn_260724_133040/analysis/diagnose-20260729-e0-instrument/report.md`.
+
+---
+
+## Update (2026-07-29T04:49:25.549040)
+
+## A0 CLOSES this lead (2026-07-29)
+
+The open arm this page named -- a fresh TCN distillation from E-int, in E-int's own plant,
+re-measured with the fixed instrument -- ran as `trpo_sdeint_a0_tcn_s30_260729_130559`
+(campaign `student_distill_eint`, roster A0). It confirms E0's refutation on the FINAL teacher,
+so the collapse suspicion is settled negative and the page needs no further experiment.
+
+**Result.** Zero of nine latent dimensions are collapsed (env-variance ratio < 0.1) at ANY DR
+level. Per-dim at hard: `[0.745 0.318 0.300 0.418 0.333 0.558 0.240 0.501 0.217]`, minimum 0.217.
+Aggregate ratio 0.5974 / 0.7344 / 0.4818 / 0.4353 at none/soft/medium/hard.
+
+**What remains true.** The 11-17x in-loop degradation this page recorded is REAL and reproduces:
+A0's in-loop latent MSE is 9.6x-21.3x its own final open-loop `loss_latent` (0.003201), widening
+with DR level. But that number measures covariate shift, not collapse -- the student resolves env
+identity fine and fails to reproduce it on its own induced distribution. The two were conflated.
+
+**Consequence for the roster.** The observability retrain this page handed off to (velocity
+channel / longer history = arms B2 and B5) stays PARKED, now on evidence from the final teacher
+rather than from the buoyanchor lineage alone. The live arms are A0g (GRU, memory horizon) then
+B4b (fixed DAgger beta 0.5), both targeting covariate shift.
+
+**One caveat A0 could not settle.** The aggregate ratio does NOT rise monotonically with DR level
+for the E-int student (it peaks at soft), unlike the E0 plain-BC profile. Either the E-int latent
+is more uniformly resolvable across the range, or the `none` level is inflated by its near-zero
+`l_true` denominator. A0g separates these without new input channels.
+
+Report: `experiments/rsl_rl/albc_trpo_student/student_distill_eint/trpo_sdeint_a0_tcn_s30_260729_130559/analysis/diagnose-20260729-a0-anchor/report.md`
+(currently in the `constrained-albc-student` worktree tree; migrates to the main tree at campaign close).
 

@@ -1,0 +1,25 @@
+{
+  "campaign_id": "student_distill_eint",
+  "created": "2026-07-29T02:57:39.423571+00:00",
+  "predecessor": "teacher_baseline_buoyfix",
+  "planned": [
+    {
+      "proposal_id": "next-20260729-123751",
+      "summary": "",
+      "label": "",
+      "added_at": "2026-07-29T03:40:14.932295+00:00"
+    },
+    {
+      "proposal_id": "next-20260729-a0g",
+      "summary": "",
+      "label": "",
+      "added_at": "2026-07-29T04:51:08.822796+00:00"
+    },
+    {
+      "proposal_id": "next-20260729-180058",
+      "summary": "Eval-side latent-sensitivity sweep on A0g: inject k*per-dim-RMSE noise into l_hat before the frozen actor, k in {0,0.5,1,2,4}, measure att_norm against the 0.1 deg floor. Splits 'latent fidelity does not drive control' from 'the latent interventions failed for mechanism reasons'. Zero training.",
+      "label": "C1-latsens",
+      "added_at": "2026-07-29T09:02:45.683768+00:00"
+    }
+  ]
+}

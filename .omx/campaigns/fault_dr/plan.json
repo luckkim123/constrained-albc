@@ -2,5 +2,19 @@
   "campaign_id": "fault_dr",
   "created": "2026-07-27T04:31:44.619472+00:00",
   "auto_initialized": true,
-  "source": "report-coverage"
+  "source": "report-coverage",
+  "planned": [
+    {
+      "proposal_id": "next-20260728-180215",
+      "summary": "E-ftc1: fault_severity initial Beta nominal 0.0 -> 0.0771 (escape the mean-preserving clamp Beta(1,99), concentration 100 -> configured 30); one of 21 dims, seed 30 paired vs Arm A, 5000 iter fixed. H1 pacing-limited (achieved severity >= 0.20, mode 0, success >= alpha, Beta a holds) vs H2 competence/authority-limited (< 0.15, or mode -2, or none-floor breach, or thruster_util binding from 0.902); [0.15,0.20) = H1-WEAK partial conversion. Reviewer-approved 0 major / 4 minor applied. Win is conditional on the Arm A plant -- confirm run at max_thrust_scale (0.85,1.15) required before entering the final teacher.",
+      "label": "E-ftc1",
+      "added_at": "2026-07-28T09:35:36.250583+00:00"
+    },
+    {
+      "proposal_id": "next-20260729-125443",
+      "summary": "E-ftc1-confirm: E-ftc1's config with max_thrust_scale restored (1.0,1.0) -> the adopted (0.85,1.15) band. CONDITIONAL -- launch ONLY if E-ftc1 returns H1 (achieved fault_severity >= 0.20); on H1-WEAK or H2 discard the entry. One variable vs E-ftc1 (the band) AND one variable vs E-int (the severity init), completing a seed-30 2x2 whose other three cells are on disk. H1 gain survives the band (achieved severity >= 2x E-int's 0.0770 = 0.154, thruster_util J_C/d_k stays below binding vs E-int 0.821, m4-dead delta holds vs 17.78/8.43/20.38x, all none floors NULL) -> ADOPT the severity init into the final teacher. H2 band eats the gain -> full-thrust-only finding, do NOT fold in, thruster-budget redesign becomes its own arm. Caveat: the E-int cell is stitched (resume from model_2350), so the difference-in-differences is secondary, never the verdict.",
+      "label": "E-ftc1-confirm",
+      "added_at": "2026-07-29T03:55:13.418510+00:00"
+    }
+  ]
 }

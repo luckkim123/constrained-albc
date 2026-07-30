@@ -1,0 +1,5 @@
+{
+  "campaign_id": "teacher_baseline_opt",
+  "created": "2026-07-30T03:25:47.353912+00:00",
+  "goal": "CLOSED pre-TAM-fix teacher baseline campaign (e1-e4 + extend10k). Back-registered 2026-07-30 for tree/campaign consistency only -- it takes NO new runs: its plant predates the TAM correction, so its results are not comparable to the current plant. Left in place on disk (719 MB), not moved."
+}
