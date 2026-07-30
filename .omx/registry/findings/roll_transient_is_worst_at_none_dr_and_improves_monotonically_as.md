@@ -1,8 +1,8 @@
 ---
 title: "roll transient is WORST at none DR and improves monotonically as DR hardens (inverted, both runs)"
-tags: ["roll", "overshoot", "transient", "dr-scaling", "os_env_mean", "open-lead", "nominal-corner", "doraemon"]
+tags: ["roll", "overshoot", "transient", "dr-scaling", "os_env_mean", "open-lead", "nominal-corner", "doraemon", "id-collision"]
 created: 2026-07-21T07:58:14.787774
-updated: 2026-07-30T05:03:17.174116
+updated: 2026-07-30T05:05:28.338476
 sources: ["diagnose-20260721-164331", "next-20260724-033159", "static_260724_040413", "static_260723_091813", "diagnose-20260728-081953"]
 links: ["eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md"]
 category: pattern
@@ -11,7 +11,7 @@ schemaVersion: 1
 qualityScore: 100
 qualityReasons: []
 status: needs-experiment
-blocked-on: "UNBLOCKED 2026-07-30 for sequencing: the 'after C3' prerequisite is met (student C3 ran 2026-07-29, campaign roster exhausted) and this is now the front of the training queue. Remaining gate is only the launch approval itself (omx queue-launch). One ambiguity first: confirm whether the original 'after C3' meant student-C3 (which ran) or teacher-C3 (which did not)."
+blocked-on: "Follow-up = nominal-corner exposure (DORAEMON nominal sampling floor), a training-side experiment sequenced 'after C3'. Referent RESOLVED 2026-07-30: C3 = the TEACHER canonical 4-arm x 3-seed ablation set (PLAN.md 216/325/618), DEFERRED to the paper phase by user decision 2026-07-23 -- NOT the student campaign's C3/gruselect arm, which is an unrelated id that shares the label. So this stays blocked on a deferred block. Open question for the human: is 'after C3' a technical dependency or only roster ordering? If ordering, it can be re-prioritised; that is a user decision, not an assumption."
 ---
 
 # roll transient is WORST at none DR and improves monotonically as DR hardens (inverted, both runs)
@@ -142,4 +142,22 @@ static_260727_235736, roll os_env_mean/n_gt20 all levels; report diagnose-202607
 Status stays needs-experiment: the follow-up IS a training run (DORAEMON nominal sampling floor), so it is launch-gated like every other arm -- queue via omx queue-launch, never auto-run. What changed is only that nothing sequences ahead of it any more.
 
 One ambiguity to resolve before designing it, carried over from the closeout plan: the original "after C3" note does not say whether it meant teacher-C3 or student-C3. The student C3 is what just ran. If the intended prerequisite was a teacher-side C3, this lead is NOT actually unblocked and the sequencing note needs a correction instead -- check which before proposing the arm.
+
+---
+
+## Update (2026-07-30T05:05:28.338476)
+
+## RETRACTION 2026-07-30 (same day, supersedes the "UNBLOCKED" entry above): "after C3" means the TEACHER canonical C3, which is DEFERRED -- this lead is NOT unblocked
+
+[FINDING] The UNBLOCKED entry written earlier on 2026-07-30 matched the wrong C3. The 2026-07-24 sequencing note refers to the TEACHER canonical C3 -- the 4-arm x 3-seed ablation set -- which user decision 2026-07-23 DEFERRED to the paper phase. The student campaign's C3 arm (gruselect) is an unrelated id in a different campaign's numbering that happens to share the label. The prerequisite is therefore NOT met, and this lead stays blocked on a deferred paper-phase block.
+
+[EVIDENCE] Three independent checks agree, verified 2026-07-30: (1) DATE -- the sequencing note is dated 2026-07-24 and the student campaign student_distill_eint did not exist until 2026-07-29, so its C3 arm could not have been the referent. (2) CONTEXT -- the note sits in the RT-a shared-exam entry whose data is teacher-side (experiments/.../trpo_buoyanchor_s30_260722_134743/sweeps/rt_a_extend8k/summary.json, roll os_env_mean), not student. (3) GRAMMAR -- PLAN.md's canonical-id mapping table (section 3, line 142) lists C3 as a canonical TEACHER id, and PLAN.md:216/325/352/618 define it as "4 ablation arms x 3 seeds, 12 runs, workstation serial, ~60 h, DEFERRED to a later paper phase (user 2026-07-23)". PLAN.md:156 explicitly warns that C1-C3 labels also appear as per-document harness numbering and are excluded from the experiment-id scheme -- the collision is a known hazard in this roster.
+
+[CONFIDENCE] HIGH
+
+Consequence for planning: this lead is NOT the front of the training queue. It is sequenced behind a block the user has deferred, and multi-seed sets are declined outside an explicit paper-phase request, so nothing about it becomes actionable by waiting.
+
+One question the original note leaves genuinely open, and which is the human's to answer rather than mine to assume: whether "after C3" is a TECHNICAL dependency (the nominal-corner arm needs the ablation set's paired-seed baseline to be judged against) or merely ROSTER ORDERING (it was written below C3 in the queue). A 60 h ablation set is an odd technical prerequisite for a single DORAEMON sampling-floor probe, which suggests ordering -- but if it is only ordering, the arm could be re-prioritized ahead of the paper phase, and that is a user decision. Do not treat it as unblocked until that is stated.
+
+What C3-the-student-arm DID contribute here stands on its own and is unaffected by the retraction: C3 has the campaign's WORST none-level dispersion (att_norm CV 53.5% vs A0g 33.2% and C2 37.0%) and worst medium (108.8% vs C2 63.6%) while owning the hard end, which is the same inverted none-vs-hard shape this page records for the roll transient, now visible on a second metric family and on the campaign's best-tracking arm. That is evidence FOR the nominal-corner mechanism; it is not a sequencing unblock.
 

@@ -1,8 +1,8 @@
 ---
 title: "On-policy DAgger correction for the buoyfix student"
-tags: ["distillation", "student", "covariate-shift", "dagger", "albc", "sim-to-real", "next-experiment", "c3-gruselect"]
+tags: ["distillation", "student", "covariate-shift", "dagger", "albc", "sim-to-real", "next-experiment", "c3-gruselect", "id-collision"]
 created: 2026-07-24T03:35:28.710539
-updated: 2026-07-30T05:02:58.713679
+updated: 2026-07-30T05:05:43.720025
 sources: ["diagnose-20260729-161459", "diagnose-20260729-172500", "diagnose-20260729-184021", "diagnose-20260729-192128"]
 links: []
 category: decision
@@ -242,4 +242,18 @@ Two collateral results worth carrying, because they were produced by this arm an
 What is NOT closed by this, and where the training thread actually continues: the dispersion signal still sits on ss_error_std, for which the profile declares NO floor -- that is a profile floor-declaration decision, not an arm. And the campaign's next TRAINING arm is the nominal-corner exposure lead (roll_transient_is_worst_at_none_dr...), whose blocked-on read "sequenced after C3" and is now unblocked. C3's none-level dispersion being the campaign's worst is direct evidence for that lead, since the nominal corner is exactly where it degrades.
 
 Status moved to resolved: no arm remains for the DAgger-mechanism question. The mechanism (dagger_mix=select) was adopted from C2, and the GRU+select combination this lead proposed has been measured.
+
+---
+
+## Update (2026-07-30T05:05:43.720025)
+
+## CORRECTION 2026-07-30 (same day): the closing paragraph above named the wrong next training arm
+
+[FINDING] The paragraph "the campaign's next TRAINING arm is the nominal-corner exposure lead, whose blocked-on read 'sequenced after C3' and is now unblocked" is WRONG and is retracted. That lead's "after C3" refers to the TEACHER canonical C3 -- the 4-arm x 3-seed ablation set deferred to the paper phase by user decision 2026-07-23 -- not to this campaign's C3/gruselect arm. The two C3s are unrelated ids that share a label.
+
+[EVIDENCE] Resolved 2026-07-30 by three checks on the roll_transient page and PLAN.md: the sequencing note is dated 2026-07-24, before student_distill_eint existed (2026-07-29); its data is teacher-side (trpo_buoyanchor_s30_260722_134743 RT-a shared exam); and PLAN.md section 3 (line 142) lists C3 as a canonical TEACHER id, defined at 216/325/352/618 as 12 runs / ~60 h / DEFERRED to the paper phase. PLAN.md:156 already warns that C1-C3 labels double as per-document harness numbering and are excluded from the experiment-id scheme.
+
+[CONFIDENCE] HIGH
+
+Corrected statement of what remains after this lead closes: the DAgger-mechanism arm question is closed (mechanism adopted from C2, GRU+select measured as C3). No next training arm follows from THIS lead. The dispersion signal still sits on ss_error_std with no declared floor, which is a profile floor-declaration decision rather than an experiment. Choosing the campaign's next training arm is a separate, human-gated decision and does not fall out of this page.
 

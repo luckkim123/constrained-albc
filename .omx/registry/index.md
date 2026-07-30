@@ -1,6 +1,6 @@
 # Wiki Index
 
-> 342 pages | Last updated: 2026-07-30T05:03:34.314667
+> 342 pages | Last updated: 2026-07-30T05:05:43.720025
 
 ## convention
 

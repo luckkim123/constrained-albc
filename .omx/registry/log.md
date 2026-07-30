@@ -8323,3 +8323,11 @@
 - **Pages:** e0_eval_latent_instrument_fix_38d979e_lives_only_on_the_student_.md
 - **Summary:** updated 'E0 eval latent instrument fix 38d979e lives only on the student branch, not main'
 
+## [2026-07-30T05:05:28.338476] add
+- **Pages:** roll_transient_is_worst_at_none_dr_and_improves_monotonically_as.md
+- **Summary:** updated 'roll transient is WORST at none DR and improves monotonically as DR hardens (inverted, both runs)'
+
+## [2026-07-30T05:05:43.720025] add
+- **Pages:** on_policy_dagger_correction_for_the_buoyfix_student.md
+- **Summary:** updated 'On-policy DAgger correction for the buoyfix student'
+
