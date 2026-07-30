@@ -8251,3 +8251,23 @@
 - **Pages:** stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md
 - **Summary:** updated 'Stonefish yaw-gap claim review: main-body hydro yaw torque structurally zero (symmetric added mass kills Munk); PhysX DOES model arm reaction; real gaps = buoy added-mass ~10x under, no arm-link hydro, no yaw-torque DR axis'
 
+## [2026-07-30T03:11:23.475047] add
+- **Pages:** stonefish_rotational_drag_is_a_distributed_integral_with_no_sepa.md
+- **Summary:** updated 'Stonefish rotational drag is a distributed integral with no separate rotational term, so hull yaw pressure drag is exactly zero by construction -- the 45.5x yaw damping gap is an artifact and roll/pitch is corrupted by a force-derived torque correction'
+
+## [2026-07-30T03:25:10.976134] add
+- **Pages:** stonefish_rotational_drag_is_a_distributed_integral_with_no_sepa.md
+- **Summary:** updated 'Stonefish rotational drag is a distributed integral with no separate rotational term, so hull yaw pressure drag is exactly zero by construction -- the 45.5x yaw damping gap is an artifact and roll/pitch is corrupted by a force-derived torque correction'
+
+## [2026-07-30T03:31:36.659471] add
+- **Pages:** stonefish_rotational_drag_is_a_distributed_integral_with_no_sepa.md
+- **Summary:** updated 'Stonefish rotational drag is a distributed integral with no separate rotational term, so hull yaw pressure drag is exactly zero by construction -- the 45.5x yaw damping gap is an artifact and roll/pitch is corrupted by a force-derived torque correction'
+
+## [2026-07-30T03:49:47.548469] add
+- **Pages:** fault_dr_training_reduces_m4_dead_attitude_degradation_by_4_12x_.md
+- **Summary:** updated 'Fault-DR training reduces m4-dead attitude degradation by 4-12x versus the ancho'
+
+## [2026-07-30T03:49:59.271337] add
+- **Pages:** student_distillation_converges_to_a_residual_that_rules_out_late.md
+- **Summary:** updated 'Student distillation converges to a residual that rules out latent multimodality (teacher-visited distribution only)'
+

@@ -2,14 +2,14 @@
 title: "Student distillation converges to a residual that rules out latent multimodality (teacher-visited distribution only)"
 tags: ["distillation", "student", "latent", "multimodality", "diffusion-rejection", "albc", "envs-main"]
 created: 2026-07-21T10:03:15.840005
-updated: 2026-07-21T10:03:15.840005
+updated: 2026-07-30T03:49:59.271337
 sources: []
 links: ["albc_stage_2_is_teacher_driven_off_policy_bc_with_mixed_latent_a.md", "closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md", "student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md", "experiment_idea_feed_o_t_into_the_encoder_alongside_p_t_state_co.md"]
 category: pattern
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
 ---
 
 # Student distillation converges to a residual that rules out latent multimodality (teacher-visited distribution only)
@@ -68,4 +68,25 @@ Related: [[student_distillation_roll_heavy_tail_is_a_teacher_policy_propert]],
 - `constrained_albc/envs/_core/student/runner.py:186-189` -- `loss_latent = F.mse_loss(l_hat, batch.l_t)` (elementwise mean).
 - `deploy/joint1_constraint/pack_B_5000iter_260629_090902/MANIFEST.json` -- student path under `logs/legacy/`.
 - `constrained_albc/analysis/eval.py:897-915` -- `_summarize_latent` defines `l_true_envvar_mean` / `l_true_tvar_mean`.
+
+---
+
+## Update (2026-07-30T03:49:59.271337)
+
+[PATH UPDATE 2026-07-30] The pack_A run cited in this page's table,
+trpo_student_tcn_armA_260629_105521, has MOVED. This page's line stating that its
+directory is under logs/rsl_rl/albc_trpo_student/ is now stale.
+
+New locations (both trees, mirrored):
+  logs/legacy/rsl_rl/albc_trpo_student/trpo_student_tcn_armA_260629_105521
+  experiments/legacy/rsl_rl/albc_trpo_student/trpo_student_tcn_armA_260629_105521
+
+Why it moved: it was one of six runs sitting loose directly under <exp>/ with no group
+layer, which left campaign-drift reporting unregistered groups. Supersession was
+fact-checked before the move rather than assumed -- its teacher is
+joint1_constraint/trpo_avg_constraint_d05_260628_040906 from the retired joint1
+lineage, whereas the live student campaign (student_distill_eint) distills E-int. Byte
+totals were verified identical on both sides and the train symlink was recreated at the
+new depth. The run_id is unchanged, so every citation that names the id rather than a
+path still resolves.
 
