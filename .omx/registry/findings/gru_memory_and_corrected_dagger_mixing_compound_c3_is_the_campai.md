@@ -2,14 +2,14 @@
 title: "GRU memory and corrected DAgger mixing COMPOUND: C3 is the campaign's best latent tracker at every level and the first student to beat the teacher by a decision-grade margin"
 tags: ["student", "distillation", "dagger", "gru", "albc", "compound", "teacher-comparison", "c3"]
 created: 2026-07-29T11:46:10.396683
-updated: 2026-07-29T11:46:10.396683
+updated: 2026-08-03T05:50:03.314927
 sources: ["diagnose-20260729-200134"]
 links: []
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
 ---
 
 # GRU memory and corrected DAgger mixing COMPOUND: C3 is the campaign's best latent tracker at every level and the first student to beat the teacher by a decision-grade margin
@@ -91,4 +91,30 @@ have drawn the wrong conclusion.
 - C3's OPEN-LOOP `loss_latent` is the campaign's WORST (0.004924 vs A0g's 0.003521) while its in-loop
   tracking is the best. Do not judge these arms on open-loop loss: DAgger trains on a harder distribution
   by construction, and C2 already established that the mixing mechanisms separate only in-loop.
+
+---
+
+## Update (2026-08-03T05:50:03.314927)
+
+## ADOPTION DECISION 2026-08-03: C3 ADOPTED as the deployment student (supersedes the A0g-only adoption)
+
+User delegated the open gate-1 call ("do as recommended") and the recommendation was C3, on the
+deployment-regime argument this page left open: the operating target is open water with real plant
+mismatch (6 needs-apply-before-retrain leads still open), which sits closer to hard DR than to none,
+and hard is the ONLY level where C1-latsens showed latent fidelity reaching control (sensitivity
+1.070 deg/unit vs 0.027-0.214 elsewhere). C3 dominates hard on mean, dispersion, jitter and both
+axes, and is the only decision-grade student-over-teacher arm (-0.1537 deg vs the 0.1 floor).
+
+Caveats carried with the decision, not hidden: vs A0g the win is hard-only (all other deltas
+sub-floor) and C3's none/medium dispersion is campaign-worst; n=1 seed screening. The decision is
+cheaply reversible - both packs exist on disk.
+
+Executed: deploy pack exported 2026-08-03 at
+deploy/student_distill_eint/pack_eint_c3_gru_260803_144925 (same teacher model_4999.pt from
+trpo_eint_s30_rs2350_260727_195102, same attitude_only_5000 batch, device cpu). Parity self-close
+CLOSED: gru_latent_max_err 1.04e-07, gru_hidden_max_err 1.79e-07, teacher_act_max_err 5.96e-07 at
+atol 1e-5. The A0g pack (pack_eint_a0g_gru_260730_134104) is RETAINED as the fallback checkpoint.
+
+Consistency note: the next student arm (E1/B2) already builds on the GRU+select recipe, so the
+campaign lineage and the deployed checkpoint now agree.
 

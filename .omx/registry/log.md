@@ -8359,3 +8359,7 @@
 - **Pages:** 32768_envs_fit_on_the_dgx_gb10_83_2_121_7_gb_peak_no_fallback_at.md
 - **Summary:** created '32768 envs FIT on the DGX GB10 (83.2/121.7 GB peak, no fallback) at 34.73 s/iter, but per-doubling cost is degrading (1.78x -> 1.90x) and a 200-iter probe cannot see DORAEMON at all (step_interval 250)'
 
+## [2026-08-03T05:50:03.314927] add
+- **Pages:** gru_memory_and_corrected_dagger_mixing_compound_c3_is_the_campai.md
+- **Summary:** updated "GRU memory and corrected DAgger mixing COMPOUND: C3 is the campaign's best latent tracker at every level and the first student to beat the teacher by a decision-grade margin"
+
