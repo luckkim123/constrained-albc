@@ -2,7 +2,7 @@
 title: "obs4 student extra-observation interface: 4 deployable channels ride the observation dict through ONE shared student_input, zero-order held at the real 25 Hz bus rate; implemented and pushed 2026-08-03, not yet run"
 tags: ["obs4", "student-extra-obs", "observation-interface", "zero-order-hold", "imu", "pressure", "distillation", "phase-b", "phase-c", "inconclusive"]
 created: 2026-08-03T09:06:21.064863
-updated: 2026-08-03T15:15:41.962890
+updated: 2026-08-03T19:54:33.510722
 sources: ["diagnose-20260803-223517"]
 links: ["sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "albc_cudnn_fix_is_a_library_path_not_a_package.md", "real_albc_deployment_state_estimation_rates_measured_from_code_a.md", "c4b_dagger_correction_measured_partial_2_5_4x_in_loop_reduction.md", "container_cudnn_is_cu13_against_cu128_torch_every_conv1d_fails_s.md", "feedback_read_metric_units_from_code.md"]
 category: decision
@@ -11,7 +11,7 @@ schemaVersion: 1
 qualityScore: 90
 qualityReasons: ["generic-only-tags"]
 status: needs-experiment
-blocked-on: "Phase C INCONCLUSIVE (B2 = +0.2460, misses the pre-registered GO bar of +0.2707 by 0.0247 = 2.54 sigma; the earlier '0.0044' was anchored on a post-hoc control, corrected 2026-08-03). Hypothesis (a) capacity crowding is ELIMINATED by the widened-encoder arm trpo_sdeint_b2wide_gru256_s30_260803_231320 (report diagnose-20260803-235022, independently reviewed): doubling the GRU to 256 made latent sum(MSE) 13.5% WORSE and doubled the hard-DR control regression again, the opposite of what capacity crowding predicts. By elimination the surviving reading is (b) frozen-actor mismatch, which only gen-2 removes. Phase D (E-obs76 teacher retrain) is RUNNING as trpo_obs76_s30_260803_233239 in group teacher_obs76 -- NOTE the run id, the first launch trpo_obs76_s30_260803_232531 died on the double-advance bug and was trashed, so that id is stale. This lead is blocked on Phase D's H1 verdict, then on the human-gated Phase E re-distill."
+blocked-on: "Phase C INCONCLUSIVE (B2 = +0.2460, misses the pre-registered GO bar of +0.2707 by 0.0247 = 2.54 sigma). Hypothesis (a) capacity crowding ELIMINATED by the widened-encoder arm (report diagnose-20260803-235022). Phase D attempt 1 (trpo_obs76_s30_260803_233239) COMPLETED and is a VOID result: it failed H1 on both clauses (none roll n_gt20 0->20.33 envs vs a 15-env floor; hard att_norm ss_error +0.3012 deg vs a 0.10 floor) but trained with fault.enable=false while E-int trained with it TRUE, so the verdict is confounded with removing the adopted fault-DR -- and the published effect of that removal runs in the SAME direction as the failure. Report diagnose-20260804-045000 (report-review approve, report-coverage 7/7 groups). Now blocked on the corrected re-run trpo_obs76fault_s30_260804_043926 (launched 2026-08-04 04:39 KST with env.fault.enable=True, bite-checked against the recorded config), then on the human-gated Phase E re-distill."
 ---
 
 # obs4 student extra-observation interface: 4 deployable channels ride the observation dict through ONE shared student_input, zero-order held at the real 25 Hz bus rate; implemented and pushed 2026-08-03, not yet run
@@ -285,4 +285,27 @@ after a crash-fix ALWAYS changes the run id. Anything written down between the t
 watcher/chain scripts, wiki blocked-on fields, memory notes -- points at a directory that will
 never be created. Re-derive the id from disk (`ls` the group dir) after any relaunch rather than
 reusing what was recorded before it.
+
+---
+
+## Update (2026-08-03T19:54:33.510722)
+
+## Phase D status update 2026-08-04
+
+Attempt 1 ran to completion and produced a VOID result on its intended question. The full
+account is in the run's report (`diagnose-20260804-045000`) and the methodological lesson is on
+its own page: a one-variable claim must be checked against the BASELINE RUN's recorded
+`config/env.yaml`, because E-int was launched dirty and its `fault.enable: true` was invisible to
+the committed-diff check the launch note relied on.
+
+What attempt 1 does establish, and what carries forward to the re-run:
+
+- gen-2 is mechanically sound -- a 76D policy trains 5000 iterations to completion with unchanged
+  latent scale (`Encoder/z_std` 0.391 vs 0.393), the same binding constraint (`thruster_util`)
+  and 100% survival at every DR level.
+- Two leads to re-test under the controlled comparison: (i) an axis trade in which pitch degrades
+  monotonically with DR (+0.0391/+0.0922/+0.1052/+0.3062 deg) while roll improves at three of
+  four levels and sheds a 63.19 deg hard-DR peak down to 3.36 deg; (ii) a weaker encoder learning
+  signal (`Policy/encoder_grad_norm` -17.8%, `Grad/enc_step` -36.3%) which should NOT move with
+  observation width at all and therefore probably tracks the easier plant.
 

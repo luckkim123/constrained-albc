@@ -8827,3 +8827,23 @@
 - **Pages:** the_five_declared_encoder_tb_tags_encoder_z_std_encoder_z_min_en.md
 - **Summary:** updated 'The five declared encoder TB tags (`Encoder/z_std`, `Encoder/z_min`, `Encoder/z_'
 
+## [2026-08-03T19:40:59.735762] query
+- **Pages:** canonical_final_teacher_baseline_buoyfix_anchor_trpo_buoyanchor_.md, incident_post_mortem_teacher_baseline_opt_e1_e4_trained_on_a_tam.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, open_actionable_ledger_read_before_any_sim_plant_code_change_or_.md, plant_change_batch_v2_four_isaac_plant_corrections_are_now_pendi.md, ftc_fault_dr_a_b_result_2026_07_27_fault_dr_adopted_5_12x_less_m.md, hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md, baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md, plant_fix_needs_apply_before_retrain_main_hull_volume_0_009_0_00.md, next_experiment_workflow_pick_a_baseline_train_once_then_re_tune.md, adding_a_dr_axis_is_half_a_change_dr_config_s_dr_tuple_fields_tr.md, eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md, extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_.md, cross_run_reference_values_must_be_re_extracted_fresh_never_carr.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, tam_plant_correctness_fix_collapses_the_void_hard_dr_roll_heavy_.md, baseline_repro_reproduces_teacher_deterministically_e4_control.md, doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md, eval_command_box_was_half_the_trained_envelope_from_2026_04_06_t.md
+- **Summary:** query 'teacher retrain plant match fault DR confound baseline config' -> 20 of 345
+
+## [2026-08-03T19:54:01.344116] add
+- **Pages:** a_one_variable_retrain_must_be_verified_against_the_baseline_run.md
+- **Summary:** created "A one-variable retrain must be verified against the BASELINE RUN's recorded config/env.yaml, not against the committed git diff -- a baseline launched dirty hides plant flags from every source-level check"
+
+## [2026-08-03T19:54:01.455891] add
+- **Pages:** removing_fault_dr_from_the_teacher_recipe_has_a_measurable_signa.md
+- **Summary:** created 'Removing fault-DR from the teacher recipe has a measurable signature on the HEALTHY eval too: better nominal steady state, much worse hard-DR tail, and a wider thruster_util margin'
+
+## [2026-08-03T19:54:01.563410] add
+- **Pages:** metrics_yaml_declares_doraemon_success_rate_but_the_real_tb_tag_.md
+- **Summary:** created 'metrics.yaml declares doraemon_success_rate but the real TB tag is DORAEMON/success_rate -- a coverage check that trusts the declared token reports the group as unlogged'
+
+## [2026-08-03T19:54:33.510722] add
+- **Pages:** obs4_student_extra_observation_interface_4_deployable_channels_r.md
+- **Summary:** updated 'obs4 student extra-observation interface: 4 deployable channels ride the observation dict through ONE shared student_input, zero-order held at the real 25 Hz bus rate; implemented and pushed 2026-08-03, not yet run'
+
