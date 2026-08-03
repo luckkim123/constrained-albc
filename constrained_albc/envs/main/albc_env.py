@@ -25,7 +25,7 @@ from isaaclab.utils.math import euler_xyz_from_quat, quat_apply, quat_apply_inve
 
 from marinelab.core import HydrodynamicsModel
 
-from .config import ALBCEnvCfg, apply_bias_ema_obs, apply_privileged_fault_obs
+from .config import ALBCEnvCfg, apply_bias_ema_obs, apply_extra_policy_obs, apply_privileged_fault_obs
 from .mdp import faults
 from .mdp.constraints import apply_joint1_constraint_arm, compute_all_costs
 from .mdp.events import (
@@ -110,6 +110,11 @@ class ALBCEnv(DirectRLEnv):
         # noise-model tuples that DirectRLEnv.__init__ consumes to build gym spaces + the
         # noise model. See config.apply_bias_ema_obs.
         apply_bias_ema_obs(cfg)
+
+        # Materialize the gen-2 extra-policy-obs toggle (no-op unless cfg.use_extra_policy_obs).
+        # MUST run AFTER apply_bias_ema_obs -- that one asserts a pre-bump width of exactly 69 --
+        # and before super().__init__(), for the same reason. See config.apply_extra_policy_obs.
+        apply_extra_policy_obs(cfg)
 
         # Materialize the Arm-B privileged-fault-obs toggle (no-op unless
         # cfg.use_privileged_fault_obs). MUST also run before super().__init__():
@@ -202,12 +207,15 @@ class ALBCEnv(DirectRLEnv):
             expected_obs_dim += self.cfg.integral_dims
         if self.cfg.use_bias_ema_obs:
             expected_obs_dim += 3
+        if getattr(self.cfg, "use_extra_policy_obs", False):
+            expected_obs_dim += 4
         if expected_obs_dim != self.cfg.observation_space:
             raise ValueError(
                 f"observation_space={self.cfg.observation_space} != computed obs dim {expected_obs_dim} "
                 f"(proprio={PROPRIO_DIM}, hist_len={self._hist_len}, hist_action_len={self._hist_action_len}, "
                 f"use_integral_obs={self.cfg.use_integral_obs}, integral_dims={self.cfg.integral_dims}, "
-                f"use_bias_ema_obs={self.cfg.use_bias_ema_obs})"
+                f"use_bias_ema_obs={self.cfg.use_bias_ema_obs}, "
+                f"use_extra_policy_obs={getattr(self.cfg, 'use_extra_policy_obs', False)})"
             )
 
         # Pre-build the integral error-gating sigma tensor once (step-invariant cfg constants).
@@ -469,6 +477,11 @@ class ALBCEnv(DirectRLEnv):
         base = list(_OBS_NOISE_STD)
         if getattr(self.cfg, "use_bias_ema_obs", False):
             base = base + [0.0, 0.0, 0.0]
+        # Gen-2: the 4 folded channels get std 0 for the same reason the integral and
+        # bias_ema dims do -- they carry their own sensor model, so the generic obs-noise
+        # layer must be identity on them (see config.apply_extra_policy_obs).
+        if getattr(self.cfg, "use_extra_policy_obs", False):
+            base = base + [0.0, 0.0, 0.0, 0.0]
         return torch.tensor(base, device=self.device)
 
     def _init_faults(self) -> None:
@@ -1147,6 +1160,18 @@ class ALBCEnv(DirectRLEnv):
         if self.cfg.use_bias_ema_obs:
             policy_obs = torch.cat([policy_obs, self._bias_ema], dim=-1)
 
+        # The 4 deployable sensor channels, computed ONCE per step and shared by both
+        # consumers below. compute_student_extra_obs advances the zero-order-hold state and
+        # draws sensor noise, so calling it twice would hand the policy and the student key
+        # two DIFFERENT signals in the same step -- silently, and only when both flags are on.
+        extra_obs = compute_student_extra_obs(self, self._robot) if self.cfg.use_student_extra_obs else None
+
+        # Gen-2 (Phase D): fold those channels into policy_obs itself (72 -> 76), so the
+        # teacher's actor is trained on them. Lands after bias_ema, matching the width order
+        # apply_extra_policy_obs bumps and _obs_noise_base_std pads. No-op in gen-1.
+        if self.cfg.use_extra_policy_obs:
+            policy_obs = torch.cat([policy_obs, extra_obs], dim=-1)
+
         # Per-env sensor-noise fault: extra noise on top of the always-on noise model.
         # No-op (identity) when fault is disabled -> obs byte-identical. base_std tracks
         # the always-on noise model's std (69D, or 72D when use_bias_ema_obs extends it),
@@ -1163,12 +1188,14 @@ class ALBCEnv(DirectRLEnv):
         )
 
         observations = {"policy": policy_obs}
-        # E1/B2: publish the 4 extra student channels as their own obs key. NOT appended to
-        # policy_obs in gen-1, so the frozen teacher actor's 72D input is untouched. The key
-        # rides RslRlVecEnvWrapper's TensorDict straight to the student runner and to
-        # StudentInLoopPolicy -- no env.unwrapped reach-through anywhere.
-        if self.cfg.use_student_extra_obs:
-            observations[STUDENT_EXTRA_OBS_KEY] = compute_student_extra_obs(self, self._robot)
+        # E1/B2: publish the 4 extra student channels as their own obs key. In gen-1 they are
+        # NOT in policy_obs, so the frozen teacher actor's 72D input is untouched; in gen-2
+        # this is the same tensor already folded above, republished so a gen-1 student can
+        # still be distilled from a gen-2 env. The key rides RslRlVecEnvWrapper's TensorDict
+        # straight to the student runner and to StudentInLoopPolicy -- no env.unwrapped
+        # reach-through anywhere.
+        if extra_obs is not None:
+            observations[STUDENT_EXTRA_OBS_KEY] = extra_obs
         assert policy_obs.shape[-1] == self.cfg.observation_space, (
             f"emitted policy obs dim {policy_obs.shape[-1]} != "
             f"cfg.observation_space {self.cfg.observation_space}"

@@ -678,6 +678,12 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # from any real bag -- the firmware ships its own loop count as loop_speed in the
     # DEPTH field, so the true value is loop_speed/4. Re-set this once that bag exists.
     extra_obs_hold_steps: int = 2   # 1 = no hold (50 Hz, NOT deployable today)
+    # Gen-2 (Phase D of the 2026-08-03 obs4 program plan): fold the SAME 4 channels into
+    # policy_obs itself, 72 -> 76, so the TEACHER's actor is trained with them. Gen-1 left
+    # the actor blind to the student's inputs, which is the confound Phase C could not
+    # separate from capacity crowding. Requires use_student_extra_obs=True (the channels
+    # must be computed to be folded). Off by default = byte-identical to gen-1.
+    use_extra_policy_obs: bool = False
 
 
 def apply_bias_ema_obs(cfg) -> None:
@@ -722,6 +728,51 @@ def apply_bias_ema_obs(cfg) -> None:
         noise_cfg.std = tuple(noise_cfg.std) + zeros3
         bias_cfg.n_min = tuple(bias_cfg.n_min) + zeros3
         bias_cfg.n_max = tuple(bias_cfg.n_max) + zeros3
+
+
+def apply_extra_policy_obs(cfg) -> None:
+    """Materialize the gen-2 extra-policy-obs toggle, in place.
+
+    MUST be called from ALBCEnv.__init__ AFTER apply_bias_ema_obs and BEFORE
+    super().__init__(), for the same reason apply_bias_ema_obs must: observation_space
+    and observation_noise_model are consumed by DirectRLEnv.__init__ to build the gym
+    spaces and the noise model. The ordering against apply_bias_ema_obs matters only
+    because that one asserts a pre-bump width of exactly 69; this one accepts whichever
+    width it left, so the two compose in either configuration.
+
+    use_extra_policy_obs=False (default): no-op, byte-identical to gen-1.
+    use_extra_policy_obs=True: observation_space += 4, appending the 4 deployable channels
+    (IMU specific force 3D + pressure-derived heave rate 1D) after the bias_ema dims (see
+    ALBCEnv._get_observations). The noise/bias tuples are extended by 4 ZEROS each,
+    mirroring how the integral and bias_ema dims are already treated -- these channels
+    carry their OWN sensor model (depth_noise_std / heave_lag_tau / accel_noise_std / the
+    zero-order hold), so stacking the generic obs-noise layer on top would double-noise
+    them and break the correspondence with what the real bus delivers.
+    """
+    if not cfg.use_extra_policy_obs:
+        return
+    if not cfg.use_student_extra_obs:
+        raise ValueError(
+            "use_extra_policy_obs=True requires use_student_extra_obs=True -- the 4 channels "
+            "are produced by compute_student_extra_obs, which only runs under that flag, so "
+            "gen-2 would otherwise fold an absent tensor into policy_obs."
+        )
+    if cfg.observation_space not in (69, 72):
+        raise ValueError(
+            f"use_extra_policy_obs=True expects observation_space 69 or 72 pre-bump, got "
+            f"{cfg.observation_space} (materializer already applied, or observation_space "
+            "was overridden elsewhere)"
+        )
+    cfg.observation_space += 4
+    # Same eval caveat as apply_bias_ema_obs: eval.py nulls observation_noise_model while the
+    # 76D policy still needs the space bump, and _obs_noise_base_std reconstructs the width.
+    if cfg.observation_noise_model is not None:
+        zeros4 = (0.0, 0.0, 0.0, 0.0)
+        noise_cfg = cfg.observation_noise_model.noise_cfg
+        bias_cfg = cfg.observation_noise_model.bias_noise_cfg
+        noise_cfg.std = tuple(noise_cfg.std) + zeros4
+        bias_cfg.n_min = tuple(bias_cfg.n_min) + zeros4
+        bias_cfg.n_max = tuple(bias_cfg.n_max) + zeros4
 
 
 def apply_privileged_fault_obs(cfg) -> None:
