@@ -8743,3 +8743,87 @@
 - **Pages:** obs4_student_extra_observation_interface_4_deployable_channels_r.md
 - **Summary:** updated 'obs4 student extra-observation interface: 4 deployable channels ride the observation dict through ONE shared student_input, zero-order held at the real 25 Hz bus rate; implemented and pushed 2026-08-03, not yet run'
 
+## [2026-08-03T15:15:41.962890] add
+- **Pages:** obs4_student_extra_observation_interface_4_deployable_channels_r.md
+- **Summary:** updated 'obs4 student extra-observation interface: 4 deployable channels ride the observation dict through ONE shared student_input, zero-order held at the real 25 Hz bus rate; implemented and pushed 2026-08-03, not yet run'
+
+## [2026-08-03T15:16:03.279468] add
+- **Pages:** wide_draws_an_independent_env_set_from_every_other_arm_including.md
+- **Summary:** updated 'WIDE draws an independent env set from every other arm, including B2 whose recip'
+
+## [2026-08-03T15:16:03.279468] add
+- **Pages:** the_channels_are_live_and_the_zero_order_hold_is_physically_pres.md
+- **Summary:** updated 'The channels are live and the zero-order hold is physically present in this arm '
+
+## [2026-08-03T15:16:03.279468] add
+- **Pages:** widening_the_encoder_made_latent_reconstruction_worse_in_absolut.md
+- **Summary:** updated 'Widening the encoder made latent reconstruction WORSE in absolute error: `sum(MS'
+
+## [2026-08-03T15:16:03.279468] add
+- **Pages:** the_aggregate_r2_almost_entirely_masks_that_regression_and_it_ma.md
+- **Summary:** created 'The aggregate `R2` almost entirely masks that regression, and it masks it in the'
+
+## [2026-08-03T15:16:03.279468] add
+- **Pages:** d6_the_pre_registered_dimension_whose_32_1_error_drop_was_b2_s_s.md
+- **Summary:** updated "d6 — the pre-registered dimension whose 32.1% error drop was B2's single stronge"
+
+## [2026-08-03T15:16:03.279468] add
+- **Pages:** capacity_crowding_is_not_supported_as_the_explanation_for_phase_.md
+- **Summary:** updated "Capacity crowding is not supported as the explanation for Phase C's redistributi"
+
+## [2026-08-03T15:16:03.279468] add
+- **Pages:** the_training_loss_and_the_eval_latent_error_point_in_opposite_di.md
+- **Summary:** updated 'The training loss and the eval latent error point in OPPOSITE directions for thi'
+
+## [2026-08-03T15:16:03.279468] add
+- **Pages:** this_retires_loss_latent_as_an_independent_corroborator_of_an_ev.md
+- **Summary:** updated 'This retires `loss_latent` as an independent corroborator of an eval-side latent'
+
+## [2026-08-03T15:16:03.279468] add
+- **Pages:** dagger_teacher_frac_is_0_499958_in_both_b2_and_wide_identical_to.md
+- **Summary:** updated '`dagger_teacher_frac` is 0.499958 in both B2 and WIDE, identical to six decimals'
+
+## [2026-08-03T15:16:03.279468] add
+- **Pages:** widening_did_not_rescue_the_hard_dr_control_regression_it_deepen.md
+- **Summary:** updated 'Widening did not rescue the hard-DR control regression, it deepened it: hard `at'
+
+## [2026-08-03T15:16:03.279468] add
+- **Pages:** the_hard_level_distribution_is_dominated_by_a_few_envs_rather_th.md
+- **Summary:** updated 'The hard-level distribution is dominated by a few envs rather than uniformly shi'
+
+## [2026-08-03T15:16:03.279468] add
+- **Pages:** no_per_axis_attribution_of_the_hard_regression_is_supportable_in.md
+- **Summary:** updated 'No per-axis attribution of the hard regression is supportable in this arm: the l'
+
+## [2026-08-03T15:16:03.279468] add
+- **Pages:** wide_is_the_best_arm_in_the_set_at_none_on_the_mean_0_4948_below.md
+- **Summary:** updated "WIDE is the best arm in the set at `none` on the mean (0.4948, below B2's 0.5137"
+
+## [2026-08-03T15:16:03.279468] add
+- **Pages:** the_none_improvement_is_itself_sub_floor_and_must_not_be_read_as.md
+- **Summary:** updated 'The `none` improvement is itself sub-floor and must not be read as a gain: WIDE '
+
+## [2026-08-03T15:16:03.279468] add
+- **Pages:** the_reward_decomposition_cannot_exist_for_this_run_type_distilla.md
+- **Summary:** updated 'The reward decomposition cannot exist for this run type: distillation freezes th'
+
+## [2026-08-03T15:16:03.279468] add
+- **Pages:** no_trpo_learning_dynamics_group_exists_there_is_no_policy_optimi.md
+- **Summary:** updated 'No TRPO learning-dynamics group exists: there is no policy optimisation in a dis'
+
+## [2026-08-03T15:16:03.279468] add
+- **Pages:** loss_value_function_and_loss_cost_value_are_absent_the_run_fits_.md
+- **Summary:** updated '`Loss/value_function` and `Loss/cost_value` are absent: the run fits no critic.'
+
+## [2026-08-03T15:16:03.279468] add
+- **Pages:** none_of_the_20_declared_constraint_tags_exist_and_barrier_penalt.md
+- **Summary:** updated 'None of the 20 declared constraint tags exist and `barrier_penalty` is not logge'
+
+## [2026-08-03T15:16:03.279468] add
+- **Pages:** the_doraemon_curriculum_group_is_absent_by_design_configure_env_.md
+- **Summary:** updated 'The DORAEMON curriculum group is absent by design: `configure_env_for_student` d'
+
+## [2026-08-03T15:16:03.279468] add
+- **Pages:** the_five_declared_encoder_tb_tags_encoder_z_std_encoder_z_min_en.md
+- **Summary:** updated 'The five declared encoder TB tags (`Encoder/z_std`, `Encoder/z_min`, `Encoder/z_'
+

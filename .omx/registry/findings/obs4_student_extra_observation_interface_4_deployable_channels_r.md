@@ -2,7 +2,7 @@
 title: "obs4 student extra-observation interface: 4 deployable channels ride the observation dict through ONE shared student_input, zero-order held at the real 25 Hz bus rate; implemented and pushed 2026-08-03, not yet run"
 tags: ["obs4", "student-extra-obs", "observation-interface", "zero-order-hold", "imu", "pressure", "distillation", "phase-b", "phase-c", "inconclusive"]
 created: 2026-08-03T09:06:21.064863
-updated: 2026-08-03T15:01:48.855779
+updated: 2026-08-03T15:15:41.962890
 sources: ["diagnose-20260803-223517"]
 links: ["sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "albc_cudnn_fix_is_a_library_path_not_a_package.md", "real_albc_deployment_state_estimation_rates_measured_from_code_a.md", "c4b_dagger_correction_measured_partial_2_5_4x_in_loop_reduction.md", "container_cudnn_is_cu13_against_cu128_torch_every_conv1d_fails_s.md", "feedback_read_metric_units_from_code.md"]
 category: decision
@@ -11,7 +11,7 @@ schemaVersion: 1
 qualityScore: 90
 qualityReasons: ["generic-only-tags"]
 status: needs-experiment
-blocked-on: "Phase C INCONCLUSIVE (B2 = +0.2460, misses the pre-registered GO bar of +0.2707 by 0.0247 = 2.54 sigma; the earlier '0.0044' was anchored on a post-hoc control, corrected 2026-08-03). Hypothesis (a) capacity crowding is now ELIMINATED by the widened-encoder arm trpo_sdeint_b2wide_gru256_s30_260803_231320 (report diagnose-20260803-235022, independently reviewed): doubling the GRU to 256 made latent sum(MSE) 13.5% WORSE and doubled the hard-DR control regression again, the opposite of what capacity crowding predicts. By elimination the surviving reading is (b) frozen-actor mismatch, which only gen-2 removes. Phase D (E-obs76 teacher retrain) is RUNNING as trpo_obs76_s30_260803_232531 in group teacher_obs76; this lead is blocked on its H1 verdict, then on the human-gated Phase E re-distill."
+blocked-on: "Phase C INCONCLUSIVE (B2 = +0.2460, misses the pre-registered GO bar of +0.2707 by 0.0247 = 2.54 sigma; the earlier '0.0044' was anchored on a post-hoc control, corrected 2026-08-03). Hypothesis (a) capacity crowding is ELIMINATED by the widened-encoder arm trpo_sdeint_b2wide_gru256_s30_260803_231320 (report diagnose-20260803-235022, independently reviewed): doubling the GRU to 256 made latent sum(MSE) 13.5% WORSE and doubled the hard-DR control regression again, the opposite of what capacity crowding predicts. By elimination the surviving reading is (b) frozen-actor mismatch, which only gen-2 removes. Phase D (E-obs76 teacher retrain) is RUNNING as trpo_obs76_s30_260803_233239 in group teacher_obs76 -- NOTE the run id, the first launch trpo_obs76_s30_260803_232531 died on the double-advance bug and was trashed, so that id is stale. This lead is blocked on Phase D's H1 verdict, then on the human-gated Phase E re-distill."
 ---
 
 # obs4 student extra-observation interface: 4 deployable channels ride the observation dict through ONE shared student_input, zero-order held at the real 25 Hz bus rate; implemented and pushed 2026-08-03, not yet run
@@ -268,4 +268,21 @@ frozen actor.
 
 Note the last row: the training loss moved OPPOSITE to the eval. See the separate page on why
 `loss_latent` is not a valid corroborator of an eval-side latent claim.
+
+---
+
+## Update (2026-08-03T15:15:41.962890)
+
+## Run-id correction (2026-08-03 night)
+
+Phase D was launched twice. The first attempt, `trpo_obs76_s30_260803_232531`, died at iteration 1
+on the sensor-model double-advance bug and was trashed; the relaunch after the fix minted
+`trpo_obs76_s30_260803_233239`, which is the run that is actually training. Any note citing the
+`..._232531` id refers to the dead attempt.
+
+The generalizable point: `make_run_id` stamps a fresh timestamp at every launch, so a relaunch
+after a crash-fix ALWAYS changes the run id. Anything written down between the two launches --
+watcher/chain scripts, wiki blocked-on fields, memory notes -- points at a directory that will
+never be created. Re-derive the id from disk (`ls` the group dir) after any relaunch rather than
+reusing what was recorded before it.
 

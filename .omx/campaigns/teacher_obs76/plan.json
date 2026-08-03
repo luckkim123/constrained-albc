@@ -1,0 +1,7 @@
+{
+  "campaign_id": "teacher_obs76",
+  "created": "2026-08-03T15:14:59.905921+00:00",
+  "goal": "obs4 Phase D: retrain the E-int teacher with the 4 deployable sensor channels folded INTO policy_obs (72 -> 76, gen-2), so the actor is trained on the same inputs the student must reconstruct from. One variable vs E-int: observation width. Verdict rule H1 = no nominal-level floor regresses AND hard att_norm within floors -> the new teacher is eligible for the Phase E re-distill. A teacher-side improvement is possible but NOT required.",
+  "baseline_run_id": "trpo_eint_s30_rs2350_260727_195102",
+  "predecessor": "teacher_baseline_buoyfix"
+}
