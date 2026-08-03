@@ -8367,3 +8367,15 @@
 - **Pages:** plant_change_batch_v2_four_isaac_plant_corrections_are_now_pendi.md
 - **Summary:** updated 'Plant-change batch v2: four Isaac plant corrections are now pending and each alone forces a teacher retrain, so they are batched behind one sizing gate instead of decided individually'
 
+## [2026-08-03T05:57:29.627258] add
+- **Pages:** stonefish_role_narrowed_to_integration_smoke_bench_user_ratified.md
+- **Summary:** created 'Stonefish role narrowed to integration smoke bench (user-ratified 2026-08-03): no coefficient source, no performance verdicts; priority moves to thruster/real-robot anchors; third simulator rejected'
+
+## [2026-08-03T06:10:28.634376] add
+- **Pages:** stonefish_role_narrowed_to_integration_smoke_bench_ratified_2026.md
+- **Summary:** created "Stonefish role narrowed to integration smoke bench (ratified 2026-08-03): no more absolute-performance or coefficient verdicts; real-robot anchors take priority; retrain principle = widen DR by measured uncertainty, never move coefficients to a simulator's value"
+
+## [2026-08-03T06:10:45.185310] add
+- **Pages:** plant_change_batch_v2_four_isaac_plant_corrections_are_now_pendi.md
+- **Summary:** updated 'Plant-change batch v2: four Isaac plant corrections are now pending and each alone forces a teacher retrain, so they are batched behind one sizing gate instead of decided individually'
+

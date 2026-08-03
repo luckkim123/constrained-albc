@@ -2,7 +2,7 @@
 title: "Plant-change batch v2: four Isaac plant corrections are now pending and each alone forces a teacher retrain, so they are batched behind one sizing gate instead of decided individually"
 tags: ["plant", "batch", "retrain", "buoy", "added-mass", "damping", "thruster", "actuator", "sim-to-real", "guard-structure", "sequencing"]
 created: 2026-07-29T11:46:55.315005
-updated: 2026-08-03T05:53:22.346889
+updated: 2026-08-03T06:10:45.185310
 sources: ["stonefish-reply-20260729", "buoy-hydro-rig-20260729", "thruster-static-gain-20260729", "servo-chatter-p1-correction-20260729", "stonefish-reply-20260730", "code-verify-20260730"]
 links: []
 category: decision
@@ -91,4 +91,20 @@ GATE, same discipline as the other four: adopt into the batch ONLY IF E1/B2 firs
 channels carry real information (per-dim R2 rises on the currently-negative dims). If E1 returns
 null, the channels earn nothing at the encoder and there is no reason to expect the actor to use
 them better - drop this candidate rather than retrain on faith.
+
+---
+
+## Update (2026-08-03T06:10:45.185310)
+
+## GOVERNING PRINCIPLE RATIFIED 2026-08-03 (Stonefish role decision)
+
+The batch is now governed by the ratified real-anchor principle: never move a hydro coefficient
+to either simulator's value - widen the DR distribution by the measured uncertainty instead, with
+the curriculum budget retuned alongside (curriculum_recalibration lead). The existing candidates
+already comply (buoy targets the GEOMETRIC value; thruster and actuator candidates align to the
+bench measurements), but any future candidate must be checked against it. The bench session
+(T200 curve + XW540 step response) is now the official cross-team resource priority - and it has
+NO booked date, which is why the obs4 program (2026-08-03 plan) proceeds on the current plant
+generation rather than waiting for this batch. See wiki page
+stonefish_role_narrowed_to_integration_smoke_bench_ratified_2026.
 
