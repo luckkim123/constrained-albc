@@ -1,6 +1,6 @@
 # Wiki Index
 
-> 342 pages | Last updated: 2026-07-30T05:22:44.654801
+> 344 pages | Last updated: 2026-07-30T08:15:48.169652
 
 ## convention
 
@@ -41,6 +41,7 @@
 
 ## debugging
 
+- [C4b DAgger correction measured: partial (2.5-4x in-loop reduction at low-mod DR, under-dispersion floor persists at hard)](c4b_dagger_correction_measured_partial_2_5_4x_in_loop_reduction_.md) - # C4b DAgger correction measured: partial (2.5-4x in-loop reduction at low-mo...
 - [DORAEMON/kl_step final value 0.0000 is a sparse-logging artifact, NOT a frozen curriculum](doraemon_kl_step_final_value_0_0000_is_a_sparse_logging_artifact.md) - # DORAEMON/kl_step final value 0.0000 is a sparse-logging artifact, NOT a fro...
 - [ENGINE-GAP: analyze_training deep-plot has 2 blank panels + inconsistent legends; no DORAEMON curriculum plot](engine_gap_analyze_training_deep_plot_has_2_blank_panels_inconsi.md) - # ENGINE-GAP: analyze_training deep-plot has 2 blank panels + inconsistent le...
 - [heavy-tail vs sample-mean divergence are independent](heavy_tail_vs_sample_mean_divergence_are_independent.md) - # heavy-tail vs sample-mean divergence are independent
@@ -148,6 +149,7 @@
 
 ## reference
 
+- [32768 envs FIT on the DGX GB10 (83.2/121.7 GB peak, no fallback) at 34.73 s/iter, but per-doubling cost is degrading (1.78x -> 1.90x) and a 200-iter probe cannot see DORAEMON at all (step_interval 250)](32768_envs_fit_on_the_dgx_gb10_83_2_121_7_gb_peak_no_fallback_at.md) - # 32768 envs FIT on the DGX GB10 (83.2/121.7 GB peak, no fallback) at 34.73 s...
 - [Absolute-degree reference scales for judging attitude deltas (stop reading percentages on a small base)](absolute_degree_reference_scales_for_judging_attitude_deltas_sto.md) - # Absolute-degree reference scales for judging attitude deltas (stop reading ...
 - [action pipeline behavior walk-through (two clamps / raw gaussian vs tanh / delta integrator reset / single-vector two-dynamics / arm PD gain DR)](action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md) - # action pipeline behavior walk-through (two clamps / raw gaussian vs tanh / ...
 - [Actuator hardware identification: arm=XW540-T260 (board-measured), prior 'no PID-gain code' claim corrected, thrust-curve keep-off, step-response prereqs](actuator_hardware_identification_arm_xw540_t260_board_measured_p.md) - # Actuator hardware identification: arm=XW540-T260 (board-measured), prior 'n...
