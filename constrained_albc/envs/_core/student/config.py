@@ -13,7 +13,15 @@ _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..",
 
 @dataclass
 class StudentCfg:
-    """Hyperparameters for student encoder supervised training."""
+    """Hyperparameters for student encoder supervised training.
+
+    Fields must stay primitive-only (str/int/float/bool/tuple) -- runner.py's
+    _save_checkpoint persists the whole cfg as ``vars(self.cfg)`` inside the checkpoint,
+    and eval.py / student_policy.py both unpickle it back out but currently use
+    differing torch.load ``weights_only`` settings historically. A non-primitive field
+    would load fine under one and raise under the other; explicit primitives keep both
+    loaders safe regardless of that setting.
+    """
 
     # Experiment. experiment_name shares the teacher's "albc_trpo" prefix (2026-05-26) so
     # teacher (albc_trpo_teacher) and student (albc_trpo_student) cluster together under

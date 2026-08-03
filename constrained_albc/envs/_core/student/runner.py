@@ -22,7 +22,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from .collector import RolloutBuffer
 from .config import StudentCfg, dagger_beta_at
-from .models import extra_scale_tensor, make_student_encoder, student_input
+from .models import STUDENT_EXTRA_OBS_KEY, extra_scale_tensor, make_student_encoder, student_input
 from .teacher import FrozenTeacher
 
 logger = logging.getLogger(__name__)
@@ -229,7 +229,7 @@ class StudentRunner:
 
             obs = obs_next["policy"]
             privileged = obs_next["privileged"]
-            extra = obs_next.get("student_extra") if self.cfg.extra_obs_dim > 0 else None
+            extra = obs_next.get(STUDENT_EXTRA_OBS_KEY) if self.cfg.extra_obs_dim > 0 else None
             prev_dones = dones.to(torch.bool)
 
         # Persist last env.step dones so the next rollout's step_idx=0 records
@@ -332,7 +332,32 @@ class StudentRunner:
 
     def _save_checkpoint(self, iter_idx: int) -> None:
         path = os.path.join(self.log_dir, "models", f"student_{iter_idx}.pt")
-        torch.save({"iter": iter_idx, "student_state_dict": self.student.state_dict(), "cfg": vars(self.cfg)}, path)
+        # IMPORTANT-1 fix (fix-wave 2026-08-03): the 4 sensor-model knobs that define what
+        # the extra channels physically ARE (extra_obs_hold_steps, heave_lag_tau,
+        # depth_noise_std, accel_noise_std -- ALBCEnvCfg, set by hydra override at train
+        # time) were previously persisted NOWHERE and silently defaulted at eval, so a
+        # non-default train-time value (e.g. hold_steps=4) would eval against a different
+        # sensor model with no error. self.env already holds the trained env_cfg (see
+        # configure_env_for_student above), so read them off it here -- no new constructor
+        # parameter needed. getattr with the ALBCEnvCfg defaults: full_dof/TDC variants
+        # (see IMPORTANT-2) have no such fields at all -- harmless there since those
+        # variants never enable extra_obs_dim in the first place.
+        env_cfg = self.env.unwrapped.cfg
+        env_sensor_cfg = {
+            "extra_obs_hold_steps": getattr(env_cfg, "extra_obs_hold_steps", 2),
+            "heave_lag_tau": getattr(env_cfg, "heave_lag_tau", 0.05),
+            "depth_noise_std": getattr(env_cfg, "depth_noise_std", 0.01),
+            "accel_noise_std": getattr(env_cfg, "accel_noise_std", 0.0),
+        }
+        torch.save(
+            {
+                "iter": iter_idx,
+                "student_state_dict": self.student.state_dict(),
+                "cfg": vars(self.cfg),
+                "env_sensor_cfg": env_sensor_cfg,
+            },
+            path,
+        )
         logger.info("Saved student checkpoint: %s", path)
 
     def learn(self) -> None:
@@ -340,7 +365,7 @@ class StudentRunner:
         obs_td, _extras = self.env.reset()
         obs = obs_td["policy"]
         privileged = obs_td["privileged"]
-        extra = obs_td.get("student_extra") if self.cfg.extra_obs_dim > 0 else None
+        extra = obs_td.get(STUDENT_EXTRA_OBS_KEY) if self.cfg.extra_obs_dim > 0 else None
         # Freshly-reset obs: treat as post-reset (dones=True) so flat_buf's
         # pre-rollout region (zeros) isn't mixed with bogus history on step 0.
         self.prev_dones = torch.ones(self.cfg.num_envs, dtype=torch.bool, device=self.device)

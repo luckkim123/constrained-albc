@@ -249,7 +249,13 @@ def compute_student_extra_obs(
     hold = max(1, int(env.cfg.extra_obs_hold_steps))
     env._extra_tick += 1
     if env._extra_tick < hold:
-        return env._student_extra_held
+        # .clone(): _reset_task_and_state zeroes env._student_extra_held IN PLACE on
+        # reset. Returning the bare reference was safe only by call-ordering (every
+        # current caller copies the value before the next env.step()) -- clone the
+        # RETURN (not the stored buffer, which must keep persisting between sample
+        # boundaries for the ZOH hold above) so a caller holding this reference across
+        # a reset is safe by construction instead (fix-wave 2026-08-03, minor item 6).
+        return env._student_extra_held.clone()
     env._extra_tick = 0
     sensor_dt = hold * env.step_dt
 
@@ -273,4 +279,4 @@ def compute_student_extra_obs(
     env._heave_rate_filt = env._heave_rate_filt + alpha * (heave_raw - env._heave_rate_filt)
 
     env._student_extra_held = torch.cat([a_imu_b, env._heave_rate_filt.unsqueeze(-1)], dim=-1)
-    return env._student_extra_held
+    return env._student_extra_held.clone()  # see clone rationale above

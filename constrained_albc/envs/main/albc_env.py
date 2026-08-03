@@ -44,6 +44,7 @@ from .mdp.events import (
 )
 from .mdp.observations import compute_policy_obs, compute_privileged_obs, compute_student_extra_obs
 from .mdp.rewards import RewardManager
+from .student.models import STUDENT_EXTRA_OBS_KEY
 from .utils import log_dr_metrics
 
 logger = logging.getLogger(__name__)
@@ -384,9 +385,10 @@ class ALBCEnv(DirectRLEnv):
         # step regardless of error magnitude; meant to capture systematic per-env bias
         # that per-step tracking reward ignores.
         self._bias_ema = torch.zeros(self.num_envs, 3, device=self.device)
-        # E1/B2 student-extra channel state (gen-1: published as observations["student_extra"],
-        # NOT part of policy_obs). Allocated unconditionally -- three small dead buffers when the
-        # flag is off, which keeps _reset_idx branch-free.
+        # E1/B2 student-extra channel state (gen-1: published as observations[STUDENT_EXTRA_OBS_KEY],
+        # NOT part of policy_obs). Allocated unconditionally -- six small dead state items (four
+        # tensors, a gravity constant, and a tick counter) when the flag is off, which keeps
+        # _reset_idx branch-free.
         self._gravity_w = torch.tensor([0.0, 0.0, -9.81], device=self.device)
         self._depth_meas_prev = torch.zeros(self.num_envs, device=self.device)
         self._heave_rate_filt = torch.zeros(self.num_envs, device=self.device)
@@ -1166,7 +1168,7 @@ class ALBCEnv(DirectRLEnv):
         # rides RslRlVecEnvWrapper's TensorDict straight to the student runner and to
         # StudentInLoopPolicy -- no env.unwrapped reach-through anywhere.
         if self.cfg.use_student_extra_obs:
-            observations["student_extra"] = compute_student_extra_obs(self, self._robot)
+            observations[STUDENT_EXTRA_OBS_KEY] = compute_student_extra_obs(self, self._robot)
         assert policy_obs.shape[-1] == self.cfg.observation_space, (
             f"emitted policy obs dim {policy_obs.shape[-1]} != "
             f"cfg.observation_space {self.cfg.observation_space}"

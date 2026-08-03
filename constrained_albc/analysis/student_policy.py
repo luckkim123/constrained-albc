@@ -25,6 +25,7 @@ import torch
 
 from constrained_albc.envs.main.student.config import StudentCfg
 from constrained_albc.envs.main.student.models import (
+    STUDENT_EXTRA_OBS_KEY,
     extra_scale_tensor,
     make_student_encoder,
     student_input,
@@ -194,14 +195,14 @@ class StudentInLoopPolicy:
         else:
             # Single-step forward. Normalize obs to match training distribution.
             obs_for_student = self.obs_normalizer(obs)
-            if self._extra_scale is not None and "student_extra" not in obs_td:
+            if self._extra_scale is not None and STUDENT_EXTRA_OBS_KEY not in obs_td:
                 raise RuntimeError(
                     "student ckpt has extra_obs_dim > 0 but the env published no "
                     "'student_extra' obs key -- the eval env needs "
                     "use_student_extra_obs=True (run_static sets it from the ckpt)"
                 )
             obs_seq = student_input(
-                obs_for_student, obs_td.get("student_extra"), self._extra_scale
+                obs_for_student, obs_td.get(STUDENT_EXTRA_OBS_KEY), self._extra_scale
             ).unsqueeze(1)
             l_hat_seq, self.hidden = self.student(obs_seq, hidden=self.hidden)
             l_hat = l_hat_seq[:, -1]    # (B, 9)

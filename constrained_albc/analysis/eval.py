@@ -1082,13 +1082,33 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         if args_cli.teacher_ckpt is None or args_cli.encoder_type is None:
             raise ValueError("--student_ckpt requires both --teacher_ckpt and --encoder_type.")
 
-    # A student trained with the extra sensor channels needs the env to publish them.
-    # Read it off the CHECKPOINT rather than adding a CLI flag: a flag can be forgotten,
-    # and a forgotten flag would silently evaluate the student against an absent key.
+    # A student trained with the extra sensor channels needs the env to publish them,
+    # AND needs the exact sensor-model parameters it was trained on (extra_obs_hold_steps,
+    # heave_lag_tau, depth_noise_std, accel_noise_std -- these define what the channels
+    # physically ARE, set by hydra override at train time and otherwise persisted
+    # nowhere). Read both off the CHECKPOINT rather than adding CLI flags: a flag can be
+    # forgotten, and a forgotten flag would silently evaluate the student against an
+    # absent key or against a DIFFERENT sensor model than it was trained on (IMPORTANT-1
+    # fix, fix-wave 2026-08-03). weights_only=False explicit: see StudentCfg docstring.
+    _ENV_SENSOR_CFG_KEYS = ("extra_obs_hold_steps", "heave_lag_tau", "depth_noise_std", "accel_noise_std")
     if is_student_mode:
-        _sc = torch.load(args_cli.student_ckpt, map_location="cpu").get("cfg", {})
+        _student_blob = torch.load(args_cli.student_ckpt, map_location="cpu", weights_only=False)
+        _sc = _student_blob.get("cfg", {})
         if _sc.get("extra_obs_dim", 0) > 0:
             env_cfg.use_student_extra_obs = True
+            _env_sensor_cfg = _student_blob.get("env_sensor_cfg")
+            if _env_sensor_cfg:
+                for _k in _ENV_SENSOR_CFG_KEYS:
+                    if _k in _env_sensor_cfg:
+                        setattr(env_cfg, _k, _env_sensor_cfg[_k])
+            else:
+                print(
+                    f"[WARN] student checkpoint {args_cli.student_ckpt} has no "
+                    "'env_sensor_cfg' (pre-fix-wave checkpoint) -- falling back to "
+                    "ALBCEnvCfg defaults for extra_obs_hold_steps/heave_lag_tau/"
+                    "depth_noise_std/accel_noise_std. These may NOT match what this "
+                    "student was actually trained on."
+                )
 
     resume_path = None
     if is_student_mode:

@@ -5,8 +5,11 @@
 
 """Sim-free unit tests for compute_student_extra_obs (E1/B2 gen-1 side-channel).
 
-Also covers the student config/model widening for the extra channels (A3) and the
-GRU rollout collector's extra-channel round-trip (A4).
+Also covers the student config/model widening for the extra channels (A3), the
+GRU rollout collector's extra-channel round-trip (A4), the --extra_obs_dim launch
+flag + student/env cross-check (A9), and the 2026-08-03 fix-wave regressions
+(train/eval sensor-cfg round-trip, full_dof/TDC AttributeError guard, the shared
+STUDENT_EXTRA_OBS_KEY constant, and the clone-on-return safety fix).
 
 Loads observations.py standalone (bypasses constrained_albc/__init__ -> isaaclab.sim
 -> pxr). See _load_observations() docstring.
@@ -14,6 +17,8 @@ Loads observations.py standalone (bypasses constrained_albc/__init__ -> isaaclab
 
 import ast
 import importlib.util
+import logging
+import os
 import sys
 import types
 from pathlib import Path
@@ -258,3 +263,182 @@ def test_extra_obs_dim_argparse_default_is_zero():
     default_kw = next(kw for kw in call.keywords if kw.arg == "default")
     assert isinstance(default_kw.value, ast.Constant)
     assert default_kw.value.value == 0
+
+
+def test_extra_obs_cross_check_raises_when_dim_is_not_0_or_4():
+    """Minor item 1: bool(dim) != bool(flag) only checks truthiness, so --extra_obs_dim 3
+    against a flag-on env used to pass this check and die later in collector.py with a
+    bare shape mismatch. The env always emits exactly 4 channels."""
+    check = _load_check_extra_obs_consistency()
+    with pytest.raises(ValueError, match=r"must be 0 \(off\) or 4 \(on\)"):
+        check(3, True)
+
+
+# ---------------------------------------------------------------------------
+# IMPORTANT-2: _resolve_extra_obs_env_flag tolerates env variants (full_dof, TDC)
+# that have no 'use_student_extra_obs' field at all, instead of a bare AttributeError.
+# ---------------------------------------------------------------------------
+
+
+def _load_resolve_extra_obs_env_flag():
+    tree = ast.parse(_TRAIN_STUDENT_PATH.read_text())
+    func_node = next(
+        n for n in ast.walk(tree)
+        if isinstance(n, ast.FunctionDef) and n.name == "_resolve_extra_obs_env_flag"
+    )
+    namespace: dict = {}
+    exec(compile(ast.unparse(func_node), "<_resolve_extra_obs_env_flag>", "exec"), namespace)
+    return namespace["_resolve_extra_obs_env_flag"]
+
+
+def test_resolve_extra_obs_env_flag_no_longer_raises_attributeerror_when_field_absent():
+    """The regression: full_dof/config.py's ALBCEnvCfg has no 'use_student_extra_obs'
+    field, so reading it unconditionally used to raise AttributeError before gym.make
+    ever ran. --extra_obs_dim==0 (the default) against such a cfg must resolve to False,
+    not raise."""
+    resolve = _load_resolve_extra_obs_env_flag()
+    full_dof_like_cfg = types.SimpleNamespace()  # no use_student_extra_obs attribute
+    assert resolve(full_dof_like_cfg, 0) is False
+
+
+def test_resolve_extra_obs_env_flag_raises_named_error_when_dim_set_but_field_absent():
+    """extra_obs_dim>0 against a variant with no field is a genuine user mistake and
+    must get a named ValueError, not a bare AttributeError."""
+    resolve = _load_resolve_extra_obs_env_flag()
+    full_dof_like_cfg = types.SimpleNamespace()
+    with pytest.raises(ValueError, match="has no 'use_student_extra_obs' field"):
+        resolve(full_dof_like_cfg, 4)
+
+
+def test_resolve_extra_obs_env_flag_passes_through_when_field_present():
+    resolve = _load_resolve_extra_obs_env_flag()
+    main_like_cfg = types.SimpleNamespace(use_student_extra_obs=True)
+    assert resolve(main_like_cfg, 4) is True
+    main_like_cfg2 = types.SimpleNamespace(use_student_extra_obs=False)
+    assert resolve(main_like_cfg2, 0) is False
+
+
+# ---------------------------------------------------------------------------
+# IMPORTANT-1: the 4 sensor-model knobs must round-trip through the student
+# checkpoint (train -> eval), not silently default at eval time.
+# ---------------------------------------------------------------------------
+
+
+_RUNNER_PATH = _STUDENT_DIR / "runner.py"
+
+
+def _load_save_checkpoint():
+    """AST-extract StudentRunner._save_checkpoint standalone (same extraction pattern as
+    _load_check_extra_obs_consistency above), deliberately WITHOUT importing runner.py as
+    a module: runner.py does `import wandb` at module level, which is fragile mid-suite
+    (some other test's omni/pxr/carb/warp mock stubs left in sys.modules corrupt wandb's
+    own import chain when it is first imported later in the session -- see conftest.py's
+    docstring for the general failure class). The method body only touches os/torch/
+    logger, none of which need the rest of runner.py.
+    """
+    tree = ast.parse(_RUNNER_PATH.read_text())
+    class_node = next(n for n in ast.walk(tree) if isinstance(n, ast.ClassDef) and n.name == "StudentRunner")
+    func_node = next(
+        n for n in ast.walk(class_node) if isinstance(n, ast.FunctionDef) and n.name == "_save_checkpoint"
+    )
+    namespace: dict = {"os": os, "torch": torch, "logger": logging.getLogger("test_save_checkpoint")}
+    exec(compile(ast.unparse(func_node), "<_save_checkpoint>", "exec"), namespace)
+    return namespace["_save_checkpoint"]
+
+
+def _fake_student_runner_self(tmp_path, env_cfg_ns, models_mod, cfg_mod):
+    cfg = cfg_mod.StudentCfg()
+    cfg.encoder_type = "gru"
+    cfg.policy_obs_dim = 4
+    cfg.privileged_dim = 2
+    cfg.latent_dim = 2
+    cfg.gru_hidden = 4
+    cfg.gru_head_hidden = 0
+    student = models_mod.make_student_encoder(cfg)
+    fake_env = types.SimpleNamespace(unwrapped=types.SimpleNamespace(cfg=env_cfg_ns))
+    (tmp_path / "models").mkdir()
+    return types.SimpleNamespace(log_dir=str(tmp_path), student=student, cfg=cfg, env=fake_env)
+
+
+def test_checkpoint_roundtrips_env_sensor_cfg(tmp_path):
+    """_save_checkpoint must persist extra_obs_hold_steps/heave_lag_tau/depth_noise_std/
+    accel_noise_std under 'env_sensor_cfg' -- without this, eval silently measures a
+    different sensor model than the one the student was trained on."""
+    cfg_mod, models_mod = _load_student("config", "models")
+    env_cfg = types.SimpleNamespace(
+        extra_obs_hold_steps=3, heave_lag_tau=0.07, depth_noise_std=0.02, accel_noise_std=0.01,
+    )
+    fake_self = _fake_student_runner_self(tmp_path, env_cfg, models_mod, cfg_mod)
+
+    _load_save_checkpoint()(fake_self, 0)
+
+    blob = torch.load(str(tmp_path / "models" / "student_0.pt"), weights_only=False)
+    assert blob["env_sensor_cfg"] == {
+        "extra_obs_hold_steps": 3,
+        "heave_lag_tau": 0.07,
+        "depth_noise_std": 0.02,
+        "accel_noise_std": 0.01,
+    }
+
+
+def test_checkpoint_env_sensor_cfg_falls_back_when_env_variant_lacks_fields(tmp_path):
+    """Degrades gracefully (getattr defaults) rather than crashing for env variants
+    (full_dof/TDC) that have no sensor-cfg fields at all -- those variants never enable
+    extra_obs_dim, so the fallback values are inert."""
+    cfg_mod, models_mod = _load_student("config", "models")
+    fake_self = _fake_student_runner_self(tmp_path, types.SimpleNamespace(), models_mod, cfg_mod)
+
+    _load_save_checkpoint()(fake_self, 0)
+
+    blob = torch.load(str(tmp_path / "models" / "student_0.pt"), weights_only=False)
+    assert blob["env_sensor_cfg"] == {
+        "extra_obs_hold_steps": 2,
+        "heave_lag_tau": 0.05,
+        "depth_noise_std": 0.01,
+        "accel_noise_std": 0.0,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Minor item 6: compute_student_extra_obs must return a COPY, not the live
+# env._student_extra_held reference (which _reset_task_and_state zeroes in place).
+# ---------------------------------------------------------------------------
+
+
+def test_compute_student_extra_obs_return_is_not_aliased_to_stored_buffer():
+    compute_student_extra_obs = _load_observations().compute_student_extra_obs
+    env = _fake_env()
+    out = compute_student_extra_obs(env, _robot(depth=5.0))
+    before = out.clone()
+    # Simulate _reset_task_and_state's in-place reset of the stored buffer.
+    env._student_extra_held[:] = 0.0
+    assert torch.equal(out, before), "returned tensor was mutated by a later in-place reset"
+
+
+# ---------------------------------------------------------------------------
+# Minor item 7: "student_extra" must be ONE shared constant, not 5 independent
+# string literals a rename could silently desync.
+# ---------------------------------------------------------------------------
+
+
+def test_student_extra_obs_key_is_a_shared_constant():
+    cfg_mod, models_mod = _load_student("config", "models")
+    assert models_mod.STUDENT_EXTRA_OBS_KEY == "student_extra"
+
+    repo = Path(__file__).resolve().parent.parent
+    albc_env = (repo / "constrained_albc" / "envs" / "main" / "albc_env.py").read_text()
+    runner_src = (repo / "constrained_albc" / "envs" / "_core" / "student" / "runner.py").read_text()
+    student_policy_src = (repo / "constrained_albc" / "analysis" / "student_policy.py").read_text()
+
+    assert "STUDENT_EXTRA_OBS_KEY" in albc_env
+    assert "observations[STUDENT_EXTRA_OBS_KEY]" in albc_env
+    assert albc_env.count('"student_extra"') == 0
+
+    assert runner_src.count("STUDENT_EXTRA_OBS_KEY") >= 3  # import + 2 call sites
+    assert runner_src.count('"student_extra"') == 0
+
+    assert student_policy_src.count("STUDENT_EXTRA_OBS_KEY") >= 3  # import + 2 call sites
+    # One literal legitimately remains: the human-readable RuntimeError message text
+    # (single-quoted, embedded in a double-quoted string -- not a dict-key usage).
+    assert student_policy_src.count("'student_extra'") == 1
+    assert student_policy_src.count('"student_extra"') == 0

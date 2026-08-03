@@ -12,6 +12,13 @@ import torch.nn.functional as F
 
 from .config import StudentCfg
 
+# Single source of truth for the obs-dict key the env publishes the 4 extra sensor
+# channels under. Producer (envs/main/albc_env.py) and consumers (this package's
+# runner.py, analysis/student_policy.py) all import this instead of repeating the
+# string literal -- a rename in one place used to be caught by nothing (fix-wave
+# 2026-08-03, minor item 7).
+STUDENT_EXTRA_OBS_KEY = "student_extra"
+
 
 def student_input(
     obs_n: torch.Tensor, extra: torch.Tensor | None, scale: torch.Tensor | None

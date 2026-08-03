@@ -156,13 +156,48 @@ def _check_extra_obs_consistency(extra_obs_dim: int, use_student_extra_obs: bool
         them -- completely silent, and the direction that would corrupt a B2 verdict
         by making the run look like the intervention while it is actually a re-run of
         the baseline recipe.
+
+    Also rejects any extra_obs_dim other than {0, 4}: bool(dim) != bool(flag) only
+    checks truthiness, so --extra_obs_dim 3 against a flag-on env silently passed this
+    check before (fix-wave 2026-08-03, minor item 1) and died later in collector.py with
+    a bare shape-mismatch error -- the env always emits exactly 4 channels.
     """
+    if extra_obs_dim not in (0, 4):
+        raise ValueError(
+            f"--extra_obs_dim={extra_obs_dim} is invalid: the env always emits exactly 4 "
+            "extra channels (IMU specific force 3D + heave rate 1D, see "
+            "compute_student_extra_obs) when the flag is on, so extra_obs_dim must be 0 "
+            "(off) or 4 (on)."
+        )
     if bool(extra_obs_dim) != bool(use_student_extra_obs):
         raise ValueError(
             f"student/env extra-obs mismatch: --extra_obs_dim={extra_obs_dim} but "
             f"env.use_student_extra_obs={use_student_extra_obs}. Both must agree "
             "(extra_obs_dim>0 with the env flag on, or extra_obs_dim==0 with it off)."
         )
+
+
+def _resolve_extra_obs_env_flag(env_cfg, extra_obs_dim: int) -> bool:
+    """Resolve env_cfg.use_student_extra_obs, tolerating env variants that lack the field.
+
+    IMPORTANT-2 fix (fix-wave 2026-08-03): full_dof/config.py's ALBCEnvCfg (and tdc,
+    which inherits it) declares an INDEPENDENT ALBCEnvCfg with no 'use_student_extra_obs'
+    field, so reading it unconditionally raised a bare AttributeError before gym.make
+    ever ran -- breaking every full_dof/TDC launch regardless of --extra_obs_dim.
+    extra_obs_dim>0 against such a variant is a genuine user mistake (the variant cannot
+    publish the channels), so that combination gets a named error; extra_obs_dim==0
+    (the default) silently resolves to False, matching pre-obs4 behaviour.
+    """
+    if not hasattr(env_cfg, "use_student_extra_obs"):
+        if extra_obs_dim > 0:
+            raise ValueError(
+                f"--extra_obs_dim={extra_obs_dim} was requested but env variant "
+                f"{type(env_cfg).__name__} has no 'use_student_extra_obs' field -- this "
+                "variant does not support the extra sensor channels (only "
+                "constrained_albc.envs.main does)."
+            )
+        return False
+    return env_cfg.use_student_extra_obs
 
 
 @hydra_task_config(args_cli.task, "rsl_rl_cfg_entry_point")
@@ -198,7 +233,7 @@ def main(env_cfg: DirectRLEnvCfg, _agent_cfg) -> None:
     if args_cli.gru_head_hidden is not None:
         cfg.gru_head_hidden = args_cli.gru_head_hidden
 
-    _check_extra_obs_consistency(cfg.extra_obs_dim, env_cfg.use_student_extra_obs)
+    _check_extra_obs_consistency(cfg.extra_obs_dim, _resolve_extra_obs_env_flag(env_cfg, cfg.extra_obs_dim))
 
     # Log dir. cfg.log_dir_root is an absolute constrained-albc path (student/config.py),
     # so student output lands in the constrained-albc repo even though this script runs from
