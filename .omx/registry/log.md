@@ -8379,3 +8379,263 @@
 - **Pages:** plant_change_batch_v2_four_isaac_plant_corrections_are_now_pendi.md
 - **Summary:** updated 'Plant-change batch v2: four Isaac plant corrections are now pending and each alone forces a teacher retrain, so they are batched behind one sizing gate instead of decided individually'
 
+## [2026-08-03T06:13:59.143643] add
+- **Pages:** stonefish_role_narrowed_to_integration_smoke_bench_user_ratified.md
+- **Summary:** updated 'Stonefish role narrowed to integration smoke bench (user-ratified 2026-08-03): no coefficient source, no performance verdicts; priority moves to thruster/real-robot anchors; third simulator rejected'
+
+## [2026-08-03T06:21:41.365125] add
+- **Pages:** real_albc_deployment_state_estimation_rates_measured_from_code_a.md
+- **Summary:** created 'Real ALBC deployment state-estimation rates measured from code: attitude+gyro at most ~25 Hz (loop_speed/4, self-telemetered in the sensors DEPTH field), joints 10 Hz, control 50 Hz -- the real policy runs on zero-order-held stale observations, so 50 Hz Stonefish odom is already faster than reality'
+
+## [2026-08-03T09:04:32.828601] query
+- **Pages:** real_albc_deployment_state_estimation_rates_measured_from_code_a.md, real_robot_has_2_faulted_thrusters_user_judges_buoyancy_restorin.md, real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md, stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, thruster_static_gain_gap_stonefish_quadratic_rated_20_03_n_vs_is.md, bias_ema_obs_is_deployment_safe_computed_from_command_minus_meas.md, buoy_added_mass_is_wrong_in_both_sims_and_in_opposite_directions.md, hydrorc_016d1b1_recentered_nine_hull_hydro_numbers_onto_a_broken.md, onboard_measured_2026_07_06_arm_step_response_valid_sim_zeta_0_7.md, plant_change_batch_v2_four_isaac_plant_corrections_are_now_pendi.md, stonefish_role_narrowed_to_integration_smoke_bench_ratified_2026.md, stonefish_role_narrowed_to_integration_smoke_bench_user_ratified.md, arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md, next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md, penalty_vs_objective_exchange_rate_deg_of_attitude_error_bought_.md, leaky_integral_and_ema_bias_carry_over_the_mid_episode_command_r.md, reward_md_6_error_buffers_reward_call_site_dt_scaling_theory_rev.md, actuator_hardware_identification_arm_xw540_t260_board_measured_p.md
+- **Summary:** query 'real robot publish rate Hz sensor bus' -> 20 of 209
+
+## [2026-08-03T09:05:26.635075] add
+- **Pages:** c4b_dagger_correction_measured_partial_2_5_4x_in_loop_reduction_.md
+- **Summary:** updated 'C4b DAgger correction measured: partial (2.5-4x in-loop reduction at low-mod DR, under-dispersion floor persists at hard)'
+
+## [2026-08-03T09:06:21.064863] add
+- **Pages:** obs4_student_extra_observation_interface_4_deployable_channels_r.md
+- **Summary:** created 'obs4 student extra-observation interface: 4 deployable channels ride the observation dict through ONE shared student_input, zero-order held at the real 25 Hz bus rate; implemented and pushed 2026-08-03, not yet run'
+
+## [2026-08-03T09:07:04.300885] add
+- **Pages:** obs4_student_extra_observation_interface_4_deployable_channels_r.md
+- **Summary:** updated 'obs4 student extra-observation interface: 4 deployable channels ride the observation dict through ONE shared student_input, zero-order held at the real 25 Hz bus rate; implemented and pushed 2026-08-03, not yet run'
+
+## [2026-08-03T09:07:52.061131] add
+- **Pages:** experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md
+- **Summary:** updated 'experiment idea: latency/transport-delay DR (sensor-obs + control-action lag) -- infra exists (isaaclab DelayBuffer) but unused; DelayedPD failed before'
+
+## [2026-08-03T09:08:57.106332] add
+- **Pages:** obs4_student_extra_observation_interface_4_deployable_channels_r.md
+- **Summary:** updated 'obs4 student extra-observation interface: 4 deployable channels ride the observation dict through ONE shared student_input, zero-order held at the real 25 Hz bus rate; implemented and pushed 2026-08-03, not yet run'
+
+## [2026-08-03T09:08:59.806775] query
+- **Pages:** latent_dim_d4_collapses_at_none_dr_in_every_student_arm_and_the_.md, teacher_encoder_0_dead_latent_dims_keys_on_lateral_cog_cob_offse.md, experiment_idea_feed_o_t_into_the_encoder_alongside_p_t_state_co.md, encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md, posttam_encoder_is_alive_and_specialized_z_sweep_exploration_col.md, student_distillation_converges_to_a_residual_that_rules_out_late.md, the_frozen_actor_s_sensitivity_to_latent_error_is_strongly_level.md, engine_gap_m1_critic_side_encoder_gradient_is_not_logged_policy_.md, closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md, e0_eval_latent_instrument_fix_38d979e_lives_only_on_the_student_.md, literature_map_how_rl_control_actually_handles_steady_state_erro.md, albc_stage_2_is_teacher_driven_off_policy_bc_with_mixed_latent_a.md, attitude_only_ablation_arms_registered_policy_obs_dim_sync_must_.md, gru_memory_and_corrected_dagger_mixing_compound_c3_is_the_campai.md, training_anomaly_thresholds_tb_tag_alert_table.md, lambda_latent_is_bracketed_and_closed_no_decision_grade_control_.md, no_latent_collapse_and_no_softsign_saturation_in_any_run_and_arm.md, the_encoder_is_statistically_indistinguishable_from_the_anchor_o.md, the_probe_measures_the_actor_s_transfer_function_not_the_encoder.md, encoder_priv_obs_normalization_bounds_must_be_dr_derived_not_har.md
+- **Summary:** query 'encoder latent' -> 20 of 89
+
+## [2026-08-03T09:08:59.917111] query
+- **Pages:** actuator_hardware_identification_arm_xw540_t260_board_measured_p.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, engine_gap_analyze_training_py_only_runs_under_isaac_sim_python_.md, engine_gap_omx_plot_is_unusable_on_this_workspace_tb_blocked_by_.md, engine_gap_omx_reduce_tb_final_unusable_here_cli_on_system_pytho.md, stonefish_base_hull_effective_hydro_measured_2026_07_27_damping_.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md, hydrorc_016d1b1_recentered_nine_hull_hydro_numbers_onto_a_broken.md, hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md, onboard_measured_2026_07_06_arm_step_response_valid_sim_zeta_0_7.md, stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, added_mass_scale_upper_half_is_attenuated_not_inert_the_0_95_i_c.md, engine_gap_the_analysis_engine_and_omx_reduce_are_both_unusable_.md, experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md, experiment_result_recording_location_experiments_tree_is_ssot_no.md, incident_post_mortem_teacher_baseline_opt_e1_e4_trained_on_a_tam.md, open_actionable_ledger_read_before_any_sim_plant_code_change_or_.md, reward_cost_parallel_structure_mostly_mirroring_two_real_couplin.md, reward_penalty_terms_thruster_smoothness_bias_block_3_temporal_b.md, reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md
+- **Summary:** query 'system identification' -> 20 of 34
+
+## [2026-08-03T09:09:00.009284] query
+- **Pages:** experiment_idea_feed_o_t_into_the_encoder_alongside_p_t_state_co.md, engine_gap_m1_critic_side_encoder_gradient_is_not_logged_policy_.md, posttam_encoder_is_alive_and_specialized_z_sweep_exploration_col.md, teacher_encoder_0_dead_latent_dims_keys_on_lateral_cog_cob_offse.md, the_encoder_is_alive_and_unsaturated_in_both_runs_so_the_fault_r.md, literature_map_how_rl_control_actually_handles_steady_state_erro.md, latent_dim_d4_collapses_at_none_dr_in_every_student_arm_and_the_.md, policy_head_design_rationale_and_literature_standing_encoder_inp.md, bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md, attitude_only_ablation_arms_registered_policy_obs_dim_sync_must_.md, encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md, encoder_priv_obs_normalization_bounds_must_be_dr_derived_not_har.md, training_anomaly_thresholds_tb_tag_alert_table.md, training_diagnosis_decision_tree.md, ftc_investigation_2026_07_25_m4_loss_halves_pure_yaw_ceiling_uti.md, priv_obs_slim_stage_2_lead_contested_p_t_dims_quad_damp_lin_vel_.md, arm_b_s_critic_converges_better_than_arm_a_s_on_both_losses_cons.md, both_critics_fit_better_on_the_recentered_plant_loss_value_funct.md, encoder_health_is_unchanged_by_the_plant_swap_encoder_z_std_0_39.md, encoder_tb_health_is_unchanged_encoder_z_std_0_40_0_38_z_range_s.md
+- **Summary:** query 'auxiliary loss encoder' -> 20 of 99
+
+## [2026-08-03T09:09:00.105121] query
+- **Pages:** latent_dim_d4_collapses_at_none_dr_in_every_student_arm_and_the_.md, c4b_dagger_correction_measured_partial_2_5_4x_in_loop_reduction_.md, bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, engine_gap_the_analysis_engine_and_omx_reduce_are_both_unusable_.md, eval_decision_floors_are_the_binding_standard_for_student_arm_co.md, gru_memory_and_corrected_dagger_mixing_compound_c3_is_the_campai.md, obs4_student_extra_observation_interface_4_deployable_channels_r.md, student_distillation_converges_to_a_residual_that_rules_out_late.md, student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md, closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md, e0_eval_latent_instrument_fix_38d979e_lives_only_on_the_student_.md, on_policy_dagger_correction_for_the_buoyfix_student.md, bias_ema_observability_p_b1_confirmed_at_the_fair_none_point_68_.md, container_cudnn_is_cu13_against_cu128_torch_every_conv1d_fails_s.md, deploy_export_was_tcn_only_so_it_shipped_the_non_adopted_student.md, albc_stage_2_is_teacher_driven_off_policy_bc_with_mixed_latent_a.md, encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md, the_frozen_actor_s_sensitivity_to_latent_error_is_strongly_level.md, after_five_student_arms_the_only_decision_grade_control_differen.md, in_deployment_conditions_the_student_latent_is_worse_than_a_cons.md
+- **Summary:** query 'observability student' -> 20 of 85
+
+## [2026-08-03T09:14:26.302525] query
+- **Pages:** gru_memory_and_corrected_dagger_mixing_compound_c3_is_the_campai.md, closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md, on_policy_dagger_correction_for_the_buoyfix_student.md, bias_ema_observability_69_72d_improves_absolute_attitude_trackin.md, engine_gap_the_analysis_engine_and_omx_reduce_are_both_unusable_.md, obs4_student_extra_observation_interface_4_deployable_channels_r.md, lambda_latent_is_bracketed_and_closed_no_decision_grade_control_.md, ftc_fault_dr_a_b_result_2026_07_27_fault_dr_adopted_5_12x_less_m.md, a5_budgetslack_rp_vel_settling_manipulability_budgets_x100_learn.md, bias_ema_observability_p_b1_confirmed_at_the_fair_none_point_68_.md, doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md, reward_md_6_error_buffers_reward_call_site_dt_scaling_theory_rev.md, engine_gap_analyze_training_py_needs_the_logs_run_dir_not_the_ex.md, engine_gap_analyze_training_py_only_runs_under_isaac_sim_python_.md, p_b1_shared_exam_on_reference_dr_hard_roll_floor_was_exam_artifa.md, real_robot_has_2_faulted_thrusters_user_judges_buoyancy_restorin.md, severity_init_head_start_converts_to_curriculum_2_50x_but_makes_.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, april_2026_entropy_collapse_campaign_machinery_bug_solved_conver.md, tam_plant_correctness_fix_collapses_the_void_hard_dr_roll_heavy_.md
+- **Summary:** query 'student latent under-dispersion observability floor' -> 20 of 49
+
+## [2026-08-03T09:14:26.413253] query
+- **Pages:** latent_dim_d4_collapses_at_none_dr_in_every_student_arm_and_the_.md, the_frozen_actor_s_sensitivity_to_latent_error_is_strongly_level.md, student_distillation_converges_to_a_residual_that_rules_out_late.md, an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md, student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md, roll_transient_is_worst_at_none_dr_and_improves_monotonically_as.md, teacher_encoder_0_dead_latent_dims_keys_on_lateral_cog_cob_offse.md, teacher_hard_dr_cv_explodes_without_heavy_tail_dc_bias_dispersio.md, teacher_segmented_post_switch_roll_transient_jumps_under_hard_dr.md, doraemon_over_widens_then_oscillates_when_a_converged_teacher_is.md, the_mean_preserving_beta_clamp_silently_triples_concentration_fo.md, constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md, posttam_encoder_is_alive_and_specialized_z_sweep_exploration_col.md, teacher_dr_harder_yaw_is_the_only_heavy_tail_axis_roll_is_dc_bia.md, doraemon_is_trust_region_limited_not_feasibility_limited_kl_step.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md, engine_generic_flags_entropy_collapse_barrier_spike_reward_plate.md, thruster_util_is_the_binding_constrainttrpo_constraint_in_7_of_7.md
+- **Summary:** query 'student latent under-dispersion observability floor' -> 18 of 18
+
+## [2026-08-03T09:14:53.104332] query
+- **Pages:** engine_gap_analyze_training_py_needs_the_logs_run_dir_not_the_ex.md, engine_gap_analyze_training_py_only_runs_under_isaac_sim_python_.md, engine_gap_doraemon_per_parameter_curriculum_expansion_is_invisi.md, engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md, engine_gap_m1_critic_side_encoder_gradient_is_not_logged_policy_.md, engine_gap_omx_cli_gaps_found_re_analyzing_teacher_2026_06_06_ro.md, engine_gap_omx_plot_is_unusable_on_this_workspace_tb_blocked_by_.md, engine_gap_omx_reduce_tb_final_unusable_here_cli_on_system_pytho.md, engine_gap_the_analysis_engine_and_omx_reduce_are_both_unusable_.md, engine_gap_eval_adapter_heavy_tail_lacks_median_based_tail_ratio.md, engine_gap_flat_target_eval_records_joint1_trajectory_but_render.md, engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md, engine_gap_eval_npz_saves_no_raw_obs_std_privileged_blocks_exact.md, engine_gap_heavy_tail_json_pct_peak_gt_thresh_exceeds_100_at_ood.md, eval_analysis_core_does_stats_adapter_does_heavy_tail.md, hydrorc_016d1b1_recentered_nine_hull_hydro_numbers_onto_a_broken.md, stonefish_rotational_drag_is_a_distributed_integral_with_no_sepa.md, exp_analyze_must_run_analyze_training_py_for_training_side_diagn.md, p_a8_perflb200_more_iters_5000_8000_closed_the_deployment_ood_dr.md, extend8k_8000_iter_confirms_e3_extending_past_5000_iters_is_net_.md
+- **Summary:** query 'engine-gap' -> 20 of 42
+
+## [2026-08-03T09:18:19.230814] query
+- **Pages:** incident_post_mortem_teacher_baseline_opt_e1_e4_trained_on_a_tam.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, buoy_added_mass_is_wrong_in_both_sims_and_in_opposite_directions.md, hydrorc_016d1b1_recentered_nine_hull_hydro_numbers_onto_a_broken.md, hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md
+- **Summary:** query 'a_imu_b a_w about above accelerometer accept acceptable actually' -> 5 of 348
+
+## [2026-08-03T09:19:49.946914] query
+- **Pages:** incident_post_mortem_teacher_baseline_opt_e1_e4_trained_on_a_tam.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, buoy_added_mass_is_wrong_in_both_sims_and_in_opposite_directions.md, hydrorc_016d1b1_recentered_nine_hull_hydro_numbers_onto_a_broken.md, hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md
+- **Summary:** query 'a_imu_b a_w about above accelerometer accept acceptable actually' -> 5 of 348
+
+## [2026-08-03T09:26:00.354371] query
+- **Pages:** eval_decision_floors_are_the_binding_standard_for_student_arm_co.md, eval_metric_units_and_decision_floors_os_env_mean_is_percent_of_.md, eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md, experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md, every_b4b_vs_a0_attitude_difference_is_smaller_than_the_decision.md, cross_run_dr_comparability_eval_py_doraemon_dr_from_already_prov.md, engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md, engine_gap_omx_plot_is_unusable_on_this_workspace_tb_blocked_by_.md, eval_analysis_core_does_stats_adapter_does_heavy_tail.md, eval_command_box_was_half_the_trained_envelope_from_2026_04_06_t.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, static_eval_plots_regenerate_sim_free_from_npz_reconstruct_segme.md, the_decision_floors_block_remains_field_keyed_while_units_are_ax.md, engine_gap_eval_adapter_heavy_tail_lacks_median_based_tail_ratio.md, engine_gap_flat_target_eval_records_joint1_trajectory_but_render.md, e0_eval_latent_instrument_fix_38d979e_lives_only_on_the_student_.md, hydro_dr_train_eval_sampling_mismatch_is_real_but_left_as_is_opt.md, canonical_final_teacher_baseline_buoyfix_anchor_trpo_buoyanchor_.md, engine_gap_omx_reduce_tb_final_unusable_here_cli_on_system_pytho.md, imu_45deg_offset_pitch_negation_sim_uncompensated_2026_07_05.md
+- **Summary:** query 'eval decision floors' -> 20 of 166
+
+## [2026-08-03T09:33:16.181755] query
+- **Pages:** hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md, buoy_added_mass_is_wrong_in_both_sims_and_in_opposite_directions.md, incident_post_mortem_teacher_baseline_opt_e1_e4_trained_on_a_tam.md, stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, hydrorc_016d1b1_recentered_nine_hull_hydro_numbers_onto_a_broken.md
+- **Summary:** query 'a0g a_imu_b a_w above accelerometer across actually add' -> 5 of 348
+
+## [2026-08-03T09:43:50.793353] query
+- **Pages:** incident_post_mortem_teacher_baseline_opt_e1_e4_trained_on_a_tam.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, hydrorc_016d1b1_recentered_nine_hull_hydro_numbers_onto_a_broken.md, doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md, hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md
+- **Summary:** query 'a0g a_imu_b a_w above absolute accelerometer accidentally across' -> 5 of 348
+
+## [2026-08-03T09:49:46.593655] query
+- **Pages:** incident_post_mortem_teacher_baseline_opt_e1_e4_trained_on_a_tam.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, hydrorc_016d1b1_recentered_nine_hull_hydro_numbers_onto_a_broken.md, doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md, hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md
+- **Summary:** query 'a_imu_b a_w above absolute accelerometer acceptable accidentally across' -> 5 of 348
+
+## [2026-08-03T09:49:53.872479] query
+- **Pages:** incident_post_mortem_teacher_baseline_opt_e1_e4_trained_on_a_tam.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, hydrorc_016d1b1_recentered_nine_hull_hydro_numbers_onto_a_broken.md, doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md, hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md
+- **Summary:** query 'a_imu_b a_w above absolute accelerometer acceptable accidentally across' -> 5 of 348
+
+## [2026-08-03T09:50:40.848442] query
+- **Pages:** incident_post_mortem_teacher_baseline_opt_e1_e4_trained_on_a_tam.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, hydrorc_016d1b1_recentered_nine_hull_hydro_numbers_onto_a_broken.md, doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md, hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md
+- **Summary:** query 'a_imu_b a_w above absolute accelerometer acceptable accidentally across' -> 5 of 348
+
+## [2026-08-03T09:54:25.298034] add
+- **Pages:** c4b_dagger_correction_measured_partial_2_5_4x_in_loop_reduction_.md
+- **Summary:** updated 'C4b DAgger correction measured: partial (2.5-4x in-loop reduction at low-mod DR, under-dispersion floor persists at hard)'
+
+## [2026-08-03T09:54:42.683163] add
+- **Pages:** obs4_student_extra_observation_interface_4_deployable_channels_r.md
+- **Summary:** updated 'obs4 student extra-observation interface: 4 deployable channels ride the observation dict through ONE shared student_input, zero-order held at the real 25 Hz bus rate; implemented and pushed 2026-08-03, not yet run'
+
+## [2026-08-03T10:45:38.859259] add
+- **Pages:** obs4_student_extra_observation_interface_4_deployable_channels_r.md
+- **Summary:** updated 'obs4 student extra-observation interface: 4 deployable channels ride the observation dict through ONE shared student_input, zero-order held at the real 25 Hz bus rate; implemented and pushed 2026-08-03, not yet run'
+
+## [2026-08-03T10:45:53.656856] add
+- **Pages:** c4b_dagger_correction_measured_partial_2_5_4x_in_loop_reduction_.md
+- **Summary:** updated 'C4b DAgger correction measured: partial (2.5-4x in-loop reduction at low-mod DR, under-dispersion floor persists at hard)'
+
+## [2026-08-03T12:43:06.070816] query
+- **Pages:** none
+- **Summary:** query 'koopman' -> 0 of 0
+
+## [2026-08-03T12:46:55.580210] query
+- **Pages:** incident_post_mortem_teacher_baseline_opt_e1_e4_trained_on_a_tam.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md, hydrorc_016d1b1_recentered_nine_hull_hydro_numbers_onto_a_broken.md, buoy_added_mass_is_wrong_in_both_sims_and_in_opposite_directions.md
+- **Summary:** query 'a_imu_b a_w about above absolute accelerometer acceptable accidentally' -> 5 of 348
+
+## [2026-08-03T13:31:36.893013] query
+- **Pages:** training_log_analysis_engine_reference_adapter.md, analysis_engine_map_what_is_grow_able_vs_off_limits.md, exp_analyze_must_run_analyze_training_py_for_training_side_diagn.md, engine_gap_analyze_training_py_only_runs_under_isaac_sim_python_.md, engine_gap_analyze_training_py_needs_the_logs_run_dir_not_the_ex.md, engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md, engine_gap_omx_cli_gaps_found_re_analyzing_teacher_2026_06_06_ro.md, engine_gap_the_analysis_engine_and_omx_reduce_are_both_unusable_.md, eval_analysis_core_does_stats_adapter_does_heavy_tail.md, engine_gap_eval_adapter_heavy_tail_lacks_median_based_tail_ratio.md, engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md, engine_gap_doraemon_per_parameter_curriculum_expansion_is_invisi.md, engine_generic_flags_entropy_collapse_barrier_spike_reward_plate.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, buoy_added_mass_is_wrong_in_both_sims_and_in_opposite_directions.md, coverage_lint_ok_is_a_floor_not_a_quality_gate_re_analysis_uses_.md, engine_gap_omx_reduce_tb_final_unusable_here_cli_on_system_pytho.md, failure_dr_join_now_covers_fault_channels_not_just_dr_per_env_fa.md, stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md, engine_gap_flat_target_eval_records_joint1_trajectory_but_render.md
+- **Summary:** query 'analysis engine reference adapter how to analyze' -> 20 of 348
+
+## [2026-08-03T13:31:36.994304] query
+- **Pages:** latent_dim_d4_collapses_at_none_dr_in_every_student_arm_and_the_.md, obs4_student_extra_observation_interface_4_deployable_channels_r.md, student_distillation_converges_to_a_residual_that_rules_out_late.md, c4b_dagger_correction_measured_partial_2_5_4x_in_loop_reduction_.md, closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md, engine_gap_the_analysis_engine_and_omx_reduce_are_both_unusable_.md, gru_memory_and_corrected_dagger_mixing_compound_c3_is_the_campai.md, albc_stage_2_is_teacher_driven_off_policy_bc_with_mixed_latent_a.md, student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md, the_frozen_actor_s_sensitivity_to_latent_error_is_strongly_level.md, lambda_latent_is_bracketed_and_closed_no_decision_grade_control_.md, container_cudnn_is_cu13_against_cu128_torch_every_conv1d_fails_s.md, e0_eval_latent_instrument_fix_38d979e_lives_only_on_the_student_.md, on_policy_dagger_correction_for_the_buoyfix_student.md, encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md, eval_decision_floors_are_the_binding_standard_for_student_arm_co.md, experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md, in_deployment_conditions_the_student_latent_is_worse_than_a_cons.md, the_action_term_pays_a_small_measurable_price_for_the_extra_late.md, deploy_export_was_tcn_only_so_it_shipped_the_non_adopted_student.md
+- **Summary:** query 'student distillation latent R2 observability extra sensor channels' -> 20 of 158
+
+## [2026-08-03T13:52:43.764401] add
+- **Pages:** b2_draws_an_independent_env_set_from_both_baselines_while_the_co.md
+- **Summary:** created 'B2 draws an independent env set from both baselines while the control and C3 sha'
+
+## [2026-08-03T13:52:43.764401] add
+- **Pages:** the_run_is_gradable_not_void_every_channel_is_live_on_every_env_.md
+- **Summary:** created 'The run is gradable, not VOID: every channel is live on every env, the zero-orde'
+
+## [2026-08-03T13:52:43.764401] add
+- **Pages:** heave_snr_rises_monotonically_with_dr_difficulty_2_227_2_456_3_2.md
+- **Summary:** created '`heave_snr` rises monotonically with DR difficulty (2.227 -> 2.456 -> 3.218 -> 4'
+
+## [2026-08-03T13:52:43.764401] add
+- **Pages:** the_channels_regress_hard_dr_attitude_control_past_its_own_decis.md
+- **Summary:** created 'The channels regress hard-DR attitude control past its own decision floor: +0.14'
+
+## [2026-08-03T13:52:43.764401] add
+- **Pages:** the_regression_is_attributable_to_the_channels_and_not_to_the_co.md
+- **Summary:** created 'The regression is attributable to the channels and not to the code state, becaus'
+
+## [2026-08-03T13:52:43.764401] add
+- **Pages:** the_env_to_env_dispersion_moves_in_opposite_directions_at_the_tw.md
+- **Summary:** created 'The env-to-env dispersion moves in opposite directions at the two ends: CV falls'
+
+## [2026-08-03T13:52:43.764401] add
+- **Pages:** roll_is_the_only_axis_that_degrades_at_hard_its_q90_crosses_20_a.md
+- **Summary:** created 'Roll is the only axis that degrades at hard — its q90 crosses 20 and its count o'
+
+## [2026-08-03T13:52:43.764401] add
+- **Pages:** the_same_roll_axis_improves_markedly_at_medium_os_env_mean_11_51.md
+- **Summary:** created 'The same roll axis IMPROVES markedly at medium (`os_env_mean` 11.511 -> 8.396, `'
+
+## [2026-08-03T13:52:43.764401] add
+- **Pages:** the_none_column_is_not_an_easy_in_distribution_case_for_any_of_t.md
+- **Summary:** created 'The `none` column is not an easy in-distribution case for any of these students:'
+
+## [2026-08-03T13:52:43.764401] add
+- **Pages:** generalization_and_hard_corner_performance_move_in_opposite_dire.md
+- **Summary:** created 'Generalization and hard-corner performance move in OPPOSITE directions for B2, w'
+
+## [2026-08-03T13:52:43.764401] add
+- **Pages:** against_the_control_the_aggregate_hard_r2_rises_0_1555_2_92_sigm.md
+- **Summary:** created 'Against the control the aggregate hard `R2` rises +0.1555 = +2.92 sigma, short o'
+
+## [2026-08-03T13:52:43.764401] add
+- **Pages:** roughly_40_of_that_headline_is_the_denominator_moving_not_the_er.md
+- **Summary:** created 'Roughly 40% of that headline is the denominator moving, not the error falling: B'
+
+## [2026-08-03T13:52:43.764401] add
+- **Pages:** d6_the_pre_registered_dimension_improves_for_a_real_reason_and_n.md
+- **Summary:** created 'd6, the pre-registered dimension, improves for a real reason and not only throug'
+
+## [2026-08-03T13:52:43.764401] add
+- **Pages:** the_pre_registered_d4_corroboration_failed_d4_is_the_only_dim_th.md
+- **Summary:** created 'The pre-registered d4 corroboration FAILED. d4 is the only dim that is an absolu'
+
+## [2026-08-03T13:52:43.764401] add
+- **Pages:** the_per_dim_pattern_is_a_redistribution_rather_than_a_uniform_ga.md
+- **Summary:** created 'The per-dim pattern is a REDISTRIBUTION rather than a uniform gain — five dims i'
+
+## [2026-08-03T13:52:43.764401] add
+- **Pages:** d3_s_r2_rise_of_0_3874_is_a_denominator_artifact_and_must_not_be.md
+- **Summary:** created "d3's `R2` rise of +0.3874 is a denominator artifact and must not be read as an i"
+
+## [2026-08-03T13:52:43.764401] add
+- **Pages:** the_training_side_loss_corroborates_the_eval_side_latent_finding.md
+- **Summary:** created 'The training-side loss corroborates the eval-side latent finding independently: '
+
+## [2026-08-03T13:52:43.764401] add
+- **Pages:** c3_s_unrecoverable_dirty_tree_diff_was_inert_on_the_training_pat.md
+- **Summary:** created "C3's unrecoverable dirty-tree diff was INERT on the training path: the control's"
+
+## [2026-08-03T13:52:43.764401] add
+- **Pages:** dagger_teacher_frac_sits_at_0_4998_0_4999_in_all_three_arms_conf.md
+- **Summary:** created '`dagger_teacher_frac` sits at 0.4998-0.4999 in all three arms, confirming the fi'
+
+## [2026-08-03T13:52:43.764401] add
+- **Pages:** the_reward_decomposition_cannot_exist_for_this_run_type_distilla.md
+- **Summary:** created 'The reward decomposition cannot exist for this run type: distillation freezes th'
+
+## [2026-08-03T13:52:43.764401] add
+- **Pages:** no_trpo_learning_dynamics_group_exists_there_is_no_policy_optimi.md
+- **Summary:** created 'No TRPO learning-dynamics group exists: there is no policy optimisation in a dis'
+
+## [2026-08-03T13:52:43.764401] add
+- **Pages:** loss_value_function_and_loss_cost_value_are_absent_the_run_fits_.md
+- **Summary:** created '`Loss/value_function` and `Loss/cost_value` are absent: the run fits no critic.'
+
+## [2026-08-03T13:52:43.764401] add
+- **Pages:** none_of_the_20_declared_constraint_tags_exist_and_barrier_penalt.md
+- **Summary:** created 'None of the 20 declared constraint tags exist and `barrier_penalty` is not logge'
+
+## [2026-08-03T13:52:43.764401] add
+- **Pages:** the_doraemon_curriculum_group_is_absent_by_design_not_by_omissio.md
+- **Summary:** created 'The DORAEMON curriculum group is absent by design, not by omission: `configure_e'
+
+## [2026-08-03T13:52:43.764401] add
+- **Pages:** this_absence_is_load_bearing_for_how_the_tracking_table_must_be_.md
+- **Summary:** created 'This absence is load-bearing for how the `tracking` table must be read, not mere'
+
+## [2026-08-03T13:52:43.764401] add
+- **Pages:** the_five_declared_encoder_tb_tags_are_absent_because_the_teacher.md
+- **Summary:** created "The five declared encoder TB tags are absent because the teacher's encoder is fr"
+
+## [2026-08-03T13:53:27.506570] add
+- **Pages:** an_r2_delta_between_two_runs_mixes_error_change_with_denominator.md
+- **Summary:** created 'An R2 DELTA between two runs mixes error change with denominator change whenever their eval env draws differ -- decompose it before reporting the headline'
+
+## [2026-08-03T13:53:44.575649] add
+- **Pages:** extra_obs_dim_0_shifts_the_eval_rng_stream_so_an_obs4_arm_never_.md
+- **Summary:** created 'extra_obs_dim>0 shifts the eval RNG stream so an obs4 arm never shares env draws with a pre-obs4 run, but a dim=0 control on the same commit is byte-identical to one'
+
+## [2026-08-03T13:54:05.423137] add
+- **Pages:** c3_s_dirty_tree_provenance_doubt_is_closed_a_dim_0_control_on_co.md
+- **Summary:** created "C3's dirty-tree provenance doubt is CLOSED: a dim=0 control on commit d81e2fd reproduces C3's iteration 0 bit-identically, so every student_distill_eint comparison against C3 stands"
+
+## [2026-08-03T13:54:37.300266] add
+- **Pages:** obs4_student_extra_observation_interface_4_deployable_channels_r.md
+- **Summary:** updated 'obs4 student extra-observation interface: 4 deployable channels ride the observation dict through ONE shared student_input, zero-order held at the real 25 Hz bus rate; implemented and pushed 2026-08-03, not yet run'
+
+## [2026-08-03T13:54:59.336112] add
+- **Pages:** c4b_dagger_correction_measured_partial_2_5_4x_in_loop_reduction_.md
+- **Summary:** updated 'C4b DAgger correction measured: partial (2.5-4x in-loop reduction at low-mod DR, under-dispersion floor persists at hard)'
+
+## [2026-08-03T14:11:06.139256] add
+- **Pages:** obs4_student_extra_observation_interface_4_deployable_channels_r.md
+- **Summary:** updated 'obs4 student extra-observation interface: 4 deployable channels ride the observation dict through ONE shared student_input, zero-order held at the real 25 Hz bus rate; implemented and pushed 2026-08-03, not yet run'
+
+## [2026-08-03T14:11:06.239650] add
+- **Pages:** c4b_dagger_correction_measured_partial_2_5_4x_in_loop_reduction_.md
+- **Summary:** updated 'C4b DAgger correction measured: partial (2.5-4x in-loop reduction at low-mod DR, under-dispersion floor persists at hard)'
+
+## [2026-08-03T14:12:45.501887] add
+- **Pages:** koopman_rl_integration_research_consolidated_reference_2026_08_0.md
+- **Summary:** created 'Koopman RL integration research consolidated reference 2026-08-03'
+

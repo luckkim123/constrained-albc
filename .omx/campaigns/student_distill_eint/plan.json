@@ -20,6 +20,12 @@
       "summary": "Eval-side latent-sensitivity sweep on A0g: inject k*per-dim-RMSE noise into l_hat before the frozen actor, k in {0,0.5,1,2,4}, measure att_norm against the 0.1 deg floor. Splits 'latent fidelity does not drive control' from 'the latent interventions failed for mechanism reasons'. Zero training.",
       "label": "C1-latsens",
       "added_at": "2026-07-29T09:02:45.683768+00:00"
+    },
+    {
+      "proposal_id": "next-20260803-184816",
+      "summary": "B2-extraobs: extra_obs_dim 0->4 (IMU specific force 3D + pressure heave rate 1D, ZOH at the real 25 Hz bus) on the student GRU encoder vs the C3 recipe; H1 aggregate hard R2 >= +0.27 with d6 rising >= 0.175, H2 no rise at all; PREREQ B0 = a student_extra dump in eval.py, without which the run cannot be graded",
+      "label": "B2-extraobs",
+      "added_at": "2026-08-03T09:54:01.810757+00:00"
     }
   ]
 }

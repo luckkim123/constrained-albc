@@ -2,16 +2,16 @@
 title: "experiment idea: latency/transport-delay DR (sensor-obs + control-action lag) -- infra exists (isaaclab DelayBuffer) but unused; DelayedPD failed before"
 tags: ["latency", "delay", "domain-randomization", "sim2real", "experiment-idea", "control_delay", "delay-buffer", "sim-to-real", "doraemon", "eval-instrument", "e1", "user-decision"]
 created: 2026-07-08T02:50:39.246807
-updated: 2026-07-24T07:18:33.943973
+updated: 2026-08-03T09:07:52.061131
 sources: ["trpo_e1_latdr_260713_124923", "diagnose-20260713-184751", "next-20260713-122215", "next-20260713-142602", "dr_config.py", "eval.py", "next-20260724-033157", "static_260724_083142", "static_260724_085559"]
-links: ["real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md", "eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md", "an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md", "baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md", "xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e.md", "cross_run_dr_comparability_eval_py_doraemon_dr_from_already_prov.md"]
+links: ["real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md", "eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md", "an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md", "baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md", "xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e.md", "cross_run_dr_comparability_eval_py_doraemon_dr_from_already_prov.md", "real_albc_deployment_state_estimation_rates_measured_from_code_a.md", "obs4_student_extra_observation_interface_4_deployable_channels_r.md"]
 category: convention
 confidence: high
 schemaVersion: 1
 qualityScore: 90
 qualityReasons: ["generic-only-tags"]
 status: needs-experiment
-blocked-on: "BLOCKER 1 (eval instrument) RESOLVED; BLOCKER 2 (delay is off-DORAEMON, needs _PARAM_DEFS dim or MEASURED performance_lb recalibration) remains for the training side"
+blocked-on: "BLOCKER 1 (eval instrument) RESOLVED; BLOCKER 2 (delay is off-DORAEMON, needs _PARAM_DEFS dim or MEASURED performance_lb recalibration) remains for the training side. As of 2026-08-03 this lead is no longer speculative margin -- the real bus rate is MEASURED and the deployed system already carries observation staleness of the same order the Z4 sweep priced; priority argument strengthened, blocker unchanged"
 ---
 
 # experiment idea: latency/transport-delay DR (sensor-obs + control-action lag) -- infra exists (isaaclab DelayBuffer) but unused; DelayedPD failed before
@@ -194,4 +194,43 @@ run (trpo_e1_latdr) already showed a naive delay-ON run stalls -- do not repeat 
 ## Update (2026-07-24T07:18:33.943973)
 
 [MEASURED 2026-07-24] Z4 delay eval sweep DONE -> BLOCKER 1 (no delay-sweep instrument) RESOLVED. Built `--control-delay N` on exp/latency-eval-instrument (99de708 + 790b0c8 DelayBuffer-at-env-init); d=0 reproduces the clean anchor byte-for-byte (roll ss_error none 0.539) = instrument is a clean no-op at d=0, so the delay effect is REAL not artifact. Anchor s30, none+hard, d in {0,1,2,3} (1 step = 20 ms @ 50 Hz). att_norm ss_error vs d0: none d1=+134% (0.63->1.47), d2=+414%, d3=+790% (5.60); hard d1=1.7x, d2=8.4x, d3=12.8x (10.68 deg); roll ss_jitter blows up 2.2x/4.8x/8.5x (none) and 2.8x/7.6x/11.6x (hard); hard survival drops 100->92%. VERDICT: H2 (delay-naive policy degrades MATERIALLY) CONFIRMED strongly -- the H1 "delay is free" tolerance (att_norm within +10%, jitter <2x) breaks already at d=1 (20 ms). Control latency is NOT free; large sim-to-real risk. CONSEQUENCE: a delay-ON training probe is justified (benefit-half now measured). CAVEAT: the magnitude is large enough that the delay-ON training proposal should FIRST re-confirm the DelayBuffer semantics in code (rule 03 "verify implementation not name"). BLOCKER 2 (off-DORAEMON, performance_lb recalibration) still gates the training side. Data: experiments/.../trpo_buoyanchor_s30_260722_134743/sweeps/z4_delay/d*/summary.json.
+
+---
+
+## Update (2026-08-03T09:07:52.061131)
+
+
+## 2026-08-03 -- the measured bus rate reclassifies this lead from hypothetical margin to current deployment condition
+
+[FINDING] The real sensor rates are now measured from firmware, not assumed
+([[real_albc_deployment_state_estimation_rates_measured_from_code_a]]): `/hero_agent/sensors`
+(attitude + gyro + depth) publishes at <= ~25 Hz while the policy ticks at 50 Hz, and joints arrive at
+10 Hz. The deployed system therefore ALREADY runs on observations aged roughly 0-40 ms on the attitude
+channel and up to 100 ms on the joint channel. The Z4 sweep on this page priced 20 ms of loop
+dead-time at +134% attitude error and 2.2x roll jitter, and 40 ms at +415% / 4.8x. The staleness the
+robot actually has sits inside that measured band.
+
+[EVIDENCE: rate page (agent.ino 4-phase loop, delay(9) per phase, publish only in the last phase ->
+period >= 36 ms, exact value = loop_speed/4 self-telemetered in the sensors DEPTH field; Dynamixel
+LOOP_HZ = 10.0; control_hz = 50 / CONTROL_DT = 0.02) against the Z4 table already on this page
+(experiments/.../trpo_buoyanchor_s30_260722_134743/sweeps/z4_delay/d*/summary.json).]
+[CONFIDENCE: HIGH]
+
+DO NOT read the Z4 d-numbers as a spec for the sensor side. Z4 delayed the ACTION with a fixed
+DelayBuffer; what the rate measurement describes is OBSERVATION staleness whose age VARIES between
+ticks because a slower publisher is being zero-order held. Both add dead-time to the same loop, so the
+order of magnitude carries; the exact penalty does not, and asserting it would be the "verify
+implementation, not name" trap. The training probe should model the sensor side explicitly rather than
+reuse a control-side buffer and call it equivalent.
+
+SCOPE BOUNDARY, so this does not get silently absorbed by another arm: the obs4 work
+([[obs4_student_extra_observation_interface_4_deployable_channels_r]]) zero-order holds ITS OWN four
+new channels at the real bus rate, but the pre-existing 72D observation vector is still trained fresh
+at 50 Hz. Closing the staleness gap on the MAIN observation vector belongs to this lead, not to the
+B2 arm. B2 must not be graded as if it addressed it.
+
+CONSEQUENCE: BLOCKER 2 is unchanged -- delay is still off-DORAEMON and still needs either a
+_PARAM_DEFS dim or a measured performance_lb recalibration, and the naive delay-ON run (trpo_e1_latdr)
+already showed what skipping that costs. What changed is the justification: this is no longer a
+robustness margin someone might want, it is a condition the hardware imposes today.
 
