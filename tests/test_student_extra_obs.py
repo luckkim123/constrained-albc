@@ -159,11 +159,17 @@ def test_collector_extra_roundtrip():
     cfg.num_envs = 3; cfg.n_steps_per_rollout = 2; cfg.minibatch_size = 6
     buf = coll_mod.RolloutBuffer(cfg, torch.device("cpu"))
     for t in range(2):
-        buf.add(torch.full((3, cfg.policy_obs_dim), float(t)),
-                torch.zeros(3, cfg.privileged_dim), torch.zeros(3, 9),
-                torch.zeros(3, 8), torch.zeros(3, dtype=torch.bool),
-                extra=torch.full((3, 4), 10.0 + t))
+        # Per-env values must differ (not torch.full/uniform): iter_minibatches_gru
+        # permutes envs via torch.randperm, so uniform data would still pass even if
+        # extra_seq used a DIFFERENT permutation than obs_seq -- exactly the silent
+        # env-mispairing corruption this test exists to catch.
+        env_val = 100.0 * torch.arange(3, dtype=torch.float32) + t
+        obs = env_val.unsqueeze(-1).expand(3, cfg.policy_obs_dim)
+        extra = (env_val + 0.5).unsqueeze(-1).expand(3, 4)
+        buf.add(obs, torch.zeros(3, cfg.privileged_dim), torch.zeros(3, 9),
+                torch.zeros(3, 8), torch.zeros(3, dtype=torch.bool), extra=extra)
     (batch,) = buf.iter_minibatches_gru()
     assert batch.extra_seq.shape == (3, 2, 4)
-    assert torch.allclose(batch.extra_seq[:, 0], torch.full((3, 4), 10.0))
-    assert torch.allclose(batch.obs_seq[:, 1, 0], torch.ones(3))
+    # Pairing invariant: holds under ANY permutation as long as obs_seq and extra_seq
+    # used the SAME one; breaks the moment they diverge (e.g. reversed idx for one).
+    assert torch.allclose(batch.extra_seq[:, :, 0], batch.obs_seq[:, :, 0] + 0.5)
