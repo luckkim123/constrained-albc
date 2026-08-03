@@ -83,6 +83,12 @@ def test_multi_layer_is_rejected():
         StudentGRUSpec._assert_board_runnable(_cfg(gru_layers=2))
 
 
+def test_extra_obs_is_rejected():
+    """Gen-1 extra-obs students have no board-side input/normalization contract."""
+    with pytest.raises(ExportContractError, match="extra_obs_dim"):
+        StudentGRUSpec._assert_board_runnable(_cfg(extra_obs_dim=4))
+
+
 def test_adopted_geometry_is_accepted():
     StudentGRUSpec._assert_board_runnable(_cfg())  # must not raise
 

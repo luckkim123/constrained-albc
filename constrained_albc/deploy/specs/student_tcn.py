@@ -59,10 +59,27 @@ class StudentTCNSpec(ExportSpec):
         cfg_dict = ckpt.get("cfg", {})
         cfg = StudentCfg(**{k: v for k, v in cfg_dict.items()
                             if k in StudentCfg.__dataclass_fields__}) if cfg_dict else StudentCfg()
+        self._assert_board_runnable(cfg)
         model = StudentEncoderTCN(cfg).to(device)
         model.load_state_dict(ckpt["student_state_dict"])
         model.eval()
         return model
+
+    @staticmethod
+    def _assert_board_runnable(cfg) -> None:
+        """Reject a gen-1 extra-obs student; npforward has no contract for it.
+
+        Unreachable via the training runner today (TCN students always go through
+        make_student_encoder, which already rejects extra_obs_dim > 0 for non-GRU
+        encoders), but guarded here too so the deploy path enforces the same
+        contract as its GRU twin rather than relying on an upstream check.
+        """
+        if getattr(cfg, "extra_obs_dim", 0) > 0:
+            raise ExportContractError(
+                "student_tcn: extra_obs_dim > 0 (E1/B2 gen-1 side-channel student). "
+                "npforward has no extra-channel input or scaling contract; deploy support "
+                "arrives with gen-2 (teacher obs76), where policy_obs itself is 76D."
+            )
 
     def map_state_dict(self, model: nn.Module) -> dict[str, np.ndarray]:
         sd = model.state_dict()

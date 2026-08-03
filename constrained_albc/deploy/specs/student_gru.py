@@ -84,6 +84,12 @@ class StudentGRUSpec(ExportSpec):
                 "(LayerNorm) and head.3 (second Linear). Only the deep-head variant is "
                 "exportable to the board runtime."
             )
+        if getattr(cfg, "extra_obs_dim", 0) > 0:
+            raise ExportContractError(
+                "student_gru: extra_obs_dim > 0 (E1/B2 gen-1 side-channel student). "
+                "npforward has no extra-channel input or scaling contract; deploy support "
+                "arrives with gen-2 (teacher obs76), where policy_obs itself is 76D."
+            )
 
     def map_state_dict(self, model: nn.Module) -> dict[str, np.ndarray]:
         sd = model.state_dict()

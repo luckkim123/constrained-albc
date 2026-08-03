@@ -1,5 +1,10 @@
+from types import SimpleNamespace
+
 import numpy as np
+import pytest
 import torch
+
+from constrained_albc.deploy.spec import ExportContractError
 from constrained_albc.deploy.specs.student_tcn import StudentTCNSpec
 
 # Ground-truth shapes from student_999.pt (verified 2026-06-11)
@@ -55,3 +60,23 @@ def test_map_is_identity_and_fp32():
     for k, shape in GT.items():
         assert mapped[k].shape == shape
         assert mapped[k].dtype == np.float32  # cast from float64
+
+
+def _cfg(**over):
+    base = dict(extra_obs_dim=0)
+    base.update(over)
+    return SimpleNamespace(**base)
+
+
+def test_extra_obs_is_rejected():
+    """Gen-1 extra-obs students have no board-side input/normalization contract.
+
+    Unreachable via the training runner today (make_student_encoder already
+    rejects extra_obs_dim > 0 for non-GRU encoders), but guarded here too so
+    the deploy path doesn't depend on that upstream check alone."""
+    with pytest.raises(ExportContractError, match="extra_obs_dim"):
+        StudentTCNSpec._assert_board_runnable(_cfg(extra_obs_dim=4))
+
+
+def test_no_extra_obs_is_accepted():
+    StudentTCNSpec._assert_board_runnable(_cfg())  # must not raise
