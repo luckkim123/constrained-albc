@@ -2,14 +2,14 @@
 title: "Plant-change batch v2: four Isaac plant corrections are now pending and each alone forces a teacher retrain, so they are batched behind one sizing gate instead of decided individually"
 tags: ["plant", "batch", "retrain", "buoy", "added-mass", "damping", "thruster", "actuator", "sim-to-real", "guard-structure", "sequencing"]
 created: 2026-07-29T11:46:55.315005
-updated: 2026-07-30T02:29:55.632589
+updated: 2026-08-03T05:53:22.346889
 sources: ["stonefish-reply-20260729", "buoy-hydro-rig-20260729", "thruster-static-gain-20260729", "servo-chatter-p1-correction-20260729", "stonefish-reply-20260730", "code-verify-20260730"]
 links: []
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
 ---
 
 # Plant-change batch v2: four Isaac plant corrections are now pending and each alone forces a teacher retrain, so they are batched behind one sizing gate instead of decided individually
@@ -69,4 +69,26 @@ hydrorc_016d1b1_recentered_nine_hull_hydro_numbers_onto_a_broken.
 
 [EVIDENCE: Stonefish reply 2026-07-30; git show 016d1b1; arithmetic re-derived 2026-07-30 code-exec;
 marinelab/assets/albc/albc.py:52,85,115,141] [CONFIDENCE: HIGH]
+
+---
+
+## Update (2026-08-03T05:53:22.346889)
+
+## FIFTH CANDIDATE ADDED 2026-08-03 (user proposal): policy_obs +4 deployable sensor channels at the next batched teacher retrain
+
+The user proposed adding the E1/B2 sensor channels (IMU specific force 3D + pressure-derived heave
+rate 1D) to the TEACHER as well. That is path (b) of the 2026-07-30 E1 decision - putting the
+channels in policy_obs so the shared actor reads them, giving the CONTROLLER itself acceleration
+feedback rather than only helping the student encoder infer the latent. It is architecturally sound
+(all four channels are deployable; the bias-EMA 69-to-72D expansion is the precedent) and was
+excluded from E1 only because it forces a teacher retrain, which this batch already pays for.
+
+So it rides this batch: when the batched plant-v2 teacher retrain happens, widen policy_obs 72-to-76
+with the same four channels, sharing the E1 implementation (channel computation, cfg knobs
+depth_noise_std / heave_lag_tau, reset handling are identical; only the wiring target differs).
+
+GATE, same discipline as the other four: adopt into the batch ONLY IF E1/B2 first shows the
+channels carry real information (per-dim R2 rises on the currently-negative dims). If E1 returns
+null, the channels earn nothing at the encoder and there is no reason to expect the actor to use
+them better - drop this candidate rather than retrain on faith.
 

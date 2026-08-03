@@ -8363,3 +8363,7 @@
 - **Pages:** gru_memory_and_corrected_dagger_mixing_compound_c3_is_the_campai.md
 - **Summary:** updated "GRU memory and corrected DAgger mixing COMPOUND: C3 is the campaign's best latent tracker at every level and the first student to beat the teacher by a decision-grade margin"
 
+## [2026-08-03T05:53:22.346889] add
+- **Pages:** plant_change_batch_v2_four_isaac_plant_corrections_are_now_pendi.md
+- **Summary:** updated 'Plant-change batch v2: four Isaac plant corrections are now pending and each alone forces a teacher retrain, so they are batched behind one sizing gate instead of decided individually'
+
