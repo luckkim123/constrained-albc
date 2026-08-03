@@ -751,11 +751,13 @@ def apply_extra_policy_obs(cfg) -> None:
     """
     if not cfg.use_extra_policy_obs:
         return
-    if not cfg.use_student_extra_obs:
+    if cfg.use_student_extra_obs:
         raise ValueError(
-            "use_extra_policy_obs=True requires use_student_extra_obs=True -- the 4 channels "
-            "are produced by compute_student_extra_obs, which only runs under that flag, so "
-            "gen-2 would otherwise fold an absent tensor into policy_obs."
+            "use_extra_policy_obs=True is mutually exclusive with use_student_extra_obs=True: "
+            "gen-2 folds the 4 channels into policy_obs itself, so the gen-1 side key would hand "
+            "the student the same signal twice. It would also force the student to extra_obs_dim>0, "
+            "which train_student.py's _check_extra_obs_consistency rejects for a 76D-obs student -- "
+            "a gen-2 student runs extra_obs_dim=0 because the 76D stream IS the observation."
         )
     if cfg.observation_space not in (69, 72):
         raise ValueError(

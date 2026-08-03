@@ -14,7 +14,7 @@ what actually breaks if a future edit adds a fourth site and forgets this one.
 Each test names the production change that makes it fail:
   - off_is_noop            -> deleting the `if not cfg.use_extra_policy_obs: return` guard
   - bumps_and_extends      -> bumping by 3 instead of 4, or padding non-zero noise
-  - requires_student_flag  -> deleting the use_student_extra_obs precondition
+  - mutually_exclusive     -> deleting the gen-1/gen-2 exclusivity precondition
   - rejects_double_apply   -> deleting the pre-bump width check
   - noise_model_none       -> dropping the `is not None` guard (AttributeError on eval path)
   - composes_with_bias_ema -> hardcoding a 72-only pre-bump width
@@ -98,7 +98,7 @@ def test_off_is_noop():
 
 def test_bumps_and_extends_vectors_with_four_zeros():
     apply = _load_apply_extra_policy_obs()
-    cfg = _make_fake_cfg(use_extra_policy_obs=True, use_student_extra_obs=True, observation_space=72)
+    cfg = _make_fake_cfg(use_extra_policy_obs=True, use_student_extra_obs=False, observation_space=72)
     apply(cfg)
     assert cfg.observation_space == 76
     std = cfg.observation_noise_model.noise_cfg.std
@@ -112,17 +112,19 @@ def test_bumps_and_extends_vectors_with_four_zeros():
     assert n_max[-4:] == (0.0, 0.0, 0.0, 0.0)
 
 
-def test_requires_student_extra_obs_flag():
-    """Gen-2 without the producing flag would fold an absent tensor into policy_obs."""
+def test_mutually_exclusive_with_gen1_side_channel():
+    """Both flags on would hand the student the same signal twice, and would force the
+    student to extra_obs_dim>0 -- which train_student.py's consistency check rejects for a
+    76D-obs student. A gen-2 student runs extra_obs_dim=0 with the gen-1 flag off."""
     apply = _load_apply_extra_policy_obs()
-    cfg = _make_fake_cfg(use_extra_policy_obs=True, use_student_extra_obs=False, observation_space=72)
-    with pytest.raises(ValueError, match="use_student_extra_obs"):
+    cfg = _make_fake_cfg(use_extra_policy_obs=True, use_student_extra_obs=True, observation_space=72)
+    with pytest.raises(ValueError, match="mutually exclusive"):
         apply(cfg)
 
 
 def test_rejects_double_apply():
     apply = _load_apply_extra_policy_obs()
-    cfg = _make_fake_cfg(use_extra_policy_obs=True, use_student_extra_obs=True, observation_space=76)
+    cfg = _make_fake_cfg(use_extra_policy_obs=True, use_student_extra_obs=False, observation_space=76)
     with pytest.raises(ValueError, match="observation_space"):
         apply(cfg)
 
@@ -130,7 +132,7 @@ def test_rejects_double_apply():
 def test_bumps_space_when_noise_model_none_eval_path():
     """eval.py nulls observation_noise_model; the 76D policy still needs the space bump."""
     apply = _load_apply_extra_policy_obs()
-    cfg = _make_fake_cfg(use_extra_policy_obs=True, use_student_extra_obs=True, observation_space=72)
+    cfg = _make_fake_cfg(use_extra_policy_obs=True, use_student_extra_obs=False, observation_space=72)
     cfg.observation_noise_model = None
     apply(cfg)
     assert cfg.observation_space == 76
@@ -140,7 +142,7 @@ def test_bumps_space_when_noise_model_none_eval_path():
 def test_composes_with_bias_ema_off():
     """bias_ema off leaves 69, so gen-2 must accept that pre-bump width too (69 -> 73)."""
     apply = _load_apply_extra_policy_obs()
-    cfg = _make_fake_cfg(use_extra_policy_obs=True, use_student_extra_obs=True, observation_space=69)
+    cfg = _make_fake_cfg(use_extra_policy_obs=True, use_student_extra_obs=False, observation_space=69)
     apply(cfg)
     assert cfg.observation_space == 73
 

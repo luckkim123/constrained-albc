@@ -1164,7 +1164,11 @@ class ALBCEnv(DirectRLEnv):
         # consumers below. compute_student_extra_obs advances the zero-order-hold state and
         # draws sensor noise, so calling it twice would hand the policy and the student key
         # two DIFFERENT signals in the same step -- silently, and only when both flags are on.
-        extra_obs = compute_student_extra_obs(self, self._robot) if self.cfg.use_student_extra_obs else None
+        extra_obs = (
+            compute_student_extra_obs(self, self._robot)
+            if (self.cfg.use_student_extra_obs or self.cfg.use_extra_policy_obs)
+            else None
+        )
 
         # Gen-2 (Phase D): fold those channels into policy_obs itself (72 -> 76), so the
         # teacher's actor is trained on them. Lands after bias_ema, matching the width order
@@ -1188,13 +1192,13 @@ class ALBCEnv(DirectRLEnv):
         )
 
         observations = {"policy": policy_obs}
-        # E1/B2: publish the 4 extra student channels as their own obs key. In gen-1 they are
-        # NOT in policy_obs, so the frozen teacher actor's 72D input is untouched; in gen-2
-        # this is the same tensor already folded above, republished so a gen-1 student can
-        # still be distilled from a gen-2 env. The key rides RslRlVecEnvWrapper's TensorDict
-        # straight to the student runner and to StudentInLoopPolicy -- no env.unwrapped
-        # reach-through anywhere.
-        if extra_obs is not None:
+        # E1/B2 gen-1 only: publish the 4 channels as their own obs key, NOT in policy_obs, so
+        # the frozen teacher actor's 72D input is untouched. Gen-2 deliberately does NOT publish
+        # it -- the channels are already inside the 76D policy_obs, so a gen-2 student runs
+        # extra_obs_dim=0 and the two flags are mutually exclusive (apply_extra_policy_obs
+        # enforces it). The key rides RslRlVecEnvWrapper's TensorDict straight to the student
+        # runner and to StudentInLoopPolicy -- no env.unwrapped reach-through anywhere.
+        if self.cfg.use_student_extra_obs:
             observations[STUDENT_EXTRA_OBS_KEY] = extra_obs
         assert policy_obs.shape[-1] == self.cfg.observation_space, (
             f"emitted policy obs dim {policy_obs.shape[-1]} != "
