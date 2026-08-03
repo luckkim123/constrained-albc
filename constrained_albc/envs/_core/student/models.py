@@ -31,6 +31,25 @@ def student_input(
     return torch.cat([obs_n, extra / scale], dim=-1)
 
 
+def extra_scale_tensor(cfg, device) -> torch.Tensor | None:
+    """Per-channel scale tensor for the extra sensor channels, or None when off.
+
+    One definition shared by the runner and by eval's StudentInLoopPolicy -- the same
+    reason student_input exists. The length check turns a silent truncation into a
+    named error: a short extra_obs_scale would otherwise slice quietly and surface as
+    an opaque broadcast failure at the first forward.
+    """
+    n = getattr(cfg, "extra_obs_dim", 0)
+    if n <= 0:
+        return None
+    scale = cfg.extra_obs_scale
+    if len(scale) < n:
+        raise ValueError(
+            f"extra_obs_scale has {len(scale)} entries but extra_obs_dim is {n}"
+        )
+    return torch.tensor(scale[:n], device=device)
+
+
 class StudentEncoderTCN(nn.Module):
     """Window-based temporal conv encoder.
 

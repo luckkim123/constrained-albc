@@ -24,7 +24,11 @@ import os
 import torch
 
 from constrained_albc.envs.main.student.config import StudentCfg
-from constrained_albc.envs.main.student.models import make_student_encoder
+from constrained_albc.envs.main.student.models import (
+    extra_scale_tensor,
+    make_student_encoder,
+    student_input,
+)
 from constrained_albc.envs.main.student.teacher import FrozenTeacher
 
 
@@ -59,12 +63,19 @@ class StudentInLoopPolicy:
         # width is set from cfg.policy_obs_dim in models.py, and the ring below).
         if "policy_obs_dim" in saved_cfg:
             cfg.policy_obs_dim = saved_cfg["policy_obs_dim"]
+        for field in ("extra_obs_dim", "extra_obs_scale"):
+            if field in saved_cfg:
+                setattr(cfg, field, saved_cfg[field])
         if cfg.policy_obs_dim != self.teacher.obs_dim:
             raise ValueError(
                 f"student obs width ({cfg.policy_obs_dim}) != teacher obs width "
                 f"({self.teacher.obs_dim}): the student and teacher were trained on "
                 "different observation layouts and cannot be paired for in-loop eval."
             )
+        # ENCODER width is obs + extra -- the guard above stays on obs width only.
+        if getattr(cfg, "extra_obs_dim", 0) > 0 and cfg.encoder_type != "gru":
+            raise ValueError("extra channels are GRU-only (see StudentCfg)")
+        self._extra_scale = extra_scale_tensor(cfg, device)
         if cfg.encoder_type == "gru":
             if "gru.weight_ih_l0" in sd:
                 cfg.gru_hidden = sd["gru.weight_ih_l0"].shape[0] // 3
@@ -183,7 +194,15 @@ class StudentInLoopPolicy:
         else:
             # Single-step forward. Normalize obs to match training distribution.
             obs_for_student = self.obs_normalizer(obs)
-            obs_seq = obs_for_student.unsqueeze(1)  # (B, 1, 87)
+            if self._extra_scale is not None and "student_extra" not in obs_td:
+                raise RuntimeError(
+                    "student ckpt has extra_obs_dim > 0 but the env published no "
+                    "'student_extra' obs key -- the eval env needs "
+                    "use_student_extra_obs=True (run_static sets it from the ckpt)"
+                )
+            obs_seq = student_input(
+                obs_for_student, obs_td.get("student_extra"), self._extra_scale
+            ).unsqueeze(1)
             l_hat_seq, self.hidden = self.student(obs_seq, hidden=self.hidden)
             l_hat = l_hat_seq[:, -1]    # (B, 9)
 

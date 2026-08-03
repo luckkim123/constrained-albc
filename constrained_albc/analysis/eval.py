@@ -1082,6 +1082,14 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         if args_cli.teacher_ckpt is None or args_cli.encoder_type is None:
             raise ValueError("--student_ckpt requires both --teacher_ckpt and --encoder_type.")
 
+    # A student trained with the extra sensor channels needs the env to publish them.
+    # Read it off the CHECKPOINT rather than adding a CLI flag: a flag can be forgotten,
+    # and a forgotten flag would silently evaluate the student against an absent key.
+    if is_student_mode:
+        _sc = torch.load(args_cli.student_ckpt, map_location="cpu").get("cfg", {})
+        if _sc.get("extra_obs_dim", 0) > 0:
+            env_cfg.use_student_extra_obs = True
+
     resume_path = None
     if is_student_mode:
         resume_path = args_cli.student_ckpt

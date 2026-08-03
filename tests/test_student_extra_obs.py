@@ -153,6 +153,21 @@ def test_tcn_extra_rejected():
         models_mod.make_student_encoder(cfg)
 
 
+def test_extra_scale_tensor_off_when_extra_obs_dim_zero():
+    cfg_mod, models_mod = _load_student("config", "models")
+    cfg = cfg_mod.StudentCfg()
+    assert models_mod.extra_scale_tensor(cfg, torch.device("cpu")) is None
+
+
+def test_extra_scale_tensor_raises_on_short_scale():
+    cfg_mod, models_mod = _load_student("config", "models")
+    cfg = cfg_mod.StudentCfg()
+    cfg.extra_obs_dim = 4
+    cfg.extra_obs_scale = (10.0, 10.0)  # shorter than extra_obs_dim
+    with pytest.raises(ValueError, match="extra_obs_scale has 2 entries but extra_obs_dim is 4"):
+        models_mod.extra_scale_tensor(cfg, torch.device("cpu"))
+
+
 def test_collector_extra_roundtrip():
     cfg_mod, coll_mod = _load_student("config", "collector")
     cfg = cfg_mod.StudentCfg(); cfg.encoder_type = "gru"; cfg.extra_obs_dim = 4

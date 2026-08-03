@@ -22,7 +22,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from .collector import RolloutBuffer
 from .config import StudentCfg, dagger_beta_at
-from .models import make_student_encoder, student_input
+from .models import extra_scale_tensor, make_student_encoder, student_input
 from .teacher import FrozenTeacher
 
 logger = logging.getLogger(__name__)
@@ -108,10 +108,7 @@ class StudentRunner:
         # E1/B2 extra-channel scale: divides extra before concatenation with obs_n
         # (see student_input in models.py). None when extra_obs_dim == 0 -> every
         # encoder forward stays byte-identical to the pre-obs4 recipe.
-        self._extra_scale = (
-            torch.tensor(cfg.extra_obs_scale[: cfg.extra_obs_dim], device=device)
-            if cfg.extra_obs_dim > 0 else None
-        )
+        self._extra_scale = extra_scale_tensor(cfg, device)
 
         self.optimizer = torch.optim.Adam(self.student.parameters(), lr=cfg.lr)
 
