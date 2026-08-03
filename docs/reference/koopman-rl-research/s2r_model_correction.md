@@ -1,0 +1,71 @@
+## Axis 2 — Koopman for Model Correction / Adaptation Across the Sim2Real Gap
+
+**Headline finding**: the exact recipe sketched (pretrain Koopman/lifting in a simulator, correct/complete it with a small real dataset, and use the K_sim-vs-K_real spectral distance as a gap meter) is **not yet published as a single closed loop anywhere found**. What exists is three separable pieces, each independently demonstrated, that would have to be stitched together: (a) physics-model-plus-data-residual Koopman hybrids validated on real hardware, (b) frozen-embedding / adapt-only-the-operator fine-tuning patterns for Koopman on real robots, and (c) an operator-distance metric theory that could serve as the spectral gap meter but has never been pointed at a sim-vs-real comparison. Marine instances beyond OM-Koop exist but are simulation-only.
+
+---
+
+### Q1 — Pretrain Koopman in sim, correct with small real dataset (our sketched recipe)
+
+| Paper | Mechanism | Where Koopman sits in the pipeline | Evidence | Maturity | Verdict for our stack |
+|---|---|---|---|---|---|
+| **Bruder, Bombara, Wood — "A Koopman-based residual modeling approach for the control of a soft robot arm"**, IJRR 44, 388–406 (2025), also NASA NTRS preprint | A **physics-based Koopman model** (fixed lifting from known kinematics/geometry) is identified first; a **data-driven residual Koopman operator** is then fit on top to absorb what physics misses. Combined model stays linear → drop-in for MPC. | Physics-Koopman = the "sim" prior; residual-Koopman = the correction. Structurally *identical* to our `K_real = K_sim + Δ` sketch, except their "sim" is an analytical physics model rather than an RL simulator — which maps closely onto our own situation (analytical hydro nominals vs. measured watertank telemetry). | **Real hardware**: physical soft robot arm, trajectory tracking + pick-and-place + writing tasks. Publisher claims hybrid model is more accurate than physics-only and needs less data than pure data-driven, but I could not extract the exact sample-count/accuracy table — the PDF served corrupted/compressed text through both NTRS and SAGE, and ResearchGate returned 403. Flagging this as **unverified at the number level, verified at the abstract/mechanism level** (cross-confirmed via NTRS metadata, SAGE listing, and independent search snippets). | Published, IJRR 2024/2025, real-hardware-validated. | **APPLICABLE-NOW as a methodological template** — this is the closest published analog to our "keep φ_x frozen/physics-derived, fit only the residual operator on real telemetry" plan. Not underwater, not literally simulator-trained, but the physics-prior + data-residual split is exactly our shape. |
+| **Ristich, Zhang, Ren, Sun — "Physics-informed Split Koopman Operators for Data-efficient Soft Robotic Simulation"**, arXiv:2502.00162 (Feb 2025) | Splits dynamics into a **known component** (passive physics, learned cheaply from equilibrium/phase-space samples, no trajectories needed) and an **unknown component** (actuator forces, learned from trajectory data), combined via Strang splitting into one linear model. | Same conceptual split as our K_sim/Δ idea, but both components are currently fit **in simulation** (Cosserat-rod PDE solver), not on real data. | **Simulation-only.** Reports ~3 orders of magnitude smaller shape error than standard EDMDc baselines at small sample sizes; plateaus past 2^12 samples. Authors explicitly name "apply this technique to data collected from physical prototypes" as future work — i.e., they have **not yet done** the sim→real step. | Early-stage, sim-only, explicit gap acknowledged by the authors themselves. | **STRETCH** — the architecture is transferable to our recipe (freeze/derive the "known" physics part from our analytical hydro model, fit the "unknown" part from real telemetry), but there is zero real-hardware evidence for it yet; we would be the first to close that loop. |
+| Recurring search-engine claim: *"fine-tune only the A/B matrices of the lifted linear dynamics while freezing the embedding, quantifying sim-to-real mismatch via matched PyBullet-vs-hardware trajectories"* | — | — | This exact framing appeared verbatim-ish across three independent WebSearch result sets, most often attributed near **Jung, Abuduweili, Li, Liu — "Whole-Body Safe Control of Robotic Systems with Koopman Neural Dynamics," arXiv:2603.03740** (confirmed via direct PDF fetch to include **real Kinova Gen3 manipulator hardware experiments**, figures "Kinova_Max_comparison"/"Kinova_Mean_comparison"). | I could **not** get clean extracted text from the PDF (heavily compressed streams defeated WebFetch three times) to directly quote the PyBullet/frozen-embedding passage, so I cannot fully verify this is the source paper vs. a search-engine paraphrase/conflation across several Koopman-adaptation papers. | Real hardware confirmed independently; the specific fine-tuning claim is **unverified — flagging explicitly rather than asserting it**. | If the mechanism is real (frozen lifting, adapt-only-operator on hardware data), it is the single closest published match to "freeze φ_x, adapt only K on real data" from our shortlist — worth the user pulling the arXiv HTML directly to confirm before citing. |
+
+**Answer to "how much real data suffices?"** — no paper in this search reports a real-data sample-efficiency curve for the sim-Koopman + real-residual recipe specifically. The Split-Koopman paper (sim-only) shows the *data-driven half* saturating past ~4096 samples; that is the closest available proxy, and it is not a real-hardware number.
+
+### Q2 — Koopman-based digital-twin calibration loop (real telemetry → update lifted model → improve sim fidelity)
+
+- **"Adaptive Digital Twin of Sheet Metal Forming via POD-based Koopman Operator with MPC,"** arXiv:2511.10852. Uses an online **Recursive Least-Squares** update of the Koopman operator's control matrix B as new deformation telemetry streams in, i.e., exactly the "real telemetry → update lifted model" loop we want — but for a manufacturing process, not a vehicle/robot, and the "sim" being calibrated is the digital twin itself rather than an RL training simulator upstream of a deployed policy. **STRETCH**: the update-loop *pattern* (online RLS on the operator matrix as real data arrives) is directly reusable for continuously tightening K_real from watertank sessions; the domain is a nearest-neighbor, not a direct hit.
+- No robot- or marine-specific "telemetry calibrates the RL sim itself" Koopman loop was found. This sub-question is the thinnest of the four — **say so plainly**: a Koopman-mediated digital-twin-fidelity-improvement loop for a robot/UUV simulator does not appear to exist in the literature yet.
+
+### Q3 — Koopman spectra/operators as a quantitative sim-vs-real gap metric ("gap meter")
+
+- **Germain, Flamary, Kostic, Lounici — "A Spectral-Grassmann Wasserstein metric for operator representations of dynamical systems,"** arXiv:2509.24920 (Sept 2025). Defines a genuine distance metric between two systems' operator representations (Koopman-type) combining spectral decomposition, Grassmann-manifold geometry, and optimal transport. This is mathematically **exactly the "gap meter" primitive** we sketched. **Evidence is theoretical/synthetic only** — 1D systems and fluid-dynamics numerical experiments, t-SNE visualization of interpolating systems; no robot, no sim-vs-real application. **STRETCH**: the tool exists and is recent/rigorous, but nobody has pointed it at a K_sim-vs-K_real robot comparison — that application would be novel if we did it.
+- Weaker precedent: a DMD-based mode-comparison metric for detecting **mode collapse in generative time-series models** (arXiv:2412.11292, "DMD-GEN") — compares DMD modes extracted from real vs. generated time series as a distributional-fidelity metric. Not robotics, not sim2real, but it is direct precedent that "compare DMD/Koopman modes between two data sources as a fidelity/gap score" is an established idea outside our field — supports feasibility, doesn't substitute for a demonstration.
+- No paper found that computes a Koopman/DMD spectral distance between a **simulator's** dynamics and a **real robot's** dynamics as an explicit sim-to-real gap score. This is the cleanest opening in the literature relative to what has been surveyed.
+
+### Q4 — Marine/underwater instances beyond OM-Koop
+
+All three marine-Koopman candidates surfaced are **simulation-only**, contrary to what search-engine summaries initially claimed (verified by direct abstract fetch, catching an apparent hallucination):
+
+- **Rahmani & Redkar — "Enhanced Koopman operator-based robust data-driven control for 3-DOF AUVs,"** Ocean Engineering, Sept 2024. DMD-derived Koopman + Fractional Sliding Mode Control. The abstract I pulled directly states *"verified through simulation results"* — no towing-tank/real hardware, despite an earlier search snippet claiming towing-tank validation (that claim did not survive direct verification and should be treated as a search-engine artifact, not fact).
+- **"Optimizing AUV speed dynamics with a data-driven Koopman operator approach,"** arXiv:2503.09628. Koopman-MPC for AUV speed control, validated in MATLAB/Gazebo only; authors themselves note "potential for real-world applications" as future work.
+- **Palma, Serani, et al. — "Model-free system identification of surface ships in waves via Hankel DMDc,"** arXiv:2502.15782 (Feb 2025). Hankel-DMDc + Bayesian UQ for ship-motion forecasting in severe sea states; trained/tested entirely on TEMPEST potential-flow simulation data (49 runs), no experimental data, no sim-to-real discussion.
+
+**So**: beyond OM-Koop, marine Koopman work exists but none of it closes a sim→real loop with real telemetry — every marine instance found stops at "verified in simulation" or explicitly defers real validation to future work.
+
+---
+
+## Overall assessment
+
+The literature genuinely does not yet contain the specific "Koopman-mediated sim2real correction with a quantified spectral gap meter" pipeline as one closed system. The nearest neighbors are:
+
+1. **Bruder et al.'s physics+residual Koopman** (real hardware, non-marine, non-simulator-trained-but-structurally-identical) — this is the strongest template to imitate for the correction half.
+2. **The Split-Koopman paper** (arXiv:2502.00162) — same architecture idea, sim-only, authors flag real-data application as open.
+3. **The Spectral-Grassmann Wasserstein metric** (arXiv:2509.24920) — the right mathematical tool for the gap-meter half, never applied to sim-vs-real.
+4. Marine Koopman-MPC work is real but stops at simulation; no marine sim2real-via-Koopman precedent exists beyond OM-Koop.
+
+None of these individually give APPLICABLE-NOW confidence for the *whole* pipeline; each piece is APPLICABLE-NOW to a sub-component, and combining them (physics/sim-Koopman prior + Bruder-style real residual fit + Spectral-Grassmann-Wasserstein as the diagnostic) would itself be a publishable contribution rather than a reproduction of prior work. Recommend treating this as confirmed white space rather than searching further for a closed match.
+
+## Sources
+
+- [Bruder, Bombara, Wood — A Koopman-based residual modeling approach for the control of a soft robot arm (IJRR abstract)](https://journals.sagepub.com/doi/abs/10.1177/02783649241272114)
+- [Same paper, NASA NTRS preprint](https://ntrs.nasa.gov/citations/20250001907) / [PDF](https://ntrs.nasa.gov/api/citations/20250001907/downloads/ResidualKoopmanModel_IJRR.pdf)
+- [Ristich, Zhang, Ren, Sun — Physics-informed Split Koopman Operators for Data-efficient Soft Robotic Simulation](https://arxiv.org/html/2502.00162) / [abs](https://arxiv.org/abs/2502.00162)
+- [Jung, Abuduweili, Li, Liu — Whole-Body Safe Control of Robotic Systems with Koopman Neural Dynamics](https://arxiv.org/pdf/2603.03740) / [html](https://arxiv.org/html/2603.03740v1)
+- [Germain, Flamary, Kostic, Lounici — A Spectral-Grassmann Wasserstein metric for operator representations of dynamical systems](https://arxiv.org/pdf/2509.24920)
+- [Grassmannian Geometry Meets Dynamic Mode Decomposition in DMD-GEN (mode-collapse metric)](https://arxiv.org/html/2412.11292v1)
+- [Rahmani & Redkar — Enhanced Koopman operator-based robust data-driven control for 3-DOF AUVs (Ocean Engineering, ScienceDirect)](https://www.sciencedirect.com/science/article/abs/pii/S0029801824015658) / [ASU listing](https://asu.elsevierpure.com/en/publications/enhanced-koopman-operator-based-robust-data-driven-control-for-3-)
+- [Optimizing AUV speed dynamics with a data-driven Koopman operator approach](https://arxiv.org/pdf/2503.09628) / [review](https://www.themoonlight.io/en/review/optimizing-auv-speed-dynamics-with-a-data-driven-koopman-operator-approach)
+- [Palma, Serani, et al. — Model-free system identification of surface ships in waves via Hankel DMDc](https://arxiv.org/html/2502.15782v1)
+- [Adaptive Digital Twin of Sheet Metal Forming via POD-based Koopman Operator with MPC](https://arxiv.org/html/2511.10852)
+- [Gong, Lyu, Ding, Xiao, Wang — KORR: Robust Online Residual Refinement via Koopman-Guided Dynamics Modeling](https://arxiv.org/pdf/2509.12562)
+- [MAKO: Meta-Adaptive Koopman Operators for Learning-based MPC of Parametrically Uncertain Nonlinear Systems](https://arxiv.org/html/2510.09042) *(already on your covered list — flagged only for context)*
+- [MetaKoopman: Bayesian Meta-Learning of Koopman Operators for Modeling Structured Dynamics under Distribution Shifts](https://arxiv.org/html/2607.26345v1)
+- [Physics-informed Deep Mixture-of-Koopmans Vehicle Dynamics Model (electric-drive trucks)](https://arxiv.org/pdf/2603.17416)
+- [Koopman Operator Based Linear Model Predictive Control for Quadruped Trotting](https://arxiv.org/pdf/2508.08259)
+
+---
+
+**Note on verification failures**: several PDFs (NASA NTRS residual-Koopman paper, ScienceDirect AUV paper, arXiv 2603.03740/2603.17416/2508.08259) returned corrupted/compressed text through WebFetch and could not be read in full; conclusions from these are marked accordingly above and should be re-verified by direct arXiv HTML or institutional access before being cited in the design doc as load-bearing evidence.

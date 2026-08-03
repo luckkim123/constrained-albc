@@ -49,6 +49,7 @@ Organized [Diátaxis](https://diataxis.fr/)-style by reader intent. English-only
 | [exploration-and-noise](reference/exploration-and-noise.md) | `envs/main` action-noise (`log_std`), post-update clamp, entropy bonus, entropy collapse under ConstraintTRPO |
 | [domain-randomization-and-doraemon](reference/domain-randomization-and-doraemon.md) | `envs/main` DR system: 20-param DORAEMON curriculum, `DomainRandomizationCfg`, sampling/scheduler wiring, eval-side fixed DR |
 | [glossary](reference/glossary.md) | alphabetized term list, each entry linked to its owning reference page |
+| [koopman-rl-research](reference/koopman-rl-research.md) | consolidated Koopman x RL integration research (2026-08-03, 3-round adversarial review): proposal verdicts, design space, code-anchored constraints, depth-tagged references; evidence reports in `reference/koopman-rl-research/` |
 | [experiments-archive](reference/experiments-archive.md) | ARCHIVE — experiment campaign rounds (2026-04-04 ~ 04-18) + root-cause investigations |
 | [design-history](reference/design-history.md) | ARCHIVE — design/plan document timeline (2026-02 ~ 03) mapped to current code |
 | [debug-history](reference/debug-history.md) | ARCHIVE — resolved bugs, TDC gain tuning, code review/cleanup logs |
