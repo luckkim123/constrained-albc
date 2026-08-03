@@ -39,6 +39,7 @@ from _eval_dr.metrics import (  # type: ignore[import-not-found]  # noqa: E402
     _pick_sample_env,
     compute_metrics,
     compute_seg_metrics,
+    summarize_student_extra,
 )
 from _eval_dr.trajectory import (  # type: ignore[import-not-found]  # noqa: E402
     ATT_AMP_DEG,
@@ -965,10 +966,19 @@ class _InstrumentedStudentPolicy:
         self._s = student
         self.l_hat_log: list[np.ndarray] = []
         self.l_true_log: list[np.ndarray] = []
+        # B0 (2026-08-03): capture the obs4 extra channels for the bite check. This is pure
+        # OBSERVATION -- it advances no state, draws no RNG, and copies to host immediately, so
+        # the instrument is unperturbed. Local import because constrained_albc.envs triggers env
+        # registration (and Isaac) at import time; same pattern as build_student_policy_fn.
+        from constrained_albc.envs._core.student.models import STUDENT_EXTRA_OBS_KEY
+
+        self._extra_key = STUDENT_EXTRA_OBS_KEY
+        self.extra_log: list[np.ndarray] = []
 
     def reset_logs(self) -> None:
         self.l_hat_log = []
         self.l_true_log = []
+        self.extra_log = []
 
     def reset(self, env_ids=None) -> None:
         if env_ids is None or isinstance(env_ids, torch.Tensor):
@@ -985,6 +995,8 @@ class _InstrumentedStudentPolicy:
 
         self.l_hat_log.append(l_hat.detach().cpu().numpy())
         self.l_true_log.append(l_true.detach().cpu().numpy())
+        if self._extra_key in obs_td:
+            self.extra_log.append(obs_td[self._extra_key].detach().cpu().numpy())
         return action
 
 
@@ -1488,6 +1500,55 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
             l_hat = np.stack(policy.l_hat_log, axis=0)    # (T, E, 9)
             l_true = np.stack(policy.l_true_log, axis=0)  # (T, E, 9)
             np.savez_compressed(os.path.join(output_dir, f"latent_{level}.npz"), l_hat=l_hat, l_true=l_true)
+            # B0: the extra channels get their OWN file, never a new key inside latent_<level>.npz.
+            # That file must stay identical to what the unpatched eval.py produced -- the
+            # instrument-unperturbed proof this change has to pass, since C3's baseline came from
+            # the unpatched instrument and B2's would come from this one. 38d979e is the cost of
+            # asserting that identity instead of checking it.
+            if policy.extra_log:
+                # Isolated: an exception here would abort the level loop and lose
+                # summary_latent.json for EVERY level, even though the per-level .npz already
+                # landed. A diagnostic must not be able to destroy the measurement it annotates.
+                try:
+                    extra_arr = np.stack(policy.extra_log, axis=0)  # (T, E, 4)
+                    np.savez_compressed(
+                        os.path.join(output_dir, f"student_extra_{level}.npz"), extra=extra_arr
+                    )
+                    # Sensor params come from env_cfg, which the student checkpoint already
+                    # restored above -- the noise floor tracks the sensor model the student was
+                    # actually trained on instead of a hardcoded default that would silently
+                    # stop matching the moment depth_noise_std or heave_lag_tau is varied.
+                    es = summarize_student_extra(
+                        extra_arr,
+                        hold_steps=getattr(env_cfg, "extra_obs_hold_steps", 2),
+                        control_dt=float(step_dt),
+                        depth_noise_std=float(getattr(env_cfg, "depth_noise_std", 0.01)),
+                        heave_lag_tau=float(getattr(env_cfg, "heave_lag_tau", 0.05)),
+                    )
+                    # Persist: a gate verdict that lives only in stdout is a gate someone
+                    # re-derives by hand. New filename, so latent_<level>.npz stays identical.
+                    with open(
+                        os.path.join(output_dir, f"student_extra_summary_{level}.json"), "w"
+                    ) as f:
+                        json.dump(es, f, indent=2)
+                    print(
+                        f"  [extra] nonzero={es['nonzero']} time_varying={es['time_varying']} "
+                        f"degenerate_envs={es['n_env_degenerate']} "
+                        f"gravity_ok={es['gravity_ok']} (mean {es['gravity_mean']:+.3f}) "
+                        f"hold_ok={es['hold_ok']} (repeat {es['repeat_fraction']:.3f} vs "
+                        f"{es['expected_repeat_fraction']:.3f}) heave_snr={es['heave_snr']:.2f}"
+                    )
+                except Exception as e:  # noqa: BLE001 -- diagnostic must not abort the eval
+                    print(f"  [WARN] extra-channel bite check failed: {e}")
+            elif getattr(env_cfg, "use_student_extra_obs", False):
+                # Loud on absence: the env was configured to publish the channels and none
+                # arrived. Staying silent here would reproduce the exact no-op the gate exists
+                # to catch, one layer out.
+                print(
+                    f"  [extra] NO channels logged at level={level} despite "
+                    "use_student_extra_obs=True -- the key was never published; "
+                    "this run CANNOT be graded on the observability question."
+                )
             ls = _summarize_latent(l_hat, l_true)
             latent_summary["levels"][level] = ls
             print(f"  [latent] overall_mse={ls['overall_mse']:.5f}  "

@@ -690,3 +690,117 @@ def compute_seg_metrics(data: dict) -> dict:
         })
 
     return {"per_seg": per_seg, "num_envs": num_envs, "num_segments": num_segs}
+
+
+def summarize_student_extra(
+    extra: np.ndarray,
+    hold_steps: int,
+    control_dt: float = 0.02,
+    depth_noise_std: float = 0.01,
+    heave_lag_tau: float = 0.05,
+    gravity: float = 9.81,
+    gravity_tol: float = 2.0,
+    hold_tol: float = 0.05,
+    time_var_eps: float = 1e-4,
+) -> dict:
+    """Bite check for the obs4 student extra-observation channels (B0, 2026-08-03).
+
+    `extra` is (T, E, 4), as dumped to `student_extra_<level>.npz`:
+      [0:3] IMU specific force in the body frame, gravity INCLUDED
+      [3]   pressure-derived heave rate
+
+    Exists because an all-zeros or never-updated channel is a SILENT no-op. The E2 delay
+    injector ran for an entire sweep while taking no effect at all, and was caught only by a
+    byte-identical d=0..3 comparison after the fact. Each check below is one a real defect fails:
+
+      nonzero       the channel was published but never filled
+      time_varying  the channel was filled once and then frozen. Judged RELATIVE to the channel's
+                    own magnitude, not against zero: numpy's std over identical values returns
+                    ~1e-16 (float64) or ~1e-6 (float32) rather than 0.0, so a `> 0` test passes on
+                    a genuinely frozen channel. That false negative was caught by this function's
+                    own tests.
+      gravity_ok    channel[2] lost the gravity-included convention -- a sign flip (-9.81) or a
+                    dropped gravity term (0.0). A CONVENTION check, not a precision one: the
+                    tolerance is wide because commanded tilt legitimately moves the mean
+                    (9.81*cos(roll)*cos(pitch)), so it cannot catch a scale error under ~20%.
+      hold_ok       the zero-order hold did not apply, so the run measured a 50 Hz channel the
+                    real robot (<= ~25 Hz sensor bus) cannot deliver -- which would make a GO
+                    verdict false rather than merely noisy
+      heave_snr     the heave channel is present but carries less signal than its own sensor noise
+
+    `nonzero` and `time_varying` are judged PER ENV, not on a pooled aggregate. Every piece of the
+    producer's state is per-env (`_depth_meas_prev`, `_heave_rate_filt`, `_extra_reset_pending`) and
+    `_reset_idx` zeroes the held buffer per env, so a single dead env is the plausible failure shape
+    -- and a mean over envs hides exactly that. `n_env_degenerate` reports how many failed.
+
+    SCOPE: this proves the env PUBLISHED the channels, not that the student CONSUMED them. The
+    logged tensor is read upstream of `student_input`'s `extra / scale`, so a degenerate
+    `extra_obs_scale` is invisible here. It cannot change these verdicts (a fixed nonzero per-channel
+    divisor leaves all four invariant), but do not read the gate as covering it.
+
+    The heave noise floor is the std of the channel with ZERO true heave, propagated through the
+    producer's actual chain rather than assumed: a first difference of two INDEPENDENT noisy depth
+    samples (a sqrt(2) growth, and an MA(1) correlation the naive form ignores) followed by the
+    first-order LPF `y += alpha*(raw - y)`. Taking the floor as `depth_noise_std / sensor_dt` --
+    which an earlier version of this function did -- overstates it by ~2x at the default
+    parameters, so a channel that is 100% noise scored 0.504 and read as "well below its own noise".
+    `heave_total_to_noise` is therefore ~1.0 for a pure-noise channel by construction, and
+    `heave_snr` is the signal-only ratio derived from it. Threshold on `heave_snr`.
+
+    Returns plain Python types. No verdict is baked in: the thresholds that decide an experiment
+    belong to that experiment's pre-registration, not to this function.
+    """
+    if extra.ndim != 3:
+        raise ValueError(f"summarize_student_extra expects (T, E, C); got shape {extra.shape}")
+    hold = max(1, int(hold_steps))
+    sensor_dt = hold * control_dt
+
+    per_env_absmax = np.abs(extra).max(axis=0)          # (E, C)
+    per_env_time_std = extra.std(axis=0)                # (E, C)
+    per_ch_absmax = per_env_absmax.max(axis=0)          # (C,)
+    time_var_floor = time_var_eps * np.maximum(per_ch_absmax, 1e-12)
+
+    env_alive = (per_env_absmax > 0) & (per_env_time_std > time_var_floor[None, :])
+    n_env_degenerate = int((~env_alive.all(axis=1)).sum())
+
+    if extra.shape[0] > 1:
+        repeat_fraction = float(np.all(extra[1:] == extra[:-1], axis=-1).mean())
+    else:
+        repeat_fraction = float("nan")
+    expected_repeat = (hold - 1) / hold
+
+    gravity_mean = float(extra[..., 2].mean())
+
+    alpha = sensor_dt / (heave_lag_tau + sensor_dt) if (heave_lag_tau + sensor_dt) > 0 else 1.0
+    heave_noise_floor = (
+        depth_noise_std / sensor_dt * float(np.sqrt(alpha ** 2 * 2.0 / (2.0 - alpha)))
+        if sensor_dt > 0 and depth_noise_std > 0
+        else 0.0
+    )
+    heave_std = float(extra[..., 3].std())
+    if heave_noise_floor > 0:
+        total_to_noise = heave_std / heave_noise_floor
+        heave_snr = float(np.sqrt(max(total_to_noise ** 2 - 1.0, 0.0)))
+    else:
+        total_to_noise = float("inf")
+        heave_snr = float("inf")
+
+    return {
+        "shape": list(extra.shape),
+        "hold_steps": hold,
+        "sensor_dt": sensor_dt,
+        "per_channel_absmax": per_ch_absmax.tolist(),
+        "per_channel_time_std": per_env_time_std.mean(axis=0).tolist(),
+        "n_env_degenerate": n_env_degenerate,
+        "nonzero": bool((per_env_absmax > 0).all()),
+        "time_varying": bool((per_env_time_std > time_var_floor[None, :]).all()),
+        "gravity_mean": gravity_mean,
+        "gravity_ok": bool(abs(gravity_mean - gravity) <= gravity_tol),
+        "repeat_fraction": repeat_fraction,
+        "expected_repeat_fraction": expected_repeat,
+        "hold_ok": bool(abs(repeat_fraction - expected_repeat) <= hold_tol),
+        "heave_std": heave_std,
+        "heave_noise_floor": heave_noise_floor,
+        "heave_total_to_noise": float(total_to_noise),
+        "heave_snr": heave_snr,
+    }
