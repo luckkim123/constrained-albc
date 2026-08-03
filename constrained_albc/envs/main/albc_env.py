@@ -405,6 +405,12 @@ class ALBCEnv(DirectRLEnv):
         # the held sample the policy re-reads between publishes.
         self._extra_tick = 0
         self._student_extra_held = torch.zeros(self.num_envs, 4, device=self.device)
+        # Step id of the last sensor-model advance. _get_observations is NOT called exactly
+        # once per step -- ConstraintEncoderRunner.log -> log_encoder_metrics calls
+        # env.get_observations() an extra time per training iteration -- and this sensor
+        # model is stateful (differentiator + LPF + ZOH tick), so the extra call must be
+        # served from the held sample instead of advancing it again. -1 = never advanced.
+        self._extra_last_step = -1
         self._vel_cmd_step_counter = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
         # Per-env command range scales. Permanently 1.0 -- inert residue of a command-difficulty
         # curriculum that was wired to DORAEMON then removed (f4583fd, 2026-04-06: it drove
@@ -1164,11 +1170,22 @@ class ALBCEnv(DirectRLEnv):
         # consumers below. compute_student_extra_obs advances the zero-order-hold state and
         # draws sensor noise, so calling it twice would hand the policy and the student key
         # two DIFFERENT signals in the same step -- silently, and only when both flags are on.
-        extra_obs = (
-            compute_student_extra_obs(self, self._robot)
-            if (self.cfg.use_student_extra_obs or self.cfg.use_extra_policy_obs)
-            else None
-        )
+        # _get_observations is NOT called exactly once per step: ConstraintEncoderRunner.log
+        # -> log_encoder_metrics calls env.get_observations() an extra time per training
+        # iteration. compute_student_extra_obs advances a differentiator, an LPF and the ZOH
+        # tick on EVERY call, so a repeat within one step would run the sensor model at the
+        # wrong rate. Serve the held sample instead. common_step_counter increments once per
+        # DirectRLEnv.step(), which is exactly the rate the sensor model is meant to run at.
+        # Before this guard the extra call raised "Inplace update to inference tensor" on the
+        # _depth_meas_prev write (rsl_rl's logging path runs outside the inference_mode the
+        # buffers were written under) -- a loud symptom of the silent rate error underneath.
+        extra_obs = None
+        if self.cfg.use_student_extra_obs or self.cfg.use_extra_policy_obs:
+            if self._extra_last_step == self.common_step_counter:
+                extra_obs = self._student_extra_held.clone()
+            else:
+                self._extra_last_step = self.common_step_counter
+                extra_obs = compute_student_extra_obs(self, self._robot)
 
         # Gen-2 (Phase D): fold those channels into policy_obs itself (72 -> 76), so the
         # teacher's actor is trained on them. Lands after bias_ema, matching the width order

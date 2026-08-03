@@ -240,9 +240,13 @@ def compute_student_extra_obs(
     (_depth_meas_prev, _heave_rate_filt, _extra_reset_pending) live on env and are
     reset in _reset_idx; the pending mask suppresses the post-reset spike.
 
-    CALL EXACTLY ONCE PER ENV STEP -- it advances a differentiator and an LPF. The only
-    call site is ALBCEnv._get_observations (gen-1) or the policy_obs concat (gen-2),
-    which DirectRLEnv invokes once per step and once per reset.
+    EVERY CALL ADVANCES the differentiator, the LPF and the ZOH tick, so it must be called
+    at most once per env step. That is NOT something the callers can be assumed to honour:
+    ALBCEnv._get_observations is itself invoked an extra time per training iteration by
+    ConstraintEncoderRunner.log -> log_encoder_metrics. The de-duplication therefore lives
+    in ALBCEnv._get_observations, which owns the step counter -- see the _extra_last_step
+    guard there. Keep this function advancing unconditionally: its unit tests drive it with
+    a bare fake env and rely on one call meaning one step.
     """
     # --- zero-order hold at the sensor rate (see cfg.extra_obs_hold_steps) ---
     # Between publishes the real policy re-reads the last sample, so do the same here.

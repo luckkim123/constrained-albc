@@ -20,6 +20,7 @@ Each test names the production change that makes it fail:
   - composes_with_bias_ema -> hardcoding a 72-only pre-bump width
   - env_width_sites        -> adding the +4 to only some of the three env-side sites
   - shared_extra_tensor    -> calling compute_student_extra_obs twice per step
+  - step_guard             -> dropping the _extra_last_step de-duplication
 """
 
 from __future__ import annotations
@@ -198,3 +199,42 @@ def test_extra_obs_computed_once_and_shared():
         and c.func.id == "compute_student_extra_obs"
     ]
     assert len(calls) == 1, f"compute_student_extra_obs called {len(calls)}x per step, expected 1"
+
+
+def test_extra_obs_advance_is_guarded_by_step_id():
+    """The sensor model must advance at most once per env step.
+
+    _get_observations is called an EXTRA time per training iteration by
+    ConstraintEncoderRunner.log -> log_encoder_metrics, and compute_student_extra_obs
+    advances a differentiator, an LPF and the ZOH tick on every call. Without the guard
+    the sensor model runs at the wrong rate -- and, because rsl_rl's logging path is
+    outside the inference_mode the buffers were written under, the in-place
+    _depth_meas_prev write raises RuntimeError("Inplace update to inference tensor").
+    That is what killed the first Phase D launch (2026-08-03).
+
+    Behavioural proof is the live run: a teacher training past its first log() call
+    exercises exactly this path. This test is the regression pin against the guard being
+    dropped, so it asserts the guard's two moving parts are both wired to the call site.
+    """
+    tree = ast.parse(_ENV_PATH.read_text())
+    node = next(
+        n
+        for n in ast.walk(tree)
+        if isinstance(n, ast.FunctionDef) and n.name == "_get_observations"
+    )
+    body = ast.unparse(node)
+    assert "_extra_last_step" in body, "no step-id guard around the sensor-model advance"
+    assert "common_step_counter" in body, "step guard is not keyed on the env step counter"
+    # The guard is only meaningful if the held sample is what the repeat call returns.
+    assert "_student_extra_held" in body, "repeat call does not serve the held sample"
+
+    # Initialised alongside its sibling ZOH state, not in some unrelated place: the whole
+    # extra-obs buffer set has to be allocated together or _reset_idx stops being branch-free.
+    owner = [
+        n.name
+        for n in ast.walk(tree)
+        if isinstance(n, ast.FunctionDef)
+        and "_extra_tick = 0" in ast.unparse(n)
+        and "_extra_last_step" in ast.unparse(n)
+    ]
+    assert owner, "_extra_last_step is not initialised with the other extra-obs ZOH buffers"
