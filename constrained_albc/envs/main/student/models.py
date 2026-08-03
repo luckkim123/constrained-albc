@@ -10,4 +10,5 @@ from constrained_albc.envs._core.student.models import (  # noqa: F401
     StudentEncoderGRU,
     StudentEncoderTCN,
     make_student_encoder,
+    student_input,
 )

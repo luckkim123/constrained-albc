@@ -22,7 +22,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from .collector import RolloutBuffer
 from .config import StudentCfg, dagger_beta_at
-from .models import make_student_encoder
+from .models import make_student_encoder, student_input
 from .teacher import FrozenTeacher
 
 logger = logging.getLogger(__name__)
@@ -105,6 +105,14 @@ class StudentRunner:
         # and restores useful gradient signal.
         self.obs_normalizer = self.teacher.policy.actor_obs_normalizer
 
+        # E1/B2 extra-channel scale: divides extra before concatenation with obs_n
+        # (see student_input in models.py). None when extra_obs_dim == 0 -> every
+        # encoder forward stays byte-identical to the pre-obs4 recipe.
+        self._extra_scale = (
+            torch.tensor(cfg.extra_obs_scale[: cfg.extra_obs_dim], device=device)
+            if cfg.extra_obs_dim > 0 else None
+        )
+
         self.optimizer = torch.optim.Adam(self.student.parameters(), lr=cfg.lr)
 
         self.buffer = RolloutBuffer(cfg, device=device)
@@ -159,8 +167,8 @@ class StudentRunner:
         logger.info("StudentRunner initialized: encoder=%s log_dir=%s", cfg.encoder_type, log_dir)
 
     def _collect_rollout(
-        self, obs: torch.Tensor, privileged: torch.Tensor, beta: float
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+        self, obs: torch.Tensor, privileged: torch.Tensor, extra: torch.Tensor | None, beta: float
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
         """Run n_steps env steps, filling the buffer with teacher-relabeled targets.
 
         The env is stepped with ``beta*a_teacher + (1-beta)*a_student`` (DAgger). At
@@ -176,7 +184,10 @@ class StudentRunner:
             and teacher_actor(obs_s, l_hat) ~= a_s. Any time-shift between obs and
             (a, l) breaks the BC target and creates an unreachable loss floor.
 
-        Returns the final (obs, privileged) so the caller can carry state.
+        Returns the final (obs, privileged, extra) so the caller can carry state. ``extra``
+        has exactly the same lifetime as ``privileged``: seeded from the same reset/step
+        dict at the same loop position, so it is always the value the CURRENT ``obs`` was
+        drawn alongside -- never one step ahead or behind.
         """
         self.buffer.reset()
         # Track dones from the PREVIOUS env.step so that "dones" stored at
@@ -203,11 +214,11 @@ class StudentRunner:
             # supervision target and is UNCHANGED by DAgger -- the teacher relabels the
             # visited state regardless of who drove the env there.
             # prev_dones says whether the current obs is a fresh post-reset obs.
-            self.buffer.add(obs, privileged, l_t.detach(), a_t.detach(), prev_dones)
+            self.buffer.add(obs, privileged, l_t.detach(), a_t.detach(), prev_dones, extra=extra)
 
             # Step env with the DAgger-mixed action (== a_t when beta==1). The student
             # forward runs only when beta<1, so the default teacher-only recipe pays no cost.
-            a_exec = self._dagger_action(obs, a_t, beta) if use_student else a_t
+            a_exec = self._dagger_action(obs, extra, a_t, beta) if use_student else a_t
             obs_next, _rew, dones, extras = self.env.step(a_exec)
 
             # Zero the collection-time student history for reset envs so the next student
@@ -221,6 +232,7 @@ class StudentRunner:
 
             obs = obs_next["policy"]
             privileged = obs_next["privileged"]
+            extra = obs_next.get("student_extra") if self.cfg.extra_obs_dim > 0 else None
             prev_dones = dones.to(torch.bool)
 
         # Persist last env.step dones so the next rollout's step_idx=0 records
@@ -233,10 +245,16 @@ class StudentRunner:
         if use_student:
             self.student.train()  # restore train mode for the optimization phase in learn()
         self.buffer.carry_over_history()
-        return obs, privileged
+        return obs, privileged, extra
 
     @torch.no_grad()
-    def _dagger_action(self, obs: torch.Tensor, a_teacher: torch.Tensor, beta: float) -> torch.Tensor:
+    def _dagger_action(
+        self,
+        obs: torch.Tensor,
+        extra: torch.Tensor | None,
+        a_teacher: torch.Tensor,
+        beta: float,
+    ) -> torch.Tensor:
         """Mix the teacher action with the action the student's own latent induces.
 
         The student latent is built from the same normalized history-window machinery as
@@ -255,7 +273,8 @@ class StudentRunner:
             l_hat = self.student(ring_n)
         else:
             obs_n = self.obs_normalizer(obs)
-            l_hat_seq, self.gru_hidden = self.student(obs_n.unsqueeze(1), hidden=self.gru_hidden)
+            x = student_input(obs_n, extra, self._extra_scale)
+            l_hat_seq, self.gru_hidden = self.student(x.unsqueeze(1), hidden=self.gru_hidden)
             l_hat = l_hat_seq[:, -1]
         obs_normed = self.teacher.normalize_obs(obs)
         a_student = self.teacher.actor_forward(obs_normed, l_hat)
@@ -297,7 +316,8 @@ class StudentRunner:
         # Normalize student input (obs_seq) with teacher's actor_obs_normalizer.
         B, T, D = batch.obs_seq.shape
         obs_seq_n = self.obs_normalizer(batch.obs_seq.reshape(B * T, D)).reshape(B, T, D)
-        l_hat_seq, _ = self.student(obs_seq_n, hidden=h_in)             # (envs, T, 9)
+        x_seq = student_input(obs_seq_n, batch.extra_seq, self._extra_scale)
+        l_hat_seq, _ = self.student(x_seq, hidden=h_in)                 # (envs, T, 9)
         M = l_hat_seq.shape[0] * l_hat_seq.shape[1]
         l_hat = l_hat_seq.reshape(M, -1)
         obs_normed = self.teacher.normalize_obs(batch.obs_t)
@@ -323,6 +343,7 @@ class StudentRunner:
         obs_td, _extras = self.env.reset()
         obs = obs_td["policy"]
         privileged = obs_td["privileged"]
+        extra = obs_td.get("student_extra") if self.cfg.extra_obs_dim > 0 else None
         # Freshly-reset obs: treat as post-reset (dones=True) so flat_buf's
         # pre-rollout region (zeros) isn't mixed with bogus history on step 0.
         self.prev_dones = torch.ones(self.cfg.num_envs, dtype=torch.bool, device=self.device)
@@ -332,7 +353,7 @@ class StudentRunner:
             # Collect (DAgger: beta anneals teacher->student action over the rollout)
             beta = dagger_beta_at(self.cfg, it)
             t0 = time.time()
-            obs, privileged = self._collect_rollout(obs, privileged, beta)
+            obs, privileged, extra = self._collect_rollout(obs, privileged, extra, beta)
             t_collect = time.time() - t0
 
             # Train
@@ -391,7 +412,13 @@ class StudentRunner:
                     obs_all_n = self.obs_normalizer(
                         obs_all.reshape(-1, D)
                     ).reshape(self.cfg.num_envs, T_, D)
-                    _, h_end = self.student(obs_all_n, hidden=h_start)
+                    extra_all = (
+                        self.buffer.extra_flat[:T_].transpose(0, 1)
+                        if self.buffer.extra_flat is not None else None
+                    )
+                    _, h_end = self.student(
+                        student_input(obs_all_n, extra_all, self._extra_scale), hidden=h_start
+                    )
                     h_end[:, any_done_in_rollout] = 0.0
                     self.train_hidden = h_end.detach()
 

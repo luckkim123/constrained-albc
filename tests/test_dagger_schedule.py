@@ -58,13 +58,18 @@ def test_runner_beta_mix_and_relabeling_unchanged():
     action (teacher-only when beta==1), student action no-grad, teacher relabeling intact."""
     src = (STUDENT / "runner.py").read_text()
     assert "use_student = beta < 1.0" in src
-    assert "a_exec = self._dagger_action(obs, a_t, beta) if use_student else a_t" in src
+    # obs4: _dagger_action gained an `extra` parameter (threaded exactly like privileged)
+    assert "a_exec = self._dagger_action(obs, extra, a_t, beta) if use_student else a_t" in src
     assert "obs_next, _rew, dones, extras = self.env.step(a_exec)" in src
     assert "beta * a_teacher + (1.0 - beta) * a_student" in src
     # student action is distribution-shaping only, must not carry gradient
     assert re.search(r"@torch\.no_grad\(\)\s*\n\s*def _dagger_action", src)
     # DAgger relabeling: buffer still records the TEACHER's l_t, a_t as the BC targets
-    assert "self.buffer.add(obs, privileged, l_t.detach(), a_t.detach(), prev_dones)" in src
+    # (obs4: buffer.add also gained extra=extra, same call, same targets)
+    assert (
+        "self.buffer.add(obs, privileged, l_t.detach(), a_t.detach(), prev_dones, extra=extra)"
+        in src
+    )
     # deploy parity: collection-time student runs in eval mode, restored to train after
     assert "self.student.eval()" in src
     assert "self.student.train()" in src

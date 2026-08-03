@@ -13,6 +13,24 @@ import torch.nn.functional as F
 from .config import StudentCfg
 
 
+def student_input(
+    obs_n: torch.Tensor, extra: torch.Tensor | None, scale: torch.Tensor | None
+) -> torch.Tensor:
+    """THE definition of the student encoder's input layout: [obs_n, extra / scale].
+
+    Every encoder forward in the codebase -- DAgger collection, training loss,
+    end-of-rollout hidden recompute, and eval in-loop inference -- calls this. Do not
+    inline the concat at a call site: an eval-side copy of a training-side forward is
+    exactly how 38d979e silently invalidated every in-loop verdict for two months.
+    Shapes: obs_n (..., D), extra (..., E), scale (E,) -> (..., D + E).
+    """
+    if scale is None:
+        return obs_n
+    if extra is None:
+        raise ValueError("student_input: extra_obs_dim > 0 but extra is None")
+    return torch.cat([obs_n, extra / scale], dim=-1)
+
+
 class StudentEncoderTCN(nn.Module):
     """Window-based temporal conv encoder.
 
