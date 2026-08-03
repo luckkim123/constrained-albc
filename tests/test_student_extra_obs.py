@@ -5,6 +5,9 @@
 
 """Sim-free unit tests for compute_student_extra_obs (E1/B2 gen-1 side-channel).
 
+Also covers the student config/model widening for the extra channels (A3) and the
+GRU rollout collector's extra-channel round-trip (A4).
+
 Loads observations.py standalone (bypasses constrained_albc/__init__ -> isaaclab.sim
 -> pxr). See _load_observations() docstring.
 """
@@ -148,3 +151,19 @@ def test_tcn_extra_rejected():
     cfg = cfg_mod.StudentCfg(); cfg.encoder_type = "tcn"; cfg.extra_obs_dim = 4
     with pytest.raises(ValueError, match="GRU student only"):
         models_mod.make_student_encoder(cfg)
+
+
+def test_collector_extra_roundtrip():
+    cfg_mod, coll_mod = _load_student("config", "collector")
+    cfg = cfg_mod.StudentCfg(); cfg.encoder_type = "gru"; cfg.extra_obs_dim = 4
+    cfg.num_envs = 3; cfg.n_steps_per_rollout = 2; cfg.minibatch_size = 6
+    buf = coll_mod.RolloutBuffer(cfg, torch.device("cpu"))
+    for t in range(2):
+        buf.add(torch.full((3, cfg.policy_obs_dim), float(t)),
+                torch.zeros(3, cfg.privileged_dim), torch.zeros(3, 9),
+                torch.zeros(3, 8), torch.zeros(3, dtype=torch.bool),
+                extra=torch.full((3, 4), 10.0 + t))
+    (batch,) = buf.iter_minibatches_gru()
+    assert batch.extra_seq.shape == (3, 2, 4)
+    assert torch.allclose(batch.extra_seq[:, 0], torch.full((3, 4), 10.0))
+    assert torch.allclose(batch.obs_seq[:, 1, 0], torch.ones(3))

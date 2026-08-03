@@ -34,6 +34,8 @@ class RolloutBatch:
     # GRU-only: env indices for this minibatch, used to slice the persisted
     # hidden state at rollout start. None for TCN batches.
     env_idx: torch.Tensor | None = None
+    # GRU-only: extra sensor channels, (envs, T, extra_dim). None when extra_obs_dim == 0.
+    extra_seq: torch.Tensor | None = None
 
 
 class RolloutBuffer:
@@ -70,6 +72,12 @@ class RolloutBuffer:
         self.a_gt_flat = torch.zeros(self.n_steps, self.num_envs, 8, device=device)
         self.done_flat = torch.zeros(self.n_steps, self.num_envs, dtype=torch.bool, device=device)
 
+        self.extra_dim = getattr(cfg, "extra_obs_dim", 0)
+        self.extra_flat = (
+            torch.zeros(self.n_steps, self.num_envs, self.extra_dim, device=device)
+            if self.extra_dim > 0 else None
+        )
+
         self.step_idx = 0
 
     def add(
@@ -79,6 +87,7 @@ class RolloutBuffer:
         l_t: torch.Tensor,          # (num_envs, latent_dim)
         a_t: torch.Tensor,          # (num_envs, 8)
         dones: torch.Tensor,        # (num_envs,) bool, from the PREVIOUS env step
+        extra: torch.Tensor | None = None,
     ) -> None:
         """Add one timestep.
 
@@ -97,6 +106,9 @@ class RolloutBuffer:
         self.l_gt_flat[self.step_idx] = l_t
         self.a_gt_flat[self.step_idx] = a_t
         self.done_flat[self.step_idx] = dones
+        if self.extra_flat is not None:
+            assert extra is not None, "extra_obs_dim > 0 but no extra passed to buffer.add"
+            self.extra_flat[self.step_idx] = extra
         self.step_idx += 1
 
     def carry_over_history(self) -> None:
@@ -178,6 +190,8 @@ class RolloutBuffer:
                     l_t=self.l_gt_flat[:T, idx].transpose(0, 1).reshape(-1, self.cfg.latent_dim),
                     a_t=self.a_gt_flat[:T, idx].transpose(0, 1).reshape(-1, 8),
                     env_idx=idx,
+                    extra_seq=(self.extra_flat[:T, idx].transpose(0, 1)
+                               if self.extra_flat is not None else None),
                 )
             )
         return batches
