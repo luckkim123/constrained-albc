@@ -14,6 +14,7 @@ import sys
 import types
 from pathlib import Path
 
+import pytest
 import torch
 
 _OBS_PATH = (
@@ -103,3 +104,47 @@ def test_zero_order_hold_serves_stale_sample_and_uses_sensor_dt():
     assert n_distinct <= len(seen) // 2, f"refreshed too often: {n_distinct} of {len(seen)}"
     # Settled magnitude is still the TRUE 1 m/s -- proves sensor_dt, not step_dt.
     assert torch.allclose(seen[-1][:, 3], torch.full((4,), 1.0), atol=0.05)
+
+
+_STUDENT_DIR = (
+    Path(__file__).resolve().parent.parent / "constrained_albc" / "envs" / "_core" / "student"
+)
+
+
+def _load_student(*module_names):
+    """Exec _core/student modules by path without importing constrained_albc.
+    Verbatim shape of tests/test_student_eval_obs_width.py::_load_student_models."""
+    for pkg in ("constrained_albc", "constrained_albc.envs",
+                "constrained_albc.envs._core", "constrained_albc.envs._core.student"):
+        if pkg not in sys.modules:
+            m = types.ModuleType(pkg)
+            m.__path__ = []
+            sys.modules[pkg] = m
+    out = []
+    for name in module_names:
+        full = f"constrained_albc.envs._core.student.{name}"
+        spec = importlib.util.spec_from_file_location(full, _STUDENT_DIR / f"{name}.py")
+        mod = importlib.util.module_from_spec(spec)
+        mod.__package__ = "constrained_albc.envs._core.student"
+        sys.modules[full] = mod
+        spec.loader.exec_module(mod)
+        out.append(mod)
+    return out
+
+
+def test_gru_input_widening():
+    cfg_mod, models_mod = _load_student("config", "models")
+    cfg = cfg_mod.StudentCfg()
+    cfg.encoder_type = "gru"
+    cfg.policy_obs_dim = 72
+    cfg.extra_obs_dim = 4
+    enc = models_mod.make_student_encoder(cfg)
+    z, h = enc(torch.zeros(2, 5, 76))
+    assert z.shape == (2, 5, 9)
+
+
+def test_tcn_extra_rejected():
+    cfg_mod, models_mod = _load_student("config", "models")
+    cfg = cfg_mod.StudentCfg(); cfg.encoder_type = "tcn"; cfg.extra_obs_dim = 4
+    with pytest.raises(ValueError, match="GRU student only"):
+        models_mod.make_student_encoder(cfg)

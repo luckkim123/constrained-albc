@@ -75,8 +75,9 @@ class StudentEncoderGRU(nn.Module):
     def __init__(self, cfg: StudentCfg) -> None:
         super().__init__()
         self.cfg = cfg
+        extra = getattr(cfg, "extra_obs_dim", 0)
         self.gru = nn.GRU(
-            input_size=cfg.policy_obs_dim,
+            input_size=cfg.policy_obs_dim + extra,
             hidden_size=cfg.gru_hidden,
             num_layers=cfg.gru_layers,
             batch_first=True,
@@ -120,6 +121,11 @@ class StudentEncoderGRU(nn.Module):
 
 def make_student_encoder(cfg: StudentCfg) -> nn.Module:
     """Factory."""
+    if getattr(cfg, "extra_obs_dim", 0) > 0 and cfg.encoder_type != "gru":
+        raise ValueError(
+            "extra_obs_dim > 0 is implemented for the GRU student only "
+            "(TCN flat-buf/ring were deliberately not widened -- see StudentCfg)"
+        )
     if cfg.encoder_type == "tcn":
         return StudentEncoderTCN(cfg)
     if cfg.encoder_type == "gru":

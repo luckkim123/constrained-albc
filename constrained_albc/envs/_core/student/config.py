@@ -59,6 +59,16 @@ class StudentCfg:
     # 0.17..0.48). Default 64 adds ~8K params, ~10% inference cost.
     gru_head_hidden: int = 64
 
+    # E1/B2 extra sensor channels (gen-1 side-channel). 0 = off (default recipe).
+    # simplified: GRU-only -- TCN would need flat_buf/ring widening for a retired
+    # architecture; extend if a TCN arm ever needs the channels.
+    extra_obs_dim: int = 0
+    # Static per-channel scales (divide before the encoder): IMU specific force ~ +-15
+    # m/s^2 -> /10; heave rate ~ +-1 m/s -> /1. Static (not a running normalizer) so the
+    # board runtime can replicate normalization from constants; calibration knobs, tune
+    # against real sensor ranges at bring-up.
+    extra_obs_scale: tuple[float, ...] = (10.0, 10.0, 10.0, 1.0)
+
     # Training
     num_envs: int = 4096
     n_steps_per_rollout: int = 24
