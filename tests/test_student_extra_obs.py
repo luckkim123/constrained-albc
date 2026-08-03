@@ -12,6 +12,7 @@ Loads observations.py standalone (bypasses constrained_albc/__init__ -> isaaclab
 -> pxr). See _load_observations() docstring.
 """
 
+import ast
 import importlib.util
 import sys
 import types
@@ -188,3 +189,72 @@ def test_collector_extra_roundtrip():
     # Pairing invariant: holds under ANY permutation as long as obs_seq and extra_seq
     # used the SAME one; breaks the moment they diverge (e.g. reversed idx for one).
     assert torch.allclose(batch.extra_seq[:, :, 0], batch.obs_seq[:, :, 0] + 0.5)
+
+
+# ---------------------------------------------------------------------------
+# A9: --extra_obs_dim launch flag + student/env cross-check
+# (scripts/train_student.py calls AppLauncher() at module import time -- not
+# importable standalone -- so the check function is AST-extracted and exec'd,
+# same pattern as tests/test_bias_ema_obs.py's apply_bias_ema_obs extraction.)
+# ---------------------------------------------------------------------------
+
+_TRAIN_STUDENT_PATH = (
+    Path(__file__).resolve().parent.parent / "scripts" / "train_student.py"
+)
+
+
+def _load_check_extra_obs_consistency():
+    """Extract _check_extra_obs_consistency's source via AST and exec it standalone.
+
+    The function body only references builtins (bool, ValueError, f-string formatting
+    of its two scalar args), so it needs no mocking.
+    """
+    tree = ast.parse(_TRAIN_STUDENT_PATH.read_text())
+    func_node = next(
+        n for n in ast.walk(tree)
+        if isinstance(n, ast.FunctionDef) and n.name == "_check_extra_obs_consistency"
+    )
+    namespace: dict = {}
+    exec(compile(ast.unparse(func_node), "<_check_extra_obs_consistency>", "exec"), namespace)
+    return namespace["_check_extra_obs_consistency"]
+
+
+def test_extra_obs_cross_check_passes_when_both_off():
+    check = _load_check_extra_obs_consistency()
+    check(0, False)  # must not raise
+
+
+def test_extra_obs_cross_check_passes_when_both_on():
+    check = _load_check_extra_obs_consistency()
+    check(4, True)  # must not raise
+
+
+def test_extra_obs_cross_check_raises_when_dim_set_but_env_flag_off():
+    """extra_obs_dim>0 + env flag off: env never publishes the key (today caught by
+    collector.py's assert -- loud, but assert-dependent)."""
+    check = _load_check_extra_obs_consistency()
+    with pytest.raises(ValueError, match=r"extra_obs_dim=4"):
+        check(4, False)
+
+
+def test_extra_obs_cross_check_raises_when_env_flag_on_but_dim_zero():
+    """extra_obs_dim==0 + env flag on: the env computes the channels and nobody reads
+    them -- completely silent today, the direction that would corrupt a verdict."""
+    check = _load_check_extra_obs_consistency()
+    with pytest.raises(ValueError, match=r"use_student_extra_obs=True"):
+        check(0, True)
+
+
+def test_extra_obs_dim_argparse_default_is_zero():
+    """Static contract: --extra_obs_dim defaults to 0 -- every existing recipe stays
+    byte-identical unless a launch explicitly opts in."""
+    tree = ast.parse(_TRAIN_STUDENT_PATH.read_text())
+    call = next(
+        n for n in ast.walk(tree)
+        if isinstance(n, ast.Call)
+        and isinstance(n.func, ast.Attribute) and n.func.attr == "add_argument"
+        and any(isinstance(a, ast.Constant) and a.value == "--extra_obs_dim" for a in n.args)
+    )
+    default_kw = next(kw for kw in call.keywords if kw.arg == "default")
+    assert isinstance(default_kw.value, ast.Constant)
+    assert default_kw.value.value == 0

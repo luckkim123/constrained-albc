@@ -35,6 +35,10 @@ parser.add_argument("--n_epochs", type=int, default=5)
 parser.add_argument("--minibatch_size", type=int, default=8192)
 parser.add_argument("--lr", type=float, default=5e-4)
 parser.add_argument("--lambda_latent", type=float, default=1.0)
+parser.add_argument("--extra_obs_dim", type=int, default=0,
+                     help="E1/B2 extra sensor channels width for the GRU student encoder "
+                          "(0=off, default -- keeps the recipe byte-identical). Must agree with "
+                          "env.use_student_extra_obs (both on or both off, see cross-check below).")
 parser.add_argument("--save_interval", type=int, default=100)
 parser.add_argument("--dagger_beta_start", type=float, default=1.0,
                     help="DAgger: teacher-action mix at iter 0 (1.0=pure teacher).")
@@ -142,6 +146,25 @@ if not args_cli.enable_cudnn:
     torch.backends.cudnn.enabled = False
 
 
+def _check_extra_obs_consistency(extra_obs_dim: int, use_student_extra_obs: bool) -> None:
+    """Cross-check StudentCfg.extra_obs_dim (student side) against
+    ALBCEnvCfg.use_student_extra_obs (env side) -- these are independent switches and
+    either mismatch is a silent-wrong-experiment (task-A9 brief):
+      - extra_obs_dim>0 + flag off: the env never publishes the key, so the student
+        trains on an absent input (today caught loudly by collector.py's assert).
+      - extra_obs_dim==0 + flag on: the env computes the channels and nobody reads
+        them -- completely silent, and the direction that would corrupt a B2 verdict
+        by making the run look like the intervention while it is actually a re-run of
+        the baseline recipe.
+    """
+    if bool(extra_obs_dim) != bool(use_student_extra_obs):
+        raise ValueError(
+            f"student/env extra-obs mismatch: --extra_obs_dim={extra_obs_dim} but "
+            f"env.use_student_extra_obs={use_student_extra_obs}. Both must agree "
+            "(extra_obs_dim>0 with the env flag on, or extra_obs_dim==0 with it off)."
+        )
+
+
 @hydra_task_config(args_cli.task, "rsl_rl_cfg_entry_point")
 def main(env_cfg: DirectRLEnvCfg, _agent_cfg) -> None:
     """Hydra-decorated entry: receives env_cfg from the task registry."""
@@ -157,6 +180,7 @@ def main(env_cfg: DirectRLEnvCfg, _agent_cfg) -> None:
     cfg.minibatch_size = args_cli.minibatch_size
     cfg.lr = args_cli.lr
     cfg.lambda_latent = args_cli.lambda_latent
+    cfg.extra_obs_dim = args_cli.extra_obs_dim
     cfg.save_interval = args_cli.save_interval
     cfg.dagger_beta_start = args_cli.dagger_beta_start
     cfg.dagger_beta_end = args_cli.dagger_beta_end
@@ -173,6 +197,8 @@ def main(env_cfg: DirectRLEnvCfg, _agent_cfg) -> None:
         cfg.gru_hidden = args_cli.gru_hidden
     if args_cli.gru_head_hidden is not None:
         cfg.gru_head_hidden = args_cli.gru_head_hidden
+
+    _check_extra_obs_consistency(cfg.extra_obs_dim, env_cfg.use_student_extra_obs)
 
     # Log dir. cfg.log_dir_root is an absolute constrained-albc path (student/config.py),
     # so student output lands in the constrained-albc repo even though this script runs from
