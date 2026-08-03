@@ -1095,6 +1095,17 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         _student_blob = torch.load(args_cli.student_ckpt, map_location="cpu", weights_only=False)
         _sc = _student_blob.get("cfg", {})
         if _sc.get("extra_obs_dim", 0) > 0:
+            # Guard the whole block, not each setattr: the flag and the four sensor params are
+            # declared as one unit on ALBCEnvCfg, so if the gate field is absent this is a
+            # non-main variant (full_dof/TDC) that cannot publish the channels at all. Without
+            # this, setattr would CREATE dead fields and the student would be evaluated against
+            # an env silently missing its extra key.
+            if not hasattr(env_cfg, "use_student_extra_obs"):
+                raise RuntimeError(
+                    f"student checkpoint has extra_obs_dim={_sc['extra_obs_dim']} but "
+                    f"{type(env_cfg).__name__} has no 'use_student_extra_obs' field -- gen-1 "
+                    "extra-obs is envs/main only; this student cannot be evaluated on this task."
+                )
             env_cfg.use_student_extra_obs = True
             _env_sensor_cfg = _student_blob.get("env_sensor_cfg")
             if _env_sensor_cfg:

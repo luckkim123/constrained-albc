@@ -234,7 +234,9 @@ def compute_student_extra_obs(
               ground truth would hand the student a signal the robot cannot produce.
 
     Gen-1: NOT part of policy_obs; the frozen teacher actor never sees these. The env
-    publishes the return value as observations["student_extra"]. State buffers
+    publishes the return value under STUDENT_EXTRA_OBS_KEY (_core/student/models.py),
+    whose value is "student_extra" -- spelled out here because this module must stay
+    torch-only at runtime and so cannot import the constant. State buffers
     (_depth_meas_prev, _heave_rate_filt, _extra_reset_pending) live on env and are
     reset in _reset_idx; the pending mask suppresses the post-reset spike.
 
