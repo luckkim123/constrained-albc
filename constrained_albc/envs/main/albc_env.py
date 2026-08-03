@@ -42,7 +42,7 @@ from .mdp.events import (
     reset_joint_positions_default,
     reset_robot_pose_default,
 )
-from .mdp.observations import compute_policy_obs, compute_privileged_obs
+from .mdp.observations import compute_policy_obs, compute_privileged_obs, compute_student_extra_obs
 from .mdp.rewards import RewardManager
 from .utils import log_dr_metrics
 
@@ -384,6 +384,17 @@ class ALBCEnv(DirectRLEnv):
         # step regardless of error magnitude; meant to capture systematic per-env bias
         # that per-step tracking reward ignores.
         self._bias_ema = torch.zeros(self.num_envs, 3, device=self.device)
+        # E1/B2 student-extra channel state (gen-1: published as observations["student_extra"],
+        # NOT part of policy_obs). Allocated unconditionally -- three small dead buffers when the
+        # flag is off, which keeps _reset_idx branch-free.
+        self._gravity_w = torch.tensor([0.0, 0.0, -9.81], device=self.device)
+        self._depth_meas_prev = torch.zeros(self.num_envs, device=self.device)
+        self._heave_rate_filt = torch.zeros(self.num_envs, device=self.device)
+        self._extra_reset_pending = torch.ones(self.num_envs, dtype=torch.bool, device=self.device)
+        # Zero-order-hold state: one global tick counter (one robot, one sensor bus) plus
+        # the held sample the policy re-reads between publishes.
+        self._extra_tick = 0
+        self._student_extra_held = torch.zeros(self.num_envs, 4, device=self.device)
         self._vel_cmd_step_counter = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
         # Per-env command range scales. Permanently 1.0 -- inert residue of a command-difficulty
         # curriculum that was wired to DORAEMON then removed (f4583fd, 2026-04-06: it drove
@@ -1150,6 +1161,12 @@ class ALBCEnv(DirectRLEnv):
         )
 
         observations = {"policy": policy_obs}
+        # E1/B2: publish the 4 extra student channels as their own obs key. NOT appended to
+        # policy_obs in gen-1, so the frozen teacher actor's 72D input is untouched. The key
+        # rides RslRlVecEnvWrapper's TensorDict straight to the student runner and to
+        # StudentInLoopPolicy -- no env.unwrapped reach-through anywhere.
+        if self.cfg.use_student_extra_obs:
+            observations["student_extra"] = compute_student_extra_obs(self, self._robot)
         assert policy_obs.shape[-1] == self.cfg.observation_space, (
             f"emitted policy obs dim {policy_obs.shape[-1]} != "
             f"cfg.observation_space {self.cfg.observation_space}"
@@ -1648,6 +1665,9 @@ class ALBCEnv(DirectRLEnv):
         # Reset integral error on episode reset
         self._error_integral[env_ids] = 0.0
         self._bias_ema[env_ids] = 0.0
+        self._heave_rate_filt[env_ids] = 0.0
+        self._extra_reset_pending[env_ids] = True
+        self._student_extra_held[env_ids] = 0.0
 
     # ------------------------------------------------------------------
     # Play-mode evaluation
