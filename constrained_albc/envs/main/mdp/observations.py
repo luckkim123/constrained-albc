@@ -202,3 +202,75 @@ def compute_privileged_obs(
         p_t = torch.cat([p_t, health], dim=-1)
 
     return p_t
+
+
+def _quat_apply_inverse(quat: torch.Tensor, vec: torch.Tensor) -> torch.Tensor:
+    """Rotate ``vec`` (x,y,z) by the inverse of ``quat`` (w,x,y,z). World -> body.
+
+    Local torch-only copy of isaaclab.utils.math.quat_apply_inverse (math.py:650-668,
+    same arithmetic, same order). Copied rather than imported because this module must
+    stay importable without Isaac: `isaaclab.utils.__init__` does `from .mesh import *`
+    which needs `pxr`, so the no-Isaac test suite (tests/conftest.py) could not load
+    this file at all. Do not "clean this up" into an import.
+    """
+    shape = vec.shape
+    quat = quat.reshape(-1, 4)
+    vec = vec.reshape(-1, 3)
+    xyz = quat[:, 1:]
+    t = xyz.cross(vec, dim=-1) * 2
+    return (vec - quat[:, 0:1] * t + xyz.cross(t, dim=-1)).view(shape)
+
+
+def compute_student_extra_obs(
+    env: ALBCEnv,
+    robot: Articulation,
+) -> torch.Tensor:
+    """4 deployable extra channels for the student encoder (E1/B2 side-channel).
+
+        [0:3] IMU specific force, body frame, gravity INCLUDED (hardware convention):
+              a_imu_b = R_wb^T (a_w - g_w),   g_w = (0, 0, -9.81)
+        [3]   pressure-derived heave rate: d(depth_meas)/dt through a first-order LPF.
+              depth_meas = -z_w + N(0, depth_noise_std); NEVER root_lin_vel_b[2] --
+              ground truth would hand the student a signal the robot cannot produce.
+
+    Gen-1: NOT part of policy_obs; the frozen teacher actor never sees these. The env
+    publishes the return value as observations["student_extra"]. State buffers
+    (_depth_meas_prev, _heave_rate_filt, _extra_reset_pending) live on env and are
+    reset in _reset_idx; the pending mask suppresses the post-reset spike.
+
+    CALL EXACTLY ONCE PER ENV STEP -- it advances a differentiator and an LPF. The only
+    call site is ALBCEnv._get_observations (gen-1) or the policy_obs concat (gen-2),
+    which DirectRLEnv invokes once per step and once per reset.
+    """
+    # --- zero-order hold at the sensor rate (see cfg.extra_obs_hold_steps) ---
+    # Between publishes the real policy re-reads the last sample, so do the same here.
+    # The sensor model below advances ONLY on a sample boundary, and its dt is the
+    # SENSOR period, not the control tick.
+    hold = max(1, int(env.cfg.extra_obs_hold_steps))
+    env._extra_tick += 1
+    if env._extra_tick < hold:
+        return env._student_extra_held
+    env._extra_tick = 0
+    sensor_dt = hold * env.step_dt
+
+    lin_acc_w = robot.data.body_lin_acc_w[:, 0, :]  # root body, world frame
+    spec_force_w = lin_acc_w - env._gravity_w  # (N,3) - (3,) broadcast
+    a_imu_b = _quat_apply_inverse(robot.data.root_quat_w, spec_force_w)
+    if env.cfg.accel_noise_std > 0.0:
+        a_imu_b = a_imu_b + env.cfg.accel_noise_std * torch.randn_like(a_imu_b)
+
+    depth_meas = -robot.data.root_pos_w[:, 2]
+    if env.cfg.depth_noise_std > 0.0:
+        depth_meas = depth_meas + env.cfg.depth_noise_std * torch.randn_like(depth_meas)
+    # Post-reset envs: re-anchor the differentiator so heave_raw = 0 (no spike).
+    pending = env._extra_reset_pending
+    if pending.any():
+        env._depth_meas_prev[pending] = depth_meas[pending]
+        env._extra_reset_pending[pending] = False
+    heave_raw = (depth_meas - env._depth_meas_prev) / sensor_dt
+    env._depth_meas_prev = depth_meas
+    alpha = sensor_dt / (env.cfg.heave_lag_tau + sensor_dt)
+    env._heave_rate_filt = env._heave_rate_filt + alpha * (heave_raw - env._heave_rate_filt)
+
+    env._student_extra_held = torch.cat([a_imu_b, env._heave_rate_filt.unsqueeze(-1)], dim=-1)
+    return env._student_extra_held

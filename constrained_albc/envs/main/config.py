@@ -654,6 +654,31 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     joint1_constraint_arm: str = "none"  # one of {"none", "B"}
     joint1_constraint_budget: float = 0.05  # per-step average budget d_k for the joint1 term
 
+    # --- student-extra-obs experiment (E1/B2, off by default = byte-identical) ---
+    # 4 deployable sensor channels for the STUDENT ENCODER side-channel: IMU specific
+    # force (3D, gravity included -- what the hardware outputs) + pressure-derived heave
+    # rate (1D). Gen-1 (validation): side-channel only, policy_obs stays 72D and the
+    # frozen teacher actor never sees these. Gen-2 (teacher obs76) folds them into
+    # policy_obs via a materializer (Phase D of the 2026-08-03 obs4 program plan).
+    use_student_extra_obs: bool = False
+    # Sensor-model calibration knobs -- real hardware needs tuning a minimal model
+    # cannot see. Values are STARTING points, not measurements.
+    depth_noise_std: float = 0.01   # m; pressure-sensor depth resolution (~1 cm)
+    heave_lag_tau: float = 0.05     # s; first-order sensor lag
+    accel_noise_std: float = 0.0    # m/s^2; additive white noise on specific force
+    # Zero-order hold: how many 50 Hz control ticks one sensor sample is held for.
+    # The real bus is SLOWER than sim -- /hero_agent/sensors (attitude + gyro + DEPTH,
+    # i.e. every channel these 4 are derived from) publishes at <= ~25 Hz: agent.ino's
+    # main loop is a 4-phase state machine with delay(9) per phase and publishes only
+    # in the last phase, so the period is >= 36 ms against a 20 ms control tick.
+    # 2 => 25 Hz. Refreshing these channels every tick would train the student on a
+    # signal the robot cannot deliver -- the same defect class as feeding it
+    # root_lin_vel_b[2] (see compute_student_extra_obs' docstring).
+    # CALIBRATION KNOB, not a measurement: the exact rate is recoverable in a minute
+    # from any real bag -- the firmware ships its own loop count as loop_speed in the
+    # DEPTH field, so the true value is loop_speed/4. Re-set this once that bag exists.
+    extra_obs_hold_steps: int = 2   # 1 = no hold (50 Hz, NOT deployable today)
+
 
 def apply_bias_ema_obs(cfg) -> None:
     """Materialize the bias-ema-obs experiment toggle, in place.
