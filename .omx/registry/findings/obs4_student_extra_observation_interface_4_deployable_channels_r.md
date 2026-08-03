@@ -2,16 +2,16 @@
 title: "obs4 student extra-observation interface: 4 deployable channels ride the observation dict through ONE shared student_input, zero-order held at the real 25 Hz bus rate; implemented and pushed 2026-08-03, not yet run"
 tags: ["obs4", "student-extra-obs", "observation-interface", "zero-order-hold", "imu", "pressure", "distillation", "phase-b", "phase-c", "inconclusive"]
 created: 2026-08-03T09:06:21.064863
-updated: 2026-08-03T14:11:06.139256
+updated: 2026-08-03T15:01:48.855779
 sources: ["diagnose-20260803-223517"]
 links: ["sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "albc_cudnn_fix_is_a_library_path_not_a_package.md", "real_albc_deployment_state_estimation_rates_measured_from_code_a.md", "c4b_dagger_correction_measured_partial_2_5_4x_in_loop_reduction.md", "container_cudnn_is_cu13_against_cu128_torch_every_conv1d_fails_s.md", "feedback_read_metric_units_from_code.md"]
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 70
-qualityReasons: ["no-source-marker", "generic-only-tags"]
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 status: needs-experiment
-blocked-on: "RAN 2026-08-03, INCONCLUSIVE. CORRECTED 2026-08-03 after independent review: the earlier 'misses the 3-sigma bar by 0.0044' figure was computed against the dim=0 CONTROL, which postdates the pre-registration. The pre-registration's decision table partitions B2's ABSOLUTE aggregate hard R2 with C3's own value (+0.1108) as the INCONCLUSIVE floor. On that literal statistic B2 = +0.2460 sits in [+0.1108, +0.2707) and misses GO by 0.0247 = 2.54 sigma, NOT 0.0044 = 2.92 sigma. Same band either way, but the near-miss was overstated 5.6x, so any 'it almost cleared, push harder' argument is unsupported. Also cost +0.1401 deg of hard-DR roll control past its 0.1 floor, and the pre-registered d4 corroboration FAILED. Blocked on the human choice among Phase D (teacher obs76, the only path that opens deployment since deploy specs reject gen-1), a widened-encoder arm, or recording the null."
+blocked-on: "Phase C INCONCLUSIVE (B2 = +0.2460, misses the pre-registered GO bar of +0.2707 by 0.0247 = 2.54 sigma; the earlier '0.0044' was anchored on a post-hoc control, corrected 2026-08-03). Hypothesis (a) capacity crowding is now ELIMINATED by the widened-encoder arm trpo_sdeint_b2wide_gru256_s30_260803_231320 (report diagnose-20260803-235022, independently reviewed): doubling the GRU to 256 made latent sum(MSE) 13.5% WORSE and doubled the hard-DR control regression again, the opposite of what capacity crowding predicts. By elimination the surviving reading is (b) frozen-actor mismatch, which only gen-2 removes. Phase D (E-obs76 teacher retrain) is RUNNING as trpo_obs76_s30_260803_232531 in group teacher_obs76; this lead is blocked on its H1 verdict, then on the human-gated Phase E re-distill."
 ---
 
 # obs4 student extra-observation interface: 4 deployable channels ride the observation dict through ONE shared student_input, zero-order held at the real 25 Hz bus rate; implemented and pushed 2026-08-03, not yet run
@@ -240,4 +240,32 @@ control arm is added to a pre-registered experiment after the fact, it does not 
 pre-registration's decision table. Report the literal pre-registered statistic first and the better-controlled
 one as a supplement, and state the gap between them. Both reports were re-authored through the
 exp-analyze RE-analysis path to carry both anchors side by side.
+
+---
+
+## Update (2026-08-03T15:01:48.855779)
+
+## Hypothesis (a) capacity crowding is ELIMINATED (2026-08-03 night)
+
+Phase C left two readings of the per-dim redistribution and the hard-DR control regression:
+(a) capacity crowding, four new inputs competing inside an unwidened 128-unit GRU; and
+(b) frozen-actor mismatch, the actor trained on the teacher's z having never seen a student's
+l_hat. The widened-encoder arm was the direct discriminator, and it came back against (a).
+
+| measure at hard | B2 (GRU 128) | WIDE (GRU 256) | direction |
+|:--|--:|--:|:--|
+| latent `sum(MSE)` | 0.4996 | 0.5672 | +13.5% WORSE |
+| d6 MSE (the pre-registered dim) | 0.0369 | 0.0617 | +67.1% WORSE |
+| `att_norm ss_error` (deg) | 0.6975 | 1.3198 | +0.6223, clears the 0.1 floor |
+| aggregate R2, error-only delta | -- | -0.1020 | worse |
+| train `loss_latent` | 0.004572 | 0.004154 | -9.1% BETTER |
+
+Doubling the width is exactly what (a) predicts should help. Every denominator-free eval measure
+moved the wrong way instead. At one seed with independent env draws this is suggestive, not
+conclusive, and it is elimination rather than direct evidence for (b) -- but (b) is the reading
+left standing, and no amount of student capacity addresses it because the mismatch lives in the
+frozen actor.
+
+Note the last row: the training loss moved OPPOSITE to the eval. See the separate page on why
+`loss_latent` is not a valid corroborator of an eval-side latent claim.
 
