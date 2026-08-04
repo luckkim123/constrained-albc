@@ -250,6 +250,44 @@ def test_extra_obs_cross_check_raises_when_env_flag_on_but_dim_zero():
         check(0, True)
 
 
+def _load_check_tail_mode_consistency():
+    """Extract _check_tail_mode_consistency via AST and exec it standalone (same
+    pattern as _load_check_extra_obs_consistency above; the body touches only
+    builtins and duck-typed attribute access)."""
+    tree = ast.parse(_TRAIN_STUDENT_PATH.read_text())
+    func_node = next(
+        n for n in ast.walk(tree)
+        if isinstance(n, ast.FunctionDef) and n.name == "_check_tail_mode_consistency"
+    )
+    namespace: dict = {}
+    exec(compile(ast.unparse(func_node), "<_check_tail_mode_consistency>", "exec"), namespace)
+    return namespace["_check_tail_mode_consistency"]
+
+
+def test_tail_mode_cross_check_is_inert_when_flag_off():
+    """OFF path: the default recipe must never consult the env flag at all."""
+    from types import SimpleNamespace
+
+    check = _load_check_tail_mode_consistency()
+    cfg = SimpleNamespace(extra_obs_from_policy_tail=False)
+    check(cfg, SimpleNamespace())  # env without the field: must not raise
+
+
+def test_tail_mode_cross_check_raises_without_gen2_env():
+    """The silent-corruption direction: a 72D env + 72D teacher would let the split
+    slice 4 core bias-EMA dims as 'channels' with every width guard passing -- the
+    launcher-side named error is the only thing standing in front of that."""
+    from types import SimpleNamespace
+
+    check = _load_check_tail_mode_consistency()
+    cfg = SimpleNamespace(extra_obs_from_policy_tail=True)
+    with pytest.raises(ValueError, match=r"use_extra_policy_obs"):
+        check(cfg, SimpleNamespace(use_extra_policy_obs=False))
+    with pytest.raises(ValueError, match=r"use_extra_policy_obs"):
+        check(cfg, SimpleNamespace())  # field absent entirely
+    check(cfg, SimpleNamespace(use_extra_policy_obs=True))  # gen-2 env: must not raise
+
+
 def test_extra_obs_dim_argparse_default_is_zero():
     """Static contract: --extra_obs_dim defaults to 0 -- every existing recipe stays
     byte-identical unless a launch explicitly opts in."""

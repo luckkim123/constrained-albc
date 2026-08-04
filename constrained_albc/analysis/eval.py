@@ -973,6 +973,11 @@ class _InstrumentedStudentPolicy:
         from constrained_albc.envs._core.student.models import STUDENT_EXTRA_OBS_KEY
 
         self._extra_key = STUDENT_EXTRA_OBS_KEY
+        # X1 tail mode: the channels ride inside policy_obs (last _tail_n dims, raw),
+        # not under the side-channel key -- capture them from there so the bite check /
+        # channel-health summary exists for tail-mode runs too (the proposal registers
+        # their absence as a VOID condition). 0 for every non-tail student.
+        self._tail_n = getattr(student, "_tail_n", 0)
         self.extra_log: list[np.ndarray] = []
 
     def reset_logs(self) -> None:
@@ -997,6 +1002,8 @@ class _InstrumentedStudentPolicy:
         self.l_true_log.append(l_true.detach().cpu().numpy())
         if self._extra_key in obs_td:
             self.extra_log.append(obs_td[self._extra_key].detach().cpu().numpy())
+        elif self._tail_n:
+            self.extra_log.append(obs_td["policy"][..., -self._tail_n:].detach().cpu().numpy())
         return action
 
 
@@ -1106,19 +1113,29 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     if is_student_mode:
         _student_blob = torch.load(args_cli.student_ckpt, map_location="cpu", weights_only=False)
         _sc = _student_blob.get("cfg", {})
-        if _sc.get("extra_obs_dim", 0) > 0:
+        _gen1 = _sc.get("extra_obs_dim", 0) > 0
+        _tail = bool(_sc.get("extra_obs_from_policy_tail", False))
+        if _gen1 or _tail:
+            # gen-1 publishes the channels as a side-channel obs key; X1 tail mode needs the
+            # gen-2 env to fold them into the policy_obs tail instead. Both flags read off
+            # the CHECKPOINT, which closes the remembered-CLI-flag trap for tail-mode ckpts.
+            # (A PLAIN gen-2 student -- extra_obs_dim=0, tail off, e.g. Phase E -- is not
+            # detectable from its cfg and still needs env.use_extra_policy_obs=True on the
+            # CLI, exactly as before.) The sensor-model knobs below restore identically in
+            # both modes: the channels are the same compute_student_extra_obs output.
+            _env_flag = "use_student_extra_obs" if _gen1 else "use_extra_policy_obs"
             # Guard the whole block, not each setattr: the flag and the four sensor params are
             # declared as one unit on ALBCEnvCfg, so if the gate field is absent this is a
             # non-main variant (full_dof/TDC) that cannot publish the channels at all. Without
             # this, setattr would CREATE dead fields and the student would be evaluated against
-            # an env silently missing its extra key.
-            if not hasattr(env_cfg, "use_student_extra_obs"):
+            # an env silently missing its extra channels.
+            if not hasattr(env_cfg, _env_flag):
                 raise RuntimeError(
-                    f"student checkpoint has extra_obs_dim={_sc['extra_obs_dim']} but "
-                    f"{type(env_cfg).__name__} has no 'use_student_extra_obs' field -- gen-1 "
-                    "extra-obs is envs/main only; this student cannot be evaluated on this task."
+                    f"student checkpoint requires env flag '{_env_flag}' but "
+                    f"{type(env_cfg).__name__} has no such field -- the extra sensor channels "
+                    "are envs/main only; this student cannot be evaluated on this task."
                 )
-            env_cfg.use_student_extra_obs = True
+            setattr(env_cfg, _env_flag, True)
             _env_sensor_cfg = _student_blob.get("env_sensor_cfg")
             if _env_sensor_cfg:
                 for _k in _ENV_SENSOR_CFG_KEYS:
@@ -1540,13 +1557,18 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
                     )
                 except Exception as e:  # noqa: BLE001 -- diagnostic must not abort the eval
                     print(f"  [WARN] extra-channel bite check failed: {e}")
-            elif getattr(env_cfg, "use_student_extra_obs", False):
-                # Loud on absence: the env was configured to publish the channels and none
-                # arrived. Staying silent here would reproduce the exact no-op the gate exists
-                # to catch, one layer out.
+            elif getattr(env_cfg, "use_student_extra_obs", False) or getattr(
+                env_cfg, "use_extra_policy_obs", False
+            ):
+                # Loud on absence: the env was configured to publish/fold the channels and
+                # none were logged. Staying silent here would reproduce the exact no-op the
+                # gate exists to catch, one layer out. (Fires for a plain gen-2 student too:
+                # its channel-health evidence genuinely is absent -- only tail-mode ckpts
+                # extract the channels from the policy_obs tail.)
                 print(
-                    f"  [extra] NO channels logged at level={level} despite "
-                    "use_student_extra_obs=True -- the key was never published; "
+                    f"  [extra] NO channels logged at level={level} despite the env "
+                    "being configured to publish/fold them (use_student_extra_obs / "
+                    "use_extra_policy_obs) -- none were captured; "
                     "this run CANNOT be graded on the observability question."
                 )
             ls = _summarize_latent(l_hat, l_true)

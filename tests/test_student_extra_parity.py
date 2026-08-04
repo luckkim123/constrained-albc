@@ -136,6 +136,92 @@ def test_every_encoder_forward_uses_the_shared_layout():
         )
 
 
+def _fns_calling(tree, callee: str):
+    out = set()
+    for fn in [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)]:
+        for node in ast.walk(fn):
+            if isinstance(node, ast.Call) and getattr(node.func, "id", None) == callee:
+                out.add(fn.name)
+    return out
+
+
+def test_tail_split_routes_through_every_gru_site():
+    """X1-tailsplit AST extension: every must-route encoder forward also handles the
+    policy-tail assembly (split_policy_tail). A site that skipped it would fail LOUD at
+    runtime anyway (tail mode has a non-None scale with a None extra, which student_input
+    rejects) -- this gate moves that failure from the first tail-mode run to CI, and makes
+    a future site copy the complete pattern."""
+    for path, (must_route, _allowed) in _SITES.items():
+        tree = ast.parse(path.read_text())
+        split_callers = _fns_calling(tree, "split_policy_tail")
+        assert must_route <= split_callers, (
+            f"{path.name}: {sorted(must_route - split_callers)} route through student_input "
+            "but never call split_policy_tail -- tail mode would raise at that site."
+        )
+
+
+def test_tail_split_assembly_matches_gen1_convention():
+    """The X1 contract: split+student_input == cat(norm(obs)[..., :-4], obs[..., -4:]/scale).
+
+    Behavioral, on the shipped helpers (38d979e discipline: never assert on a re-inlined
+    copy). The stand-in normalizer is affine and elementwise like the real
+    EmpiricalNormalization, which is exactly the property the slice-commutes argument uses.
+    """
+    torch.manual_seed(1)
+    cfg_mod, models_mod = _load_student("config", "models")
+    cfg = cfg_mod.StudentCfg()
+    cfg.encoder_type = "gru"
+    assert cfg.extra_obs_from_policy_tail is False, "flag must default OFF"
+    cfg.extra_obs_from_policy_tail = True
+    scale = models_mod.extra_scale_tensor(cfg, torch.device("cpu"))
+    assert scale is not None and scale.shape == (models_mod.POLICY_TAIL_N,)
+    obs = torch.randn(5, 76)
+    obs_n = obs * 2.0 + 1.0  # elementwise affine stand-in for the frozen normalizer
+    core_n, tail_raw = models_mod.split_policy_tail(
+        obs_raw=obs, obs_n=obs_n, n_tail=models_mod.POLICY_TAIL_N
+    )
+    x = models_mod.student_input(core_n, tail_raw, scale)
+    manual = torch.cat([obs_n[..., :72], obs[..., 72:] / scale], dim=-1)
+    assert x.shape == (5, 76)
+    assert torch.equal(x, manual)
+    # Bite (unit-level): the assembled tail must DIFFER from the pure gen-2 stream
+    # (z-scored tail) whenever the normalizer stats differ from the static scales --
+    # the launch-time bite check proves the same thing on recorded stats.
+    assert not torch.allclose(x[..., 72:], obs_n[..., 72:])
+    # Fail-loud property the runner relies on: tail mode's scale with a missing split
+    # (extra=None) must raise, never silently feed the un-split 76D.
+    try:
+        models_mod.student_input(obs_n, None, scale)
+        raise AssertionError("student_input accepted scale!=None with extra=None")
+    except ValueError:
+        pass
+
+
+def test_tail_mode_guards():
+    cfg_mod, models_mod = _load_student("config", "models")
+    # OFF path byte-identity precondition: default cfg arms nothing.
+    cfg = cfg_mod.StudentCfg()
+    assert models_mod.extra_scale_tensor(cfg, torch.device("cpu")) is None
+    # Mutual exclusion: gen-1 side channel and tail mode cannot combine.
+    cfg = cfg_mod.StudentCfg()
+    cfg.extra_obs_dim = 4
+    cfg.extra_obs_from_policy_tail = True
+    try:
+        models_mod.extra_scale_tensor(cfg, torch.device("cpu"))
+        raise AssertionError("mutually exclusive delivery conventions were accepted")
+    except ValueError:
+        pass
+    # GRU-only: TCN never routes through student_input, so tail mode must be rejected.
+    cfg = cfg_mod.StudentCfg()
+    cfg.encoder_type = "tcn"
+    cfg.extra_obs_from_policy_tail = True
+    try:
+        models_mod.make_student_encoder(cfg)
+        raise AssertionError("tail mode with a TCN encoder was accepted")
+    except ValueError:
+        pass
+
+
 def test_stepwise_and_sequence_forwards_agree():
     torch.manual_seed(0)
     cfg_mod, models_mod = _load_student("config", "models")

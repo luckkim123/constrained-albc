@@ -39,6 +39,11 @@ parser.add_argument("--extra_obs_dim", type=int, default=0,
                      help="E1/B2 extra sensor channels width for the GRU student encoder "
                           "(0=off, default -- keeps the recipe byte-identical). Must agree with "
                           "env.use_student_extra_obs (both on or both off, see cross-check below).")
+parser.add_argument("--extra_obs_from_policy_tail", action="store_true",
+                     help="X1-tailsplit: re-assemble the gen-1 student input from a gen-2 env's "
+                          "policy_obs tail (split last 4 dims, static scale instead of the "
+                          "teacher's z-score stats). Requires env.use_extra_policy_obs=True and "
+                          "--extra_obs_dim 0; GRU only. See the X1 proposal / cross-check below.")
 parser.add_argument("--save_interval", type=int, default=100)
 parser.add_argument("--dagger_beta_start", type=float, default=1.0,
                     help="DAgger: teacher-action mix at iter 0 (1.0=pure teacher).")
@@ -177,6 +182,29 @@ def _check_extra_obs_consistency(extra_obs_dim: int, use_student_extra_obs: bool
         )
 
 
+def _check_tail_mode_consistency(cfg, env_cfg) -> None:
+    """Cross-check --extra_obs_from_policy_tail against the env (task-A9 pattern).
+
+    Tail mode reads the extra channels from the LAST 4 dims of policy_obs, so the env
+    must actually fold them there (gen-2, use_extra_policy_obs=True). The dangerous
+    direction is SILENT: against a 72D gen-2-off env whose teacher is also 72D, the
+    split would slice 4 core obs dims (bias-EMA integrals) as "channels", every width
+    guard would pass, and the run would grade a corrupted input as the X1 verdict.
+    extra_obs_dim exclusivity and the GRU-only rule are enforced structurally in
+    models.py (extra_scale_tensor / make_student_encoder); this check owns the one
+    fact only the launcher can see -- the env flag.
+    """
+    if not cfg.extra_obs_from_policy_tail:
+        return
+    if not getattr(env_cfg, "use_extra_policy_obs", False):
+        raise ValueError(
+            "--extra_obs_from_policy_tail requires a gen-2 env that folds the 4 channels "
+            "into the policy_obs tail: pass env.use_extra_policy_obs=True (hydra override). "
+            f"Current env variant {type(env_cfg).__name__} has "
+            f"use_extra_policy_obs={getattr(env_cfg, 'use_extra_policy_obs', '<absent>')!r}."
+        )
+
+
 def _resolve_extra_obs_env_flag(env_cfg, extra_obs_dim: int) -> bool:
     """Resolve env_cfg.use_student_extra_obs, tolerating env variants that lack the field.
 
@@ -216,6 +244,7 @@ def main(env_cfg: DirectRLEnvCfg, _agent_cfg) -> None:
     cfg.lr = args_cli.lr
     cfg.lambda_latent = args_cli.lambda_latent
     cfg.extra_obs_dim = args_cli.extra_obs_dim
+    cfg.extra_obs_from_policy_tail = args_cli.extra_obs_from_policy_tail
     cfg.save_interval = args_cli.save_interval
     cfg.dagger_beta_start = args_cli.dagger_beta_start
     cfg.dagger_beta_end = args_cli.dagger_beta_end
@@ -234,6 +263,7 @@ def main(env_cfg: DirectRLEnvCfg, _agent_cfg) -> None:
         cfg.gru_head_hidden = args_cli.gru_head_hidden
 
     _check_extra_obs_consistency(cfg.extra_obs_dim, _resolve_extra_obs_env_flag(env_cfg, cfg.extra_obs_dim))
+    _check_tail_mode_consistency(cfg, env_cfg)
 
     # Log dir. cfg.log_dir_root is an absolute constrained-albc path (student/config.py),
     # so student output lands in the constrained-albc repo even though this script runs from

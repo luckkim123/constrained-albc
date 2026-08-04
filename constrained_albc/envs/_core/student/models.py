@@ -19,6 +19,29 @@ from .config import StudentCfg
 # 2026-08-03, minor item 7).
 STUDENT_EXTRA_OBS_KEY = "student_extra"
 
+# Width of the extra-channel block the gen-2 env folds at the policy_obs TAIL
+# (apply_extra_policy_obs, envs/main/config.py): IMU specific force 3D + heave rate 1D.
+# The env always emits exactly 4; train_student.py's cross-check states the same fact.
+POLICY_TAIL_N = 4
+
+
+def split_policy_tail(
+    *, obs_raw: torch.Tensor, obs_n: torch.Tensor, n_tail: int
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Recover the gen-1 (normalized core, RAW extra) pair from a gen-2 policy_obs.
+
+    X1-tailsplit: the gen-2 env appends the extra channels at the TAIL of policy_obs,
+    and the teacher's actor_obs_normalizer is elementwise, so slicing the normalized
+    stream at -n_tail equals normalizing the core alone. The tail is taken from the RAW
+    obs so student_input applies the gen-1 static per-channel scale instead of the
+    teacher's z-score statistics -- that normalization mode is the ONE experimental
+    variable X1 isolates. Feed the result to student_input; the input layout stays
+    defined in exactly one place. Shapes: obs_raw/obs_n (..., D) -> ((..., D-n), (..., n)).
+    Keyword-only: the two tensor args have identical shapes, so a positional swap would
+    silently return a z-scored tail -- the exact convention this helper exists to avoid.
+    """
+    return obs_n[..., :-n_tail], obs_raw[..., -n_tail:]
+
 
 def student_input(
     obs_n: torch.Tensor, extra: torch.Tensor | None, scale: torch.Tensor | None
@@ -47,6 +70,14 @@ def extra_scale_tensor(cfg, device) -> torch.Tensor | None:
     an opaque broadcast failure at the first forward.
     """
     n = getattr(cfg, "extra_obs_dim", 0)
+    tail = getattr(cfg, "extra_obs_from_policy_tail", False)
+    if n > 0 and tail:
+        raise ValueError(
+            "extra_obs_dim > 0 and extra_obs_from_policy_tail are mutually exclusive "
+            "delivery conventions (gen-1 side channel vs X1 policy-tail split)"
+        )
+    if tail:
+        n = POLICY_TAIL_N
     if n <= 0:
         return None
     scale = cfg.extra_obs_scale
@@ -169,6 +200,12 @@ def make_student_encoder(cfg: StudentCfg) -> nn.Module:
         raise ValueError(
             "extra_obs_dim > 0 is implemented for the GRU student only "
             "(TCN flat-buf/ring were deliberately not widened -- see StudentCfg)"
+        )
+    if getattr(cfg, "extra_obs_from_policy_tail", False) and cfg.encoder_type != "gru":
+        raise ValueError(
+            "extra_obs_from_policy_tail is implemented for the GRU student only "
+            "(the TCN forward never routes through student_input, so tail mode "
+            "would be a silent no-op there -- see test_student_extra_parity.py)"
         )
     if cfg.encoder_type == "tcn":
         return StudentEncoderTCN(cfg)

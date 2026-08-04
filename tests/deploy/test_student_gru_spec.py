@@ -89,6 +89,13 @@ def test_extra_obs_is_rejected():
         StudentGRUSpec._assert_board_runnable(_cfg(extra_obs_dim=4))
 
 
+def test_tail_split_is_rejected():
+    """X1 tail-split students have no board-side split+static-scale contract -- an
+    export would silently z-score the tail channels the student expects raw."""
+    with pytest.raises(ExportContractError, match="extra_obs_from_policy_tail"):
+        StudentGRUSpec._assert_board_runnable(_cfg(extra_obs_from_policy_tail=True))
+
+
 def test_adopted_geometry_is_accepted():
     StudentGRUSpec._assert_board_runnable(_cfg())  # must not raise
 

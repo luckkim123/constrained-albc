@@ -22,7 +22,14 @@ from torch.utils.tensorboard import SummaryWriter
 
 from .collector import RolloutBuffer
 from .config import StudentCfg, dagger_beta_at
-from .models import STUDENT_EXTRA_OBS_KEY, extra_scale_tensor, make_student_encoder, student_input
+from .models import (
+    POLICY_TAIL_N,
+    STUDENT_EXTRA_OBS_KEY,
+    extra_scale_tensor,
+    make_student_encoder,
+    split_policy_tail,
+    student_input,
+)
 from .teacher import FrozenTeacher
 
 logger = logging.getLogger(__name__)
@@ -109,6 +116,14 @@ class StudentRunner:
         # (see student_input in models.py). None when extra_obs_dim == 0 -> every
         # encoder forward stays byte-identical to the pre-obs4 recipe.
         self._extra_scale = extra_scale_tensor(cfg, device)
+
+        # X1-tailsplit: the gen-2 env folds the channels at the policy_obs TAIL; this
+        # mode re-assembles the gen-1 input (split + static scale) at every forward
+        # site. 0 = off. Note the fail-loud construction: in tail mode _extra_scale is
+        # non-None while the side-channel `extra` is None, so any site that skipped the
+        # split would raise inside student_input instead of silently feeding the
+        # z-scored tail (38d979e class).
+        self._tail_n = POLICY_TAIL_N if getattr(cfg, "extra_obs_from_policy_tail", False) else 0
 
         self.optimizer = torch.optim.Adam(self.student.parameters(), lr=cfg.lr)
 
@@ -270,6 +285,8 @@ class StudentRunner:
             l_hat = self.student(ring_n)
         else:
             obs_n = self.obs_normalizer(obs)
+            if self._tail_n:
+                obs_n, extra = split_policy_tail(obs_raw=obs, obs_n=obs_n, n_tail=self._tail_n)
             x = student_input(obs_n, extra, self._extra_scale)
             l_hat_seq, self.gru_hidden = self.student(x.unsqueeze(1), hidden=self.gru_hidden)
             l_hat = l_hat_seq[:, -1]
@@ -313,7 +330,12 @@ class StudentRunner:
         # Normalize student input (obs_seq) with teacher's actor_obs_normalizer.
         B, T, D = batch.obs_seq.shape
         obs_seq_n = self.obs_normalizer(batch.obs_seq.reshape(B * T, D)).reshape(B, T, D)
-        x_seq = student_input(obs_seq_n, batch.extra_seq, self._extra_scale)
+        extra_seq = batch.extra_seq
+        if self._tail_n:
+            obs_seq_n, extra_seq = split_policy_tail(
+                obs_raw=batch.obs_seq, obs_n=obs_seq_n, n_tail=self._tail_n
+            )
+        x_seq = student_input(obs_seq_n, extra_seq, self._extra_scale)
         l_hat_seq, _ = self.student(x_seq, hidden=h_in)                 # (envs, T, 9)
         M = l_hat_seq.shape[0] * l_hat_seq.shape[1]
         l_hat = l_hat_seq.reshape(M, -1)
@@ -438,6 +460,10 @@ class StudentRunner:
                         self.buffer.extra_flat[:T_].transpose(0, 1)
                         if self.buffer.extra_flat is not None else None
                     )
+                    if self._tail_n:
+                        obs_all_n, extra_all = split_policy_tail(
+                            obs_raw=obs_all, obs_n=obs_all_n, n_tail=self._tail_n
+                        )
                     _, h_end = self.student(
                         student_input(obs_all_n, extra_all, self._extra_scale), hidden=h_start
                     )

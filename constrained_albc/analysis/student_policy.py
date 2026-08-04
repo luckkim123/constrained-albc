@@ -25,9 +25,11 @@ import torch
 
 from constrained_albc.envs.main.student.config import StudentCfg
 from constrained_albc.envs.main.student.models import (
+    POLICY_TAIL_N,
     STUDENT_EXTRA_OBS_KEY,
     extra_scale_tensor,
     make_student_encoder,
+    split_policy_tail,
     student_input,
 )
 from constrained_albc.envs.main.student.teacher import FrozenTeacher
@@ -64,7 +66,7 @@ class StudentInLoopPolicy:
         # width is set from cfg.policy_obs_dim in models.py, and the ring below).
         if "policy_obs_dim" in saved_cfg:
             cfg.policy_obs_dim = saved_cfg["policy_obs_dim"]
-        for field in ("extra_obs_dim", "extra_obs_scale"):
+        for field in ("extra_obs_dim", "extra_obs_scale", "extra_obs_from_policy_tail"):
             if field in saved_cfg:
                 setattr(cfg, field, saved_cfg[field])
         if cfg.policy_obs_dim != self.teacher.obs_dim:
@@ -77,6 +79,10 @@ class StudentInLoopPolicy:
         if getattr(cfg, "extra_obs_dim", 0) > 0 and cfg.encoder_type != "gru":
             raise ValueError("extra channels are GRU-only (see StudentCfg)")
         self._extra_scale = extra_scale_tensor(cfg, device)
+        # X1-tailsplit: mirror the runner -- re-assemble the gen-1 input from the gen-2
+        # policy_obs tail. In tail mode the encoder width is policy_obs_dim itself
+        # (extra_obs_dim == 0), so the teacher-width guard above already covers it.
+        self._tail_n = POLICY_TAIL_N if getattr(cfg, "extra_obs_from_policy_tail", False) else 0
         if cfg.encoder_type == "gru":
             if "gru.weight_ih_l0" in sd:
                 cfg.gru_hidden = sd["gru.weight_ih_l0"].shape[0] // 3
@@ -195,15 +201,19 @@ class StudentInLoopPolicy:
         else:
             # Single-step forward. Normalize obs to match training distribution.
             obs_for_student = self.obs_normalizer(obs)
-            if self._extra_scale is not None and STUDENT_EXTRA_OBS_KEY not in obs_td:
+            extra = obs_td.get(STUDENT_EXTRA_OBS_KEY)
+            if self._tail_n:
+                # Tail mode: channels live inside policy_obs, no side-channel key.
+                obs_for_student, extra = split_policy_tail(
+                    obs_raw=obs, obs_n=obs_for_student, n_tail=self._tail_n
+                )
+            elif self._extra_scale is not None and STUDENT_EXTRA_OBS_KEY not in obs_td:
                 raise RuntimeError(
                     "student ckpt has extra_obs_dim > 0 but the env published no "
                     "'student_extra' obs key -- the eval env needs "
                     "use_student_extra_obs=True (run_static sets it from the ckpt)"
                 )
-            obs_seq = student_input(
-                obs_for_student, obs_td.get(STUDENT_EXTRA_OBS_KEY), self._extra_scale
-            ).unsqueeze(1)
+            obs_seq = student_input(obs_for_student, extra, self._extra_scale).unsqueeze(1)
             l_hat_seq, self.hidden = self.student(obs_seq, hidden=self.hidden)
             l_hat = l_hat_seq[:, -1]    # (B, 9)
 

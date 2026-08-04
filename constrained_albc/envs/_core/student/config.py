@@ -71,6 +71,13 @@ class StudentCfg:
     # simplified: GRU-only -- TCN would need flat_buf/ring widening for a retired
     # architecture; extend if a TCN arm ever needs the channels.
     extra_obs_dim: int = 0
+    # X1-tailsplit: recover the gen-1 input assembly from a gen-2 env whose policy_obs
+    # folds the 4 channels at the TAIL (use_extra_policy_obs). The student input becomes
+    # cat(norm(obs)[..., :-4], obs[..., -4:] / extra_obs_scale) -- same width, gen-1
+    # channel normalization convention. Mutually exclusive with extra_obs_dim > 0
+    # (guarded in extra_scale_tensor); GRU-only like the side channel. False keeps every
+    # encoder forward byte-identical to the pre-X1 recipe.
+    extra_obs_from_policy_tail: bool = False
     # Static per-channel scales (divide before the encoder): IMU specific force ~ +-15
     # m/s^2 -> /10; heave rate ~ +-1 m/s -> /1. Static (not a running normalizer) so the
     # board runtime can replicate normalization from constants; calibration knobs, tune

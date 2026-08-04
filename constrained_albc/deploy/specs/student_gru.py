@@ -90,6 +90,13 @@ class StudentGRUSpec(ExportSpec):
                 "npforward has no extra-channel input or scaling contract; deploy support "
                 "arrives with gen-2 (teacher obs76), where policy_obs itself is 76D."
             )
+        if getattr(cfg, "extra_obs_from_policy_tail", False):
+            raise ExportContractError(
+                "student_gru: extra_obs_from_policy_tail=True (X1 tail-split student). "
+                "npforward has no split+static-scale contract, so an exported pack would "
+                "silently z-score the tail channels the student expects raw. Extend the "
+                "deploy spec first if this recipe is adopted."
+            )
 
     def map_state_dict(self, model: nn.Module) -> dict[str, np.ndarray]:
         sd = model.state_dict()
