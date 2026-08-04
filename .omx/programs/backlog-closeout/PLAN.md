@@ -299,6 +299,22 @@ Commit `ee3bcac`. **Open backlog 17 -> 3.**
 
 ---
 
+**2026-08-05 02:07 — the control-delay sweep was measuring nothing; killed and re-run.** The
+Hydra override `env.randomization.control_delay_steps=[N,N]` does not survive `apply_dr_config()`,
+which rebuilds the randomization config before env creation and again at every DR level;
+`control_delay_steps` is not a `_DR_TUPLE_FIELDS` dim, so it reverted to `(0,0)` every time. d1's
+`data_hard.npz` was elementwise identical to the stock baseline across all 40 keys. I checked d1
+against the baseline BEFORE waiting for d3, precisely because this project has been burned by a
+silent eval-side no-op before, and that early check is what saved the remaining GPU1 time. The
+supported instrument is the dedicated flag `--control-delay N`, which eval.py applies both before
+`env.__init__` (so the `DelayBuffer` is allocated at all) and after each per-level
+`apply_dr_config` — the code comment at `eval.py:1312-1314` documents this exact trap, so the
+instrument was right and my invocation was wrong. queue3 was killed mid-d2, both output
+directories carry a `VOID.txt`, and `gpu1_queue5.sh` re-runs the sweep with a self-abort gate.
+The gate was validated in both directions before being trusted: 0 differing keys on the known
+no-op, 10 on the known-real yaw-damping arm.
+
+
 ## 8. STATE AT LAST COMPACTION — read this first on resume (overwrite each time)
 
 **Written 2026-08-05 02:03 KST.** Everything below is live at that moment. Re-derive from disk
@@ -323,8 +339,10 @@ every id recorded here.
   Stdout `logs_queue/iterbudget_s30.log`. Plant verified; see the 01:28 entry above.
 - **GPU1 — a chain of nohup queue scripts** in `/root/.claude/jobs/3999bdb3/tmp/`, each waiting
   on the previous script's PID and appending to its own `gpu1_state*.txt`:
-  `gpu1_queue3.sh` (PID 797894, control-delay sweep d=1,2,3) then
-  `gpu1_queue4.sh` (PID 879923, Koopman arm B eval retry). Expected clear by about **02:30**.
+  `gpu1_queue4.sh` (PID 879923, Koopman arm B eval retry, started 02:08) then
+  `gpu1_queue5.sh` (PID 942451, control-delay sweep d=1,2,3 on the correct instrument).
+  Expected clear by about **02:50**. `gpu1_queue3.sh` was the first delay sweep and was KILLED
+  at 02:07 once its injection was proven to be a no-op — see the note under the eval table.
   Poll the PID directly; a `pgrep` pattern self-matches and has killed watchers here before.
 
 ### Which eval is which
@@ -344,11 +362,26 @@ directory's timestamp.
 | `static_260805_010019` | buoy added_mass + factor 1.257 | buoy **ceiling** — survival -18.75 to -31.25 pp |
 | `static_260805_012834` | hull damping yaw x0.1 | yaw damping **low** — zero REAL |
 | `static_260805_013827` | hull damping yaw x10 | yaw damping **high** — zero REAL |
-| `static_260805_014845` | `control_delay_steps=[1,1]` | delay **d1** |
-| `static_260805_015843` | `control_delay_steps=[2,2]` | delay **d2** |
+| `static_260805_014845` | `control_delay_steps=[1,1]` | delay d1 — **VOID, no-op** |
+| `static_260805_015843` | `control_delay_steps=[2,2]` | delay d2 — **VOID, no-op, killed mid-run** |
 
 The failed arm B eval left `outputs/2026-08-05/01-28-01/` with an EMPTY override list — that
 emptiness is the bug itself (the missing `env.use_marine_feature_obs=True`).
+
+**The two VOID rows are the delay-instrument trap, caught 02:07.** Passing
+`env.randomization.control_delay_steps=[N,N]` as a Hydra override does nothing:
+`apply_dr_config()` rebuilds the randomization config once before env creation (`eval.py:1308`)
+and again at every DR level, and `control_delay_steps` is not a `_DR_TUPLE_FIELDS` dim, so it
+reverts to the dataclass default `(0,0)` each time. d1 came out elementwise identical to
+`static_260804_203719` across all 40 npz keys — and `eval.py`'s own `--control-delay` help text
+calls delay-off "byte-identical to stock", so the identity WAS the signature of a dead injector.
+Both directories carry a `VOID.txt` on disk. The supported instrument is the dedicated flag
+**`--control-delay N`** (`eval.py:1309-1317` and `1462-1468`), which sets the value before
+`env.__init__` so the `DelayBuffer` is allocated AND re-sets it after each per-level
+`apply_dr_config`. The re-run is `gpu1_queue5.sh` (PID 942451), which gates itself: after d1 it
+diffs against the baseline and aborts the remaining points if the count of differing keys is 0.
+That gate was verified to fail on the known no-op (0 keys) and pass on the known-real yaw-damping
+arm (10 keys) before being trusted.
 
 ### Next actions, in order
 
