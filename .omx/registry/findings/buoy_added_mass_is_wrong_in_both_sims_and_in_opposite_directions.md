@@ -2,15 +2,15 @@
 title: "Buoy added mass is wrong in BOTH sims and in opposite directions: Isaac 3.8-8.2x below the geometric value, Stonefish 3.5-5.7x above it via an isotropic average of a dimensionally broken axial term; recentering Isaac onto Stonefish moves it further from reality"
 tags: ["sim-to-real", "stonefish", "buoy", "added-mass", "hydrodynamics", "domain-randomization", "hydrorc", "cross-sim-measurement", "guard-structure", "compound-body", "batch", "plant", "upstream-bug", "title-drift"]
 created: 2026-07-29T09:01:06.191774
-updated: 2026-07-29T11:47:19.746521
+updated: 2026-08-04T16:24:13.137955
 sources: ["buoy-hydro-rig-20260729", "buoy-probe-design-20260729", "stonefish-reply-20260729", "isaac-side-verify-20260729"]
 links: []
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 80
-qualityReasons: ["no-source-marker"]
-status: needs-apply-before-retrain
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
+status: resolved
 blocked-on: "Isaac-side guard-structure decision, NOT a further Stonefish measurement (the probe route is closed: no link3, buoy welded into the link2 compound, no external-wrench service, and the standalone rig already ran). Decide among: raise the 0.95 cap, drop/retune added_mass_stability_factor, or move added mass out of the explicit external-wrench path into the mass matrix as Stonefish does. Target is the GEOMETRIC value (broadside ~2.0, axial ~1.6 kg), never the Stonefish measurement"
 ---
 
@@ -170,3 +170,69 @@ THREE ISAAC-SIDE VERIFICATIONS OF THIS PAGE, done 2026-07-29 against source.
 3. The mass-matrix argument stands, but NOT on the number it was argued with. Moving added mass onto the left-hand side is unconditionally stable where an explicit forward-Euler external wrench is not, and that is exactly why the 0.95 cap exists -- the architectural case is sound. However the supporting claim that Stonefish stably runs M_a/m about 10 leans on the very axial term this page shows is 8.47x inflated. At the GEOMETRIC target (2.0 broadside, 1.6 axial on a 0.93 kg body) the ratio is about 2.2 and 1.8, still above the Isaac cap but an order of magnitude below 10. Argue the path, not the ratio.
 
 TITLE-BODY DRIFT, flagged not fixed. The title still carries the retired coefficient comparison (3.8-8.2x low, 3.5-5.7x high) while the 10:13 update replaced it with a total-effective-inertia table (2.4-2.5x low, 3.5-4.0x high). Both are internally correct -- they compare different quantities -- but the backlog and query results render the TITLE, so a later session reading only the listing will pick up the retired framing. Retitling requires a gc round, so it is recorded here rather than patched.
+
+---
+
+## Update (2026-08-04T16:24:13.137955)
+
+## VERDICT 2026-08-05 -- RESOLVED, and NOT the way this program expected (backlog-closeout)
+
+Measured rather than argued. Three points of effective buoy added mass were evaluated on the
+E-int teacher (model_4999.pt) against its own baseline eval static_260804_203719, same GPU,
+same branch, same DORAEMON anchor. Pairing verified: 24/24 dr+fault keys elementwise identical
+at all four DR levels, so the paired decision floors legitimately apply.
+
+The geometric target cannot be set directly. hydrodynamics.py:215 raises at construction when
+added_mass / body_mass >= 1.0 and the buoy's body mass is 0.93 kg, while events.py:273 silently
+clamps the DR-scaled coefficient at 0.95 * body_mass on EVERY reset -- including at the none DR
+level, so a naive coefficient raise would have been a silent no-op. The applied wrench is
+M_a * acc * added_mass_stability_factor (hydrodynamics.py:361) and the factor carries no guard,
+so the target was reached by splitting it between coefficient and factor. Rotational terms were
+held byte-equal throughout (effective 0.0008 at every point), so only translational added mass
+moved. Each override was confirmed in the hydra-resolved config, not assumed.
+
+| point | effective surge/sway | ratio to body mass | result |
+|:--|:--|:--|:--|
+| current | 0.28 kg | 0.30 | reference |
+| x2 | 0.56 kg | 0.60 | ZERO REAL flags on any field, axis or DR level |
+| ceiling | 0.88 kg | 0.95 | survival -18.75 to -31.25 pp, REAL at all four levels |
+| geometric | 2.00 kg | 2.15 | 0/64 alive before step 1000; the run crashed on an all-NaN metric |
+
+**This is a numerical stability cliff, not a control-sensitivity curve, and reading it the other
+way would be the error.** The ceiling point also shows ss_error +0.19 to +0.35 deg and
+ss_error_std +0.86 to +1.46 deg flagged REAL -- but those numbers come from a run in which a
+fifth to a third of the environments died, so the surviving population is a biased subset and
+the accuracy deltas are survivorship-contaminated. They must NOT be quoted as "the policy
+degrades by 0.35 deg under corrected added mass". The primary result at that point is the
+survival collapse, and its mechanism is the same one that kills every env at the geometric
+value: explicit external-wrench integration of a force proportional to acceleration is
+unconditionally unstable as the added mass approaches the body's own inertia. The death rate is
+monotone in that ratio (0 percent at 0.60, 19-31 percent at 0.95, 100 percent at 2.15).
+
+**Consequence: the correct geometric added mass is UNREACHABLE by any coefficient or factor
+setting in the current formulation.** This lead offered three options -- raise the 0.95 cap,
+drop or retune added_mass_stability_factor, or move added mass out of the explicit
+external-wrench path into the mass matrix as Stonefish does. The first two are now measured to
+be dead ends: they do not fail because the cap is too conservative, they fail because the
+underlying integration scheme cannot carry the value. Option (c) is the only route, and it is a
+**gen-2 engine item**, not a coefficient fix.
+
+**What gen-1 ships with, stated precisely.** Within the numerically representable range the
+policy is insensitive to buoy added mass -- zero REAL flags anywhere at 2x. That is why the
+known model error is accepted for gen-1. But the honest form of that statement is "insensitive
+across a range that does not reach the true value", which is weaker than "the error does not
+matter". Nothing here measures behaviour at the real vehicle's added mass, because nothing can.
+This belongs in the DGX handoff as a quantified, bounded sim-to-real gap rather than a resolved
+one.
+
+**Engine defect found while running this, recorded and deliberately NOT fixed.** The stability
+guard validates the RAW coefficient (`ratio = added_mass[i] / gen_inertia[i]`,
+hydrodynamics.py:215) while the applied wrench is coefficient * added_mass_stability_factor. So
+the guard under-protects whenever the factor exceeds 1 and over-protects whenever it is below 1.
+Concretely: the geometric configuration had a raw ratio of 0.54 and passed validation silently,
+then destroyed the simulation; and with the shipped factor of 0.4 the guard is 2.5x conservative
+on the buoy. The correct test is `added_mass[i] * added_mass_stability_factor / gen_inertia[i]`.
+This is a one-line change and it is NOT being made now: altering a plant-engine guard during an
+active experiment program is exactly what voids a baseline mid-campaign. Queued as a gen-2
+engine item alongside option (c), which touches the same code.
+

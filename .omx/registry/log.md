@@ -9843,3 +9843,7 @@
 - **Pages:** roll_transient_is_worst_at_none_dr_and_improves_monotonically_as.md
 - **Summary:** updated 'roll transient is WORST at none DR and improves monotonically as DR hardens (inverted, both runs)'
 
+## [2026-08-04T16:24:13.137955] add
+- **Pages:** buoy_added_mass_is_wrong_in_both_sims_and_in_opposite_directions.md
+- **Summary:** updated 'Buoy added mass is wrong in BOTH sims and in opposite directions: Isaac 3.8-8.2x below the geometric value, Stonefish 3.5-5.7x above it via an isotropic average of a dimensionally broken axial term; recentering Isaac onto Stonefish moves it further from reality'
+
