@@ -15,14 +15,22 @@ further experiment.
 
 ## Hard rules
 
-1. Launch EXACTLY ONE training run, the one specified in Step 3. No other training or eval
-   launches without a new human approval.
-2. Change NOTHING except `num_envs`. Every "scale-up companion" change was tested and rejected on
-   record: kl_ub-up is known-bad (E1), iteration-extension is net-negative twice (extend8k,
-   moreiters), performance_lb re-derivation belongs to the next purpose, DR-box widening is
-   blocked pending measured hardware bounds, entropy/min_std changes were a 5/5 zero-adoption
-   sweep, num_mini_batches stays 4. If you think a knob needs to differ, that is a STOP-and-report,
-   not a judgment call.
+1. Launch EXACTLY ONE training run, the one specified in Step 3. Three things are pre-approved and
+   are NOT exceptions you have to ask about: the optional Step 2 smoke, the Step 4b eval schedule,
+   and a Step 5 crash relaunch. Anything beyond those three — a second training run, an
+   off-schedule eval, a re-run at different settings — needs a new human approval.
+2. Change NOTHING except the two knobs already decided and already written into the Step 3 command:
+   `num_envs 32768` and `max_iterations 20000`. Every other "scale-up companion" change was tested
+   and rejected on record: kl_ub-up is known-bad (E1), performance_lb re-derivation belongs to the
+   next purpose, DR-box widening is blocked pending measured hardware bounds, entropy/min_std
+   changes were a 5/5 zero-adoption sweep, num_mini_batches stays 4, step_interval stays 250. If you
+   think a knob needs to differ, that is a STOP-and-report, not a judgment call.
+   Do not "correct" `max_iterations` back to 5000: the old rule of thumb that iteration-extension is
+   net-negative (extend8k, moreiters) is WITHDRAWN — PLAN §3 retracted it because `moreiters` was
+   cited backwards (it IMPROVED at the fair `none` level), the effect's sign is
+   `performance_lb`-dependent, and both datapoints sit on the retired posttam plant. 20000 is a
+   recorded user decision (2026-08-04) whose risk is carried by Step 4b's gates, not an unreviewed
+   extension.
 3. `isaaclab/` is a pristine fork — never commit or write project files into it.
 4. All numbers you report are single-seed screening on a non-reference machine (a +109%
    cross-machine isolation term is on record). Report measurements, never adoption conclusions.
@@ -32,9 +40,13 @@ further experiment.
 - No Docker; Isaac Sim is a source build. Launcher: `TERM=xterm ~/workspace/isaaclab/isaaclab.sh -p`
   (raw python lacks numpy; missing TERM kills the launcher over SSH with "unknown terminal type").
 - Single GPU — do NOT set `CUDA_VISIBLE_DEVICES`.
-- Unified 121.7 GB memory: `nvidia-smi` reports Memory-Usage "Not Supported". Monitor with
-  `free -m` and `nvidia-smi --query-compute-apps=pid,used_memory`. Measured peak at 32768 envs:
-  83.2 GB; treat sustained > 100 GB as an abort signal.
+- Unified 124,610 MiB memory: `nvidia-smi` reports Memory-Usage "Not Supported". Monitor with
+  `free -m` and `nvidia-smi --query-compute-apps=pid,used_memory`. Measured TRAINING peak at 32768
+  envs: 83,170 MiB, leaving ~41,400 MiB spare (the source figure carries a 1,000 MiB internal
+  inconsistency). Abort signal: `free -m` "used" above **102,400 MiB**. Every memory number here is
+  in MiB because that is the unit `free -m` prints — do not convert to GB by eye, the headroom is
+  only ~41 GB and a GB-vs-GiB slip is ~7% of it. A Step 4b eval starts a SECOND Isaac Sim process on
+  this same pool; see the eval-contention exemption in Step 4b before reading a spike as an abort.
 - Expected steady-state: ~34.7 s/iter → **20000 iters ≈ 192.9 h ≈ 8.0 days**. That figure is a CAP,
   not a fixed commitment: Step 4b's periodic eval + stop rule can end the run earlier (48.2 h at
   5000, 96.5 h at 10000, 144.7 h at 15000) with no loss, because every earlier checkpoint is on disk.
@@ -67,7 +79,7 @@ adopted values before; only the dumped config counts.
 | observation width (env.yaml observation_space) | 72 (NOT 76; `use_extra_policy_obs` false/absent) |
 | fault.enable | true |
 | fault.thruster_fail_prob / thruster_health_range | 0.1 / (0.0, 0.5) |
-| fault.use_privileged_fault_obs | false |
+| use_privileged_fault_obs (env-cfg ROOT key, NOT under `fault.`) | false |
 | max_thrust_scale DR band | (0.85, 1.15) |
 | doraemon: enable / kl_ub / performance_lb / step_interval | true / 0.12 / 250.0 / 250 |
 | doraemon alpha / buffer_size / min_episodes | 0.5 / 2000 / 200 |
@@ -131,7 +143,8 @@ KILL the run and report if ANY of:
 - `DORAEMON/kl_step` shows no accepted widening move (≈0 on both updates) AND `DORAEMON/mode` <= -2;
 - `DORAEMON/success_rate` pinned > 0.95 (inert gate) or < 0.5 (infeasible) sustained;
 - any DR dim already at Beta(1,1) (premature saturation);
-- sustained s/iter > 40, or `free -m` used > 100 GB;
+- s/iter > 40, or `free -m` used > 102,400 MiB — in either case sustained for 15+ min and measured
+  OUTSIDE an eval window (Step 4b's exemption; a 9-min eval legitimately moves both numbers);
 - NaN in metric lines.
 Healthy expectations: success_rate ≈ 0.75–0.90 (anchor measured 0.815 at lb=250),
 kl_step at the 0.12 cap on accepted updates, `DORAEMON/ess_ratio` HIGHER than workstation runs
@@ -139,29 +152,153 @@ kl_step at the 0.12 cap on accepted updates, `DORAEMON/ess_ratio` HIGHER than wo
 
 Repeat a lighter look at ~iter 1000 and ~2500 (checkpoints land every 50 iters ≈ 29 min).
 
-### Step 4b — the two gates that matter for a 20000-iteration run
+### Step 4b — the three gates that matter for a 20000-iteration run
 
 This run is 20000 iterations (192.9 h ≈ 8.0 days). The curriculum is expected to finish expanding
 around iteration 6750, so roughly two thirds of the run trains on a frozen, fully-expanded DR box.
-That regime has never been run at this length — these two gates are what make it safe.
+That regime has never been run at this length, and 17,500 of the 20,000 iterations happen after the
+last Step 4 look at iteration 2500 — these three gates are what make that stretch safe.
 
-**Gate A — saturation checkpoint (~iter 6750–7000).** Confirm `DORAEMON/kl_step` has gone to 0 and
-that `doraemon_state.pt` reads Beta(1,1) on every dim (`torch.load`, keys `dist_a`/`dist_b`).
+**Gate A — saturation checkpoint (~iter 6750–7000). This is the gate that decides what kind of run
+this is.** `max_iterations` is DORAEMON's expansion clock, so until the box saturates, raising it is
+a DR-WIDTH treatment, not extra training. Once the box hits its Beta(1,1) ceiling the treatment
+stops and everything after is purely more optimization on a STATIONARY target — which is the regime
+this run is meant to be in for its last two thirds.
+
+Confirm `DORAEMON/kl_step` has gone to 0 and `doraemon_state.pt` reads Beta(1,1) on every dim
+(`torch.load`, keys `dist_a`/`dist_b`).
+
+Measured reference (`trpo_biasema_extend8k_260716_162849`, from-scratch, 4096 envs): 26 boundaries
+fired, the LAST at iter 6750, and the freeze was total — over the remaining 1250 iterations
+`DORAEMON/entropy_before` took exactly TWO distinct values (-18.2939 then -18.2007 constant),
+`success_rate` held 0.813 -> 0.789 (min 0.7595), `Train/mean_reward` held 258-268. A saturated box
+really does stop moving; nothing degraded in that stretch.
+
 - Saturated MUCH earlier than ~6500: the budget arithmetic is wrong — report, do not kill.
-- NOT saturated by ~iter 9000: expansion attrition is worse at 32768 envs than on record
-  (`DORAEMON/mode = -3` fires in 4/4 recorded runs) — report.
+- NOT saturated by ~iter 9000: **this is the failure that matters**, not a scheduling curiosity.
+  The recorded case is `trpo_e3_extend10k_260713_224822` (a converged teacher RESUMED for +10000):
+  boundaries kept firing to iter 14749 and never stopped, because `success_rate` fell under alpha so
+  the box was pulled back instead of reaching the ceiling — `entropy_before` -30.1 -> max -18.24 ->
+  back to -24.4, success ending 0.37, reward 274 -> ~225. That run trained 10000 iterations against
+  a NON-STATIONARY target. If this run is still firing boundaries past ~9000, it is in that regime,
+  not in extend8k's — report immediately.
+
+Note on reading `DORAEMON/kl_step`: `doraemon.py:416-419` writes `kl_step = 0.0` on every
+NON-boundary iteration, so sampling the tag at a fixed stride can read 0 everywhere and look like
+"no expansions". Scan for `kl_step > 0` over ALL steps instead. On a resumed run the boundaries are
+phase-shifted (extend10k fires at iters ending 249/499/749/999, not 250-multiples).
 
 **Gate B — inert-gate watch, at every eval point below.** `DORAEMON/success_rate` sustained > 0.95
 is the recorded inert-gate failure class: `performance_lb=250` has stopped constraining anything
 and the rest of the run is unguarded. The reference teacher already sits at 0.814 against
-`alpha=0.5`, so there is not much slack. If it pins > 0.95, STOP and report before continuing.
+`alpha=0.5`, so there is not much slack. If it pins > 0.95: KILL the run, keep the best checkpoint,
+and report — the same action as the Step 4 gate, because an inert gate means every remaining
+iteration is unguarded and the checkpoints already on disk lose nothing.
+
+**Watch the LOW side just as hard, and at every eval point — not only at iteration 500.**
+`success_rate` sustained BELOW alpha 0.5 is the mechanism that prevents saturation: DORAEMON
+contracts the box instead of reaching the ceiling, Gate A never closes, and the run spends its
+remaining days chasing a moving target (extend10k: success decayed 0.91 -> 0.38 monotonically,
+crossing alpha around iter 8250 and never recovering, with `Train/mean_reward` 274 -> ~225).
+Healthy reference at saturation is 0.76-0.81. A monotone decay through 0.6 toward alpha, especially
+while boundaries are still firing, is the early signature — report it before it reaches alpha, not
+after.
+
+**Gate C — policy-health watch, at every eval point. There is NO automatic early stop anywhere in
+this codebase**, so a policy that quietly degenerates burns the remaining days at full cost. Nothing
+in the algorithm halts training: a non-finite TRPO step logs a warning and SKIPS that update
+(`constraint_trpo.py:560-565`), a failed line search reverts and continues, a DORAEMON ESS failure
+reverts only the DR update. The run reaches `max_iterations` unless a human kills it. Also note
+`Policy/entropy` and `Policy/mean_noise_std` are NOT scheduled — the action log_std is a LEARNED
+TRPO parameter re-clamped every update to [min_std_per_dim, 2.0] (`:506-511`), so over 4x the usual
+number of updates it can drift where a 5000-iteration run never had time to. Read all three at every
+eval point:
+Measured reference band (read these before judging anything). `mean_noise_std` starts at
+`init_noise_std` 0.7 and decays FAST and then asymptotes; the decay rate is not a function of
+`max_iterations`, so this shape is what to expect at any length:
+
+| iteration | E-int, current plant, 4096 envs | extend8k, retired posttam plant, 4096 envs |
+|--:|--:|--:|
+| 1000 | — | 0.1244 |
+| 2000 | — | 0.1010 |
+| 3000 | 0.0945 | 0.0915 |
+| 5000 | 0.0881 | 0.0860 |
+| 8000 | — (run ended) | 0.0838 |
+
+The hard floor is **0.0625** (`min_std_per_dim` = (0.10, 0.10, 0.05 x6) averaged over 8 dims). No
+recorded run has ever approached it: extend8k's decay rate FALLS from about -1.3e-6/iter before
+iteration 5000 to about -6e-7/iter at 7500-8000, and carrying that measured rate forward puts
+iteration 20000 near **0.076**, still above the floor. (A naive linear extrapolation from the
+pre-5000 slope would instead predict floor contact around iteration 18000 — the measured 5000-8000
+segment contradicts it, which is exactly why this needs watching rather than predicting: the run
+goes 12000 iterations past any measurement that exists.) Note the DGX run uses 32768 envs, so its
+trajectory will NOT overlay E-int's — treat the band as indicative, not as a pairing.
+
+**The aggregate tag alone is a weak instrument — use the per-dim read.** On recorded posttam runs
+**5 of the 8 action dims already sit exactly ON their per-dim `min_std` floor**; only {arm1, thr0,
+thr3} are free. So `Policy/mean_noise_std` is an average dominated by already-clamped dims and it
+cannot move much by construction. At each eval point also read the checkpoint directly and report
+HOW MANY of the 8 dims sit at their floor:
+
+```python
+import torch
+sd = torch.load("model_<it>.pt", map_location="cpu", weights_only=False)["model_state_dict"]
+std = sd["log_std"].exp()          # shape [8]; the key is log_std, not std
+floors = torch.tensor([0.10, 0.10, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05])
+print(std.tolist(), int((std <= floors * 1.01).sum()), "of 8 floored")
+```
+
+Verified reference — the E-int teacher this run must match, `model_4999.pt` on the current plant:
+`[0.1003, 0.1470, 0.1316, 0.0500, 0.0500, 0.1257, 0.0500, 0.0500]` = **5 of 8 floored**, free set
+{arm1, thr0, thr3} (dims 1, 2, 5). Their mean is 0.0881, which is exactly the `mean_noise_std` tag
+at that iteration — so the aggregate and the per-dim read agree, and the aggregate is simply the
+less sensitive of the two. Going from 5/8 to 7/8 or 8/8 floored is the real signal; the aggregate
+would barely register it.
+
+Also note this is a known-open phenomenon, not a new risk: sigma has tightened monotonically across
+campaigns (0.22-0.34 in April, 0.175 in June, 0.109 on 2026-07-13, 0.084 by 2026-07-16) and the omx
+wiki records it as never solved. It has nonetheless been benign for every converged teacher so far —
+extend8k held reward 258-268 and success ~0.79 through its post-saturation stretch with sigma at
+0.084. Report movement; do not treat a floored dim as an automatic fault.
+
+What to report:
+- `Policy/mean_noise_std` **below ~0.070**, or the per-dim floored count rising above 5/8 =
+  exploration is being taken over by the clamp rather than learning.
+- `Policy/entropy` falling with no deceleration across two eval points. The reference shape
+  decelerates hard: extend8k drops 1.42 over iterations 2000-5000 and only 0.14 over 5000-8000.
+- `Policy/line_search_success` sustained low = TRPO rejecting nearly every step, policy frozen while
+  wall-clock burns. This one is PRECAUTIONARY: it reads exactly 1.000 at every recorded iteration of
+  both reference runs, so any sustained departure is unprecedented and worth reporting early.
+
+None of these is an automatic kill — they are the readings that tell a human whether the remaining
+days are buying anything.
 
 **Periodic eval + stop rule (this is what bounds the 8 days).** Evaluate at iterations
 5000 / 7500 / 10000 / 12500 / 15000 / 17500 / 20000 (~9 min each at 64 envs) and track `none`-level
 `att_norm ss_error` from each eval's `summary.json`. **Two consecutive eval points worse than the
-running best = stop the run and keep the best checkpoint.** Stopping early costs nothing: the better
-checkpoint is already on disk, and the run's earlier iterations are identical to a shorter run
-(`max_iterations` is consumed only as the loop counter).
+running best by MORE THAN 0.10 deg each = stop the run and keep the best checkpoint.** The 0.10 deg
+term is the project's registered `ss_error` decision floor (`_analyze/recompute_metrics.py`
+`DECISION_FLOORS`); without it the rule fires on a 0.01 deg wobble and ends an 8-day run at 96 h.
+A point that is worse by less than the floor is NOT worse — it counts as a tie, and the running best
+is unchanged. Stopping early costs nothing: the better checkpoint is already on disk, and the run's
+earlier iterations are bit-identical to a shorter run at the same seed and `num_envs` (verified: the
+5000-iter and 8000-iter biasema pair agree to 0.000000 on `Policy/entropy`, `mean_noise_std`,
+`line_search_success` and `DORAEMON/kl_step` at every sampled iteration up to 4999).
+
+Do NOT read that as "20000 is just 5000 trained longer", though. Until the box saturates,
+`max_iterations` is DORAEMON's expansion clock, so raising it administers a WIDER DR box — the
+treatment, not the duration, is what changed in every recorded extension. The run becomes a pure
+train-longer run only AFTER Gate A closes. Both statements are true and they matter at different
+ends: the prefix is identical (so stopping early is free), the endpoint is a different DR exposure
+(so the final policy is not "the 5000 policy, more converged").
+
+**Eval contention — the Step 4 abort thresholds are SUSPENDED during an eval.** Each eval starts a
+second Isaac Sim process on the same single GB10 and the same unified memory pool, so `free -m`
+"used" rises and s/iter degrades for the ~9 min it runs. That is expected contention, not the
+failure the abort gate is looking for. Record the start/stop wall-clock of every eval, exclude those
+windows when judging the memory and s/iter thresholds, and only treat a reading as an abort signal
+if it persists 15+ min after the eval process has exited. The NaN and DORAEMON conditions are NOT
+suspended — they still apply during an eval.
 
 **Fair-exam rule — do not skip this.** `eval.py static` defaults `--doraemon-dr` to True, which
 grades each checkpoint on the DR box THAT checkpoint learned. Checkpoints from different iterations
@@ -169,30 +306,72 @@ therefore sit at different curriculum widths and their soft/medium/hard numbers 
 to each other. Compare only on `none`, or re-evaluate every checkpoint under
 `--doraemon-dr-from <one fixed run dir>` so they all take the identical exam.
 
+Two mechanics make this sharper than it sounds, both worth knowing before you trust any DR-level
+number from a mid-flight eval. (a) The auto-load reads the run's TensorBoard event file and takes
+the FINAL `DORAEMON/mean/*` values in it (`analysis/dr_config.py:214-241`), so on a run that is
+still training, even the SAME checkpoint evaluated at two different wall-clock times gets two
+different exams. (b) `doraemon_state.pt` is written to the run dir and OVERWRITTEN at every save
+(`constraint_encoder_runner.py:293`), so an early checkpoint's own box is not recoverable from it
+afterwards — only `curriculum_trajectory.json` (written beside it) preserves the full trajectory.
+`none` is unaffected by all of this, which is why it is the comparison axis.
+
 ## Step 5 — crash handling
 
 A relaunch mints a NEW run id — never resume by editing Hydra `agent.resume` or a group-path
 `load_run` (both fail silently). The working protocol:
 
 ```bash
-# inside the NEW run dir's parent, point RESUME_SRC at the crashed run:
-ln -s <crashed_run_dir> RESUME_SRC
+cd ~/workspace/constrained-albc
+# RESUME_SRC MUST sit at the EXPERIMENT ROOT, NOT inside the run_group dir:
+ln -s <abs_path_to_crashed_run_dir> logs/rsl_rl/albc_trpo_teacher/RESUME_SRC
 TERM=xterm ~/workspace/isaaclab/isaaclab.sh -p scripts/train.py \
   --task Isaac-ConstrainedALBC-TRPO-v0 --num_envs 32768 --headless \
   --resume --load_run RESUME_SRC --checkpoint model_<last>.pt \
   --max_iterations <20000 minus completed iters> \
   --run_group teacher_final_dgx32k --logger wandb --log_project_name teacher_final_dgx32k \
+  env.fault.enable=True \
   agent.run_name=dgx32k_s30_resume
 ```
+
+Three things about this command are load-bearing; getting any of them wrong is worse than the crash.
+
+- **`env.fault.enable=True` is REQUIRED on the resume too.** `--resume` restores WEIGHTS ONLY:
+  `train.py` builds the env from the Hydra config first (`train.py:264`) and only then calls
+  `runner.load(resume_path)` (`train.py:305`) — nothing restores the crashed run's env config. Omit
+  the override and you resume a fault-DISABLED plant, which is exactly the diff that voided a 4.9 h
+  run and made `trpo_obs76_s30_260803_233239` VOID. After the relaunch, **re-run the Step 1 table
+  against the RESUMED run's dumped `env.yaml`** — Step 1 is not a launch-only check.
+- **The symlink goes at the experiment root**, `logs/rsl_rl/albc_trpo_teacher/RESUME_SRC`.
+  `get_checkpoint_path` scans `log_root_path` directly with `os.scandir` + `re.match` on the entry
+  name (`isaaclab_tasks/utils/parse_cfg.py:193-195`), and `log_root_path` does NOT include the
+  `--run_group` layer (`train.py:216`). Putting it beside the run dirs inside
+  `teacher_final_dgx32k/` is one level too deep and fails with
+  `ValueError: No runs present in the directory`.
+- **`--max_iterations` on a resume is the REMAINING count**, not the target: rsl_rl computes
+  `tot_iter = start_iter + num_learning_iterations` from the checkpoint's stored `iter`.
+
 Pick `model_<last>.pt` by NUMERIC sort (`ls model_*.pt | sort -t_ -k2 -n | tail -1`) — alphabetical
 sort has destroyed final checkpoints before. Record both run ids and the stitch point in your report.
+
+What survives a resume and what does not (`doraemon.py:773-811`): the Beta distribution, the
+`step_count` phase, the episode buffer and `total_episodes` are all restored, so the curriculum
+resumes at the right point and the boundary schedule is NOT re-phased. The plant config is NOT
+restored (the bullet above). And `_trajectory` is NOT in `state_dict()` either — so the resumed
+run's `curriculum_trajectory.json` contains ONLY post-resume boundaries. Keep the crashed run's
+directory: after a resume, the full curriculum record is the crashed run's trajectory file plus the
+new one, and neither is complete alone. Say so explicitly in your report.
 
 ## Step 6 — after the run
 
 1. Verify the LAST checkpoint exists by NUMERIC sort (`model_19999.pt` for a full run, or whatever
-   the stop rule left), plus `doraemon_state.pt` and the wandb dir.
+   the stop rule left), plus `doraemon_state.pt`, `curriculum_trajectory.json`, and the wandb dir.
 2. Do NOT delete or trim anything — all ~400 checkpoints (5.9 MB each, ~2.4 GB total) are the
    dose-response series and are the main deliverable alongside the final model.
+   `curriculum_trajectory.json` matters as much as the checkpoints: `doraemon_state.pt` only ever
+   holds the LATEST box (it is overwritten at every save), so the trajectory file is the sole
+   record of which box each mid-run checkpoint learned under. If the run was resumed, that record
+   is SPLIT — the trajectory is not carried across a resume (Step 5), so keep and sync BOTH run
+   directories.
 3. Sync back to the workstation (the workstation runs the paired eval under its shared-DR
    protocol): the full `logs/rsl_rl/albc_trpo_teacher/teacher_final_dgx32k/<run_id>/` dir and the
    `experiments/` mirror entry. If you eval locally, use exactly
@@ -205,8 +384,9 @@ sort has destroyed final checkpoints before. Record both run ids and the stitch 
 ## Step 7 — report back (measurements only)
 
 - run_id, sha, exit code, wall-clock, s/iter curve summary, `free -m` peak;
-- abort-gate readings at 500/1000/2500, then Gate A (saturation, ~6750) and Gate B (inert-gate
-  watch) at every eval point;
+- abort-gate readings at 500/1000/2500, then Gate A (saturation, ~6750), Gate B (inert-gate watch)
+  and Gate C (`Policy/mean_noise_std`, `Policy/line_search_success`, `Policy/entropy`) at every
+  eval point;
 - **the dose-response table** — for each eval point (5000/7500/10000/12500/15000/17500/20000, or
   wherever the stop rule fired): iteration, `none`-level `att_norm ss_error`, `roll ss_error`,
   `roll os_env_mean`, `n_gt20`, `survival_pct`, and which checkpoint you judged best. This table is
