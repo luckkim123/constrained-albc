@@ -1,0 +1,6 @@
+{
+  "campaign_id": "koopman_marine_obs",
+  "created": "2026-08-04T12:00:39.404195+00:00",
+  "goal": "Koopman plan Phase 1 / arm B: does a 7-channel physics-informed dictionary lift of already-observed signals (sin/cos roll+pitch, signed-quadratic body rates) improve control? Tests optimization geometry, the only surviving Koopman claim. Pre-registered expectation: NULL.",
+  "baseline_run_id": "trpo_eint_s30_rs2350_260727_195102"
+}
