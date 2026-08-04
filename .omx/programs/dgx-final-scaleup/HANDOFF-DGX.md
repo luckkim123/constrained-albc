@@ -100,9 +100,11 @@ TERM=xterm ~/workspace/isaaclab/isaaclab.sh -p scripts/train.py \
 ```
 
 - **`env.fault.enable=True` is REQUIRED and is not optional polish.** `FaultInjectionCfg.enable`
-  defaults to `False` in code (`envs/main/config.py`, `ALBCEnvCfg.fault = FaultInjectionCfg()`), and
-  `train.py` exposes no fault flag — so without this Hydra override the env comes up fault-DISABLED
-  and fails the `fault.enable | true` row of the Step 1 table. The E-int final teacher and the
+  defaults to `False` in code (`envs/main/config.py`, `ALBCEnvCfg.fault = FaultInjectionCfg()`), so
+  without it the env comes up fault-DISABLED and fails the `fault.enable | true` row of the Step 1
+  table. (`train.py` also has a `--fault` store_true flag that sets the same field; either works.
+  Use the Hydra override above — it is the string on record for the runs this one must match.)
+  The E-int final teacher and the
   Phase D obs76 teacher were both launched with exactly this override; omitting it is the same diff
   that voided a 4.9 h run and made `trpo_obs76_s30_260803_233239` VOID. Step 1 will catch it, but
   only after the env has been built — verify the dumped `env.yaml` rather than assuming.
