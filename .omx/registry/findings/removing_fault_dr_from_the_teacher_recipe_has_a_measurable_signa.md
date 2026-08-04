@@ -2,7 +2,7 @@
 title: "Removing fault-DR from the teacher recipe has a measurable signature on the HEALTHY eval too: better nominal steady state, much worse hard-DR tail, and a wider thruster_util margin"
 tags: []
 created: 2026-08-03T19:54:01.455891
-updated: 2026-08-03T19:54:01.455891
+updated: 2026-08-04T00:44:18.092298
 sources: []
 links: []
 category: reference
@@ -56,4 +56,29 @@ in the recorded config.
 
 Confidence is MEDIUM: single seed per side, and the obs-width difference is not controlled. The
 controlled version is attempt 2 (`trpo_obs76fault_s30_260804_043926`).
+
+---
+
+## Update (2026-08-04T00:44:18.092298)
+
+## Controlled version RAN 2026-08-04 -- the signature is confirmed and now separable
+
+The controlled run this page pointed at (`trpo_obs76fault_s30_260804_043926`, same obs width,
+fault-DR restored) landed. Three-way comparison against the same baseline eval:
+
+| quantity | E-int (fault on, obs 72) | obs76 fault ON | obs76 fault OFF |
+|:--|--:|--:|--:|
+| hard att_norm ss_error (deg) | 0.7189 | 0.7297 | 1.0201 |
+| hard att_norm ss_error_std (deg) | 1.2791 | 0.8034 | 2.7643 |
+| none roll n_gt20 (envs) | 0.00 | 4.33 | 20.33 |
+| Constraint/margin/thruster_util | 7.17 (JC/dk 0.821) | 7.17 (0.821) | 8.51 (0.787) |
+| DORAEMON/success_rate | 0.81044 | 0.85807 | 0.91889 |
+
+Every fault-sensitive quantity returns to the baseline when `fault.enable` is restored, with the
+observation width held at 76. The `thruster_util` margin matching E-int to three decimals is the
+cleanest confirmation and is mechanistic: a policy that never loses a thruster does not have to
+over-drive the survivors.
+
+So the whole H1 failure of the fault-free run was the plant, not the observation. Use this page's
+table as the expected signature when checking whether a teacher trained with fault-DR on.
 

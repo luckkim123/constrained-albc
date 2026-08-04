@@ -8847,3 +8847,15 @@
 - **Pages:** obs4_student_extra_observation_interface_4_deployable_channels_r.md
 - **Summary:** updated 'obs4 student extra-observation interface: 4 deployable channels ride the observation dict through ONE shared student_input, zero-order held at the real 25 Hz bus rate; implemented and pushed 2026-08-03, not yet run'
 
+## [2026-08-04T00:44:17.984523] add
+- **Pages:** obs4_phase_d_result_2026_08_04_folding_the_4_deployable_channels.md
+- **Summary:** created 'obs4 Phase D result 2026-08-04: folding the 4 deployable channels into policy_obs (72 -> 76) PASSES H1 with margin; it buys hard-DR tail and spread with a REAL pitch steady-state regression at soft/medium'
+
+## [2026-08-04T00:44:18.092298] add
+- **Pages:** removing_fault_dr_from_the_teacher_recipe_has_a_measurable_signa.md
+- **Summary:** updated 'Removing fault-DR from the teacher recipe has a measurable signature on the HEALTHY eval too: better nominal steady state, much worse hard-DR tail, and a wider thruster_util margin'
+
+## [2026-08-04T00:44:37.284207] add
+- **Pages:** obs4_student_extra_observation_interface_4_deployable_channels_r.md
+- **Summary:** updated 'obs4 student extra-observation interface: 4 deployable channels ride the observation dict through ONE shared student_input, zero-order held at the real 25 Hz bus rate; implemented and pushed 2026-08-03, not yet run'
+

@@ -2,7 +2,7 @@
 title: "obs4 student extra-observation interface: 4 deployable channels ride the observation dict through ONE shared student_input, zero-order held at the real 25 Hz bus rate; implemented and pushed 2026-08-03, not yet run"
 tags: ["obs4", "student-extra-obs", "observation-interface", "zero-order-hold", "imu", "pressure", "distillation", "phase-b", "phase-c", "inconclusive"]
 created: 2026-08-03T09:06:21.064863
-updated: 2026-08-03T19:54:33.510722
+updated: 2026-08-04T00:44:37.284207
 sources: ["diagnose-20260803-223517"]
 links: ["sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "albc_cudnn_fix_is_a_library_path_not_a_package.md", "real_albc_deployment_state_estimation_rates_measured_from_code_a.md", "c4b_dagger_correction_measured_partial_2_5_4x_in_loop_reduction.md", "container_cudnn_is_cu13_against_cu128_torch_every_conv1d_fails_s.md", "feedback_read_metric_units_from_code.md"]
 category: decision
@@ -11,7 +11,7 @@ schemaVersion: 1
 qualityScore: 90
 qualityReasons: ["generic-only-tags"]
 status: needs-experiment
-blocked-on: "Phase C INCONCLUSIVE (B2 = +0.2460, misses the pre-registered GO bar of +0.2707 by 0.0247 = 2.54 sigma). Hypothesis (a) capacity crowding ELIMINATED by the widened-encoder arm (report diagnose-20260803-235022). Phase D attempt 1 (trpo_obs76_s30_260803_233239) COMPLETED and is a VOID result: it failed H1 on both clauses (none roll n_gt20 0->20.33 envs vs a 15-env floor; hard att_norm ss_error +0.3012 deg vs a 0.10 floor) but trained with fault.enable=false while E-int trained with it TRUE, so the verdict is confounded with removing the adopted fault-DR -- and the published effect of that removal runs in the SAME direction as the failure. Report diagnose-20260804-045000 (report-review approve, report-coverage 7/7 groups). Now blocked on the corrected re-run trpo_obs76fault_s30_260804_043926 (launched 2026-08-04 04:39 KST with env.fault.enable=True, bite-checked against the recorded config), then on the human-gated Phase E re-distill."
+blocked-on: "Phase D CLEARED 2026-08-04. The controlled run trpo_obs76fault_s30_260804_043926 (one variable: policy_obs 72->76, fault-DR matched to E-int) PASSES the pre-registered H1 gate on both clauses with margin -- hard att_norm ss_error +0.0108 deg against a 0.10 floor, none roll n_gt20 +4.33 envs against a 15-env floor -- so the obs76 teacher is ELIGIBLE. Report diagnose-20260804-093500. The earlier attempt trpo_obs76_s30_260803_233239 is VOID (fault.enable false vs E-int true) -- do not cite its numbers. This lead is now blocked ONLY on the human-gated Phase E re-distill (C3 recipe, GRU+select, lambda=1.0, extra_obs_dim=0, from the new teacher). Recommended cheap pre-check before Phase E: encoder_tools.py sweep on both teacher checkpoints, because Grad/enc_step is ~36% lower in BOTH obs76 runs and that is the quantity Phase E's student must reconstruct."
 ---
 
 # obs4 student extra-observation interface: 4 deployable channels ride the observation dict through ONE shared student_input, zero-order held at the real 25 Hz bus rate; implemented and pushed 2026-08-03, not yet run
@@ -308,4 +308,24 @@ What attempt 1 does establish, and what carries forward to the re-run:
   four levels and sheds a 63.19 deg hard-DR peak down to 3.36 deg; (ii) a weaker encoder learning
   signal (`Policy/encoder_grad_norm` -17.8%, `Grad/enc_step` -36.3%) which should NOT move with
   observation width at all and therefore probably tracks the easier plant.
+
+---
+
+## Update (2026-08-04T00:44:37.284207)
+
+## Phase D CLEARED 2026-08-04 -- this lead now waits only on the human Phase E gate
+
+The controlled Phase D passed H1 on both clauses. What it means for this lead:
+
+- gen-2 is validated end to end: a 76D policy trains to completion, keeps the latent scale, keeps
+  `thruster_util` as the binding constraint at the baseline's exact pressure, and survives every
+  DR level at 100%.
+- The widened observation improves exactly the properties that make a teacher hard to distill
+  from: it removes the 63 deg roll tail, cuts the pitch tail 13.06 -> 2.80 deg, and drops hard-DR
+  env-to-env spread 37.2%.
+- Two caveats travel with the GO: a REAL pitch steady-state regression at soft (+0.1336 deg) and
+  medium (+0.1204 deg) that falls outside H1's clauses, and a ~36% weaker encoder learning signal
+  present in BOTH obs76 runs.
+
+Full account: wiki `obs4_phase_d_result_2026_08_04_folding_the_4_deployable_channels`.
 
