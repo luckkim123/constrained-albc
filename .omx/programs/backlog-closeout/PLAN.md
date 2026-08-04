@@ -287,7 +287,99 @@ for a 79D policy. Same class as `env.fault.enable=True` on a resumed launch: **a
 plant or observation setting is not carried by a checkpoint.** Retry queued with the flag; the
 koopman DESIGN.md eval command is corrected and the class is recorded on the wiki.
 
-## 8. Final deliverable
+**2026-08-05 01:50 — both HydroRC leads resolved; `needs-apply-before-retrain` reaches ZERO.**
+016d1b1 is not on marinelab main, so the damage never landed and the retirement this page asked
+for is already the de-facto state. Its remaining item (re-derive every damping axis before a
+HydroRC-v2) is only worth doing if hull damping is a lever the policy feels, and a +/-10x bracket
+says it is not: zero REAL flags and unchanged survival at both ends of a 100x span. The same
+bracket answers `hydrorc_is_half_recentered`, whose surviving mechanism was a 45x hull-damping
+drop letting buoy damping dominate — swept more than twice that far, nothing above floor. Both
+interventions verified to bite (`dr_lin_damp_5` 0.1597 -> 0.01597, 23/24 other keys identical).
+Commit `ee3bcac`. **Open backlog 17 -> 3.**
+
+---
+
+## 8. STATE AT LAST COMPACTION — read this first on resume (overwrite each time)
+
+**Written 2026-08-05 02:03 KST.** Everything below is live at that moment. Re-derive from disk
+rather than trusting it if the clock has moved much; a relaunch mints a new run id and strands
+every id recorded here.
+
+### Open leads: 3, all with a run in flight
+
+| Lead | Closes on |
+|:--|:--|
+| `curriculum_recalibration_protocol…` | **Run A** (in flight) |
+| `experiment_idea_latency…` | the GPU1 control-delay sweep (in flight) |
+| `reward_sigma…` (R6) | **Run B**, launches when GPU0 frees |
+
+`omx wiki list --status needs-apply-before-retrain` already returns **zero rows**. Done means
+`--status needs-experiment` does too.
+
+### What is running
+
+- **GPU0 — Run A.** PID 873942, run id `trpo_iterbudget_s30_260805_012813`, group
+  `teacher_iter_budget`, resumed at iteration 4999 heading to 9999, ETA about **06:28**.
+  Stdout `logs_queue/iterbudget_s30.log`. Plant verified; see the 01:28 entry above.
+- **GPU1 — a chain of nohup queue scripts** in `/root/.claude/jobs/3999bdb3/tmp/`, each waiting
+  on the previous script's PID and appending to its own `gpu1_state*.txt`:
+  `gpu1_queue3.sh` (PID 797894, control-delay sweep d=1,2,3) then
+  `gpu1_queue4.sh` (PID 879923, Koopman arm B eval retry). Expected clear by about **02:30**.
+  Poll the PID directly; a `pgrep` pattern self-matches and has killed watchers here before.
+
+### Which eval is which
+
+Every eval of the E-int checkpoint lands in
+`experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_eint_s30_rs2350_260727_195102/eval/`
+under a timestamp, so they are indistinguishable by name. The authoritative decoder is
+**`outputs/2026-08-05/<HH-MM-SS>/.hydra/overrides.yaml`**, whose directory time matches the eval
+directory's timestamp.
+
+| eval dir | overrides | meaning |
+|:--|:--|:--|
+| `static_260804_143234` | — | campaign baseline of record (post-pairing-fix) |
+| `static_260804_203719` | — | same checkpoint reproduced on **GPU1** from this branch; the same-device baseline every 08-05 eval below is paired against |
+| `static_260805_004401` | buoy added_mass + factor 0.8 | buoy **x2** — zero REAL |
+| `static_260805_005359` | buoy added_mass + factor 4.0 | buoy **geometric** — 0/64 alive, run crashed, directory INCOMPLETE |
+| `static_260805_010019` | buoy added_mass + factor 1.257 | buoy **ceiling** — survival -18.75 to -31.25 pp |
+| `static_260805_012834` | hull damping yaw x0.1 | yaw damping **low** — zero REAL |
+| `static_260805_013827` | hull damping yaw x10 | yaw damping **high** — zero REAL |
+| `static_260805_014845` | `control_delay_steps=[1,1]` | delay **d1** |
+| `static_260805_015843` | `control_delay_steps=[2,2]` | delay **d2** |
+
+The failed arm B eval left `outputs/2026-08-05/01-28-01/` with an EMPTY override list — that
+emptiness is the bug itself (the missing `env.use_marine_feature_obs=True`).
+
+### Next actions, in order
+
+1. **When the delay sweep finishes**: compare d1/d2/d3 against `static_260804_203719` with
+   `compare.py paired`. **The sweep is worthless unless d1, d2 and d3 differ from each other** —
+   a previous eval-side delay injector in this project ran and changed nothing, and the silent
+   no-op was caught only by byte-identical results. Then close `experiment_idea_latency` on the
+   measured answer, recording explicitly that only the CONTROL-ACTION half was measured and the
+   sensor-observation staleness half was not.
+2. **When the arm B eval retry finishes**: verify pairing 24/24, apply the pre-registered verdict
+   in `koopman_marine_obs/DESIGN.md` section 3 (expectation NULL), and close the Koopman program.
+3. **When Run A finishes (~06:28)**: read the three questions in
+   `/workspace/.sp/plans/2026-08-05-preflight-iter-budget-launch.md` — saturation iteration,
+   `success_rate` at and after saturation, whether the post-saturation stretch is quiet. Scan ALL
+   steps for `DORAEMON/kl_step > 0`; it reads exactly 0.0 on every non-boundary iteration, and a
+   resumed run is phase-shifted so boundaries land on iterations ending 249/499/749/999. Then
+   correct **Gate A** in `.omx/programs/dgx-final-scaleup/HANDOFF-DGX.md`, which still carries a
+   saturation iteration derived from the retired posttam plant.
+4. **Immediately after**: launch **Run B** — the command is in
+   `experiments/rsl_rl/albc_trpo_teacher/teacher_integral_gate/DESIGN.md` section 6
+   (`env.integral_gate_threshold=[0.20,0.20,0.20]`, and `env.fault.enable=True` is mandatory).
+   Run C (`[0.05,0.05,0.05]`) follows if the clock allows; **17:00 is a hard cutoff for starting
+   anything on GPU0**.
+5. **Finally**: one report covering all 17 leads, Runs A/B(/C), the Koopman closure and the
+   corrected Gate A — ending with both `omx wiki list --status …` queries returning zero rows.
+
+### Still user-gated, do not do autonomously
+
+`git push`, sending the DGX handoff, and any hardware action.
+
+## 9. Final deliverable
 
 One report covering: every one of the 17 leads with its verdict and the evidence behind it, the results
 of Runs A/B(/C), the Koopman line's closure, and the DGX handoff's corrected Gate A. After it, both
