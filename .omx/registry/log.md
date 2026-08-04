@@ -9883,3 +9883,7 @@
 - **Pages:** curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md
 - **Summary:** updated 'Curriculum recalibration protocol: widening the DR box requires re-tuning budget (kl_ub x n_updates) AND performance_lb together -- not a single-variable probe'
 
+## [2026-08-04T21:38:53.586268] add
+- **Pages:** every_5000_iteration_teacher_on_the_buoyfix_plant_stops_at_65_pe.md
+- **Summary:** created 'Every 5000-iteration teacher on the buoyfix plant stops at ~65 percent of its DR curriculum, so the declared DR box is NOT the box it trained against'
+
