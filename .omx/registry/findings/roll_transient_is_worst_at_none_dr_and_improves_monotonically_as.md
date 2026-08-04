@@ -2,14 +2,14 @@
 title: "roll transient is WORST at none DR and improves monotonically as DR hardens (inverted, both runs)"
 tags: ["roll", "overshoot", "transient", "dr-scaling", "os_env_mean", "open-lead", "nominal-corner", "doraemon", "id-collision"]
 created: 2026-07-21T07:58:14.787774
-updated: 2026-08-04T15:58:14.323513
+updated: 2026-08-04T17:55:05.442915
 sources: ["diagnose-20260721-164331", "next-20260724-033159", "static_260724_040413", "static_260723_091813", "diagnose-20260728-081953"]
-links: ["eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md"]
+links: ["eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md", "koopman_phase_1_arm_b_null_marine_feature_lifting_buys_no_contro.md"]
 category: pattern
 confidence: high
 schemaVersion: 1
-qualityScore: 70
-qualityReasons: ["no-source-marker", "generic-only-tags"]
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 status: resolved
 blocked-on: "Follow-up = nominal-corner exposure (DORAEMON nominal sampling floor), a training-side experiment sequenced 'after C3'. Referent RESOLVED 2026-07-30: C3 = the TEACHER canonical 4-arm x 3-seed ablation set (PLAN.md 216/325/618), DEFERRED to the paper phase by user decision 2026-07-23 -- NOT the student campaign's C3/gruselect arm, which is an unrelated id that shares the label. So this stays blocked on a deferred block. Open question for the human: is 'after C3' a technical dependency or only roster ordering? If ordering, it can be re-prioritised; that is a user decision, not an assumption."
 ---
@@ -204,3 +204,39 @@ design task rather than an implementation detail.
 Recorded by the backlog-closeout program (.omx/programs/backlog-closeout/PLAN.md section 3).
 Status flipped to resolved; no experiment is scheduled for this lead.
 
+---
+
+## Update (2026-08-04T17:55:05.442915)
+
+## 2026-08-05 -- a third datapoint, and the first one with a paired same-plant control
+
+The Koopman Phase 1 arm B run reproduces this inversion, and unlike the 2026-07-21 pair it comes
+with a same-plant, 24/24-paired baseline that does NOT show it.
+
+| DR level | armB roll os_env_mean | E-int baseline roll os_env_mean |
+|---|---|---|
+| none | 13.74 | 7.96 |
+| soft | 12.80 | 8.00 |
+| medium | 11.87 | 8.98 |
+| hard | 11.97 | 9.39 |
+
+The baseline runs in the ORDINARY direction (harder plant, worse transient); arm B is inverted, at a
+magnitude in the same range as the A3/anchor runs on this page. Survival is 100 % at all four levels
+in both runs, so neither column is survivorship-contaminated, and the two runs pair 24/24 on
+`dr_`/`fault_` keys at every level.
+
+Why this matters for the mechanism question this page leaves open: it rules OUT the candidate that
+the inversion is purely an eval-protocol artifact of `eval.py static`, at least as a complete
+explanation. Both runs here were graded through the SAME anchored DR
+(`--doraemon-dr-from` the E-int log dir, verified 24/24), so the exam was identical and only one of
+them inverted. Whatever produces the inversion is a property of the trained policy, not of how the
+levels are constructed.
+
+[EVIDENCE: summary.json roll/os_env_mean at all four levels,
+koopman_marine_obs/trpo_koopmanB_260804_202709/eval/static_260805_020809 vs
+teacher_baseline_buoyfix/trpo_eint_s30_rs2350_260727_195102/eval/static_260804_203719; pairing
+verified elementwise over dr_/fault_ npz keys. Code-exec 2026-08-05.]
+[CONFIDENCE: HIGH]
+
+The arm B verdict itself is on
+[[koopman_phase_1_arm_b_null_marine_feature_lifting_buys_no_contro]] -- NULL, do not adopt.

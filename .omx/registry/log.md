@@ -9859,3 +9859,23 @@
 - **Pages:** hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md
 - **Summary:** updated "HydroRC IS half-recentered (buoy/link3 nominals untouched) -- but the '10x under added mass' framing dies to the effective-vs-effective correction (~2.4x); the lead survives on a different mechanism: HydroRC drops hull yaw damping 45x, so unmeasured analytical buoy damping becomes 1.8x hull's and DOMINATES the retrained plant"
 
+## [2026-08-04T17:21:41.875932] add
+- **Pages:** koopman_phase_1_arm_b_null_marine_feature_lifting_buys_no_contro.md
+- **Summary:** created 'Koopman Phase 1 arm B NULL: marine-feature lifting buys no control quality and costs transient overshoot'
+
+## [2026-08-04T17:34:34.744754] add
+- **Pages:** eval_py_rebuilds_env_cfg_from_hydra_defaults_so_obs_widening_fla.md
+- **Summary:** updated 'eval.py rebuilds env cfg from Hydra defaults, so obs-widening flags must be re-passed at eval time'
+
+## [2026-08-04T17:50:19.276763] add
+- **Pages:** experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md
+- **Summary:** updated 'experiment idea: latency/transport-delay DR (sensor-obs + control-action lag) -- infra exists (isaaclab DelayBuffer) but unused; DelayedPD failed before'
+
+## [2026-08-04T17:55:05.321505] add
+- **Pages:** koopman_phase_1_arm_b_null_marine_feature_lifting_buys_no_contro.md
+- **Summary:** updated 'Koopman Phase 1 arm B NULL: marine-feature lifting buys no control quality and costs transient overshoot'
+
+## [2026-08-04T17:55:05.442915] add
+- **Pages:** roll_transient_is_worst_at_none_dr_and_improves_monotonically_as.md
+- **Summary:** updated 'roll transient is WORST at none DR and improves monotonically as DR hardens (inverted, both runs)'
+

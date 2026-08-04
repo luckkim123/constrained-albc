@@ -447,7 +447,7 @@ matrix.
 
 
 **2026-08-05 02:55 — Run B's handoff is armed, so GPU0 does not idle at 06:36.**
-`/root/.claude/jobs/3999bdb3/tmp/handoff_runB.sh` (PID 1004223) polls Run A's PID directly, records
+`/root/.claude/jobs/3999bdb3/tmp/handoff_runB.sh` (PID **1004229**) polls Run A's PID directly, records
 how Run A ended and the last logged iteration, waits a minute for the card to release, finalizes the
 stdout, launches Run B verbatim from `teacher_integral_gate/DESIGN.md` §6, and then does the §6a
 post-launch check — it reads `integral_gate_threshold` back out of Run B's OWN recorded
@@ -462,6 +462,14 @@ handoff come straight out of Run C.
 **GPU1 is now idle and stays idle until Run B's eval.** Nothing in the remaining backlog needs it:
 the curriculum lead's Step 0 is a TensorBoard read and its Step 1 is hardware-blocked, and R6 needs
 Run B first. Recorded so a resuming session does not go looking for work to put on it.
+
+
+**Correction, same minute**: the PID I first recorded for the handoff (1004223) was wrong.
+`pgrep -f handoff_runB.sh` matched the tool-call WRAPPER shell, whose command line contains the
+script name, not the script. The real PID is **1004229**. This is the self-matching `pgrep` trap
+this project already has a memory about — and I walked into it in the act of writing the PID down.
+Verify a watcher with `ps -eo pid,ppid,cmd` and look for the bare `bash <script>` line, never with a
+`-f` pattern that the querying command itself contains.
 
 
 ## 8. STATE AT LAST COMPACTION — read this first on resume (overwrite each time)

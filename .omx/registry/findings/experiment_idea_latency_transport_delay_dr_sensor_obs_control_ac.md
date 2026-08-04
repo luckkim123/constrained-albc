@@ -2,7 +2,7 @@
 title: "experiment idea: latency/transport-delay DR (sensor-obs + control-action lag) -- infra exists (isaaclab DelayBuffer) but unused; DelayedPD failed before"
 tags: ["latency", "delay", "domain-randomization", "sim2real", "experiment-idea", "control_delay", "delay-buffer", "sim-to-real", "doraemon", "eval-instrument", "e1", "user-decision"]
 created: 2026-07-08T02:50:39.246807
-updated: 2026-08-03T09:07:52.061131
+updated: 2026-08-04T17:50:19.276763
 sources: ["trpo_e1_latdr_260713_124923", "diagnose-20260713-184751", "next-20260713-122215", "next-20260713-142602", "dr_config.py", "eval.py", "next-20260724-033157", "static_260724_083142", "static_260724_085559"]
 links: ["real_robot_deployment_vibration_differential_diagnosis_by_sim_to.md", "eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md", "an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md", "baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md", "xy_offset_dr_is_load_bearing_for_pitch_not_free_ndims_dilution_e.md", "cross_run_dr_comparability_eval_py_doraemon_dr_from_already_prov.md", "real_albc_deployment_state_estimation_rates_measured_from_code_a.md", "obs4_student_extra_observation_interface_4_deployable_channels_r.md"]
 category: convention
@@ -10,7 +10,7 @@ confidence: high
 schemaVersion: 1
 qualityScore: 90
 qualityReasons: ["generic-only-tags"]
-status: needs-experiment
+status: resolved
 blocked-on: "BLOCKER 1 (eval instrument) RESOLVED; BLOCKER 2 (delay is off-DORAEMON, needs _PARAM_DEFS dim or MEASURED performance_lb recalibration) remains for the training side. As of 2026-08-03 this lead is no longer speculative margin -- the real bus rate is MEASURED and the deployed system already carries observation staleness of the same order the Z4 sweep priced; priority argument strengthened, blocker unchanged"
 ---
 
@@ -233,4 +233,110 @@ CONSEQUENCE: BLOCKER 2 is unchanged -- delay is still off-DORAEMON and still nee
 _PARAM_DEFS dim or a measured performance_lb recalibration, and the naive delay-ON run (trpo_e1_latdr)
 already showed what skipping that costs. What changed is the justification: this is no longer a
 robustness margin someone might want, it is a condition the hardware imposes today.
+
+---
+
+## Update (2026-08-04T17:50:19.276763)
+
+## VERDICT 2026-08-05 -- CLOSED-OUT-OF-SCOPE for gen-1, carried as a gen-2 engine requirement
+
+Recorded by the backlog-closeout program (`.omx/programs/backlog-closeout/PLAN.md`). The eval half of
+this lead is now measured on the FINAL gen-1 teacher rather than on the superseded anchor, and the
+training half is deliberately not run. Both parts are justified below.
+
+### 1. The measurement, on the model that would actually deploy
+
+`trpo_eint_s30_rs2350_260727_195102` / `model_4999.pt`, `--control-delay 1|2|3` (20/40/60 ms at
+50 Hz), 64 env, all four DR levels, anchored to E-int's own DORAEMON, GPU1, single seed.
+d0 = `eval/static_260804_203719`; d1/d2/d3 = `eval/static_260805_{021830,022832,023838}`, each
+carrying its own `eval.log` with the four per-level injection markers. Survival is **100 % at every
+level and every delay point**, so nothing here is survivorship-contaminated.
+
+PAIRED `none` response (0 % DR -- the only level where d0 pairs with d>=1, see section 3):
+
+| d | delay | att_norm ss_error | vs d0 | roll ss_jitter | vs d0 |
+|--:|--:|--:|--:|--:|--:|
+| 0 | 0 ms | 0.4997 deg | 1.00x | 0.1331 deg | 1.00x |
+| 1 | 20 ms | 1.2746 deg | 2.55x | 0.6448 deg | 4.84x |
+| 2 | 40 ms | 3.2286 deg | 6.46x | 1.5355 deg | 11.54x |
+| 3 | 60 ms | 6.1165 deg | 12.24x | 2.7349 deg | 20.55x |
+
+The slope BETWEEN delay points is paired at all four levels (d1/d2/d3 are mutually paired
+everywhere). At `hard` the same progression reads 2.3937 -> 4.8417 -> 9.3941 deg.
+
+**Deployment reading.** The measured bus gives the attitude channel 0-40 ms of staleness, which
+brackets d1-d2. At d2 this teacher's nominal attitude error is **3.23 deg against 0.50 deg clean** --
+a 6.5x degradation inside the band the hardware already imposes. The 2026-07-20 user decision that
+latency belongs in the final training config is therefore confirmed by measurement on the actual
+final teacher, not only on the anchor.
+
+**Scope limit, repeating this page's own 2026-08-03 warning rather than quietly ignoring it**: this
+sweep delays the CONTROL ACTION with a fixed per-env DelayBuffer. The rate measurement describes
+OBSERVATION staleness whose age VARIES between ticks because a slower publisher is zero-order held.
+Both add dead time to the same loop so the order of magnitude carries; these numbers are NOT a
+sensor-side spec. The sensor/observation delay path remains entirely unimplemented.
+
+### 2. Why the training half is not run, and what would unblock it
+
+BLOCKER 2 is unchanged: `control_delay_steps` is not a DORAEMON `_PARAM_DEFS` dim, so the curriculum
+cannot ease it, and the return tax pins mean return under `performance_lb` -- which is exactly how
+`trpo_e1_latdr` stalled at mode -2 for its whole run. Neither of the two admissible fixes was
+available inside this program:
+
+- **Adding a `_PARAM_DEFS` dim** is an engine change to the curriculum. Made mid-program it voids
+  E-int as the comparison baseline for the DGX flagship, and its importance-sampling behaviour could
+  not be validated before the deadline -- so a run using it would confound the mechanism with its
+  implementation, which is the same reason this program declined the DORAEMON nominal-corner floor.
+- **Recalibrating `performance_lb` to the MEASURED delay-ON nominal return** needs a pilot run to
+  learn the new return ceiling, then the real run. That is two GPU0 slots. GPU0 had three, all
+  committed: Run A (iteration-budget, closes the curriculum lead and corrects DGX Gate A) and Runs
+  B/C (the R6 integral-gate sweep).
+
+A naive delay-ON run without either fix reproduces e1 exactly and answers nothing. Running it to
+have "run something" would have been the worse choice.
+
+**Carried forward as a gen-2 requirement, not dropped.** The user's 2026-07-20 decision stands. The
+recipe is fully specified: resolve BLOCKER 2 by ONE of the two routes above, train with
+`control_delay_steps (0,3)`, and grade on THIS sweep rather than on delay-free axes. Because the
+`none` column is now measured on the final teacher, a delay-ON run has a proper benefit bar to clear
+instead of the unreadable design e1 had.
+
+### 3. CORRECTION to the 2026-07-24 Z4 numbers on this page -- the hard column is UNPAIRED
+
+Found while re-running the sweep. `_draw_control_delay` (`albc_env.py:66-85`) returns early at
+`hi <= 0` and **skips its `torch.randint`**, so a d=0 run and a d>=1 run consume different amounts of
+RNG and every DR draw after the first reset diverges. `none` looks clean only because at 0 % DR there
+is nothing to shift.
+
+Measured on the Z4 artifacts themselves: d0-vs-d1 shows **0 of 23** `dr_`/`fault_` keys differing at
+`none` and **23 of 23** at soft, medium and hard. Among the d>=1 points, d2 and d3 pair at all four
+levels (both 92.19 % survival at hard) while d1 breaks against them at medium and hard (98.44 %) --
+a different death count means a different number of resets means a different number of draws.
+
+Consequence:
+- Z4's **`none` column stands** as a valid paired measurement (d1 +134 %, d2 +415 %, d3 +790 %).
+- Z4's **`hard` column** (d1 1.7x, d2 8.4x, d3 12.8x, survival 100->92 %) compares delay against a
+  DIFFERENT DR sample. The ALBC decision floors declare themselves "paired same-machine" and do not
+  apply to it. The effect sizes are far too large to be sampling noise, so the qualitative claim
+  survives -- but the multipliers must not be quoted as precise, and no floor-based verdict may rest
+  on them.
+
+The RNG consumption is deliberately NOT fixed: that is an env-code change that would alter the plant
+and void the current baseline. It is recorded here so the next person budgets for it rather than
+rediscovering it.
+
+[EVIDENCE: pairing matrix computed elementwise over `dr_*`/`fault_*` npz keys for all 6 delay-point
+pairs x 4 levels on the E-int sweep, and for d0-vs-d{1,2,3} and d{1,2,3} inter-pairs on the Z4
+artifacts under `trpo_buoyanchor_s30_260722_134743/sweeps/z4_delay/`; `albc_env.py:66-85` read at
+HEAD. Response table from the four `summary.json` files named in section 1. Index and decoder written
+to `<E-int run>/eval/README.md`. Code-exec 2026-08-05.]
+[CONFIDENCE: HIGH]
+
+### 4. A second instrument trap, for whoever runs the delay-ON probe
+
+Do NOT reach past `--control-delay` to the Hydra path `env.randomization.control_delay_steps`. It is
+accepted, exits 0, and injects nothing: `apply_dr_config()` rebuilds the randomization config before
+env creation and at every DR level, and the field is not a `_DR_TUPLE_FIELDS` dim, so it reverts to
+`(0, 0)` each time. Detected only by a byte-identical comparison against the stock baseline. Full
+write-up on `eval_py_rebuilds_env_cfg_from_hydra_defaults_so_obs_widening_fla.md`.
 
