@@ -396,33 +396,50 @@ stalled the curriculum at mode -2. Confirm at the end of the run before recordin
 
 ## 8. STATE AT LAST COMPACTION — read this first on resume (overwrite each time)
 
-**Written 2026-08-05 02:03 KST.** Everything below is live at that moment. Re-derive from disk
+**Written 2026-08-05 02:35 KST.** Everything below is live at that moment. Re-derive from disk
 rather than trusting it if the clock has moved much; a relaunch mints a new run id and strands
 every id recorded here.
 
 ### Open leads: 3, all with a run in flight
 
-| Lead | Closes on |
-|:--|:--|
-| `curriculum_recalibration_protocol…` | **Run A** (in flight) |
-| `experiment_idea_latency…` | the GPU1 control-delay sweep (in flight) |
-| `reward_sigma…` (R6) | **Run B**, launches when GPU0 frees |
+| Lead | Closes on | Status |
+|:--|:--|:--|
+| `curriculum_recalibration_protocol…` | **Run A** | in flight, iter ~6030/9999 |
+| `experiment_idea_latency…` | the GPU1 control-delay sweep | d1 done, d2 running, d3 queued |
+| `reward_sigma…` (R6) | **Run B**, launches when GPU0 frees | not started |
 
 `omx wiki list --status needs-apply-before-retrain` already returns **zero rows**. Done means
 `--status needs-experiment` does too.
 
+**Already finished this session and NOT to be redone**: the Koopman line is CLOSED as NULL
+(campaign ledger `discarded`, wiki page, CLOSED banner on `koopman-lifting/PLAN.md`); campaign
+drift is fixed (`omx campaign-drift` returns `ok: true`); Gate A's `Train/mean_reward` reference
+band in `HANDOFF-DGX.md` is sharpened to p5-p95 plus the full excursion.
+
 ### What is running
 
 - **GPU0 — Run A.** PID 873942, run id `trpo_iterbudget_s30_260805_012813`, group
-  `teacher_iter_budget`, resumed at iteration 4999 heading to 9999, ETA about **06:28**.
-  Stdout `logs_queue/iterbudget_s30.log`. Plant verified; see the 01:28 entry above.
-- **GPU1 — a chain of nohup queue scripts** in `/root/.claude/jobs/3999bdb3/tmp/`, each waiting
-  on the previous script's PID and appending to its own `gpu1_state*.txt`:
-  `gpu1_queue4.sh` (PID 879923, Koopman arm B eval retry, started 02:08) then
-  `gpu1_queue5.sh` (PID 942451, control-delay sweep d=1,2,3 on the correct instrument).
-  Expected clear by about **02:50**. `gpu1_queue3.sh` was the first delay sweep and was KILLED
-  at 02:07 once its injection was proven to be a no-op — see the note under the eval table.
+  `teacher_iter_budget`, resumed at iteration 4999 heading to 9999, ETA about **06:36**.
+  Stdout `/workspace/constrained-albc/logs_queue/iterbudget_s30.log` — use the ABSOLUTE path,
+  the shell cwd resets to `/workspace` between calls and the relative path silently fails.
+  TB dir: `logs/rsl_rl/albc_trpo_teacher/teacher_iter_budget/latest/`. Plant verified.
+- **GPU1 — `gpu1_queue5.sh`** (PID 942451), control-delay sweep d=1,2,3 on the correct
+  instrument, self-gating on a bite check. Expected clear about **02:50**. Queues 3 and 4 are
+  finished; queue3 was KILLED at 02:07 as a proven no-op.
   Poll the PID directly; a `pgrep` pattern self-matches and has killed watchers here before.
+
+### Analysis tooling already built and VALIDATED (do not rewrite)
+
+All in `/root/.claude/jobs/3999bdb3/tmp/`, each calibrated against a case with a known answer:
+
+| Script | What it does | Validated against |
+|:--|:--|:--|
+| `saturation.py <run_dir>` | the preflight plan's 3 iteration-budget questions from TB scalars | reproduces extend8k exactly (26 expansions, last 6750, success 0.813→0.789, entropy_before 2 distinct values over n=1250); refuses to over-call on in-progress Run A |
+| `floor_verdict.py <base> <treat> [label]` | applies the decision floors, survival first, suppresses survivorship-contaminated levels | 0 REAL on self-comparison; reproduces the buoy-ceiling result (18 flags, all suppressed) |
+| `delay_table.py [d1_dir …]` | delay-response table beside the Z4 anchor sweep | reproduces the Z4 wiki numbers (none d1 2.34x, d3 8.90x) |
+
+Run them with `/isaac-sim/python.sh` when they need `tensorboard`; plain `python3` suffices for
+the two that only read JSON/npz.
 
 ### Which eval is which
 
