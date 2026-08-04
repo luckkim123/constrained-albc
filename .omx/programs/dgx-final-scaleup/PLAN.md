@@ -136,7 +136,7 @@ Verdict shape: **the run is `num_envs=32768` and NOTHING else changes.** The rec
 | num_mini_batches / epochs | 4 / 5 | **4 / 5 — unchanged** | Verifier-corrected: raising to 32 was self-contradictory. At 32768 the critic gets 8x data with the same 20 Adam steps and LARGER (524,288) better-conditioned minibatches — that is not starvation. If more critic steps are ever wanted, describe it as such and probe (X5) first |
 | value_lr / max_grad_norm | 1e-3 / 1.0 | unchanged | No actor LR exists (natural gradient + line search); sqrt(8) value-lr scaling is defensible but unmeasured — not on a flagship |
 | entropy_coef_per_dim / min_std / init_noise_std | per-dim cfg | unchanged | A2/A3 tested exactly these → DISCARD (5/5 zero-adoption sweep); Andrychowicz et al. 2020 agrees for trust-region methods |
-| save_interval | 50 | 50 (~29 min/ckpt) | Crash costs ≤ 29 min of 48.2 h; E-int itself exists only because its predecessor crashed at iter ~2390 and resumed. PRE-STAGE the resume command (§5) |
+| save_interval | 50 | 50 (~29 min/ckpt) | Crash costs ≤ 29 min of 192.9 h, and at 20000 iterations the 400 checkpoints ARE the dose-response deliverable (2.4 GB), not just crash insurance. E-int itself exists only because its predecessor crashed at iter ~2390 and resumed. PRE-STAGE the resume command (§5) |
 | seed | 30 | 30 single | Screening protocol; multi-seed only if user overturns machine rule (X1) |
 | wandb group/project | — | `teacher_final_dgx32k` (one string, both flags; user confirms) | group = project = purpose. Do NOT reuse `dgx_scale_32768` (throughput pilot, not comparison-bearing) |
 | fault-DR block | Arm-A adopted values | **byte-identical; verify `fault.enable=true` in launched env.yaml** | The missed `fault.enable` diff voided a 4.9 h run once |
@@ -252,8 +252,11 @@ be scheduled soon, consider sequencing it BEFORE committing the GPU time.
 1. **Is a DGX-trained teacher adoptable as THE final model at all?** The +109% cross-machine term
    currently forbids it → the 32768 run is scale exploration. Overturning the rule requires the
    X1 anchor (22.5 h) to have any denominator.
-2. **Still want 32768?** 8x memory for 1.25x samples/s, 48.2 h, vs 3x4096 seeds at 22.5 h (a band,
-   not a point), vs ~24 h at 16384 (unmeasured interpolation). Resource call. NOTE 2026-08-04: the
+2. **Still want 32768?** 8x memory for 1.25x samples/s. At the decided 20000 iterations this is
+   **192.9 h (8.0 days)** of exclusive occupancy, vs 3x4096 seeds at 22.5 h (a band, not a point).
+   Resource call — and now a much bigger one than when this row was written against 5000 iterations
+   (48.2 h). If a week of DGX is not available, the stop rule in §4 is the release valve, or drop
+   num_envs (16384 is an unmeasured interpolation, ~24 h at 5000 iterations). NOTE 2026-08-04: the
    32768 basis is weaker than this row implied — the only measurement is a 200-iteration probe with
    `fault.enable=false`, which cannot see DORAEMON at all (step_interval 250), and the only
    training-scale datapoint above 4096 is the 8192 arm, which measured NULL. Treat throughput and
