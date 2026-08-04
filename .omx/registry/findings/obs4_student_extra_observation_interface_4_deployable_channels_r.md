@@ -2,15 +2,15 @@
 title: "obs4 student extra-observation interface: 4 deployable channels ride the observation dict through ONE shared student_input, zero-order held at the real 25 Hz bus rate; implemented and pushed 2026-08-03, not yet run"
 tags: ["obs4", "student-extra-obs", "observation-interface", "zero-order-hold", "imu", "pressure", "distillation", "phase-b", "phase-c", "inconclusive"]
 created: 2026-08-03T09:06:21.064863
-updated: 2026-08-04T03:59:06.353299
+updated: 2026-08-04T06:38:49.829416
 sources: ["diagnose-20260803-223517"]
 links: ["sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "albc_cudnn_fix_is_a_library_path_not_a_package.md", "real_albc_deployment_state_estimation_rates_measured_from_code_a.md", "c4b_dagger_correction_measured_partial_2_5_4x_in_loop_reduction.md", "container_cudnn_is_cu13_against_cu128_torch_every_conv1d_fails_s.md", "feedback_read_metric_units_from_code.md"]
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
-status: needs-experiment
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
+status: resolved
 blocked-on: "Phase D CLEARED 2026-08-04. The controlled run trpo_obs76fault_s30_260804_043926 (one variable: policy_obs 72->76, fault-DR matched to E-int) PASSES the pre-registered H1 gate on both clauses with margin -- hard att_norm ss_error +0.0108 deg against a 0.10 floor, none roll n_gt20 +4.33 envs against a 15-env floor -- so the obs76 teacher is ELIGIBLE. Report diagnose-20260804-093500. The earlier attempt trpo_obs76_s30_260803_233239 is VOID (fault.enable false vs E-int true) -- do not cite its numbers. This lead is now blocked ONLY on the human-gated Phase E re-distill (C3 recipe, GRU+select, lambda=1.0, extra_obs_dim=0, from the new teacher). Recommended cheap pre-check before Phase E: encoder_tools.py sweep on both teacher checkpoints, because Grad/enc_step is ~36% lower in BOTH obs76 runs and that is the quantity Phase E's student must reconstruct."
 ---
 
@@ -353,3 +353,12 @@ program. Phases B and C ran inside `student_distill_eint`, which stays owned by
 The sibling Koopman plan moved the same day to
 `constrained-albc/.omx/programs/koopman-lifting/PLAN.md` (commit cc1eb31).
 
+---
+
+## Update (2026-08-04T06:38:49.829416)
+
+PROGRAM-LEVEL CLOSE 2026-08-04. All three delivery routes for the 4 deployable channels have now been built and run: gen-1 side channel (B2), gen-2 folded into policy_obs and z-scored by the teachers frozen normalizer (Phase E), and gen-2 tail-split recovering the gen-1 convention (X1). Verdict across the three: NONE produced a decision-grade CONTROL gain in a student against the registered floors. The channels do measurably change latent reconstruction - X1 recovered hard aggregate R2 from -0.1044 to +0.0645 - but that recovery bought no control improvement, which is the counterexample to this interfaces motivating premise.
+
+What the interface itself delivered, and keeps: a verified, fail-loud implementation (mutual exclusion with extra_obs_dim, GRU-only guard, four forward sites routed through one helper, checkpoint-persisted flags read by eval and the deploy spec, 29 passing tests across test_student_extra_obs.py and test_student_extra_parity.py). If the channels are ever wanted for a deployability reason rather than a performance one, the plumbing is ready and tail-split is the assembly to use.
+
+DEPLOYABILITY CAVEAT that must travel with any adoption: deploy/specs/student_gru.py deliberately REJECTS tail-mode checkpoints (ExportContractError - npforward has no split-plus-static-scale contract), so the best-latent student in the campaign is currently not board-exportable. Extending the deploy spec is a prerequisite, not a formality.

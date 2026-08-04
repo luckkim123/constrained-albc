@@ -2,15 +2,15 @@
 title: "obs76 gen-2 student reproduces its teacher's mean tracking at every DR level but triples roll dispersion at hard; in-loop latent R2 stays negative, so the observability intervention did not close covariate shift"
 tags: []
 created: 2026-08-04T04:32:23.492837
-updated: 2026-08-04T04:32:23.492837
+updated: 2026-08-04T06:38:37.750117
 sources: []
 links: []
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
-status: needs-experiment
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
+status: resolved
 ---
 
 # obs76 gen-2 student reproduces its teacher's mean tracking at every DR level but triples roll dispersion at hard; in-loop latent R2 stays negative, so the observability intervention did not close covariate shift
@@ -68,3 +68,14 @@ ss_error_std or CV, so a 3.06x dispersion change and a 2-env fatality land in th
 "cannot adjudicate at n=1" bucket as genuine noise. The only decision-grade cost this run carries is
 invisible to the metric the protocol adjudicates.
 
+---
+
+## Update (2026-08-04T06:38:37.750117)
+
+CLOSED 2026-08-04 by X1-tailsplit. Both halves of this pages finding now have attributed causes, and they are DIFFERENT causes.
+
+(a) The negative in-loop latent R2 was the DELIVERY PATH, not the teacher: the tail-split re-distill from the same obs76 teacher recovered hard aggregate R2 from -0.1044 to +0.0645 (delta +0.169 vs a pre-registered 0.107 threshold). Fixable, and fixed.
+
+(b) The tripled roll dispersion at hard was NOT fixed by that recovery - X1 sits at 3.130 deg absolute vs Phase Es 2.880 and C3s 2.526, so the delivery fix did not touch it. Dispersion tracks neither the teachers own dispersion (obs76 teacher: 1.072) nor the latent quality. See the teacher-advantage-does-not-distill page; the open problem moved from "observability" to "the distillation gap itself".
+
+The env deaths follow the teacher, not the delivery: under paired draws the obs76 teacher, C3 and X1 all lose exactly 1 env of 64 at hard, while Phase E lost 2 (a 1.562 pp difference, below the registered 1.6 pp floor either way).

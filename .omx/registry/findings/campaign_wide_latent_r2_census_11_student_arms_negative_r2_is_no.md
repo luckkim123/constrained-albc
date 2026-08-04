@@ -2,15 +2,15 @@
 title: "Campaign-wide latent R2 census (11 student arms): negative R2 is NOT the campaign norm, the gen-1 extra-obs arm is the best tracker, and the obs76 gen-2 student sits at the bottom while being the only arm that kills envs"
 tags: []
 created: 2026-08-04T05:07:09.465856
-updated: 2026-08-04T05:07:09.465856
+updated: 2026-08-04T06:38:37.642657
 sources: []
 links: []
 category: pattern
 confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
-status: needs-experiment
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
+status: resolved
 ---
 
 # Campaign-wide latent R2 census (11 student arms): negative R2 is NOT the campaign norm, the gen-1 extra-obs arm is the best tracker, and the obs76 gen-2 student sits at the bottom while being the only arm that kills envs
@@ -68,3 +68,10 @@ retrained from scratch and nothing pins dimension ordering), so only aggregate a
 survive a teacher swap. And the eval env draws differ between any two runs except at `none`, so an
 R2 delta must be decomposed before it is quoted as an effect.
 
+---
+
+## Update (2026-08-04T06:38:37.642657)
+
+CLOSED 2026-08-04 by X1-tailsplit, the follow-up this page named. The censuss open question was whether the gen-2 students bottom-of-census R2 came from the teacher swap or the delivery path. Answer: the DELIVERY PATH, decisively - re-distilling from the SAME obs76 teacher with only the input assembly changed moved hard aggregate R2 from -0.1044 to +0.0645 (delta +0.169, clearing the pre-registered 2-sigma threshold of 0.107) with hard sumMSE 0.6367 -> 0.5544 at comparable sumVar. See the X1 page for the full decomposition.
+
+But the censuss implicit premise - that a better latent tracker is a better student - did NOT survive: every X1-vs-PhaseE CONTROL delta is below the registered floors, and X1s hard roll dispersion is if anything worse (2.880 -> 3.130 absolute). Ranking student arms by latent R2 therefore does not rank them by control quality, and this census should not be used to pick a model. Its remaining value is diagnostic (which arms reconstruct z, and why), not selective.

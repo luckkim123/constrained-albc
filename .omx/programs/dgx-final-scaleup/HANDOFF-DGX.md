@@ -2,9 +2,16 @@
 
 You are the DGX-side session for the `dgx-final-scaleup` program of the constrained-albc project.
 This document is self-contained: everything you need is here or produced by the commands below.
-The launch has been human-approved on the workstation side under the defaults embedded here
-(num_envs 32768, obs72 plant, current plant, purpose `teacher_final_dgx32k`, seed 30). If any
-step below fails its check, STOP and report — do not improvise a different run.
+It carries the defaults `num_envs 32768, obs72 plant, current plant, purpose teacher_final_dgx32k,
+seed 30`; **the act of sending you this document IS the workstation-side human approval of exactly
+those defaults** (the workstation user answers PLAN §8 Q1/Q2/Q6 by choosing to send it — if you
+received this some other way, STOP and ask). If any step below fails its check, STOP and report —
+do not improvise a different run.
+
+Evidence status as of 2026-08-04: all four pre-launch gates are closed, and the obs72 default is
+settled on paired metrics (the obs76 teacher is genuinely better in isolation, but none of that
+advantage survives distillation to a student — PLAN §1). Nothing in this document is awaiting a
+further experiment.
 
 ## Hard rules
 

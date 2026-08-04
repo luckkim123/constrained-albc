@@ -4,12 +4,14 @@
 named here (the flagship and every optional probe) is human-gated and fires only on explicit
 user approval.
 
-**HOLD (2026-08-04, user directive): HANDOFF-DGX.md is a DRAFT — do not send to the DGX yet.**
-A parallel session is running further experiments (the X1-tailsplit line on the obs4 program:
-gen-1 assembly from the SAME obs76 teacher, separating delivery-path vs teacher-swap). When
-they finish, re-analyze jointly with the G1–G4 gate verdicts and revise this plan — the §1
-final-model declaration and the §3 obs-width row are exactly what that experiment could
-overturn — then confirm with the user before handing off.
+**HOLD LIFTED on the experiment condition (2026-08-04 16:00); still gated on the user's §8 answers.**
+The parallel session's X1-tailsplit run finished and has been jointly re-analyzed with the G1–G4
+gate verdicts (§2, §8 Q3). Outcome: it **does not overturn** §1 or §3 — it reinforces both. The
+tail-split delivery fixed the gen-2 latent collapse decisively (hard aggregate R2 −0.1044 → +0.0645,
+delta +0.169 vs the pre-registered 0.107 threshold) while moving **no** control metric above its
+registered floor, so the obs76 line still delivers no better student. HANDOFF-DGX.md is therefore
+technically final; what remains before sending is the user's answers to §8 (Q1 machine
+adoptability, Q2 32768 go/no-go, Q6 purpose string are the launch-blocking three).
 
 Created 2026-08-04. Sources: workflow `albc-closeout-dgx-design` (run `wf_8ef2309d-9a8`,
 7 evidence agents + opus synthesis + 2 adversarial verifiers; 21 verifier findings folded in),
@@ -29,12 +31,33 @@ The final model CAN be declared today, and it is the **gen-1 pair**:
 | Student | `trpo_sdeint_c3_gruselect_s30_260729_193732` (student_distill_eint) | C3 = GRU+select, lambda=1.0, extra_obs_dim=0; adopted 2026-08-03 |
 | Deploy pack | `pack_eint_c3_gru_260803_144925` | on disk, parity closed at 2f057b9 |
 
-**gen-2 (obs76) does not supersede it.** The decision-bearing reason is the within-run latent
-measurement, which needs no decision floor: in-loop aggregate latent R2 is negative (hard −0.078
-is the decision-grade value; none/soft/medium are directionally consistent but
-denominator-collapsed) and the train-to-in-loop latent MSE gap is 10–19x — covariate shift
-survives obs76. Secondary observations (roll dispersion 3.06x at hard, 2/64 env deaths) point the
-same way but sit in the "no registered floor" bucket until G2 below closes.
+**gen-2 (obs76) does not supersede it — REAFFIRMED 2026-08-04 on stronger evidence.** The original
+reason (negative in-loop latent R2, 10–19x train-to-in-loop MSE gap) has since been *superseded as a
+reason* and replaced by a better one. X1-tailsplit proved the negative R2 was the delivery path, not
+the obs76 teacher, and fixed it (hard aggregate R2 −0.1044 → +0.0645, sumMSE 0.6367 → 0.5544 at
+comparable sumVar). The declaration survives anyway, because the fix bought nothing: **every**
+X1-vs-Phase-E control delta is below its registered floor, and hard roll dispersion drifted the wrong
+way in absolute terms (2.880 → 3.130 deg). Latent-reconstruction quality and closed-loop control are
+decoupled on this axis.
+
+The load-bearing fact is now the paired five-arm table (all evals share DR draws post-9eac3a8):
+
+| arm | hard roll ss_error | hard roll ss_error_std | hard survival |
+|:--|--:|--:|--:|
+| E-int teacher (72D) | 0.816 | 2.015 | 100.0% |
+| obs76 teacher | **0.535** | **1.072** | 98.4% |
+| C3 gen-1 student (shipped) | 0.971 | 2.526 | 98.4% |
+| Phase E gen-2 student | 0.840 | 2.880 | 96.9% |
+| X1 tail-split student | 0.855 | 3.130 | 98.4% |
+
+The obs76 teacher is a REAL-better controller (−0.281 deg mean, −0.943 deg dispersion vs E-int at
+hard, both clearing floors) — and **none of that advantage reaches any student**: all three students
+sit at 2.5–3.1 deg dispersion, worse than either teacher, in an order that does not follow the
+teacher order. Choosing the teacher by its own eval does not choose the better product. X1 vs C3 is a
+genuine trade, not a win: −0.118 deg hard att mean (REAL, X1 better) against +0.604 deg hard roll
+dispersion (REAL, X1 worse), identical survival. C3 also remains the only candidate with a verified
+deploy pack — `deploy/specs/student_gru.py` deliberately **rejects** tail-mode checkpoints
+(ExportContractError), so X1 is not board-exportable without extending the spec first.
 
 Conditions attached to the declaration:
 
@@ -94,7 +117,7 @@ Verdict shape: **the run is `num_envs=32768` and NOTHING else changes.** The rec
 | wandb group/project | — | `teacher_final_dgx32k` (one string, both flags; user confirms) | group = project = purpose. Do NOT reuse `dgx_scale_32768` (throughput pilot, not comparison-bearing) |
 | fault-DR block | Arm-A adopted values | **byte-identical; verify `fault.enable=true` in launched env.yaml** | The missed `fault.enable` diff voided a 4.9 h run once |
 | max_thrust_scale | (0.85, 1.15) | byte-identical; verify live | Sourced band (T200 voltage window); reverting silently is a protocol breach (gate D-a ack rule) |
-| obs width | 72D vs 76D | **72D** (default; §8 Q3 + tailsplit re-analysis can change it) | G3 paired result (2026-08-04) REVISED the evidence: the pitch regression shrank to soft +0.111 deg (marginal REAL), and obs76 teacher gains REAL hard-DR robustness (mean −0.30, dispersion −0.9~−1.2 deg). But the gen-2 delivery path pays a REAL +1.8 deg dispersion cost at distillation, leaving the two STUDENTS near-equivalent — and covariate shift stays open. 72D stays default until tailsplit separates delivery-path vs teacher-swap; single-seed screening either way |
+| obs width | 72D vs 76D | **72D — settled on the metrics** (only §8 Q3's requirements question is open) | Two paired results, 2026-08-04. G3: the obs76 TEACHER is REAL-better at hard (mean −0.30, dispersion −0.9~−1.2 deg) and the old pitch regression shrank to a marginal soft +0.111 deg. X1-tailsplit: that teacher advantage does NOT distill — after fixing the one delivery defect (latent R2 −0.104 → +0.065), every control delta stayed below floor and dispersion drifted to 3.130 deg, the worst of the five arms. So 76D buys a better teacher and not a better student, and its best student is not board-exportable. Nothing left for the metrics to decide; single-seed screening throughout |
 | encoder | elu+LayerNorm+softsign, latent 9, priv 28 | unchanged (settled) | `policy_obs_dim=69` in agent.yaml is a static default — runtime truth is env.yaml observation_space |
 | resume | — | fresh (`resume=false`); resume command pre-staged | Hydra `agent.resume` and group-path `load_run` both fail silently; relaunch mints a NEW run id — re-derive from disk, re-key watchers |
 | git provenance | E-int ran dirty:true | **clean tree, tagged branch, sha in manifest** | dirty:true already cost one voided run |
@@ -176,19 +199,32 @@ be scheduled soon, consider sequencing it BEFORE committing the GPU time.
    X1 anchor (22.5 h) to have any denominator.
 2. **Still want 32768?** 8x memory for 1.25x samples/s, 48.2 h, vs 3x4096 seeds at 22.5 h (a band,
    not a point), vs ~24 h at 16384 (unmeasured interpolation). Resource call.
-3. **obs72 or obs76?** Recommendation stays obs72, but G3's paired numbers (2026-08-04) weakened
-   the case against obs76: pitch regression is now only soft +0.111 deg (marginal), and the obs76
-   TEACHER is REAL-better at hard (mean −0.30, dispersion −0.9~−1.2 deg). What still favors obs72:
-   the gen-2 distillation pays a REAL +1.8 deg dispersion cost (students end near-equivalent),
-   covariate shift stays open, and deployability of the 4 real-sensor channels is a requirements
-   decision the metrics do not settle. Defer the final call to the tailsplit re-analysis (HOLD).
+3. **obs72 or obs76? — the metrics have now answered: obs72.** Both paired probes are in. The obs76
+   teacher is genuinely better (G3), but X1-tailsplit removed the last excuse for the obs76 students
+   underperformance — it fixed the delivery defect and the students still gained nothing in control.
+   The only thing left for a human is the *requirements* question the metrics cannot settle: do you
+   WANT the 4 real-sensor channels in the deployed observation for a reason other than performance
+   (e.g. future sensor-fusion work, redundancy)? If yes, note the cost: tail-split assembly is
+   mandatory and `deploy/specs/student_gru.py` must be extended first (it rejects tail mode today).
+   If no, obs72 stands with no open metric question.
 4. **Current plant or plant-v2 batch?** Current plant → six deferred items stay deferred (as obs4
    program decided). Plant-v2 → T200 bench + XW540 bench + buoy guard decision must close first.
 5. **Schedule the B1/TAM bench before committing 48 h?** See elevated-stakes note in §7.
 6. **Purpose string** `teacher_final_dgx32k` — confirm before launch (fixed for every run of the
    purpose).
 7. **Re-test C3's adoption under SE statistics (X9) before it is written up?** Zero GPU; changes
-   the claim's strength, not the shipped artifact.
+   the claim's strength, not the shipped artifact. NOTE: X9 was framed around teacher-vs-student
+   evals being unpaired — that is no longer true (9eac3a8). A re-run pair is now genuinely paired,
+   so X9 becomes "recompute against the registered floors", cheaper and stronger than the SE plan.
+8. **NEW, raised by X1 (2026-08-04): is a teacher-side scale-up the right investment at all?**
+   The five-arm paired table in §1 shows every student landing at 2.5–3.1 deg hard roll dispersion
+   regardless of whether its teacher sits at 1.07 or 2.02. The distillation step, not the teacher,
+   is what caps the shipped artifact — and the DGX flagship optimizes the teacher. This does not
+   invalidate the flagship (a better teacher is still worth having, and 32768 answers a
+   scale question nothing else answers), but the user should decide it knowing that the measured
+   bottleneck is downstream of what the run improves. No probe is designed for the distillation
+   gap yet; a capacity arm (GRU256) is the named runner-up family and must pre-register a CONTROL
+   endpoint, since X1 proved latent gains need not transfer.
 
 ## 9. Cheap follow-ups (not blocking, recorded so they are not lost)
 
