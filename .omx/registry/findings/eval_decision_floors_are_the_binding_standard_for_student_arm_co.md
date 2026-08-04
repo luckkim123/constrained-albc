@@ -2,14 +2,14 @@
 title: "Eval decision floors are the binding standard for student-arm comparisons (0.1 deg / 15 envs)"
 tags: ["eval", "decision-floor", "screening", "student", "distillation", "albc", "methodology"]
 created: 2026-07-29T07:25:58.151005
-updated: 2026-07-29T07:25:58.151005
+updated: 2026-08-04T04:32:23.386929
 sources: ["diagnose-20260729-161459"]
 links: []
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 ---
 
 # Eval decision floors are the binding standard for student-arm comparisons (0.1 deg / 15 envs)
@@ -22,3 +22,41 @@ Measured consequence in campaign student_distill_eint (analysis diagnose-2026072
 - roll n_gt20 spans 0.00-7.00 envs across all four runs against a 15-env floor. At 64 envs this metric detects catastrophe only, never degradation, so the recorded A0g 'tail regression' (7.00 vs A0's 5.67) is sub-floor and must not be cited as a real cost.
 
 Practical rule: a relative percentage on a sub-0.1-deg absolute difference is not evidence. Convert to the axis unit and compare against the floor first (repo rule: sign consistency is not magnitude). No floor is declared for ss_error_std / CV, so dispersion differences cannot be adjudicated at n=1 under the current protocol -- that gap is itself worth closing.
+
+---
+
+## Update (2026-08-04T04:32:23.386929)
+
+## LIMIT discovered 2026-08-04: the floors are PAIRED-only, and teacher-vs-student evals are NOT paired
+
+The floors carry `decision_floors_protocol` = "screening n=1 paired same-machine". The word that
+matters is PAIRED. Phase E (analysis diagnose-20260804-132500) found that a teacher eval and a
+student eval do NOT share their DR draws at any level except `none`:
+
+| level | dr_*/fault* keys differing (of 24) |
+|:--|--:|
+| none | 0 (DR off -- identity is trivial) |
+| soft | 23 |
+| medium | 23 |
+| hard | 23 |
+
+Consequence, measured on the Phase E pair (teacher static_260804_092723 vs student
+static_260804_130704): the 0.10 deg ss_error floor called TWO regressions REAL at hard
+(att_norm +0.1503, roll +0.1659 deg). Both are noise. The actual sampling standard error of those
+deltas, SE = sqrt((std_t^2 + std_s^2)/64), is 0.2976 and 0.2790 deg -- roughly 3x the floor -- so the
+two "REAL" rows sit 0.51 and 0.59 standard errors from zero. Across all twelve level x axis cells the
+largest |delta|/SE is 1.43. Not one mean attitude delta is distinguishable from env-draw noise.
+
+THE RULE THIS ADDS: the floors adjudicate a delta only when the two evals share their `dr_*` draws.
+Student-vs-student arms in one campaign normally do; teacher-vs-student never does except at `none`.
+Before applying a floor across run TYPES, either verify draw identity or switch to the dispersion-aware
+test (compare |delta| against sqrt((std_a^2 + std_b^2)/n_env)), and say which one you used.
+
+WHAT THIS DOES NOT CHANGE: within-campaign student-arm comparisons, which is what this page was
+written for. The A0/A0g/B4b numbers above stand. What it invalidates is any teacher-vs-student floor
+verdict, which should be re-read wherever one was recorded.
+
+This is the sixth member of the campaign's denominator/draw family, after the B1b ratio-target
+reversal, the B2 R2-delta decomposition, the WIDE mirror case, 38d979e, and the
+d2-smallest-denominator ranking. Same shape every time: the metric was believed rather than decomposed.
+

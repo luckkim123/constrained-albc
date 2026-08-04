@@ -2,14 +2,14 @@
 title: "engine-gap: the analysis engine and omx reduce are both unusable on student distillation runs"
 tags: ["engine-gap", "adapter", "student", "distillation", "omx", "profile", "albc"]
 created: 2026-07-29T07:26:31.168314
-updated: 2026-07-29T07:26:31.168314
+updated: 2026-08-04T04:32:23.588809
 sources: ["diagnose-20260729-161459"]
 links: []
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
 ---
 
 # engine-gap: the analysis engine and omx reduce are both unusable on student distillation runs
@@ -29,3 +29,29 @@ qualityReasons: []
    [EVIDENCE] both invocations and their tracebacks, 2026-07-29.
 
 [STATUS] proposed
+
+---
+
+## Update (2026-08-04T04:32:23.588809)
+
+## 4th limit, hit 2026-08-04 (analysis diagnose-20260804-132500)
+
+[WHERE] constrained_albc/analysis/_analyze/recompute_metrics.py, `_per_env_ss_stats`.
+[SPEC] It computes the per-env steady-state array internally (`per_env_mean`, `per_env_std`) and then
+returns only the aggregated scalars, so the per-env vector is unreachable by any consumer. A
+heavy-tail campaign needs that vector: the natural causal test for a distillation regression is
+"do the envs with the worst latent error have the worst control error", and it cannot be run.
+Reproducing the segment/settled-window logic outside the repo to recover the array is exactly the
+duplicated-code-path failure that 38d979e already cost this campaign, so the test was DROPPED rather
+than answered with a reimplementation. Return the per-env arrays alongside the scalars (or expose a
+`per_env=True` variant) and the test becomes a one-liner.
+[EVIDENCE] Phase E: the fallback available without repo logic -- terminated / time_to_failure -- shows
+the 2 dead envs at hard rank 26/64 and 9/64 by latent RMSE (median 0.2566, max 0.4984), which is
+suggestive but far weaker than the per-env correlation the question actually needs.
+
+Also re-confirmed unchanged from items 1-2 above: `analyze_training.py --tier 3 --deep` still returns
+STATUS: HEALTHY / iters=0 / last_step=0 on a student run with 1000 logged samples per tag, emitting no
+DIAGNOSIS / changepoint / plateau / regime line; and 5 of the 7 profile groups (reward_decomp, trpo,
+critic, constraint, doraemon) remain structurally absent -- verified this time by dumping the raw tag
+set, which is exactly 9 scalars all under `student/`.
+
