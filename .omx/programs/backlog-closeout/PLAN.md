@@ -364,6 +364,36 @@ would void E-int as the comparison baseline, and it is exactly the class of edit
 already declined twice.
 
 
+**2026-08-05 02:31 — the Run A analysis tooling is built and validated BEFORE the run lands.**
+`/root/.claude/jobs/3999bdb3/tmp/saturation.py` answers the preflight plan's three questions from a
+run's TensorBoard scalars. It reproduces the extend8k reference exactly — 26 expansions, last at
+6750, `success_rate` 0.813 → 0.789 (min 0.7595), `entropy_before` exactly 2 distinct values over
+n=1250 — so it is calibrated against a known answer rather than trusted.
+
+Building it early paid for itself twice.
+
+**It caught a bug in my own first version.** The naive reading of "last expansion at 5748, then 223
+iterations of `kl_step` = 0" is *saturated at 5748*. It is not: `kl_step` reads exactly 0.0 on every
+non-boundary iteration, and the boundaries are 250 apart, so the gap between two boundaries always
+looks like a freeze. The script now infers `step_interval` from the observed spacing and refuses to
+declare saturation until at least one whole boundary has been MISSED. Re-validated in both
+directions: extend8k → SATURATED at 6750 (4 boundaries missed); Run A at iter 5988 → NOT saturated,
+next boundary due ~5998. Without this I would have reported a false saturation iteration at 06:35 and
+written it into Gate A.
+
+**And it corrected two facts in the preflight plan.** (a) The predicted boundary phase is wrong: the
+plan says to expect iterations ending 249/499/749/999, the actual ones end **248/498/748** — a
+one-off that would make a targeted grep find nothing. (b) Run A carries **21** DORAEMON params
+(`fault_severity` is present, extend8k had 20), which is exactly why the plan forbids comparing
+`entropy_before` across plants: extend8k sits at -18.20, Run A at -22.53.
+
+**Early Step-0 signal, not yet a verdict** (iter 5988 of 9999): `DORAEMON/success_rate` reads 0.84
+against `alpha` = 0.5. The curriculum protocol's Step 0 says that when success >> alpha the
+feasibility gate is INERT and `performance_lb` is mis-set — a confound to fix, not a co-variable.
+Note this is the OPPOSITE of the posttam-era failure, where lb sat at ~101 % of nominal return and
+stalled the curriculum at mode -2. Confirm at the end of the run before recording it.
+
+
 ## 8. STATE AT LAST COMPACTION — read this first on resume (overwrite each time)
 
 **Written 2026-08-05 02:03 KST.** Everything below is live at that moment. Re-derive from disk
