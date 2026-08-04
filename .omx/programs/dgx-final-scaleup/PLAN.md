@@ -121,9 +121,10 @@ Verdict shape: **the run is `num_envs=32768` and NOTHING else changes.** The rec
 | Knob | Current | Flagship | Why (evidence-backed) |
 |:--|:--|:--|:--|
 | num_envs | 4096 | **32768** | Fits: peak 83,170 of 124,610 MiB (~41.4 GB spare; source carries a 1,000 MiB internal inconsistency), 34.73 s/iter measured. Honest framing: curriculum-NEUTRAL by recorded code reasoning (step_interval is iteration-clocked); benefit = gradient-noise reduction, unmeasured; Arm N (8192) measured NULL at fixed box. Go/no-go is a resource call (§8 Q2). Sub-linear: 8x batch → 1.25x samples/s |
-| max_iterations | 5000 | **OPEN — this row was wrong and is withdrawn 2026-08-04** | The previous entry ("5000 — do NOT raise; net-negative twice (extend8k, moreiters)") had three defects. (1) It contradicted a RECORDED USER DECISION — wiki `e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite` (2026-07-16, resolved): "no iteration cap; DGX scale-up is planned", which explicitly scopes the e3 keep-5000 verdict as not a cap. (2) `moreiters` is cited backwards: at the fair `none` level it IMPROVED with extension (roll os_env_mean 16.04 → 13.03, n_gt20 21.33 → 9.33). (3) The extension effect's SIGN is `performance_lb`-dependent — the lb=250 pair degraded (17.02 → 26.99, n_gt20 4.33 → 61.33) while the internally-consistent lb=200 pair improved. Both pairs are on the RETIRED posttam plant (20-dim, no fault_severity); the current buoyfix plant has no extension datapoint at all. Value pending: see §8 Q2b |
+| max_iterations | 5000 | **20000 — USER DECISION 2026-08-04** | The run is a CAP, not a commitment: `max_iterations` is consumed ONLY as the loop counter (`constraint_trpo.py:636-642 set_max_iterations` is log-only; barrier constants fixed; no LR/entropy/std scheduler exists), so the first N iterations of a 20000-run are identical to an N-iteration run at the same seed/envs. With `save_interval 50` the run therefore yields a **dose-response curve nobody has measured on this plant** — eval checkpoints on the fair `none` level and keep the best; stop early when the curve turns. Cost 20000 x 34.73 s = **192.9 h = 8.04 days**; 400 ckpts x 5.9 MB = 2.4 GB. Shape at si=250: the box saturates ~iter 6750 (26 achieved expansions), so **13,250 iterations (66%) train on a frozen fully-saturated box** — that is the untested regime this run characterizes, and the only prior datapoint in it (extend8k's 1250 post-saturation iterations) degraded nominal. See the row below for why si stays 250 anyway |
+| ~~max_iterations (superseded row)~~ | 5000 | ~~withdrawn~~ | The previous entry ("5000 — do NOT raise; net-negative twice (extend8k, moreiters)") had three defects. (1) It contradicted a RECORDED USER DECISION — wiki `e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite` (2026-07-16, resolved): "no iteration cap; DGX scale-up is planned", which explicitly scopes the e3 keep-5000 verdict as not a cap. (2) `moreiters` is cited backwards: at the fair `none` level it IMPROVED with extension (roll os_env_mean 16.04 → 13.03, n_gt20 21.33 → 9.33). (3) The extension effect's SIGN is `performance_lb`-dependent — the lb=250 pair degraded (17.02 → 26.99, n_gt20 4.33 → 61.33) while the internally-consistent lb=200 pair improved. Both pairs are on the RETIRED posttam plant (20-dim, no fault_severity); the current buoyfix plant has no extension datapoint at all. Value pending: see §8 Q2b |
 | num_steps_per_env | 64 | 64 | Above the ~25-step floor (Rudin et al. 2021); GAE horizon ~17 steps. Cutting to 32 halves wall-clock but is an unmeasured second variable — probe first if wall-clock ever binds |
-| step_interval | 250 | **250 — iteration-clocked, NOT sample-clocked** | Sample-clocking (÷8 → 31) gives budget 19.3 vs the box's saturation at 3.12 → box exhausts ~iter 800 then freezes 4200 iters in Beta(1,1) — worse than extend8k. Budget is calibrated to the CONFIG BOX, the binding resource |
+| step_interval | 250 | **250 — unchanged, RE-DECIDED for the 20000 run** | Two shapes exist at 20000 and the choice is real. (a) si=250: 80 boundaries, box saturates ~iter 6750, then 13,250 iterations at fixed maximum difficulty. (b) si≈750: 26 boundaries, saturation lands near the END, ~3x the dwell per difficulty level — which is what the recalibration protocol's "more dwell for a harder exam" logic argues for. Recommendation is (a), for three reasons: the ONE measured test of raising si (stepint400, si=400 at 8000 it) was the WORST arm of three at the fair `none` level (att_norm 0.426 vs ref5k 0.319 / extend8k 0.370); (a) keeps the run a clean ONE-variable dose-response against every run on record, which is most of what 8 days buys; and (a) reaches full DR coverage for the 4 starved dims by iter 6750 rather than only at the finish. Also unchanged: sample-clocking (÷8 → 31) remains rejected — budget 19.3 vs box saturation 3.12 would exhaust the box by ~iter 800. If the user prefers shape (b), it is a one-line change and the abort gate below still applies |
 | kl_ub (DORAEMON) | 0.12 | **0.12** | kl_ub-up measured known-bad (E1: DR 3.6x wider but attitude worse everywhere). kl_step lands at cap on every accepted update → kl_ub IS the pacing constraint. Budget: reachable 20 x 0.12 = 2.40; achieved band at 5000 iters is 2.16–2.28 (18–19 updates, success-gated) — read the saturation guard against ACHIEVED |
 | performance_lb | 250.0 | **250.0** | Byte-identity keeps the run comparable to both existing teachers (the only way the result is readable). Measured p25 from doraemon_state.pt (E-int 255.8 / obs76fault 260.1) is recorded HERE as the candidate for the NEXT purpose, where lb re-derivation belongs (recalibration Step 3, with box widening). Expectation at lb=250: success ≈ 0.815 (obs72 plant); human-look triggers: success > 0.95 sustained (inert-gate class) or < alpha 0.5 (infeasible) |
 | alpha | 0.5 | 0.5 | E5 measured alpha-up as near-null; feasibility floor, not an expansion lever |
@@ -147,9 +148,25 @@ Verdict shape: **the run is `num_envs=32768` and NOTHING else changes.** The rec
 
 ## 4. Wall-clock and cost
 
-5000 x 34.73 s = **48.2 h** flagship. Blocking gate G1–G4 is near-zero GPU. Optional X1 anchor
-= 22.5 h. Sub-linear scaling means 32768 buys 1.25x samples/s over 4096 for 8x memory — the run's
-value is the 8x per-update batch, not throughput.
+**20000 x 34.73 s = 192.9 h = 8.04 days** (user decision 2026-08-04). Prior figure was 5000 x
+34.73 = 48.2 h. Blocking gate G1–G4 is near-zero GPU. Sub-linear scaling means 32768 buys 1.25x
+samples/s over 4096 for 8x memory — the run's value is the 8x per-update batch, not throughput.
+
+**The 8 days is a CAP, not a commitment.** Because `max_iterations` is only the loop counter, the
+run's own checkpoints are a dose-response series (400 ckpts at `save_interval 50`, 2.4 GB). Eval
+schedule: iterations 5000 / 7500 / 10000 / 12500 / 15000 / 17500 / 20000, each ~9 min at 64 envs.
+Two rules make the cost bounded:
+
+1. **Fair exam only.** `eval.py static` defaults `--doraemon-dr True`, which grades each run on its
+   OWN learned box — so soft/medium/hard are NOT comparable across checkpoints whose curricula
+   differ. Compare checkpoints on `none`, or re-eval them all under `--doraemon-dr-from <one dir>`
+   (the shared-DR protocol; pairing is exact post-9eac3a8). Never read a cross-checkpoint hard
+   delta as a generalization result.
+2. **Stop when the curve turns.** Two consecutive eval points worse than the running best on `none`
+   att_norm ss_error = stop and keep the best checkpoint. There is no penalty for stopping: the
+   earlier checkpoint is already on disk.
+
+Wall-clock if the curve turns early: 48.2 h (stop at 5000), 96.5 h (10000), 144.7 h (15000).
 
 ## 5. Launch checklist (DGX side — expanded in HANDOFF-DGX.md)
 
@@ -178,6 +195,21 @@ Abort at iteration ~500 (2 DORAEMON updates seen) if ANY of:
 - sustained s/iter > 40 (wall-clock model broken) or `free -m` used > ~100 GB (headroom gone);
 - NaN in metric lines.
 This gate absorbs X4 (curriculum-at-scale) and X5 (critic-scaling) as live checks.
+
+**Additional gates for the 20000-iteration run (2026-08-04).** The iteration-500 gate above only
+catches a broken launch. Two more are needed because 66% of this run happens after the box freezes:
+
+- **Saturation checkpoint (~iter 6750–7000).** Confirm `DORAEMON/kl_step` has gone to 0 and every
+  dim reads Beta(1,1) in `doraemon_state.pt`. If saturation lands much EARLIER than 6750, the
+  21-dim KL dilution assumption was wrong and the remaining budget arithmetic is void — report.
+  If it has NOT saturated by ~iter 9000, expansion attrition (`mode=-3` fires in 4/4 recorded runs)
+  is worse at 32768 envs than on record — also report.
+- **Inert-gate watch, every eval point.** `DORAEMON/success_rate` sustained > 0.95 is the recorded
+  inert-gate failure class. E-int already sits at 0.814 (alpha = 0.5), i.e. the feasibility gate is
+  slack on this plant; 13,250 post-saturation iterations can push it to the ceiling. If it pins
+  > 0.95, `performance_lb = 250` has stopped doing anything and the rest of the run is unguarded —
+  report before continuing. (Keeping lb = 250 is the user's call for comparability; this is the
+  watch that makes that choice safe.)
 
 ## 7. Backlog disposition (12 needs-experiment + 7 needs-apply-before-retrain, 2026-08-04)
 
@@ -226,7 +258,9 @@ be scheduled soon, consider sequencing it BEFORE committing the GPU time.
    `fault.enable=false`, which cannot see DORAEMON at all (step_interval 250), and the only
    training-scale datapoint above 4096 is the 8192 arm, which measured NULL. Treat throughput and
    memory as measured, the learning outcome as NOT-DETERMINED.
-2b. **NEW — what max_iterations?** The old "5000, do NOT raise" row is withdrawn (§3). What the
+2b. **ANSWERED 2026-08-04 — max_iterations = 20000** (user decision). The reasoning below is kept
+   because it is what the run must be monitored against, not because the question is still open.
+   The old "5000, do NOT raise" row is withdrawn (§3). What the
    record now supports: `max_iterations` enters the training code ONLY as the loop counter
    (`constraint_trpo.py:636-642 set_max_iterations` is log-only; barrier_t/barrier_alpha fixed; no
    LR/entropy/std scheduler anywhere), so there is no hidden 5000-tuned schedule that extension

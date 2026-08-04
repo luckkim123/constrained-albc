@@ -35,7 +35,10 @@ further experiment.
 - Unified 121.7 GB memory: `nvidia-smi` reports Memory-Usage "Not Supported". Monitor with
   `free -m` and `nvidia-smi --query-compute-apps=pid,used_memory`. Measured peak at 32768 envs:
   83.2 GB; treat sustained > 100 GB as an abort signal.
-- Expected steady-state: ~34.7 s/iter → 5000 iters ≈ 48.2 h.
+- Expected steady-state: ~34.7 s/iter → **20000 iters ≈ 192.9 h ≈ 8.0 days**. That figure is a CAP,
+  not a fixed commitment: Step 4b's periodic eval + stop rule can end the run earlier (48.2 h at
+  5000, 96.5 h at 10000, 144.7 h at 15000) with no loss, because every earlier checkpoint is on disk.
+  Plan for exclusive occupancy of about a week and make sure nothing else needs the GPU.
 - cuDNN: the container-side cu13-vs-cu128 conv1d bug does NOT exist on DGX, but verify once before
   trusting any conv path: `python -c "import torch; print(torch.backends.cudnn.version())"` via the
   isaaclab launcher and record the value.
@@ -76,6 +79,7 @@ adopted values before; only the dumped config counts.
 | seed | 30 |
 | save_interval | 50 |
 | num_envs | 32768 |
+| max_iterations | 20000 (the Step 3 command's value; a shorter value means the wrong run) |
 | resume | false |
 
 Note: `policy_obs_dim=69` in agent.yaml is a stale static default — the runtime truth is
@@ -92,7 +96,7 @@ If you want a pre-flight, a 50-iter smoke at 32768 envs with `--logger` disabled
 cd ~/workspace/constrained-albc
 TERM=xterm ~/workspace/isaaclab/isaaclab.sh -p scripts/train.py \
   --task Isaac-ConstrainedALBC-TRPO-v0 \
-  --num_envs 32768 --max_iterations 5000 --headless \
+  --num_envs 32768 --max_iterations 20000 --headless \
   --run_group teacher_final_dgx32k \
   --logger wandb --log_project_name teacher_final_dgx32k \
   env.fault.enable=True \
@@ -135,6 +139,36 @@ kl_step at the 0.12 cap on accepted updates, `DORAEMON/ess_ratio` HIGHER than wo
 
 Repeat a lighter look at ~iter 1000 and ~2500 (checkpoints land every 50 iters ≈ 29 min).
 
+### Step 4b — the two gates that matter for a 20000-iteration run
+
+This run is 20000 iterations (192.9 h ≈ 8.0 days). The curriculum is expected to finish expanding
+around iteration 6750, so roughly two thirds of the run trains on a frozen, fully-expanded DR box.
+That regime has never been run at this length — these two gates are what make it safe.
+
+**Gate A — saturation checkpoint (~iter 6750–7000).** Confirm `DORAEMON/kl_step` has gone to 0 and
+that `doraemon_state.pt` reads Beta(1,1) on every dim (`torch.load`, keys `dist_a`/`dist_b`).
+- Saturated MUCH earlier than ~6500: the budget arithmetic is wrong — report, do not kill.
+- NOT saturated by ~iter 9000: expansion attrition is worse at 32768 envs than on record
+  (`DORAEMON/mode = -3` fires in 4/4 recorded runs) — report.
+
+**Gate B — inert-gate watch, at every eval point below.** `DORAEMON/success_rate` sustained > 0.95
+is the recorded inert-gate failure class: `performance_lb=250` has stopped constraining anything
+and the rest of the run is unguarded. The reference teacher already sits at 0.814 against
+`alpha=0.5`, so there is not much slack. If it pins > 0.95, STOP and report before continuing.
+
+**Periodic eval + stop rule (this is what bounds the 8 days).** Evaluate at iterations
+5000 / 7500 / 10000 / 12500 / 15000 / 17500 / 20000 (~9 min each at 64 envs) and track `none`-level
+`att_norm ss_error` from each eval's `summary.json`. **Two consecutive eval points worse than the
+running best = stop the run and keep the best checkpoint.** Stopping early costs nothing: the better
+checkpoint is already on disk, and the run's earlier iterations are identical to a shorter run
+(`max_iterations` is consumed only as the loop counter).
+
+**Fair-exam rule — do not skip this.** `eval.py static` defaults `--doraemon-dr` to True, which
+grades each checkpoint on the DR box THAT checkpoint learned. Checkpoints from different iterations
+therefore sit at different curriculum widths and their soft/medium/hard numbers are NOT comparable
+to each other. Compare only on `none`, or re-evaluate every checkpoint under
+`--doraemon-dr-from <one fixed run dir>` so they all take the identical exam.
+
 ## Step 5 — crash handling
 
 A relaunch mints a NEW run id — never resume by editing Hydra `agent.resume` or a group-path
@@ -146,7 +180,7 @@ ln -s <crashed_run_dir> RESUME_SRC
 TERM=xterm ~/workspace/isaaclab/isaaclab.sh -p scripts/train.py \
   --task Isaac-ConstrainedALBC-TRPO-v0 --num_envs 32768 --headless \
   --resume --load_run RESUME_SRC --checkpoint model_<last>.pt \
-  --max_iterations <5000 minus completed iters> \
+  --max_iterations <20000 minus completed iters> \
   --run_group teacher_final_dgx32k --logger wandb --log_project_name teacher_final_dgx32k \
   agent.run_name=dgx32k_s30_resume
 ```
@@ -155,20 +189,32 @@ sort has destroyed final checkpoints before. Record both run ids and the stitch 
 
 ## Step 6 — after the run
 
-1. Verify `model_4999.pt` exists (numeric sort), plus `doraemon_state.pt` and the wandb dir.
-2. Do NOT delete or trim anything.
+1. Verify the LAST checkpoint exists by NUMERIC sort (`model_19999.pt` for a full run, or whatever
+   the stop rule left), plus `doraemon_state.pt` and the wandb dir.
+2. Do NOT delete or trim anything — all ~400 checkpoints (5.9 MB each, ~2.4 GB total) are the
+   dose-response series and are the main deliverable alongside the final model.
 3. Sync back to the workstation (the workstation runs the paired eval under its shared-DR
    protocol): the full `logs/rsl_rl/albc_trpo_teacher/teacher_final_dgx32k/<run_id>/` dir and the
    `experiments/` mirror entry. If you eval locally, use exactly
    `eval.py static --seed 42 --num_envs 64 --headless` with the checkpoint path THROUGH the
    run's `train` symlink, and NEVER pass `--output_dir`.
+   Note: the workstation's eval carries a cross-run pairing fix (per-level reseed) that landed
+   after this repo state was branched; a local eval on an older `eval.py` will NOT be paired with
+   the workstation's reference evals. Report your local numbers as indicative only.
 
 ## Step 7 — report back (measurements only)
 
 - run_id, sha, exit code, wall-clock, s/iter curve summary, `free -m` peak;
-- abort-gate readings at 500/1000/2500/5000 (the tag list above);
-- final DORAEMON state: per-dim Beta a/b, achieved expansion count vs the reachable 20,
-  final success_rate;
+- abort-gate readings at 500/1000/2500, then Gate A (saturation, ~6750) and Gate B (inert-gate
+  watch) at every eval point;
+- **the dose-response table** — for each eval point (5000/7500/10000/12500/15000/17500/20000, or
+  wherever the stop rule fired): iteration, `none`-level `att_norm ss_error`, `roll ss_error`,
+  `roll os_env_mean`, `n_gt20`, `survival_pct`, and which checkpoint you judged best. This table is
+  the run's primary scientific output — it is the first iteration-budget curve ever measured on
+  this plant;
+- final DORAEMON state: per-dim Beta a/b, the iteration at which the box saturated, achieved
+  expansion count (nonzero `DORAEMON/kl_step` entries — NOT the number of scheduled boundaries),
+  and final success_rate;
 - checkpoint inventory (numeric sort) + doraemon_state.pt + wandb sync status;
 - any deviation from this document, however small.
 
