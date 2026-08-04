@@ -4,6 +4,13 @@
 named here (the flagship and every optional probe) is human-gated and fires only on explicit
 user approval.
 
+**HOLD (2026-08-04, user directive): HANDOFF-DGX.md is a DRAFT — do not send to the DGX yet.**
+A parallel session is running further experiments (the X1-tailsplit line on the obs4 program:
+gen-1 assembly from the SAME obs76 teacher, separating delivery-path vs teacher-swap). When
+they finish, re-analyze jointly with the G1–G4 gate verdicts and revise this plan — the §1
+final-model declaration and the §3 obs-width row are exactly what that experiment could
+overturn — then confirm with the user before handing off.
+
 Created 2026-08-04. Sources: workflow `albc-closeout-dgx-design` (run `wf_8ef2309d-9a8`,
 7 evidence agents + opus synthesis + 2 adversarial verifiers; 21 verifier findings folded in),
 Phase E report `student_distill_obs76/trpo_sdobs76_c3_gruselect_s30_260804_124951/analysis/diagnose-20260804-132500/report.md`,
