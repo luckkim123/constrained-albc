@@ -1475,6 +1475,13 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
             if _latent_sigma_by_level is not None:
                 policy._s.set_latent_noise(args_cli.latent_noise_k, _latent_sigma_by_level.get(level))
 
+        # Pairing: re-seed right before the level's rollout reset so per-env DR draws
+        # depend only on (seed, level) -- never on how much global RNG the policy build
+        # consumed (a 72D vs 76D actor or a student GRU init draws different amounts,
+        # which desynchronized every cross-run comparison: dr_* matched only at `none`).
+        # Mirrors segmented mode's per-boundary manual_seed (run_segmented, ~:2138).
+        torch.manual_seed(args_cli.seed + DR_LEVELS.index(level))
+
         data = run_evaluation(
             env=env,
             policy=policy,
