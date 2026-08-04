@@ -448,7 +448,7 @@ matrix.
 
 ## 8. STATE AT LAST COMPACTION — read this first on resume (overwrite each time)
 
-**Written 2026-08-05 02:35 KST.** Everything below is live at that moment. Re-derive from disk
+**Written 2026-08-05 02:52 KST.** Everything below is live at that moment. Re-derive from disk
 rather than trusting it if the clock has moved much; a relaunch mints a new run id and strands
 every id recorded here.
 
@@ -456,9 +456,10 @@ every id recorded here.
 
 | Lead | Closes on | Status |
 |:--|:--|:--|
-| `curriculum_recalibration_protocol…` | **Run A** | in flight, iter ~6030/9999 |
-| `experiment_idea_latency…` | the GPU1 control-delay sweep | d1 done, d2 running, d3 queued |
-| `reward_sigma…` (R6) | **Run B**, launches when GPU0 frees | not started |
+| `curriculum_recalibration_protocol…` | **Run A** | in flight, ETA 06:36 |
+| `reward_sigma…` (R6) | **Run B**, launches when Run A exits | not started |
+
+`experiment_idea_latency…` is **CLOSED** (02:50, CLOSED-OUT-OF-SCOPE for gen-1). Open leads: **2**.
 
 `omx wiki list --status needs-apply-before-retrain` already returns **zero rows**. Done means
 `--status needs-experiment` does too.
@@ -475,9 +476,8 @@ band in `HANDOFF-DGX.md` is sharpened to p5-p95 plus the full excursion.
   Stdout `/workspace/constrained-albc/logs_queue/iterbudget_s30.log` — use the ABSOLUTE path,
   the shell cwd resets to `/workspace` between calls and the relative path silently fails.
   TB dir: `logs/rsl_rl/albc_trpo_teacher/teacher_iter_budget/latest/`. Plant verified.
-- **GPU1 — `gpu1_queue5.sh`** (PID 942451), control-delay sweep d=1,2,3 on the correct
-  instrument, self-gating on a bite check. Expected clear about **02:50**. Queues 3 and 4 are
-  finished; queue3 was KILLED at 02:07 as a proven no-op.
+- **GPU1 — IDLE.** All five queue scripts are finished. Nothing is scheduled on it until
+  Run B's eval. (queue3 was KILLED at 02:07 as a proven no-op; queue5 re-ran the sweep correctly.)
   Poll the PID directly; a `pgrep` pattern self-matches and has killed watchers here before.
 
 ### Analysis tooling already built and VALIDATED (do not rewrite)
