@@ -471,6 +471,45 @@ this project already has a memory about — and I walked into it in the act of w
 Verify a watcher with `ps -eo pid,ppid,cmd` and look for the bare `bash <script>` line, never with a
 `-f` pattern that the querying command itself contains.
 
+### 2026-08-05 06:36 — Run A closed the curriculum lead, and overturned its central premise
+
+Run A (`trpo_iterbudget_s30_260805_012813`) finished at 06:29:30 on iteration 9998/9999. The
+handoff fired correctly: Run B (`trpo_gate020_s30_260805_063110`, PID 1191063) launched at 06:31:05
+after a **95-second** GPU0 gap, and the §6a post-launch check read `integral_gate_threshold`
+(0.2, 0.2, 0.2) and `fault.enable: true` back out of Run B's own recorded config — **OVERRIDE
+VERIFIED**. ETA 04:50, so Run B lands ~11:26, inside the 11:45 Run-C start-by.
+
+**The curriculum lead is closed, and the result is bigger than the lead asked for.** Its 2026-07-21
+Step-0 entry concluded that runs at this length are box-exhausted, so bounds-widening (hardware-
+blocked) was the only lever left. On the current plant that is false: `doraemon_state.pt` shows
+E-int — the shipped teacher and the DGX baseline — ended its 5000 iterations with **0 of 21 dims at
+Beta(1,1)**, having spent 2.2800 of the 3.5209 KL budget its own box requires (65 %). The four
+nominal-0 dims were still bunched near zero, `fault_severity` worst at Beta(1, 10.099) = mean 9 % of
+range. Run A's extra 5000 iterations took it to **21/21 at iteration 7748**, then 2250 iterations of
+a totally frozen box.
+
+So at 5000 iterations the binding constraint on this plant is the **iteration budget, not the bounds
+width** — and the lead's own Step 2 lever (raise `max_iterations`, hold `kl_ub`) needs no hardware
+measurement and is unexhausted. Step 1 (source new bounds from measured hardware) stays
+DEFERRED-HARDWARE per the user's 2026-08-05 decision; nothing else on the page is actionable, so it
+closed `resolved`. Backlog **17 → 1**.
+
+Three corrections fell out of it, all now in `HANDOFF-DGX.md`:
+
+- Gate A's saturation checkpoint moves 6750 → **7748** measured on this plant, and its
+  not-saturated-by failure threshold 9000 → 10000 to keep the same margin.
+- Gate B's "healthy `success_rate` at saturation is 0.76-0.81" is a **posttam** number. On this
+  plant healthy is **0.62-0.70**; judging the flagship against 0.76-0.81 would have raised a false
+  alarm on a healthy run. The gate now reads the SHAPE — decline while expanding is expected,
+  decline continuing after saturation is the failure.
+- `Train/mean_reward` post-saturation is **236.4-265.0** here against extend8k's 251.4-273.7.
+
+And one of my own readings was wrong and is retracted: the early note that the feasibility gate was
+INERT (`success_rate` 0.84 at iteration 5988) was a mid-expansion sample, not a steady state. The
+steady state is 0.666 against alpha 0.5, and `mode` was 0 on all 20 logged updates — neither inert
+(>0.95) nor stalled. §8 said to confirm it at the end before recording it; confirming it is what
+killed it.
+
 
 ## 8. STATE AT LAST COMPACTION — read this first on resume (overwrite each time)
 
@@ -478,15 +517,16 @@ Verify a watcher with `ps -eo pid,ppid,cmd` and look for the bare `bash <script>
 than trusting any id here if the clock has moved much: a relaunch mints a new run id and strands
 every id recorded in this file.
 
-### Open leads: 2
+### Open leads: 1
 
 | Lead | Closes on | Status |
 |:--|:--|:--|
-| `curriculum_recalibration_protocol…` | **Run A** | iter 9773/9999, ETA **06:29** |
-| `reward_sigma…` (R6) | **Run B** | auto-launches when Run A exits |
+| `reward_sigma…` (R6) | **Run B** | running, `trpo_gate020_s30_260805_063110`, ETA ~11:26 |
 
 `omx wiki list --status needs-apply-before-retrain` returns **zero rows**. Done means
-`--status needs-experiment` does too. Started at 17 leads; 15 are closed.
+`--status needs-experiment` does too. Started at 17 leads; 16 are closed. The curriculum lead closed
+`resolved` at 06:36 on Run A — see the §7 entry, and do not re-open it: its only remaining item
+(Step 1, source bounds from measured hardware) is in the class the user deferred.
 
 **Finished this session — do NOT redo any of it.** Nine leads closed by verdict (`8b63074`), two on
 evidence in hand (`e4231f3`), buoy added mass by measurement (`598db89`), both HydroRC leads
@@ -497,17 +537,15 @@ the full 251.4-273.7 excursion.
 
 ### What is running
 
-- **GPU0 — Run A.** PID 873942, `trpo_iterbudget_s30_260805_012813`, group `teacher_iter_budget`,
-  resumed at 4999 heading to 9999. Stdout `/workspace/constrained-albc/logs_queue/iterbudget_s30.log`
-  — **use the absolute path**, the shell cwd resets to `/workspace` between tool calls and the
-  relative path silently fails. TB: `logs/rsl_rl/albc_trpo_teacher/teacher_iter_budget/latest/`.
-- **Handoff watcher — PID 1004229**, `/root/.claude/jobs/3999bdb3/tmp/handoff_runB.sh`. Polls Run A's
-  PID, records its last iteration, waits 60 s, runs `finalize_run_log.sh iterbudget_s30`, launches
-  **Run B** verbatim from `teacher_integral_gate/DESIGN.md` §6, then reads
-  `integral_gate_threshold` back out of Run B's OWN `params/env.yaml` and logs either
-  `OVERRIDE VERIFIED` or `OVERRIDE FAILED … KILL IT`. Progress in `handoff_runB_state.txt`.
-  **Check that line before trusting Run B** — today proved an override can be accepted, exit 0, and
-  inject nothing.
+- **GPU0 — Run B.** PID 1191063, `trpo_gate020_s30_260805_063110`, group `teacher_integral_gate`,
+  fresh 5000-iteration run, launched 06:31:05, ETA ~11:26. Stdout
+  `/workspace/constrained-albc/logs_queue/gate020_s30.log` — **use the absolute path**, the shell cwd
+  resets to `/workspace` between tool calls and the relative path silently fails. TB:
+  `logs/rsl_rl/albc_trpo_teacher/teacher_integral_gate/latest/`. **Override already verified** at
+  06:35:05 against the run's own `params/env.yaml`: gate (0.2, 0.2, 0.2), `fault.enable: true`.
+  Nothing further to check on that front.
+- **Run A is DONE** — finished 9998/9999 at 06:29:30, stdout finalized into the run dir's
+  `launch.log`. The handoff watcher exited cleanly. Neither needs attention again.
 - **GPU1 — idle**, and correctly so. Nothing in the remaining backlog needs it until Run B's eval.
 
 **Verify a watcher with `ps -eo pid,ppid,cmd` and look for the bare `bash <script>` line.** A
@@ -516,31 +554,28 @@ that is how the handoff PID was first recorded wrong (1004223 vs the real 100422
 
 ### Next actions, in order
 
-1. **When the handoff fires (~06:31)**: read `handoff_runB_state.txt`. Confirm `OVERRIDE VERIFIED`
-   and note Run B's PID and run id. If it says `OVERRIDE FAILED`, kill Run B and relaunch by hand —
-   a five-hour run on the reference arm is unrecoverable this close to the deadline.
-2. **Analyze Run A** with `/isaac-sim/python.sh /root/.claude/jobs/3999bdb3/tmp/saturation.py
-   logs/rsl_rl/albc_trpo_teacher/teacher_iter_budget/latest/`. It answers the three preflight
-   questions and is already calibrated against extend8k. **Do not rewrite it** and do not
-   re-derive the saturation rule: a silent `kl_step` stretch is NOT saturation until a whole
-   250-iteration boundary has been missed, and the script enforces that. Boundaries land on
-   iterations ending **248/498/748**, not the 249/499/749 the preflight plan predicts. Run A has
-   **21** DORAEMON params (`fault_severity`) against extend8k's 20, so `entropy_before` is NOT
-   comparable across them (-22.53 here vs -18.20 there) — compare expansion COUNTS only.
-   Early read at iter 5988: `success_rate` 0.84 vs `alpha` 0.5, i.e. the feasibility gate is INERT,
-   the OPPOSITE of the posttam mode--2 stall. Confirm at the end before recording it.
-3. **Close the curriculum lead** on that. Its Step 0 is what Run A measures; its **Step 1 is blocked
-   on measured hardware variation**, which is the class the user explicitly deferred on 2026-08-05 —
-   so the lead ends DEFERRED-HARDWARE on its remaining item, with Run A's Step-0 numbers recorded.
-4. **Correct Gate A** in `.omx/programs/dgx-final-scaleup/HANDOFF-DGX.md`, which still carries a
-   saturation iteration (~6750-7000) derived from the retired posttam plant.
-5. **When Run B finishes (~11:35)**: eval on GPU1 per `teacher_integral_gate/DESIGN.md` §7, verify
-   24/24 pairing, apply the §5 pre-registered verdict with
-   `/root/.claude/jobs/3999bdb3/tmp/floor_verdict.py`. Then close the R6 lead.
-6. **Run C** is the narrow arm (`0.05`). It must START by about **11:45** to finish before the
+Steps 1-4 of the previous list are DONE (handoff verified, Run A analyzed, curriculum lead closed,
+Gate A/B corrected). What remains:
+
+1. **Mid-run read on Run B, around 09:00.** Two purposes. (a) Confirm it is healthy — `mode` >= 0,
+   `success_rate` declining but above alpha, no NaN. (b) **Decide whether Run C stays the narrow arm**
+   (`0.05`): `DESIGN.md` §3 says Run C is confirmed at the Run B checkpoint and may be replaced if
+   the mid-run read makes a different question more valuable. This is the decision point; do not
+   arm the Run B → Run C handoff before making it.
+2. **Arm the Run B → Run C handoff** once that decision is made, same pattern as
+   `handoff_runB.sh` (poll the training PID directly, never `pgrep -f`; verify the override out of
+   the new run's own `params/env.yaml`). Run C must START by about **11:45** to finish before the
    **17:00 hard GPU0 cutoff**. If Run B slips past that, drop Run C and close R6 on the two points
    that exist — say so explicitly rather than silently.
-7. **Final report** per §9, ending with both `omx wiki list --status …` queries returning zero rows.
+3. **When Run B finishes (~11:26)**: eval on GPU1 per `teacher_integral_gate/DESIGN.md` §7, verify
+   24/24 pairing, apply the §5 pre-registered verdict with
+   `/root/.claude/jobs/3999bdb3/tmp/floor_verdict.py`. Then close the R6 lead.
+   **Add one comparability check the design did not anticipate**: count Run B's DORAEMON expansions
+   and compare against E-int's 19 at the same iteration count. Run A proved a 5000-iteration run on
+   this plant stops at ~65 % of its KL budget, so both arms are being compared at a *partially
+   expanded* box. If the counts differ materially the arms saw different exams and that belongs in
+   the report's limitations, not buried.
+4. **Final report** per §9, ending with both `omx wiki list --status …` queries returning zero rows.
 
 ### Analysis tooling already built and VALIDATED (do not rewrite)
 

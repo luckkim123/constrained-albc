@@ -155,11 +155,11 @@ Repeat a lighter look at ~iter 1000 and ~2500 (checkpoints land every 50 iters �
 ### Step 4b — the three gates that matter for a 20000-iteration run
 
 This run is 20000 iterations (192.9 h ≈ 8.0 days). The curriculum is expected to finish expanding
-around iteration 6750, so roughly two thirds of the run trains on a frozen, fully-expanded DR box.
+around iteration 7750, so roughly two thirds of the run trains on a frozen, fully-expanded DR box.
 That regime has never been run at this length, and 17,500 of the 20,000 iterations happen after the
 last Step 4 look at iteration 2500 — these three gates are what make that stretch safe.
 
-**Gate A — saturation checkpoint (~iter 6750–7000). This is the gate that decides what kind of run
+**Gate A — saturation checkpoint (~iter 7750–8000). This is the gate that decides what kind of run
 this is.** `max_iterations` is DORAEMON's expansion clock, so until the box saturates, raising it is
 a DR-WIDTH treatment, not extra training. Once the box hits its Beta(1,1) ceiling the treatment
 stops and everything after is purely more optimization on a STATIONARY target — which is the regime
@@ -168,7 +168,30 @@ this run is meant to be in for its last two thirds.
 Confirm `DORAEMON/kl_step` has gone to 0 and `doraemon_state.pt` reads Beta(1,1) on every dim
 (`torch.load`, keys `dist_a`/`dist_b`).
 
-Measured reference (`trpo_biasema_extend8k_260716_162849`, from-scratch, 4096 envs): 26 boundaries
+**Primary reference — measured on THIS plant** (`trpo_iterbudget_s30_260805_012813`, 2026-08-05,
+4096 envs, E-int resumed 4999 -> 9998, fault DR on, 21 DORAEMON dims). The box saturated at
+**iteration 7748**: 30 chain expansions (29 of them exactly at the `kl_ub` = 0.12 cap, the 30th a
+partial 0.0410 step onto the ceiling) for a total KL budget of **3.5209**, and `doraemon_state.pt`
+reads Beta(1,1) on **21 of 21** dims. Over the following 2250 iterations `DORAEMON/entropy_before`
+took exactly TWO distinct values (-18.23835 then -18.200739 constant) and nine further boundaries
+fired with `mode` = 0 and `kl_step` = 0 — the scheduler kept deciding "expand" with nothing left to
+expand into, which is how saturation is distinguished from a stall.
+
+Two things this changes for the flagship. First, **the shipped teacher E-int never reached its own
+ceiling**: at iteration 5000 it had 0 of 21 dims at Beta(1,1) and had spent 2.2800 of the 3.5209
+budget (65 %), with the four nominal-0 dims still bunched near zero (`fault_severity` at
+Beta(1, 10.099), mean 9 % of range). The 20000-iteration budget is therefore not merely "more of the
+same" — it is the first run on this plant that trains against the fully-expanded box. Second, the
+saturation point sits ~1000 iterations later than the older plant below, because this plant carries
+one extra DR dim.
+
+The measurement is at 4096 envs on a resumed chain; the boundary schedule is iteration-based and
+`kl_ub`-capped so it should carry to 32768 envs from scratch, but the feasibility gate that decides
+whether a boundary expands or contracts is env-count sensitive. Treat 7748 as the expectation, not a
+guarantee.
+
+Corroborating case on the RETIRED posttam plant (`trpo_biasema_extend8k_260716_162849`,
+from-scratch, 4096 envs, 20 dims): 26 boundaries
 fired, the LAST at iter 6750, and the freeze was total — over the remaining 1250 iterations
 `DORAEMON/entropy_before` took exactly TWO distinct values (-18.2939 then -18.2007 constant),
 `success_rate` held 0.813 -> 0.789 (min 0.7595), `Train/mean_reward` held 258-268. A saturated box
@@ -180,8 +203,14 @@ really does stop moving; nothing degraded in that stretch.
 and is not a Gate-A finding. What matters is a monotone trend, not an excursion — judge the slope
 over a few hundred iterations, not one sample against the band edge.
 
-- Saturated MUCH earlier than ~6500: the budget arithmetic is wrong — report, do not kill.
-- NOT saturated by ~iter 9000: **this is the failure that matters**, not a scheduling curiosity.
+On the current plant the same post-saturation stretch (2250 iterations) ran **236.4 to 265.0, ending
+258.6** — a wider and lower band than extend8k's, for the same reason the success band moved: one
+more DR dim makes the saturated exam harder. Judge this run against 236-265, and against the slope
+rather than either edge.
+
+- Saturated MUCH earlier than ~7000: the budget arithmetic is wrong — report, do not kill.
+- NOT saturated by ~iter 10000: **this is the failure that matters**, not a scheduling curiosity.
+  (Threshold moved from 9000 on 2026-08-05 to keep the same ~30 % margin over the measured 7748.)
   The recorded case is `trpo_e3_extend10k_260713_224822` (a converged teacher RESUMED for +10000):
   boundaries kept firing to iter 14749 and never stopped, because `success_rate` fell under alpha so
   the box was pulled back instead of reaching the ceiling — `entropy_before` -30.1 -> max -18.24 ->
@@ -206,9 +235,17 @@ iteration is unguarded and the checkpoints already on disk lose nothing.
 contracts the box instead of reaching the ceiling, Gate A never closes, and the run spends its
 remaining days chasing a moving target (extend10k: success decayed 0.91 -> 0.38 monotonically,
 crossing alpha around iter 8250 and never recovering, with `Train/mean_reward` 274 -> ~225).
-Healthy reference at saturation is 0.76-0.81. A monotone decay through 0.6 toward alpha, especially
-while boundaries are still firing, is the early signature — report it before it reaches alpha, not
-after.
+**Healthy reference at saturation on THIS plant is 0.62-0.70, NOT the 0.76-0.81 of the retired
+posttam plant** (corrected 2026-08-05 from `trpo_iterbudget_s30_260805_012813`: 0.699 at the
+saturation iteration, min 0.6215, 0.666 at the end). Judging this run against 0.76-0.81 would raise
+a false alarm on a perfectly healthy run — the extra `fault_severity` dim makes the fully-expanded
+exam harder, so the same policy settles lower.
+
+Read the SHAPE, not the level. On the healthy reference `success_rate` falls monotonically
+0.890 -> 0.699 **while the box is still expanding**, then goes flat once the box freezes. That
+decline is the exam getting harder and is expected. The failure signature is a decline that
+**continues after saturation**, or one that continues **while boundaries are still firing** past the
+point they should have stopped — report either before it reaches alpha, not after.
 
 **Gate C — policy-health watch, at every eval point. There is NO automatic early stop anywhere in
 this codebase**, so a policy that quietly degenerates burns the remaining days at full cost. Nothing
@@ -265,7 +302,9 @@ Also note this is a known-open phenomenon, not a new risk: sigma has tightened m
 campaigns (0.22-0.34 in April, 0.175 in June, 0.109 on 2026-07-13, 0.084 by 2026-07-16) and the omx
 wiki records it as never solved. It has nonetheless been benign for every converged teacher so far —
 extend8k held reward 258-268 and success ~0.79 through its post-saturation stretch with sigma at
-0.084. Report movement; do not treat a floored dim as an automatic fault.
+0.084, and the 2026-08-05 run on the current plant held reward 236.4-265.0 (ending 258.6) and
+success 0.62-0.70 through 2250 post-saturation iterations. Report movement; do not treat a floored
+dim as an automatic fault.
 
 What to report:
 - `Policy/mean_noise_std` **below ~0.070**, or the per-dim floored count rising above 5/8 =
@@ -390,7 +429,7 @@ new one, and neither is complete alone. Say so explicitly in your report.
 ## Step 7 — report back (measurements only)
 
 - run_id, sha, exit code, wall-clock, s/iter curve summary, `free -m` peak;
-- abort-gate readings at 500/1000/2500, then Gate A (saturation, ~6750), Gate B (inert-gate watch)
+- abort-gate readings at 500/1000/2500, then Gate A (saturation, ~7750), Gate B (inert-gate watch)
   and Gate C (`Policy/mean_noise_std`, `Policy/line_search_success`, `Policy/entropy`) at every
   eval point;
 - **the dose-response table** — for each eval point (5000/7500/10000/12500/15000/17500/20000, or

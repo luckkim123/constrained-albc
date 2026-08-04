@@ -2,15 +2,15 @@
 title: "Curriculum recalibration protocol: widening the DR box requires re-tuning budget (kl_ub x n_updates) AND performance_lb together -- not a single-variable probe"
 tags: ["doraemon", "curriculum", "kl_ub", "performance_lb", "step_interval", "max_iterations", "dr-box", "protocol", "experiment-design", "batch-planning", "beta", "saturation", "Z2", "zero-gpu", "posttam"]
 created: 2026-07-20T06:29:51.844146
-updated: 2026-07-20T17:22:24.901463
-sources: ["doraemon.py:38-49", "doraemon.py:416", "trpo_biasema_extend8k_260716_162849", "diagnose-20260716-035505", "diagnose-20260721-020253", "doraemon_state.pt"]
+updated: 2026-08-04T21:32:19.931429
+sources: ["doraemon.py:38-49", "doraemon.py:416", "trpo_biasema_extend8k_260716_162849", "diagnose-20260716-035505", "diagnose-20260721-020253", "doraemon_state.pt", "trpo_iterbudget_s30_260805_012813", "envs/main/doraemon.py:_PARAM_DEFS"]
 links: ["doraemon_is_trust_region_limited_not_feasibility_limited_kl_step.md", "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "kl_ub_up_and_per_difficulty_learning_are_antagonistic_the_dr_har.md", "decision_do_not_adopt_performance_lb_200_on_the_adopted_bias_ema.md", "cross_run_dr_comparability_eval_py_doraemon_dr_from_already_prov.md", "eval_command_box_was_half_the_trained_envelope_from_2026_04_06_t.md", "step_interval_250_400_probe_separate_dr_width_from_optimisation_.md"]
 category: convention
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
-status: needs-experiment
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
+status: resolved
 blocked-on: "Step 0 (state check) DONE 2026-07-21 -- see the Z2 table on this page; saturation is reproducible and 8k-at-si250 runs are box-exhausted, so bounds-widening is the only lever for them. Step 1 bounds review remains: max_thrust span SOURCED (see sim_hydro page, campaign B0c); TAM-arm span still unsourced. Retrain arm parked under the 2026-07-20 batch-pass decision (campaign B0b)."
 ---
 
@@ -159,3 +159,97 @@ recalibration that assumes performance_lb is the active constraint is mis-target
 of the 6 runs.
 [EVIDENCE: TB DORAEMON/success_rate final -- 0.396 (baseline) vs 0.706 / 0.883 / 0.855 / 0.789 / 0.496; alpha=0.5 from config]
 [CONFIDENCE: HIGH]
+
+---
+
+## Update (2026-08-04T21:32:19.931429)
+
+# Curriculum recalibration protocol: widening the DR box requires re-tuning budget (kl_ub x n_updates) AND performance_lb together -- not a single-variable probe
+
+## CLOSURE 2026-08-05 -- Step 0 re-measured on the CURRENT plant; Step 1 DEFERRED-HARDWARE
+
+Run `trpo_iterbudget_s30_260805_012813` (group `teacher_iter_budget`, GPU0, 4096 envs) resumed the
+shipped teacher E-int from iteration 4999 to 9998 with no change other than the iteration budget,
+specifically to re-run this page's Step 0 on the plant we actually ship (buoyfix, fault DR enabled,
+21 DORAEMON dims) instead of the retired posttam plant the 2026-07-21 Step-0 entry used.
+
+### The 2026-07-21 premise is OVERTURNED on this plant
+
+That entry concluded "saturation is reproducible and 8k-at-si250 runs are box-exhausted, so
+bounds-widening is the only lever". On the current plant that is FALSE at 5000 iterations.
+
+`doraemon_state.pt` read directly (dist_a/dist_b, not inferred from a metric):
+
+| checkpoint | dims at Beta(1,1) | KL budget spent | expansions |
+|:--|:--|:--|:--|
+| E-int at 5000 (shipped teacher, DGX baseline) | **0 of 21** | 2.2800 | 19 |
+| Run A at 9998 | **21 of 21** | 3.5209 | 30 |
+
+E-int finished having spent **65 % of the budget its own box requires**. The four dims whose nominal
+is 0 -- the curriculum starts them at "off" and expands outward -- were still concentrated near zero
+(Beta(1,b), mean = 1/(1+b)):
+
+| dim (index verified against `_PARAM_DEFS` in envs/main/doraemon.py) | Beta at 5000 | mean of range |
+|:--|:--|:--|
+| payload_cog_offset_xy_u | (1.000, 7.288) | 0.121 |
+| ocean_current_strength | (1.000, 7.670) | 0.115 |
+| obs_noise_scale | (1.000, 7.918) | 0.112 |
+| fault_severity | (1.000, 10.099) | 0.090 |
+
+The other 17 dims sat near Beta(2.2, 2.2) -- symmetric and unimodal, well short of uniform. So the
+teacher that trained with `fault.enable=True` experienced, in distribution, a mean fault severity of
+about 9 % of the declared range.
+
+**Consequence for this protocol**: at 5000 iterations on this plant the binding constraint is the
+ITERATION BUDGET, not the bounds width. This page's own Step 2 lever -- raise `max_iterations`, hold
+`kl_ub` fixed -- is therefore available and UNEXHAUSTED, and it needs no hardware measurement. The
+DGX flagship at 20000 iterations already takes that lever.
+
+### Step 0 preconditions, all three now measured on this plant
+
+1. **Trust-region-limited, confirmed.** 29 of the chain's 30 expansions sat exactly at the
+   `kl_ub` = 0.12 cap. The single exception is the last one (0.0410 at iter 7748) -- the partial step
+   that lands on the ceiling, not a feasibility refusal.
+2. **The feasibility gate is neither inert nor stalled.** `success_rate` falls monotonically
+   0.890 -> 0.699 WHILE the box expands, then flattens once the box freezes (0.699 at saturation,
+   0.6215 min, 0.666 at 9998) against `alpha` = 0.5. `DORAEMON/mode` is 0 on all 20 logged updates
+   and never negative: the posttam `mode` = -2 stall does not occur here. An early read at iteration
+   5988 showed 0.84 and was mistaken for an inert gate -- that was mid-expansion, not a steady state,
+   and the inert threshold is > 0.95. The decline is the exam getting harder, not the policy
+   degrading, and it stops when the expansion stops.
+3. **Saturation is real and dated: iteration 7748**, then 2250 iterations of a totally frozen box.
+   `DORAEMON/entropy_before` takes exactly TWO distinct values over that stretch (-18.23835 then
+   -18.200739 constant), reproducing the extend8k signature. Nine scheduled boundaries fired after
+   saturation with `mode` = 0 and `kl_step` = 0 -- the scheduler kept deciding "expand" and had
+   nothing left to expand into, which distinguishes saturation from a stall mechanically.
+
+### Measured budget table (this page's central quantity, now three points)
+
+| plant | dims | expansions to saturate | KL budget | saturation iter |
+|:--|:--|:--|:--|:--|
+| posttam 5000-run | 20 | 18 (did not saturate) | 2.16 | -- |
+| posttam biasema `trpo_biasema_extend8k_260716_162849` | 20 | 26 | 3.12 | 6750 |
+| **current buoyfix E-int chain** | **21** | **30** | **3.5209** | **7748** |
+| current plant, E-int at 5000 (did not saturate) | 21 | 19 | 2.2800 | -- |
+
+The current plant needs about 13 % more budget than the posttam one and saturates roughly 1000
+iterations later.
+
+### Two mechanical notes worth keeping
+
+- **Boundary phase shifts by one iteration per resume.** The chain fires at 250-multiples in segment
+  1, at iterations ending 499/749/999/249 in segment 2, and 248/498/748/998 in segment 3. Sampling
+  `DORAEMON/kl_step` at a fixed stride therefore reads 0 everywhere on a resumed run; scan all steps.
+- **The ceiling entropy is identical (-18.200739) on the 20-dim and 21-dim plants** because the added
+  dim `fault_severity` has range exactly [0.0, 1.0] and contributes log(1.0) = 0. Mid-run the two are
+  still NOT comparable -- only the ceiling coincides.
+
+### Step 1 -- DEFERRED-HARDWARE
+
+Sourcing new DR bounds still requires measured hardware variation (hydro nominal is analytical; no
+load cell for a TAM moment-arm / max_thrust band). On 2026-08-05 the user removed that entire class
+of work from the queue. Step 1 is therefore deferred, not open: it cannot be unblocked by any
+simulation experiment. Steps 2-4 remain valid protocol for whenever bounds are eventually sourced.
+
+Nothing actionable remains on this page without a hardware measurement, so it closes here.
+

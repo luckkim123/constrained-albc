@@ -9879,3 +9879,7 @@
 - **Pages:** roll_transient_is_worst_at_none_dr_and_improves_monotonically_as.md
 - **Summary:** updated 'roll transient is WORST at none DR and improves monotonically as DR hardens (inverted, both runs)'
 
+## [2026-08-04T21:32:19.931429] add
+- **Pages:** curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md
+- **Summary:** updated 'Curriculum recalibration protocol: widening the DR box requires re-tuning budget (kl_ub x n_updates) AND performance_lb together -- not a single-variable probe'
+
