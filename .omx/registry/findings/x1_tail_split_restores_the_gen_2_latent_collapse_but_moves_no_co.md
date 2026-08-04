@@ -2,7 +2,7 @@
 title: "X1 tail-split restores the gen-2 latent collapse but moves NO control metric: latent reconstruction and closed-loop dispersion are decoupled"
 tags: ["obs4", "student", "latent", "delivery", "distillation"]
 created: 2026-08-04T06:37:32.467729
-updated: 2026-08-04T06:43:29.103612
+updated: 2026-08-04T09:36:41.244318
 sources: []
 links: ["feedback_derive_a_metrics_healthy_target.md"]
 category: decision
@@ -54,3 +54,17 @@ WHAT ACTUALLY HOLDS:
 2. The control null is uninformative, not evidence against the latent lever. To clear the 0.10 deg floor at hard you need roughly a 12% latent-RMSE reduction, and appreciably more to be worth an arm; X1 delivered 6.7%.
 3. The program decision is UNCHANGED - the obs76 line still shows no measurable better student - but it rests on the teacher-advantage-does-not-distill evidence and on X1 vs C3 being a trade (-0.118 deg hard mean REAL against +0.604 deg hard roll dispersion REAL), NOT on any decoupling claim.
 4. Reporting rule this earns: never state a latent result as an R2 delta alone. Convert to RMSE and price it through the measured deg-per-unit sensitivity at that DR level BEFORE claiming a control implication either way. See [[feedback-derive-a-metrics-healthy-target]] for the sibling trap on the same metric.
+
+---
+
+## Update (2026-08-04T09:36:41.244318)
+
+CAVEAT on the correction above (added 2026-08-04 after cross-checking the campaign owners independent report diagnose-20260804-154122, whose verdict matches this one). The 0.057 deg figure is a MED-confidence estimate, not a measurement, and must never be quoted as one:
+  - C1-latsens measured a NONLINEAR curve whose smallest point is k=0.5; pricing a 6.69% move is a roughly 7x extrapolation below anything measured.
+  - It was measured on a DIFFERENT arm (A0g), not on this teacher or this student.
+  - An injected random perturbation of the latent is not the same object as a structured reduction in reconstruction error; the sensitivity to one need not equal the sensitivity to the other.
+The load-bearing claim survives all three - the predicted effect is far enough under the 0.10 deg floor that no plausible correction lifts it above - but the correct sentence is "this null is uninformative", not "the expected gain was 0.057 deg".
+
+MECHANISM (from the owners report, and it strengthens the H2 verdict): the improvement is covariate shift, NOT fitting capacity. X1s TRAINING-side latent loss is 4.3% WORSE than the baselines (0.004236 vs 0.004062) while its CLOSED-LOOP latent error is 12.9% better, and the train-to-in-loop gap narrows at every level (9.7x -> 3.2x at none, 17.4x -> 14.5x at hard). Folding the four channels into policy_obs subjects them to the teachers FROZEN normalizer statistics, so the further the closed-loop distribution drifts from the one those statistics were fitted on, the more the channels misrepresent themselves. Tail-split removes that dependence. The gap narrows but does NOT close at hard, so covariate shift remains open as a campaign-level problem.
+
+INSTRUMENT NOISE bound, also from that report: re-evaluating the SAME checkpoint under two builds moves hard aggregate latent R2 by 0.0266 and none by 0.2190. The +0.169 hard result clears its own instrument noise by ~6x; any none-level aggregate claim is inside the noise and must not be made.

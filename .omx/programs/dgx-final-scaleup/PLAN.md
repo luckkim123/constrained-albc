@@ -42,11 +42,26 @@ X1-vs-Phase-E control delta is below its registered floor, and hard roll dispers
 way in absolute terms (2.880 → 3.130 deg).
 
 Read that null correctly — it is *expected*, not a discovery. The +0.169 R2 swing is only a **6.69%
-latent-RMSE reduction** (R2 sits near zero, so the ratio exaggerates it), and the campaign's own
-measured actor sensitivity at hard (C1-latsens: k=0.5 injection costs +0.4232 deg) prices that at
-about **0.057 deg** — under the 0.10 deg floor. So X1 tells us the delivery path owns the latent
-collapse; it tells us **nothing** about whether latent quality drives control, and it is not evidence
-of decoupling. Clearing the floor at hard would need roughly a 12% latent-RMSE reduction.
+latent-RMSE reduction** (R2 sits near zero, so the ratio exaggerates it; 15% of the swing is
+denominator drift), and the campaign's own measured actor sensitivity at hard (C1-latsens: k=0.5
+injection costs +0.4232 deg) prices that at roughly **0.06 deg** — under the 0.10 deg floor. So X1
+tells us the delivery path owns the latent collapse; it tells us **nothing** about whether latent
+quality drives control, and it is not evidence of decoupling. Clearing the floor at hard would need
+on the order of a 12% latent-RMSE reduction.
+
+Confidence on that pricing is MED, not HIGH, and the caveat must travel with it: C1-latsens measured
+a *nonlinear* curve on a *different* arm (A0g) with k=0.5 as its smallest point, so 6.69% is a ~7x
+extrapolation below anything measured, and an injected random perturbation is not the same object as
+a structured reconstruction improvement. It is enough to say the null is uninformative; it is not
+enough to quote 0.057 deg as a measurement.
+
+Mechanism, from the campaign owner's report `diagnose-20260804-154122` (independent analysis of the
+same eval, verdict identical to this one): the gain is **covariate shift, not capacity** — X1's
+*training-side* latent loss is 4.3% WORSE than the baseline's (0.004236 vs 0.004062) while its
+closed-loop latent error is 12.9% better, and the train-to-in-loop gap narrows at every level
+(9.7x → 3.2x at none, 17.4x → 14.5x at hard). Folding the channels into policy_obs subjects them to
+the teacher's frozen normalizer statistics, so they misrepresent themselves exactly where the
+deployment distribution has moved. The gap narrows but does not close at hard.
 
 The load-bearing fact is now the paired five-arm table (all evals share DR draws post-9eac3a8):
 
