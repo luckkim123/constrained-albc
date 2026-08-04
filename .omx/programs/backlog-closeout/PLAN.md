@@ -315,6 +315,27 @@ The gate was validated in both directions before being trusted: 0 differing keys
 no-op, 10 on the known-real yaw-damping arm.
 
 
+**2026-08-05 02:21 — Koopman arm B is NULL, and the line is closed.** The retry eval ran clean on the
+correct flag. Pairing is 24/24 dr+fault keys at all four levels against BOTH the pre-registered GPU0
+baseline and the same-device GPU1 reproduction; the two return the same verdict to within 0.001, which
+settles empirically the concern that the decision floors declare themselves "paired same-machine"
+while the pre-registration named a cross-device baseline. Survival is 100 % at every level in both
+runs, so nothing here is survivorship-contaminated. Both ADOPT conditions fail: `att_norm` `ss_error`
+clears the 0.10 deg floor at `hard` only — one of the two levels required — and regresses at `medium`;
+roll `n_gt20` at `none` goes 0.00 → 20.33 against a floor of 15.
+
+The shape is worth more than the verdict. The heavy tail is monotonically WORSE as the exam gets
+EASIER (none 0.00 → 20.33, soft 0.33 → 8.33, medium 1.00 → 5.00, hard 5.00 → 6.67), which is the
+opposite of a robustness trade. The mechanism is transient: at nominal the steady-state error is
+unchanged (0.4037 → 0.4003) while overshoot rises 7.96 → 13.74 pp and pitch rise time slows 23 %.
+`os_env_mean` is worse in **8 of 8** level-by-axis cells and **no single cell clears its 10.0 pp
+floor** — the floors are a per-cell noise test and do not aggregate, so a regression of exactly this
+shape passes them in silence. I only caught it by reading the sign pattern after the flag list came
+back looking mixed. Recorded on the wiki
+(`koopman_phase_1_arm_b_null_marine_feature_lifting_buys_no_contro.md`), in the campaign ledger as a
+`discarded` event, and as a CLOSED banner on `koopman-lifting/PLAN.md`. Arm C's ≥15 GPU-h is not spent.
+
+
 ## 8. STATE AT LAST COMPACTION — read this first on resume (overwrite each time)
 
 **Written 2026-08-05 02:03 KST.** Everything below is live at that moment. Re-derive from disk
