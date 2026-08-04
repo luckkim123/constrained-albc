@@ -2,15 +2,15 @@
 title: "roll transient is WORST at none DR and improves monotonically as DR hardens (inverted, both runs)"
 tags: ["roll", "overshoot", "transient", "dr-scaling", "os_env_mean", "open-lead", "nominal-corner", "doraemon", "id-collision"]
 created: 2026-07-21T07:58:14.787774
-updated: 2026-07-30T05:05:28.338476
+updated: 2026-08-04T15:58:14.323513
 sources: ["diagnose-20260721-164331", "next-20260724-033159", "static_260724_040413", "static_260723_091813", "diagnose-20260728-081953"]
 links: ["eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md"]
 category: pattern
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
-status: needs-experiment
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
+status: resolved
 blocked-on: "Follow-up = nominal-corner exposure (DORAEMON nominal sampling floor), a training-side experiment sequenced 'after C3'. Referent RESOLVED 2026-07-30: C3 = the TEACHER canonical 4-arm x 3-seed ablation set (PLAN.md 216/325/618), DEFERRED to the paper phase by user decision 2026-07-23 -- NOT the student campaign's C3/gruselect arm, which is an unrelated id that shares the label. So this stays blocked on a deferred block. Open question for the human: is 'after C3' a technical dependency or only roster ordering? If ordering, it can be re-prioritised; that is a user decision, not an assumption."
 ---
 
@@ -160,4 +160,47 @@ Consequence for planning: this lead is NOT the front of the training queue. It i
 One question the original note leaves genuinely open, and which is the human's to answer rather than mine to assume: whether "after C3" is a TECHNICAL dependency (the nominal-corner arm needs the ablation set's paired-seed baseline to be judged against) or merely ROSTER ORDERING (it was written below C3 in the queue). A 60 h ablation set is an odd technical prerequisite for a single DORAEMON sampling-floor probe, which suggests ordering -- but if it is only ordering, the arm could be re-prioritized ahead of the paper phase, and that is a user decision. Do not treat it as unblocked until that is stated.
 
 What C3-the-student-arm DID contribute here stands on its own and is unaffected by the retraction: C3 has the campaign's WORST none-level dispersion (att_norm CV 53.5% vs A0g 33.2% and C2 37.0%) and worst medium (108.8% vs C2 63.6%) while owning the hard end, which is the same inverted none-vs-hard shape this page records for the roll transient, now visible on a second metric family and on the campaign's best-tracking arm. That is evidence FOR the nominal-corner mechanism; it is not a sequencing unblock.
+
+---
+
+## Update (2026-08-04T15:58:14.323513)
+
+## VERDICT 2026-08-05 -- CLOSED-OUT-OF-SCOPE (backlog-closeout program)
+
+The finding stands and is durable: roll transient is worst at none DR and improves monotonically
+as DR hardens, in both runs. Only the proposed follow-up is being closed.
+
+The mechanism is worth recording precisely, because it explains the inversion and it tells a
+future reader what a fix would have to do. The none-DR level puts all 21 DR dimensions at their
+nominal values SIMULTANEOUSLY. DORAEMON drives each dimension's Beta toward Beta(1,1), i.e.
+uniform over its bound. Under a product of 21 near-uniform marginals, the probability that a
+single sampled env lands within even +/-10 percent of nominal on every dimension at once is on
+the order of 0.2^21, about 2e-15. The nominal corner is therefore not merely under-sampled, it
+is effectively never visited: it is a measure-zero region of the training distribution that the
+evaluation then tests directly. The policy is worst exactly where it has never trained.
+
+Three reasons the proposed fix (a DORAEMON nominal sampling floor) is not built here.
+
+First, the mechanism does not exist. There is no nominal_floor_prob anywhere in either repo;
+ParamSpec.nominal is read exactly once, at BetaDistribution.__init__, to set the initial mean.
+Building it means a new config field plus forced-nominal sampling inside
+DoraemonScheduler.sample().
+
+Second, and decisively, that change breaks the importance-sampling contract the curriculum
+controller runs on. Forced-nominal envs are not draws from the Beta, so either their weights are
+wrong or they must be excluded from the IS buffer. Neither variant can be validated inside this
+program's clock, and a subtly-wrong curriculum would make the run that tested it uninterpretable
+-- a bad result could not be attributed between the mechanism and its implementation.
+
+Third, this page's own 2026-07-30 retraction states the lead is NOT unblocked: its 'after C3'
+prerequisite is the TEACHER canonical 4-arm x 3-seed ablation, which the user deferred to the
+paper phase on 2026-07-23 (it is not the student campaign's C3, an unrelated id sharing the
+label). Building a risky shared-engine change in order to run an item its own page marks parked
+is the wrong trade against a hard deadline.
+
+Reopen when the teacher C3 block is undeferred, and treat the IS-weight question as the first
+design task rather than an implementation detail.
+
+Recorded by the backlog-closeout program (.omx/programs/backlog-closeout/PLAN.md section 3).
+Status flipped to resolved; no experiment is scheduled for this lead.
 

@@ -9835,3 +9835,11 @@
 - **Pages:** tam_vertical_single_motor_dual_esc_measured_2026_07_05.md
 - **Summary:** updated 'TAM vertical: single motor, dual ESC (measured 2026-07-05)'
 
+## [2026-08-04T15:58:14.196994] add
+- **Pages:** the_obs76_teacher_is_a_real_better_controller_than_e_int_at_hard.md
+- **Summary:** updated 'The obs76 teacher is a REAL-better controller than E-int at hard DR, but none of its advantage survives distillation to any student'
+
+## [2026-08-04T15:58:14.323513] add
+- **Pages:** roll_transient_is_worst_at_none_dr_and_improves_monotonically_as.md
+- **Summary:** updated 'roll transient is WORST at none DR and improves monotonically as DR hardens (inverted, both runs)'
+
