@@ -258,6 +258,35 @@ most need the signal are the ones the gate silences. Both arms are CLI-only
 (`env.integral_gate_threshold=[...]`), change no observation dimension, no DR box bound and no
 reward scale, so the shared E-int anchor stays valid.
 
+**2026-08-05 01:28 — Run A launched, GPU0 idle time one minute.** Arm B exited 01:27:08, the
+watcher finalized its stdout and launched Run A at 01:28:08 as PID 873942, run id
+`trpo_iterbudget_s30_260805_012813`. Plant verified rather than assumed: the `env.yaml` diff
+against E-int is 30 lines and every one is expected — three base64 noise-model blobs differing
+only in the pickled storage id (payload bytes identical), `log_dir`, and seven tail fields the
+cfg class grew after E-int ran, all at defaults. Positively confirmed: `observation_space: 72`,
+`fault.enable: true`, `thruster_health_range [0.0, 0.5]`, `performance_lb 250.0`, `kl_ub 0.12`,
+`step_interval 250`. Resume confirmed by `Learning iteration 4999/9999`. ETA about 06:28.
+
+**2026-08-05 01:28 — buoy added mass RESOLVED, and it inverted the expected verdict.** Section
+3b anticipated "policy insensitive, accept for gen-1". What the three measured points actually
+show is a **numerical stability cliff**: zero REAL flags at 2x effective (ratio 0.60), survival
+down 18.75-31.25 pp at the representable ceiling (ratio 0.95), and 0/64 alive before step 1000
+at the geometric value (ratio 2.15). The ceiling point's ss_error deltas are
+survivorship-contaminated and must NOT be quoted as control degradation. So the geometric value
+is unreachable by any coefficient or factor setting, raising the cap and retuning the factor are
+measured dead ends, and the mass-matrix route is a **gen-2 engine item**. Gen-1 accepts the error
+on the narrower ground that the policy is insensitive across a range that does not reach the true
+value — carried to the DGX handoff in exactly that form, not as "resolved". Full verdict on the
+wiki page; commit `598db89`.
+
+**2026-08-05 01:31 — a new eval trap, found by hitting it.** The arm B eval failed in 16 s with a
+state_dict size mismatch (actor 88 vs 81, critic 116 vs 109 — exactly `MARINE_FEATURE_DIM = 7`).
+`eval.py` restores `agent.yaml` from the run directory but rebuilds the ENV cfg from Hydra
+defaults plus the CLI, so `use_marine_feature_obs` fell back to False and the env was built 72D
+for a 79D policy. Same class as `env.fault.enable=True` on a resumed launch: **a config-derived
+plant or observation setting is not carried by a checkpoint.** Retry queued with the flag; the
+koopman DESIGN.md eval command is corrected and the class is recorded on the wiki.
+
 ## 8. Final deliverable
 
 One report covering: every one of the 17 leads with its verdict and the evidence behind it, the results

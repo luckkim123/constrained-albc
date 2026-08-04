@@ -9847,3 +9847,7 @@
 - **Pages:** buoy_added_mass_is_wrong_in_both_sims_and_in_opposite_directions.md
 - **Summary:** updated 'Buoy added mass is wrong in BOTH sims and in opposite directions: Isaac 3.8-8.2x below the geometric value, Stonefish 3.5-5.7x above it via an isotropic average of a dimensionally broken axial term; recentering Isaac onto Stonefish moves it further from reality'
 
+## [2026-08-04T16:32:10.561739] add
+- **Pages:** eval_py_rebuilds_env_cfg_from_hydra_defaults_so_obs_widening_fla.md
+- **Summary:** created 'eval.py rebuilds env cfg from Hydra defaults, so obs-widening flags must be re-passed at eval time'
+
