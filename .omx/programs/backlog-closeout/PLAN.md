@@ -446,6 +446,24 @@ now carries its own `eval.log` (4 injection markers, one per level) and
 matrix.
 
 
+**2026-08-05 02:55 — Run B's handoff is armed, so GPU0 does not idle at 06:36.**
+`/root/.claude/jobs/3999bdb3/tmp/handoff_runB.sh` (PID 1004223) polls Run A's PID directly, records
+how Run A ended and the last logged iteration, waits a minute for the card to release, finalizes the
+stdout, launches Run B verbatim from `teacher_integral_gate/DESIGN.md` §6, and then does the §6a
+post-launch check — it reads `integral_gate_threshold` back out of Run B's OWN recorded
+`params/env.yaml` and logs `OVERRIDE FAILED … KILL IT` if the value is not 0.2. That check exists
+because today proved an override can be accepted, exit 0, and inject nothing; on a five-hour run
+this close to the deadline that failure is unrecoverable. State goes to `handoff_runB_state.txt`.
+
+This is inside the plan's standing authority (§0 schedules Run B); the script only removes the gap.
+Run C has to start by about 11:45 to finish before the 17:00 GPU0 cutoff, so idle minutes at the
+handoff come straight out of Run C.
+
+**GPU1 is now idle and stays idle until Run B's eval.** Nothing in the remaining backlog needs it:
+the curriculum lead's Step 0 is a TensorBoard read and its Step 1 is hardware-blocked, and R6 needs
+Run B first. Recorded so a resuming session does not go looking for work to put on it.
+
+
 ## 8. STATE AT LAST COMPACTION — read this first on resume (overwrite each time)
 
 **Written 2026-08-05 02:52 KST.** Everything below is live at that moment. Re-derive from disk
