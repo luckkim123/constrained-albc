@@ -193,7 +193,72 @@ Analysis, report authoring and review go to **subagents** (user authorized 2026-
 session keeps: the schedule, launch decisions, verdicts, and the wiki closeout. Do not read whole
 eval dumps or transcripts into the main context — dispatch and keep the conclusion.
 
-## 7. Final deliverable
+## 7. Decisions taken under the authority grant (append-only, newest last)
+
+**2026-08-05 00:40 — GPU0 handoff armed.** A watcher polls arm B's PID directly (a `pgrep`
+pattern self-matches, which has silently killed watchers here) and launches Run A the moment
+it exits, so GPU0 never idles waiting for a human or for arm B's eval.
+
+**2026-08-05 00:45 — nine leads closed by verdict, no GPU.** Section 3a's eight plus joint1
+Stage-2 from 3d. Open backlog 17 -> 8. Two of the nine forked to new slugs on the first
+attempt because their stored titles had drifted from their slugs (`wiki add` merges by
+slugify(title)); the forks were removed through the library path gc uses and re-merged with
+round-trip-verified titles. Commit `8b63074`.
+
+**2026-08-05 00:44 — the buoy added-mass measurement is not the one section 3b assumed.**
+Reading the engine changed the design. The geometric target (broadside ~2.0 kg) **cannot be
+set directly**: `hydrodynamics.py:215` raises at construction when
+`added_mass / body_mass >= 1.0`, and the buoy's body mass is 0.93 kg. A second, silent guard
+clamps the DR-scaled coefficient at `0.95 * body_mass` on every reset
+(`events.py:273`) — including at the `none` DR level, so a naive coefficient raise would have
+been a silent no-op, the exact failure mode we were told to avoid. But the applied wrench is
+`M_a * acc * added_mass_stability_factor` (`hydrodynamics.py:361`) and **the factor carries no
+guard**, so splitting the target between coefficient and factor reaches the geometric
+*effective* added mass with both guards satisfied. Two points run on GPU1 against E-int, with
+rotational terms held byte-equal so only translational added mass moves:
+`x2` (0.7 * 0.8) and `geometric` (0.5 * 4.0 = 2.0 surge/sway, 0.4 * 4.0 = 1.6 heave).
+Baseline needs no run — `eval/static_260804_203719` is the same checkpoint, GPU, branch and
+anchor. **Carry into the report**: effective added mass of 2.0 kg on a 0.93 kg body is what
+the guard exists to forbid, so if the geometric point diverges, that IS the finding — the
+explicit external-wrench formulation cannot represent the correct value at all, and the wiki
+page's option (c) (move added mass into the mass matrix) is the only route. That is an engine
+item, not a coefficient item.
+
+**2026-08-05 00:49 — `hydrorc_016d1b1` gets a bracket, not a re-derivation.** Commit 016d1b1
+is **not on marinelab main** (only on branch `exp/hydro-recenter`), so the damage never landed
+and the shipped plant still has the pre-recenter analytical values. Its other blocker was a
+question to the Stonefish side, now out of scope. What is left is only "does hull yaw damping
+matter enough to justify re-deriving every axis", which a +/-10x bracket on the yaw entry
+answers without a training run. Queued on GPU1 behind the buoy points.
+
+**2026-08-05 00:50 — Run B is R6 alone; the DORAEMON nominal-corner floor is NOT implemented.**
+Three reasons, in order of weight. (1) The mechanism does not exist and would have to be built:
+no `nominal_floor_prob` anywhere, so it needs a new field plus forced-nominal sampling inside
+`DoraemonScheduler.sample()`. (2) That change breaks the importance-sampling contract the
+curriculum controller runs on — forced-nominal envs are not draws from the Beta, so either
+their weights are wrong or they must be excluded from the IS buffer, and neither variant can
+be validated inside this program's clock. A subtly-wrong curriculum would make Run B
+uninterpretable: a bad result could not be attributed between mechanism and implementation.
+(3) The lead's own page carries a 2026-07-30 retraction stating it is **not** unblocked,
+because its "after C3" prerequisite is the teacher canonical ablation the user deferred to the
+paper phase on 2026-07-23. Building a risky engine change to run an item its own page marks
+parked is the wrong trade against a hard deadline. The lead therefore closes
+CLOSED-OUT-OF-SCOPE with the mechanism recorded, which is the pruning the authority grant
+explicitly asked for.
+
+**2026-08-05 00:52 — Runs B and C are the two arms of one R6 sweep.** Design at
+`experiments/rsl_rl/albc_trpo_teacher/teacher_integral_gate/DESIGN.md` (the experiments tree
+is gitignored, so that file is disk-only). The wiki proposes no numeric value for R6, so a
+two-point A/B would rest entirely on a guess about direction; the sweep answers direction with
+data instead. Run B widens the settling band `(0.10 -> 0.20)` rad, Run C narrows it to 0.05,
+and E-int is the 0.10 reference that needs no run. The widening direction is the
+mechanism-motivated one: an env with a sustained offset past 5.73 deg is gated OUT of the
+integral accumulator, so the policy never observes the bias that is hurting it — the envs that
+most need the signal are the ones the gate silences. Both arms are CLI-only
+(`env.integral_gate_threshold=[...]`), change no observation dimension, no DR box bound and no
+reward scale, so the shared E-int anchor stays valid.
+
+## 8. Final deliverable
 
 One report covering: every one of the 17 leads with its verdict and the evidence behind it, the results
 of Runs A/B(/C), the Koopman line's closure, and the DGX handoff's corrected Gate A. After it, both
