@@ -2,7 +2,7 @@
 title: "obs4 student extra-observation interface: 4 deployable channels ride the observation dict through ONE shared student_input, zero-order held at the real 25 Hz bus rate; implemented and pushed 2026-08-03, not yet run"
 tags: ["obs4", "student-extra-obs", "observation-interface", "zero-order-hold", "imu", "pressure", "distillation", "phase-b", "phase-c", "inconclusive"]
 created: 2026-08-03T09:06:21.064863
-updated: 2026-08-04T00:44:37.284207
+updated: 2026-08-04T03:59:06.353299
 sources: ["diagnose-20260803-223517"]
 links: ["sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "albc_cudnn_fix_is_a_library_path_not_a_package.md", "real_albc_deployment_state_estimation_rates_measured_from_code_a.md", "c4b_dagger_correction_measured_partial_2_5_4x_in_loop_reduction.md", "container_cudnn_is_cu13_against_cu128_torch_every_conv1d_fails_s.md", "feedback_read_metric_units_from_code.md"]
 category: decision
@@ -328,4 +328,28 @@ The controlled Phase D passed H1 on both clauses. What it means for this lead:
   present in BOTH obs76 runs.
 
 Full account: wiki `obs4_phase_d_result_2026_08_04_folding_the_4_deployable_channels`.
+
+---
+
+## Update (2026-08-04T03:59:06.353299)
+
+## Path correction 2026-08-04 -- the program plan moved into the omx program tree
+
+Every reference on this page to
+`/workspace/.sp/plans/2026-08-03-obs4-student-then-teacher76-program.md` is STALE. The document
+now lives at `constrained-albc/.omx/programs/obs4-deployable-obs/PLAN.md`, moved byte-identically
+on 2026-08-04, with `omx program-status` as its machine-readable state.
+
+Why it moved: `/workspace` is not a git repository at all, so `.sp/plans/` had no version control
+and no tooling coverage. A multi-phase program that schedules runs across days outlives the
+"throwaway scratch" contract `.sp/` is built on. The cost was concrete -- this program's plan
+carried a run id that had been voided hours earlier and nothing flagged it, while `campaign-drift`
+caught the equivalent staleness on the campaign side the same night.
+
+Campaigns: `teacher_obs76` (Phase D) and `student_distill_obs76` (Phase E) are attached to the
+program. Phases B and C ran inside `student_distill_eint`, which stays owned by
+`teacher-final-closeout`.
+
+The sibling Koopman plan moved the same day to
+`constrained-albc/.omx/programs/koopman-lifting/PLAN.md` (commit cc1eb31).
 

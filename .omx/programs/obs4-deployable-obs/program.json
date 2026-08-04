@@ -1,0 +1,9 @@
+{
+  "program_id": "obs4-deployable-obs",
+  "campaigns": [
+    "teacher_obs76",
+    "student_distill_obs76"
+  ],
+  "status": "active",
+  "created": "2026-08-04T03:58:08.630006+00:00"
+}

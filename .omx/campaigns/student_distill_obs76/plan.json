@@ -1,0 +1,7 @@
+{
+  "campaign_id": "student_distill_obs76",
+  "created": "2026-08-04T03:53:55.117584+00:00",
+  "goal": "obs4 Phase E: re-distill the C3 student recipe (GRU 128 + head 64, dagger_mix=select, beta 0.5 fixed, lambda=1.0, extra_obs_dim=0) from the gen-2 obs76 teacher trpo_obs76fault_s30_260804_043926. The teacher swap changes the yardstick -- the student reconstructs THIS teacher's latent, so C3's R2 and every bar in student_distill_eint refer to E-int's z and do not carry over; this campaign restarts the student line rather than extending it. Cross-teacher comparison is CONTEXT, never the verdict.",
+  "baseline_run_id": "trpo_sdeint_c3_gruselect_s30_260729_193732",
+  "predecessor": "student_distill_eint"
+}

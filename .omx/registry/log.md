@@ -8859,3 +8859,27 @@
 - **Pages:** obs4_student_extra_observation_interface_4_deployable_channels_r.md
 - **Summary:** updated 'obs4 student extra-observation interface: 4 deployable channels ride the observation dict through ONE shared student_input, zero-order held at the real 25 Hz bus rate; implemented and pushed 2026-08-03, not yet run'
 
+## [2026-08-04T03:38:22.712678] add
+- **Pages:** k0_theta_probe_2026_08_04_the_teacher_latent_z_recovers_every_pl.md
+- **Summary:** created 'K0 theta-probe 2026-08-04: the teacher latent z recovers every plant parameter it was GIVEN (mass/geometry, R2 up to 0.49) and none that was withheld -- damping and 5 of 6 added-mass DOF are at the shuffle floor because they are absent from p_t, not because the encoder failed'
+
+## [2026-08-04T03:38:22.833590] add
+- **Pages:** k2_replication_2026_08_04_the_one_step_least_squares_operator_on.md
+- **Summary:** created 'K2 replication 2026-08-04: the one-step least-squares operator on the teacher latent is the identity to within refit noise across 5 run-level pairs, and the reason is structural -- z encodes per-episode CONSTANT parameters'
+
+## [2026-08-04T03:41:34.471737] query
+- **Pages:** koopman_rl_integration_research_consolidated_reference_2026_08_0.md, k0_theta_probe_2026_08_04_the_teacher_latent_z_recovers_every_pl.md, k2_replication_2026_08_04_the_one_step_least_squares_operator_on.md
+- **Summary:** query 'koopman' -> 3 of 3
+
+## [2026-08-04T03:54:21.676975] add
+- **Pages:** eval_py_student_mode_restores_the_extra_obs_env_config_for_gen_1.md
+- **Summary:** created 'eval.py student-mode restores the extra-obs env config for GEN-1 only: a gen-2 student carries extra_obs_dim=0, so the restore block is skipped and env.use_extra_policy_obs=True must be passed explicitly or the env builds 72D against a 76D student'
+
+## [2026-08-04T03:59:06.353299] add
+- **Pages:** obs4_student_extra_observation_interface_4_deployable_channels_r.md
+- **Summary:** updated 'obs4 student extra-observation interface: 4 deployable channels ride the observation dict through ONE shared student_input, zero-order held at the real 25 Hz bus rate; implemented and pushed 2026-08-03, not yet run'
+
+## [2026-08-04T03:59:06.470804] add
+- **Pages:** stonefish_role_narrowed_to_integration_smoke_bench_ratified_2026.md
+- **Summary:** updated "Stonefish role narrowed to integration smoke bench (ratified 2026-08-03): no more absolute-performance or coefficient verdicts; real-robot anchors take priority; retrain principle = widen DR by measured uncertainty, never move coefficients to a simulator's value"
+

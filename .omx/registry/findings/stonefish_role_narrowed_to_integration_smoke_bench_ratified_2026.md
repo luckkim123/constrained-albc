@@ -2,14 +2,15 @@
 title: "Stonefish role narrowed to integration smoke bench (ratified 2026-08-03): no more absolute-performance or coefficient verdicts; real-robot anchors take priority; retrain principle = widen DR by measured uncertainty, never move coefficients to a simulator's value"
 tags: []
 created: 2026-08-03T06:10:28.634376
-updated: 2026-08-03T06:10:28.634376
+updated: 2026-08-04T03:59:06.470804
 sources: []
 links: []
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 70
-qualityReasons: ["no-source-marker", "generic-only-tags"]
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
+status: resolved
 ---
 
 # Stonefish role narrowed to integration smoke bench (ratified 2026-08-03): no more absolute-performance or coefficient verdicts; real-robot anchors take priority; retrain principle = widen DR by measured uncertainty, never move coefficients to a simulator's value
@@ -63,4 +64,15 @@ IMPLICATION FOR THE OBS4 PROGRAM (plan 2026-08-03-obs4-student-then-teacher76-pr
 2 is why Phase D does not wait for the plant batch - the batch gates on an unbooked hardware
 session. Point 4 constrains any future plant work: DR widening plus curriculum recalibration, not
 nominal moves.
+
+---
+
+## Update (2026-08-04T03:59:06.470804)
+
+## Path correction 2026-08-04
+
+The "IMPLICATION FOR THE OBS4 PROGRAM" note on this page cites plan
+`2026-08-03-obs4-student-then-teacher76-program.md` by its old `.sp/plans/` filename. That
+document now lives at `constrained-albc/.omx/programs/obs4-deployable-obs/PLAN.md`, moved
+byte-identically on 2026-08-04. The implication itself is unchanged; only the path is.
 
