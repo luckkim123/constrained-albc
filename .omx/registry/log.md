@@ -9031,3 +9031,7 @@
 - **Pages:** eval_decision_floors_are_the_binding_standard_for_student_arm_co.md
 - **Summary:** updated 'Eval decision floors are the binding standard for student-arm comparisons (0.1 deg / 15 envs)'
 
+## [2026-08-04T05:07:09.465856] add
+- **Pages:** campaign_wide_latent_r2_census_11_student_arms_negative_r2_is_no.md
+- **Summary:** created 'Campaign-wide latent R2 census (11 student arms): negative R2 is NOT the campaign norm, the gen-1 extra-obs arm is the best tracker, and the obs76 gen-2 student sits at the bottom while being the only arm that kills envs'
+
