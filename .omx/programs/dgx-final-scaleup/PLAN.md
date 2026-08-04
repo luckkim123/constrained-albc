@@ -121,7 +121,7 @@ Verdict shape: **the run is `num_envs=32768` and NOTHING else changes.** The rec
 | Knob | Current | Flagship | Why (evidence-backed) |
 |:--|:--|:--|:--|
 | num_envs | 4096 | **32768** | Fits: peak 83,170 of 124,610 MiB (~41.4 GB spare; source carries a 1,000 MiB internal inconsistency), 34.73 s/iter measured. Honest framing: curriculum-NEUTRAL by recorded code reasoning (step_interval is iteration-clocked); benefit = gradient-noise reduction, unmeasured; Arm N (8192) measured NULL at fixed box. Go/no-go is a resource call (§8 Q2). Sub-linear: 8x batch → 1.25x samples/s |
-| max_iterations | 5000 | **5000 — do NOT raise** | Extension at fixed box net-negative twice (extend8k, moreiters); measured now: at 5000 iters the 17 midpoint dims end a≈b≈2.0–2.6, box NOT saturated, so extension buys the extend8k pathology, not progress. Raising is only coherent with a wider box, and widening is blocked at recalibration Step 1 (no measured hardware variation source) |
+| max_iterations | 5000 | **OPEN — this row was wrong and is withdrawn 2026-08-04** | The previous entry ("5000 — do NOT raise; net-negative twice (extend8k, moreiters)") had three defects. (1) It contradicted a RECORDED USER DECISION — wiki `e3_s_5000_iter_budget_verdict_is_scope_limited_not_a_cap_max_ite` (2026-07-16, resolved): "no iteration cap; DGX scale-up is planned", which explicitly scopes the e3 keep-5000 verdict as not a cap. (2) `moreiters` is cited backwards: at the fair `none` level it IMPROVED with extension (roll os_env_mean 16.04 → 13.03, n_gt20 21.33 → 9.33). (3) The extension effect's SIGN is `performance_lb`-dependent — the lb=250 pair degraded (17.02 → 26.99, n_gt20 4.33 → 61.33) while the internally-consistent lb=200 pair improved. Both pairs are on the RETIRED posttam plant (20-dim, no fault_severity); the current buoyfix plant has no extension datapoint at all. Value pending: see §8 Q2b |
 | num_steps_per_env | 64 | 64 | Above the ~25-step floor (Rudin et al. 2021); GAE horizon ~17 steps. Cutting to 32 halves wall-clock but is an unmeasured second variable — probe first if wall-clock ever binds |
 | step_interval | 250 | **250 — iteration-clocked, NOT sample-clocked** | Sample-clocking (÷8 → 31) gives budget 19.3 vs the box's saturation at 3.12 → box exhausts ~iter 800 then freezes 4200 iters in Beta(1,1) — worse than extend8k. Budget is calibrated to the CONFIG BOX, the binding resource |
 | kl_ub (DORAEMON) | 0.12 | **0.12** | kl_ub-up measured known-bad (E1: DR 3.6x wider but attitude worse everywhere). kl_step lands at cap on every accepted update → kl_ub IS the pacing constraint. Budget: reachable 20 x 0.12 = 2.40; achieved band at 5000 iters is 2.16–2.28 (18–19 updates, success-gated) — read the saturation guard against ACHIEVED |
@@ -221,7 +221,23 @@ be scheduled soon, consider sequencing it BEFORE committing the GPU time.
    currently forbids it → the 32768 run is scale exploration. Overturning the rule requires the
    X1 anchor (22.5 h) to have any denominator.
 2. **Still want 32768?** 8x memory for 1.25x samples/s, 48.2 h, vs 3x4096 seeds at 22.5 h (a band,
-   not a point), vs ~24 h at 16384 (unmeasured interpolation). Resource call.
+   not a point), vs ~24 h at 16384 (unmeasured interpolation). Resource call. NOTE 2026-08-04: the
+   32768 basis is weaker than this row implied — the only measurement is a 200-iteration probe with
+   `fault.enable=false`, which cannot see DORAEMON at all (step_interval 250), and the only
+   training-scale datapoint above 4096 is the 8192 arm, which measured NULL. Treat throughput and
+   memory as measured, the learning outcome as NOT-DETERMINED.
+2b. **NEW — what max_iterations?** The old "5000, do NOT raise" row is withdrawn (§3). What the
+   record now supports: `max_iterations` enters the training code ONLY as the loop counter
+   (`constraint_trpo.py:636-642 set_max_iterations` is log-only; barrier_t/barrier_alpha fixed; no
+   LR/entropy/std scheduler anywhere), so there is no hidden 5000-tuned schedule that extension
+   breaks — the one thing that moves with it is how far DORAEMON expands the box. What the record
+   does NOT support is a specific value: the extension effect's sign flips with `performance_lb`
+   (lb=250 pair degraded, lb=200 pair improved, both at the fair `none` level), every datapoint is
+   on the retired posttam plant, and a naive 7000 lands curriculum saturation on the FINAL boundary
+   with zero margin once counted in ACHIEVED expansions (extend8k: 26 achieved, last at iter 6750)
+   and once mode=-3 attrition (fires 4/4 runs) and the 21st dim's KL dilution are subtracted.
+   Deciding this needs either a bounds widening (blocked, §8 Q4) or an lb adjudication on the
+   current plant.
 3. **obs72 or obs76? — the metrics have now answered: obs72.** Both paired probes are in. The obs76
    teacher is genuinely better (G3), but X1-tailsplit removed the last excuse for the obs76 students
    underperformance — it fixed the delivery defect and the students still gained nothing in control.
