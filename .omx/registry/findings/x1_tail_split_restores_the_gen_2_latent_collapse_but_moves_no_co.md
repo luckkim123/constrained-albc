@@ -2,14 +2,14 @@
 title: "X1 tail-split restores the gen-2 latent collapse but moves NO control metric: latent reconstruction and closed-loop dispersion are decoupled"
 tags: ["obs4", "student", "latent", "delivery", "distillation"]
 created: 2026-08-04T06:37:32.467729
-updated: 2026-08-04T06:37:32.467729
+updated: 2026-08-04T06:43:29.103612
 sources: []
-links: []
+links: ["feedback_derive_a_metrics_healthy_target.md"]
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 80
-qualityReasons: ["no-source-marker"]
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
 status: resolved
 ---
 
@@ -34,3 +34,23 @@ THE FINDING: the intervention that most improved latent reconstruction in this c
 Survival endpoint reads the other way from R2: X1 lands at 1 death of 64 at hard, exactly matching its own obs76 teacher (also 1), while Phase E had 2. Per the pre-registrations own mapping this is the H1 (teacher lineage) side - but the +1.562 pp gain is below the registered floor, so it is directional context, not decision-grade.
 
 VERDICT: MIXED per pre-registration - delivery path owns the latent collapse (H2), teacher lineage owns the death behaviour (H1), and NEITHER owns a control improvement. Adopt tail-split for any future gen-2 student (it is strictly better on latent at no control cost), but it does not make the obs76 line the better product.
+
+---
+
+## Update (2026-08-04T06:43:29.103612)
+
+SELF-CORRECTION, same day (2026-08-04), before this page was used for anything. The DECOUPLED framing above is WRONG and is retracted. The numbers stand; the interpretation does not.
+
+The error was reading a delta in R2 as if it were a delta in latent error. Decomposing X1 vs Phase E at hard:
+  - dR2 = +0.1689, of which 85% is genuine numerator (error) reduction and 15% is denominator drift (sumVar 0.5766 -> 0.5927).
+  - The same change expressed in the units that couple to control is a 6.69% reduction in latent RMSE (sqrt(0.5544/0.6367) = 0.9331). R2 sits near zero here, so a modest error change swings the ratio a long way; the ratio exaggerates the practical size of the improvement.
+
+Now price that against the campaigns OWN measured exchange rate (C1-latsens, probe next-20260729-180058, wiki the_frozen_actor_s_sensitivity_to_latent_error_is_strongly_level): at hard, injecting k=0.5 (half the students existing per-dim latent RMSE, in its own shape) moved att_norm ss_error 0.6496 -> 1.0728, i.e. +0.4232 deg. Scaling linearly in the small-perturbation regime, a 6.69%-equivalent move is worth about 0.057 deg.
+
+The decision floor is 0.10 deg. So a sub-floor control result is EXACTLY what the measured coupling predicts for a latent improvement this size. The null is expected and carries NO information about whether latent quality drives control - it is not a counterexample to the coupling, it is consistent with it. Calling it decoupling inverted the meaning of the campaigns own sensitivity measurement.
+
+WHAT ACTUALLY HOLDS:
+1. Delivery path owns the gen-2 latent collapse (H2 confirmed) - unchanged, the R2/sumMSE evidence is untouched by this correction.
+2. The control null is uninformative, not evidence against the latent lever. To clear the 0.10 deg floor at hard you need roughly a 12% latent-RMSE reduction, and appreciably more to be worth an arm; X1 delivered 6.7%.
+3. The program decision is UNCHANGED - the obs76 line still shows no measurable better student - but it rests on the teacher-advantage-does-not-distill evidence and on X1 vs C3 being a trade (-0.118 deg hard mean REAL against +0.604 deg hard roll dispersion REAL), NOT on any decoupling claim.
+4. Reporting rule this earns: never state a latent result as an R2 delta alone. Convert to RMSE and price it through the measured deg-per-unit sensitivity at that DR level BEFORE claiming a control implication either way. See [[feedback-derive-a-metrics-healthy-target]] for the sibling trap on the same metric.

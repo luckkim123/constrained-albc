@@ -9,7 +9,9 @@ The parallel session's X1-tailsplit run finished and has been jointly re-analyze
 gate verdicts (§2, §8 Q3). Outcome: it **does not overturn** §1 or §3 — it reinforces both. The
 tail-split delivery fixed the gen-2 latent collapse decisively (hard aggregate R2 −0.1044 → +0.0645,
 delta +0.169 vs the pre-registered 0.107 threshold) while moving **no** control metric above its
-registered floor, so the obs76 line still delivers no better student. HANDOFF-DGX.md is therefore
+registered floor — a null the measured actor sensitivity predicts for a move that size (§1), so it
+neither helps nor hurts the obs76 case. What decides it is that the obs76 teacher's real advantage
+does not distill: no student built from it beats the shipped one. HANDOFF-DGX.md is therefore
 technically final; what remains before sending is the user's answers to §8 (Q1 machine
 adoptability, Q2 32768 go/no-go, Q6 purpose string are the launch-blocking three).
 
@@ -35,10 +37,16 @@ The final model CAN be declared today, and it is the **gen-1 pair**:
 reason (negative in-loop latent R2, 10–19x train-to-in-loop MSE gap) has since been *superseded as a
 reason* and replaced by a better one. X1-tailsplit proved the negative R2 was the delivery path, not
 the obs76 teacher, and fixed it (hard aggregate R2 −0.1044 → +0.0645, sumMSE 0.6367 → 0.5544 at
-comparable sumVar). The declaration survives anyway, because the fix bought nothing: **every**
+comparable sumVar). The declaration survives anyway, because the fix bought nothing measurable: **every**
 X1-vs-Phase-E control delta is below its registered floor, and hard roll dispersion drifted the wrong
-way in absolute terms (2.880 → 3.130 deg). Latent-reconstruction quality and closed-loop control are
-decoupled on this axis.
+way in absolute terms (2.880 → 3.130 deg).
+
+Read that null correctly — it is *expected*, not a discovery. The +0.169 R2 swing is only a **6.69%
+latent-RMSE reduction** (R2 sits near zero, so the ratio exaggerates it), and the campaign's own
+measured actor sensitivity at hard (C1-latsens: k=0.5 injection costs +0.4232 deg) prices that at
+about **0.057 deg** — under the 0.10 deg floor. So X1 tells us the delivery path owns the latent
+collapse; it tells us **nothing** about whether latent quality drives control, and it is not evidence
+of decoupling. Clearing the floor at hard would need roughly a 12% latent-RMSE reduction.
 
 The load-bearing fact is now the paired five-arm table (all evals share DR draws post-9eac3a8):
 
@@ -117,7 +125,7 @@ Verdict shape: **the run is `num_envs=32768` and NOTHING else changes.** The rec
 | wandb group/project | — | `teacher_final_dgx32k` (one string, both flags; user confirms) | group = project = purpose. Do NOT reuse `dgx_scale_32768` (throughput pilot, not comparison-bearing) |
 | fault-DR block | Arm-A adopted values | **byte-identical; verify `fault.enable=true` in launched env.yaml** | The missed `fault.enable` diff voided a 4.9 h run once |
 | max_thrust_scale | (0.85, 1.15) | byte-identical; verify live | Sourced band (T200 voltage window); reverting silently is a protocol breach (gate D-a ack rule) |
-| obs width | 72D vs 76D | **72D — settled on the metrics** (only §8 Q3's requirements question is open) | Two paired results, 2026-08-04. G3: the obs76 TEACHER is REAL-better at hard (mean −0.30, dispersion −0.9~−1.2 deg) and the old pitch regression shrank to a marginal soft +0.111 deg. X1-tailsplit: that teacher advantage does NOT distill — after fixing the one delivery defect (latent R2 −0.104 → +0.065), every control delta stayed below floor and dispersion drifted to 3.130 deg, the worst of the five arms. So 76D buys a better teacher and not a better student, and its best student is not board-exportable. Nothing left for the metrics to decide; single-seed screening throughout |
+| obs width | 72D vs 76D | **72D — settled on the metrics** (only §8 Q3's requirements question is open) | Two paired results, 2026-08-04. G3: the obs76 TEACHER is REAL-better at hard (mean −0.30, dispersion −0.9~−1.2 deg) and the old pitch regression shrank to a marginal soft +0.111 deg. X1-tailsplit: that advantage does NOT reach a student — even after fixing the delivery defect, the obs76 line's best student sits at 3.130 deg hard roll dispersion, worst of the five arms, and is not board-exportable. (X1's sub-floor control deltas are NOT the evidence here — a 6.7% latent-RMSE move prices at ~0.057 deg, below floor by construction; the deciding fact is the five-arm table in §1.) So 76D buys a better teacher and not a better student. Single-seed screening throughout |
 | encoder | elu+LayerNorm+softsign, latent 9, priv 28 | unchanged (settled) | `policy_obs_dim=69` in agent.yaml is a static default — runtime truth is env.yaml observation_space |
 | resume | — | fresh (`resume=false`); resume command pre-staged | Hydra `agent.resume` and group-path `load_run` both fail silently; relaunch mints a NEW run id — re-derive from disk, re-key watchers |
 | git provenance | E-int ran dirty:true | **clean tree, tagged branch, sha in manifest** | dirty:true already cost one voided run |
@@ -224,7 +232,8 @@ be scheduled soon, consider sequencing it BEFORE committing the GPU time.
    scale question nothing else answers), but the user should decide it knowing that the measured
    bottleneck is downstream of what the run improves. No probe is designed for the distillation
    gap yet; a capacity arm (GRU256) is the named runner-up family and must pre-register a CONTROL
-   endpoint, since X1 proved latent gains need not transfer.
+   endpoint sized through the measured exchange rate — X1 showed a 6.7% latent-RMSE gain cannot
+   clear the control floor, so an arm must project a latent move of roughly 12%+ to be worth running.
 
 ## 9. Cheap follow-ups (not blocking, recorded so they are not lost)
 
