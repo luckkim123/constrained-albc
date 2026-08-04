@@ -9027,3 +9027,7 @@
 - **Pages:** engine_gap_the_analysis_engine_and_omx_reduce_are_both_unusable_.md
 - **Summary:** updated 'engine-gap: the analysis engine and omx reduce are both unusable on student distillation runs'
 
+## [2026-08-04T04:35:03.203619] add
+- **Pages:** eval_decision_floors_are_the_binding_standard_for_student_arm_co.md
+- **Summary:** updated 'Eval decision floors are the binding standard for student-arm comparisons (0.1 deg / 15 envs)'
+

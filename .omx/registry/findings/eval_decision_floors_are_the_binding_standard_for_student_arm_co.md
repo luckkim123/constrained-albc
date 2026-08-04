@@ -2,7 +2,7 @@
 title: "Eval decision floors are the binding standard for student-arm comparisons (0.1 deg / 15 envs)"
 tags: ["eval", "decision-floor", "screening", "student", "distillation", "albc", "methodology"]
 created: 2026-07-29T07:25:58.151005
-updated: 2026-08-04T04:32:23.386929
+updated: 2026-08-04T04:35:03.203619
 sources: ["diagnose-20260729-161459"]
 links: []
 category: reference
@@ -59,4 +59,36 @@ verdict, which should be re-read wherever one was recorded.
 This is the sixth member of the campaign's denominator/draw family, after the B1b ratio-target
 reversal, the B2 R2-delta decomposition, the WIDE mirror case, 38d979e, and the
 d2-smallest-denominator ranking. Same shape every time: the metric was believed rather than decomposed.
+
+---
+
+## Update (2026-08-04T04:35:03.203619)
+
+## Re-check of the affected prior verdicts (2026-08-04): Phase D SURVIVES
+
+The LIMIT above says every teacher-vs-teacher / teacher-vs-student floor verdict must be re-read.
+Done for the one that carries a recorded conclusion, rather than left as a standing doubt.
+
+Phase D pair (E-int `trpo_eint_s30_rs2350_260727_195102` static_260729_133417 vs the obs76 teacher
+`trpo_obs76fault_s30_260804_043926` static_260804_092723) is ALSO unpaired: 0 of 24 dr_*/fault* keys
+differ at none, 23 of 24 at soft, medium and hard. Same defect. But its conclusions hold under the
+dispersion-aware test, |delta| vs SE = sqrt((std_a^2+std_b^2)/64):
+
+| level | axis | delta (deg) | SE | \|d\|/SE | verdict |
+|:--|:--|--:|--:|--:|:--|
+| soft | pitch | +0.1336 | 0.0419 | 3.19 | REAL, survives |
+| medium | pitch | +0.1204 | 0.0286 | 4.21 | REAL, survives |
+| none | pitch | +0.0612 | 0.0307 | 1.99 | borderline, under 2 |
+| hard | att_norm | +0.0108 | 0.1888 | 0.06 | null -- H1's clause passes by a wider margin than the floor showed |
+| hard | roll | -0.0651 | 0.1720 | 0.38 | null |
+
+So the recorded Phase D result -- obs76 buys the hard-DR corner at the cost of a REAL pitch
+regression at soft/medium outside H1's clauses, and H1 PASSES -- needs no correction. The pitch
+regression is real by both tests, and the H1 hard clause is 0.06 SE from zero, i.e. an even cleaner
+pass than the floor comparison suggested.
+
+The Phase E student pair is where the two tests DISAGREE (floor says two REAL rows at hard, noise
+says 0.51 and 0.59 SE), because that pair's hard dispersion is 3x larger. General shape: the floor
+and the noise test agree when dispersion is ordinary and diverge exactly where a heavy tail makes the
+floor over-sensitive. Run both; when they disagree, the arithmetic wins.
 
