@@ -1,0 +1,195 @@
+# Program: dgx-final-scaleup — DGX GB10 final-teacher scale run (num_envs 32768)
+
+**Status: PENDING USER APPROVAL — this document authorizes NO launch.** Every training launch
+named here (the flagship and every optional probe) is human-gated and fires only on explicit
+user approval.
+
+Created 2026-08-04. Sources: workflow `albc-closeout-dgx-design` (run `wf_8ef2309d-9a8`,
+7 evidence agents + opus synthesis + 2 adversarial verifiers; 21 verifier findings folded in),
+Phase E report `student_distill_obs76/trpo_sdobs76_c3_gruselect_s30_260804_124951/analysis/diagnose-20260804-132500/report.md`,
+omx wiki, and direct `doraemon_state.pt` measurements taken during the sweep. Numbers below
+trace to those sources; nothing is a round-number guess.
+
+---
+
+## 1. Final-model declaration (as of 2026-08-04)
+
+The final model CAN be declared today, and it is the **gen-1 pair**:
+
+| Role | Run | Notes |
+|:--|:--|:--|
+| Teacher | `trpo_eint_s30_rs2350_260727_195102` (teacher_baseline_buoyfix) | 72D obs, fault-DR Arm-A, max_thrust (0.85,1.15); E-int H1 PASS 2026-07-28 |
+| Student | `trpo_sdeint_c3_gruselect_s30_260729_193732` (student_distill_eint) | C3 = GRU+select, lambda=1.0, extra_obs_dim=0; adopted 2026-08-03 |
+| Deploy pack | `pack_eint_c3_gru_260803_144925` | on disk, parity closed at 2f057b9 |
+
+**gen-2 (obs76) does not supersede it.** The decision-bearing reason is the within-run latent
+measurement, which needs no decision floor: in-loop aggregate latent R2 is negative (hard −0.078
+is the decision-grade value; none/soft/medium are directionally consistent but
+denominator-collapsed) and the train-to-in-loop latent MSE gap is 10–19x — covariate shift
+survives obs76. Secondary observations (roll dispersion 3.06x at hard, 2/64 env deaths) point the
+same way but sit in the "no registered floor" bucket until G2 below closes.
+
+Conditions attached to the declaration:
+
+1. **C3's teacher-relative "win" language must be downgraded** (X9): the Phase E report proved
+   teacher-vs-student evals share DR draws only at `none`; recomputed per-pair, C3-vs-E-int at
+   hard is |d|/SE = 0.91 (roll) and 0.83 (att_norm) — under 1 SE, so the adoption is a defensible
+   preference, not a decision-grade measurement. (C3-vs-A0g arm choice is unaffected — report.md
+   already records all four deltas below floors.)
+2. **Everything is single-seed (seed 30) screening** — never a paper number until the deferred
+   4-arm x 3-seed ablation (X35) runs.
+3. **Machine adoptability**: the recorded +109% same-config same-seed cross-machine isolation
+   term means a DGX-trained teacher is, under the standing rule, NOT adoptable as the shipped
+   final model. Unless the user overturns that rule, the 32768 run is scale exploration
+   (see §8 Q1).
+
+## 2. Pre-launch gate (blocking; zero or near-zero GPU)
+
+| Gate | What | Cost |
+|:--|:--|:--|
+| G1 (X2) | **Eval pairing fix**: re-run reference evals (E-int, obs76fault, C3, gen-2 student) with one shared DR source: `eval.py static --doraemon-dr-from <one fixed run> --seed 42`; assert `dr_*`/`fault*` arrays elementwise identical across runs before reading any delta | 4 evals, minutes each |
+| G2 (X3) | **Dispersion floors**: derive and register decision floors for `ss_error_std`, CV, `survival_pct` from the existing 4-run x 4-level corpus (same derivation route as the 0.10 deg ss_error floor) | zero GPU |
+| G3 (X6) | **Obs-width paired re-eval**: E-int vs obs76fault under G1 protocol; re-test the soft/medium pitch regression with SE(delta) — settles obs72-vs-obs76 for the flagship | 2 evals |
+| G4 (X8 widened) | **metrics.yaml token audit**: six drifted tokens (lines 37/38/39/40/64/92 + group lists at 113/116/118, e.g. `doraemon_success_rate` → `DORAEMON/success_rate`); verify every declared token exists in a real event file | 1 edit pass |
+
+Optional user-gated: **X1 3-seed DGX anchor** (4096 x 5000, seeds 30/31/32, 22.5 h) — required
+ONLY if the user overturns the machine rule and wants a DGX-trained model adoptable; a corrected-plant
+EVAL seed band already exists (56.0% p2p), what is missing is a corrected-plant TRAINED band on DGX.
+
+X4 (curriculum probe) and X5 (minibatch probe) are FOLDED into the flagship's iteration-500 abort
+gate (§6) instead of running as separate probes — saves 8.6 h; running them separately first
+remains a valid conservative option.
+
+## 3. Flagship config — every knob, current → recommended
+
+Verdict shape: **the run is `num_envs=32768` and NOTHING else changes.** The record forbids every
+"scale-up companion" change that intuition suggests.
+
+| Knob | Current | Flagship | Why (evidence-backed) |
+|:--|:--|:--|:--|
+| num_envs | 4096 | **32768** | Fits: peak 83,170 of 124,610 MiB (~41.4 GB spare; source carries a 1,000 MiB internal inconsistency), 34.73 s/iter measured. Honest framing: curriculum-NEUTRAL by recorded code reasoning (step_interval is iteration-clocked); benefit = gradient-noise reduction, unmeasured; Arm N (8192) measured NULL at fixed box. Go/no-go is a resource call (§8 Q2). Sub-linear: 8x batch → 1.25x samples/s |
+| max_iterations | 5000 | **5000 — do NOT raise** | Extension at fixed box net-negative twice (extend8k, moreiters); measured now: at 5000 iters the 17 midpoint dims end a≈b≈2.0–2.6, box NOT saturated, so extension buys the extend8k pathology, not progress. Raising is only coherent with a wider box, and widening is blocked at recalibration Step 1 (no measured hardware variation source) |
+| num_steps_per_env | 64 | 64 | Above the ~25-step floor (Rudin et al. 2021); GAE horizon ~17 steps. Cutting to 32 halves wall-clock but is an unmeasured second variable — probe first if wall-clock ever binds |
+| step_interval | 250 | **250 — iteration-clocked, NOT sample-clocked** | Sample-clocking (÷8 → 31) gives budget 19.3 vs the box's saturation at 3.12 → box exhausts ~iter 800 then freezes 4200 iters in Beta(1,1) — worse than extend8k. Budget is calibrated to the CONFIG BOX, the binding resource |
+| kl_ub (DORAEMON) | 0.12 | **0.12** | kl_ub-up measured known-bad (E1: DR 3.6x wider but attitude worse everywhere). kl_step lands at cap on every accepted update → kl_ub IS the pacing constraint. Budget: reachable 20 x 0.12 = 2.40; achieved band at 5000 iters is 2.16–2.28 (18–19 updates, success-gated) — read the saturation guard against ACHIEVED |
+| performance_lb | 250.0 | **250.0** | Byte-identity keeps the run comparable to both existing teachers (the only way the result is readable). Measured p25 from doraemon_state.pt (E-int 255.8 / obs76fault 260.1) is recorded HERE as the candidate for the NEXT purpose, where lb re-derivation belongs (recalibration Step 3, with box widening). Expectation at lb=250: success ≈ 0.815 (obs72 plant); human-look triggers: success > 0.95 sustained (inert-gate class) or < alpha 0.5 (infeasible) |
+| alpha | 0.5 | 0.5 | E5 measured alpha-up as near-null; feasibility floor, not an expansion lever |
+| DR bounds (17 midpoint dims) | HardDR box | **byte-identical — do NOT widen** | Recalibration protocol: bounds must come from measured hardware variation (blocked: no load cell / TAM arm source); box is not binding at 5000 iters (a≈b≈2.0–2.6); widening also silently moves encoder input scaling (bounds auto-derived from live DR cfg) |
+| Nominal-0 dims (ocean, payload_cog_xy, obs_noise, fault_severity) | clamped Beta(1,~8-10) | **leave clamped** | Budget-conditional: at 5000 iters they reach ~10% of range; extend8k record shows three reach uniform at 8000. The one measured unclamp (E-ftc1) was REJECTED — its 2.50x endpoint gain made m4-dead rejection 2.9–5.5x worse. fault_severity stays clamped |
+| buffer_size / min_episodes | 2000 / 200 | 2000 / 200 | Estimator n is CAPACITY-bound at 2000 → 32768 envs give NO variance reduction on success_rate. What changes: buffer temporal window narrows ~11 → ~1.4 iters → fresher log_probs → expect `DORAEMON/ess_ratio` to RISE |
+| max_kl (TRPO) | 0.005 | 0.005 | No literature supports KL-trust-region retune under batch growth (McCandlish et al. excludes trust-region methods). Less-noisy KL estimate → accepted steps land nearer cap; watch `Loss/kl` + `Policy/line_search_success`, don't pre-tune |
+| cg_iters / cg_damping / backtracks | 10 / 0.1 / 10 | unchanged | No num_envs term; dominant cost in the 34.73 s/iter figure — changing them invalidates the wall-clock estimate |
+| num_mini_batches / epochs | 4 / 5 | **4 / 5 — unchanged** | Verifier-corrected: raising to 32 was self-contradictory. At 32768 the critic gets 8x data with the same 20 Adam steps and LARGER (524,288) better-conditioned minibatches — that is not starvation. If more critic steps are ever wanted, describe it as such and probe (X5) first |
+| value_lr / max_grad_norm | 1e-3 / 1.0 | unchanged | No actor LR exists (natural gradient + line search); sqrt(8) value-lr scaling is defensible but unmeasured — not on a flagship |
+| entropy_coef_per_dim / min_std / init_noise_std | per-dim cfg | unchanged | A2/A3 tested exactly these → DISCARD (5/5 zero-adoption sweep); Andrychowicz et al. 2020 agrees for trust-region methods |
+| save_interval | 50 | 50 (~29 min/ckpt) | Crash costs ≤ 29 min of 48.2 h; E-int itself exists only because its predecessor crashed at iter ~2390 and resumed. PRE-STAGE the resume command (§5) |
+| seed | 30 | 30 single | Screening protocol; multi-seed only if user overturns machine rule (X1) |
+| wandb group/project | — | `teacher_final_dgx32k` (one string, both flags; user confirms) | group = project = purpose. Do NOT reuse `dgx_scale_32768` (throughput pilot, not comparison-bearing) |
+| fault-DR block | Arm-A adopted values | **byte-identical; verify `fault.enable=true` in launched env.yaml** | The missed `fault.enable` diff voided a 4.9 h run once |
+| max_thrust_scale | (0.85, 1.15) | byte-identical; verify live | Sourced band (T200 voltage window); reverting silently is a protocol breach (gate D-a ack rule) |
+| obs width | 72D vs 76D | **72D** (default; G3 + §8 Q3 can change it) | Phase E: obs76 did not close covariate shift; teacher-side obs76 carries an unresolved soft/medium pitch regression, no seed replicate |
+| encoder | elu+LayerNorm+softsign, latent 9, priv 28 | unchanged (settled) | `policy_obs_dim=69` in agent.yaml is a static default — runtime truth is env.yaml observation_space |
+| resume | — | fresh (`resume=false`); resume command pre-staged | Hydra `agent.resume` and group-path `load_run` both fail silently; relaunch mints a NEW run id — re-derive from disk, re-key watchers |
+| git provenance | E-int ran dirty:true | **clean tree, tagged branch, sha in manifest** | dirty:true already cost one voided run |
+
+## 4. Wall-clock and cost
+
+5000 x 34.73 s = **48.2 h** flagship. Blocking gate G1–G4 is near-zero GPU. Optional X1 anchor
+= 22.5 h. Sub-linear scaling means 32768 buys 1.25x samples/s over 4096 for 8x memory — the run's
+value is the 8x per-update batch, not throughput.
+
+## 5. Launch checklist (DGX side — expanded in HANDOFF-DGX.md)
+
+1. Clean tree on the launch branch, baseline tag, record sha.
+2. Verify plant vs reference: diff launched `env.yaml` against E-int's recorded env.yaml
+   (filtered, full read) — `fault.enable`, `max_thrust_scale`, obs width, DR box.
+3. `TERM=xterm ~/workspace/isaaclab/isaaclab.sh -p` launcher; no CUDA_VISIBLE_DEVICES (single GB10);
+   memory via `free -m` (nvidia-smi memory unsupported on GB10).
+4. run_id via make_run_id (tag mandatory, label-before-date); `--run_group` = `--log_project_name`
+   = purpose string.
+5. Watcher discipline: poll the PID (no self-matching pgrep), scope NaN grep to metric lines.
+6. After finish: `eval.py static --doraemon-dr-from <reference> --seed 42`, no `--output_dir`,
+   checkpoint via the `train` symlink path.
+
+## 6. Monitoring + iteration-500 abort gate (verified TB tag names)
+
+Verified against a real teacher event file (obs76fault): `DORAEMON/success_rate`,
+`DORAEMON/kl_step`, `DORAEMON/mode`, `DORAEMON/ess_ratio`, `Policy/entropy`,
+`Policy/mean_noise_std`, `Loss/kl`, `Policy/line_search_success`, `Constraint/barrier_penalty`,
+`Grad/sigma_step`, `Grad/enc_step`, `Loss/value_function`, `Loss/cost_value`.
+
+Abort at iteration ~500 (2 DORAEMON updates seen) if ANY of:
+- `DORAEMON/kl_step` not at cap 0.12 on accepted updates AND `DORAEMON/mode` <= -2 (stall class);
+- `DORAEMON/success_rate` pinned > 0.95 (inert gate) or < 0.5 (infeasible);
+- any DR dim at Beta(1,1) already (premature saturation — budget arithmetic broken);
+- sustained s/iter > 40 (wall-clock model broken) or `free -m` used > ~100 GB (headroom gone);
+- NaN in metric lines.
+This gate absorbs X4 (curriculum-at-scale) and X5 (critic-scaling) as live checks.
+
+## 7. Backlog disposition (12 needs-experiment + 7 needs-apply-before-retrain, 2026-08-04)
+
+needs-experiment:
+
+| Lead (wiki slug prefix) | Disposition |
+|:--|:--|
+| obs4_student_extra_observation_interface | CLOSE-AND-UPDATE: blocked-on satisfied — Phase E ran 2026-08-04, report diagnose-20260804-132500; wiki status update due (X18 ext.) |
+| obs76_gen_2_student_reproduces (new 2026-08-04) | CARRIED by G2 (dispersion floors) + §8 Q3 (adoption decision) |
+| c4b_dagger_correction | REOPENED-CHEAP (X11): DAgger correction on gen-1 student, DGX-hosted, hours with cuDNN libpath fix |
+| curriculum_recalibration_protocol | DEFER (X29): blocked on bounds sourcing (X21); governs the NEXT purpose's lb/budget re-derivation, not this run |
+| experiment_idea_latency_transport_delay | DEFER (X30): off-DORAEMON blocker unchanged; priority raised by measured 25 Hz bus |
+| hydrorc_is_half_recentered | DEFER (X28): probe design unwritten |
+| joint1_stage_1 | DEFER (X31): needs unlimited-joint1 checkpoint |
+| roll_transient_is_worst_at_none | DEFER (X34): sequenced after X35 (paper-phase 3-seed ablation); ordering question still with user |
+| reward_sigma_integral (R6) | DEFER (X33): batch-pass parked per 2026-07-20 decision |
+| stonefish_yaw_gap | DEFER (X36): hardware bench (XW540 step + T200 curve) |
+| thruster_nonlinear_curve | DEFER (X37): T200 bench; keep-off decision stands |
+| thruster_static_gain | DEFER (X38): same T200 bench decides alignment side |
+
+needs-apply-before-retrain (all six plant items stay deferred iff this run continues the CURRENT
+plant — §8 Q4; the seventh, metrics.yaml, is G4):
+
+| Item | Disposition for THIS run |
+|:--|:--|
+| buoy_added_mass (guard-structure decision) | DEFER-to-plant-v2; USER-DECISION on sizing route |
+| hydrorc_016d1b1 retire / HydroRC-v2 | DEFER-to-plant-v2 (re-derivation per axis required) |
+| imu_45deg_offset | DEFER (user-deferred to robot bring-up, unchanged) |
+| metrics_yaml_declares_doraemon_success_rate | **G4 — apply now** (widened to 6-token audit) |
+| sim_hydro_nominal (TAM moment-arm band) | DEFER-to-plant-v2; ELEVATED STAKES at 48 h scale (single silent bias axis with no DR band) — named in launch ack |
+| stonefish_rotational_drag | DEFER (Stonefish-side, no Isaac impact) |
+| tam_vertical_single_motor (m4 remeasure) | DEFER-to-plant-v2; ELEVATED STAKES (structural allocation error no DR band covers) — named in launch ack |
+
+Elevated-stakes warning (Q5): a plant change obsoletes every student distilled from the affected
+teacher. At screening scale that sunk cost was hours; at 48 h it is days. If the B1/TAM bench can
+be scheduled soon, consider sequencing it BEFORE committing the GPU time.
+
+## 8. Open questions for the user (decisions this program cannot make)
+
+1. **Is a DGX-trained teacher adoptable as THE final model at all?** The +109% cross-machine term
+   currently forbids it → the 32768 run is scale exploration. Overturning the rule requires the
+   X1 anchor (22.5 h) to have any denominator.
+2. **Still want 32768?** 8x memory for 1.25x samples/s, 48.2 h, vs 3x4096 seeds at 22.5 h (a band,
+   not a point), vs ~24 h at 16384 (unmeasured interpolation). Resource call.
+3. **obs72 or obs76?** Recommendation obs72 (Phase E verdict + pitch regression); deployability of
+   the 4 real-sensor channels is a requirements decision the metrics do not settle. G3 firms the
+   pitch question cheaply.
+4. **Current plant or plant-v2 batch?** Current plant → six deferred items stay deferred (as obs4
+   program decided). Plant-v2 → T200 bench + XW540 bench + buoy guard decision must close first.
+5. **Schedule the B1/TAM bench before committing 48 h?** See elevated-stakes note in §7.
+6. **Purpose string** `teacher_final_dgx32k` — confirm before launch (fixed for every run of the
+   purpose).
+7. **Re-test C3's adoption under SE statistics (X9) before it is written up?** Zero GPU; changes
+   the claim's strength, not the shipped artifact.
+
+## 9. Cheap follow-ups (not blocking, recorded so they are not lost)
+
+X10 encoder sweep on both teachers (Grad/enc_step −36% question) · X11 DAgger-correction re-open ·
+X12 per-env ss stats engine gap · X13 analyze_training student namespace · X14 wandb alert arming ·
+X15 hard-survival root cause (2 dead envs, npz parse) · X16 DGX cuDNN libpath verify ·
+X18 plan-doc/wiki status sync (incl. the two obs4-program leads) · X19 rsl-rl source verify ·
+X40 gen-2 deploy pack export (only if gen-2 ever adopted).
+
+## 10. Handoff
+
+`HANDOFF-DGX.md` (beside this file) is the paste-as-is prompt for the DGX-side session. It embeds
+the recommended defaults (32768 / obs72 / current plant / purpose `teacher_final_dgx32k` / seed 30)
+— review §8 answers first, then paste.
