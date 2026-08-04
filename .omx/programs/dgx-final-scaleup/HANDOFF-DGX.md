@@ -95,9 +95,17 @@ TERM=xterm ~/workspace/isaaclab/isaaclab.sh -p scripts/train.py \
   --num_envs 32768 --max_iterations 5000 --headless \
   --run_group teacher_final_dgx32k \
   --logger wandb --log_project_name teacher_final_dgx32k \
+  env.fault.enable=True \
   agent.run_name=dgx32k_s30
 ```
 
+- **`env.fault.enable=True` is REQUIRED and is not optional polish.** `FaultInjectionCfg.enable`
+  defaults to `False` in code (`envs/main/config.py`, `ALBCEnvCfg.fault = FaultInjectionCfg()`), and
+  `train.py` exposes no fault flag — so without this Hydra override the env comes up fault-DISABLED
+  and fails the `fault.enable | true` row of the Step 1 table. The E-int final teacher and the
+  Phase D obs76 teacher were both launched with exactly this override; omitting it is the same diff
+  that voided a 4.9 h run and made `trpo_obs76_s30_260803_233239` VOID. Step 1 will catch it, but
+  only after the env has been built — verify the dumped `env.yaml` rather than assuming.
 - run_id is minted at train time by make_run_id (`trpo_dgx32k_s30_<ts>`); record the actual id
   from the created log dir immediately — every watcher/report keys on it.
 - `--run_group` and `--log_project_name` carry the SAME string (group = wandb project = purpose).
