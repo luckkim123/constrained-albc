@@ -1,6 +1,6 @@
 # Wiki Index
 
-> 405 pages | Last updated: 2026-08-04T03:59:06.470804
+> 406 pages | Last updated: 2026-08-04T04:07:37.712116
 
 ## convention
 
@@ -56,6 +56,7 @@
 - [performance_lb recon needs ZERO new rollouts: doraemon_state.pt already carries buffer_returns (the 260608 p25 method)](performance_lb_recon_needs_zero_new_rollouts_doraemon_state_pt_a.md) - # performance_lb recon needs ZERO new rollouts: doraemon_state.pt already car...
 - [report completeness gate must run BEFORE writing, not after](report_completeness_gate_must_run_before_writing_not_after.md) - # report completeness gate must run BEFORE writing, not after
 - [static-eval plots regenerate sim-free from npz (reconstruct segment metadata)](static_eval_plots_regenerate_sim_free_from_npz_reconstruct_segme.md) - # static-eval plots regenerate sim-free from npz (reconstruct segment metadata)
+- [Teacher and student checkpoints live at DIFFERENT depths under the run tree: teacher writes train/model_N.pt, train_student.py writes train/models/student_N.pt -- a completion watcher copied from the teacher polls a path that will never exist](teacher_and_student_checkpoints_live_at_different_depths_under_t.md) - # Teacher and student checkpoints live at DIFFERENT depths under the run tree...
 - [train.py --max_iterations under --resume is iters-FROM-resume, not an absolute target (e3 got +10000 not +5000)](train_py_max_iterations_under_resume_is_iters_from_resume_not_an.md) - # train.py --max_iterations under --resume is iters-FROM-resume, not an absol...
 - [training diagnosis decision tree](training_diagnosis_decision_tree.md) - # training diagnosis decision tree
 - [Training loss_latent is NOT a valid corroborator of an eval-side latent result: the widened-encoder arm moved them in opposite directions](training_loss_latent_is_not_a_valid_corroborator_of_an_eval_side.md) - # Training loss_latent is NOT a valid corroborator of an eval-side latent res...

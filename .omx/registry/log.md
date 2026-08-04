@@ -8883,3 +8883,7 @@
 - **Pages:** stonefish_role_narrowed_to_integration_smoke_bench_ratified_2026.md
 - **Summary:** updated "Stonefish role narrowed to integration smoke bench (ratified 2026-08-03): no more absolute-performance or coefficient verdicts; real-robot anchors take priority; retrain principle = widen DR by measured uncertainty, never move coefficients to a simulator's value"
 
+## [2026-08-04T04:07:37.712116] add
+- **Pages:** teacher_and_student_checkpoints_live_at_different_depths_under_t.md
+- **Summary:** created 'Teacher and student checkpoints live at DIFFERENT depths under the run tree: teacher writes train/model_N.pt, train_student.py writes train/models/student_N.pt -- a completion watcher copied from the teacher polls a path that will never exist'
+
