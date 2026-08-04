@@ -2,15 +2,15 @@
 title: "HydroRC IS half-recentered (buoy/link3 nominals untouched) -- but the '10x under added mass' framing dies to the effective-vs-effective correction (~2.4x); the lead survives on a different mechanism: HydroRC drops hull yaw damping 45x, so unmeasured analytical buoy damping becomes 1.8x hull's and DOMINATES the retrained plant"
 tags: ["stonefish", "hydrodynamics", "buoy", "link3", "added-mass", "domain-randomization", "sim-to-real", "hydro-recenter", "yaw", "system-id", "envs-main", "guard-policy", "handoff"]
 created: 2026-07-27T11:28:30.027308
-updated: 2026-07-29T08:50:56.367055
+updated: 2026-08-04T16:49:24.840526
 sources: ["marinelab:exp/hydro-recenter@016d1b1", "marinelab@f45d612", "next-20260727-174905", "code-review-20260727", "diagnose-20260728-081953", "code-verify-20260729", "handoff-stonefish-servo-pc-20260729"]
 links: ["stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md", "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md", "stonefish_base_hull_effective_hydro_measured_2026_07_27_damping.md"]
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
-status: needs-experiment
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
+status: resolved
 blocked-on: "probe design undecided (link3 has no thruster, Stonefish has no external-wrench service); and per rebuttal 2 the deliverable may be a guard-structure decision rather than a measured coefficient"
 ---
 
@@ -148,3 +148,55 @@ ONE MORE ARGUMENT FOR REBUTTAL 2, FROM THE CONFIG ITSELF. The cap is not a subtl
 UNRESOLVED MINOR. The config comment and this pages rebuttal disagree on the theory number (2.67 vs 2.01 kg) because they use Ca 1.0 vs the Ca 0.75 short-cylinder value the same docstring cites. The conclusion is unaffected at either value; settle it only if the theory number is ever needed on its own.
 
 DISPATCHED 2026-07-29. A handoff to the Stonefish session asks the three questions that actually gate the measurement route -- can link3/ABPC be excited independently at all, is adding a force-application path cheap, and does the Stonefish buoy model even carry a separate added-mass term -- rather than commissioning a measurement. A no on the first two CLOSES the measurement route and converts this lead into an Isaac-side guard decision. Handoff at /workspace/.sp/plans/2026-07-29-handoff-stonefish-servo-pc.md (scratch, gitignored). It is bundled with the servo-gain fix because the servo chatter contaminates any arm-involving Stonefish measurement, and decay/oscillation measurement is exactly the class a high-frequency limit cycle corrupts.
+
+---
+
+## Update (2026-08-04T16:49:24.840526)
+
+## VERDICT 2026-08-05 -- RESOLVED (backlog-closeout program)
+
+This lead survived its own correction on a specific mechanism: HydroRC drops hull yaw damping
+45x, so the unmeasured analytical buoy damping would become about 1.8x the hull's and would
+DOMINATE the retrained plant. That mechanism is now answered on two independent grounds.
+
+**It is conditional on a plant we are not building.** The 45x drop comes from 016d1b1, which is
+not on marinelab main and is retired rather than rebuilt (see the hydrorc_016d1b1 page, resolved
+the same day). Without that commit the hull keeps its analytical yaw damping and the buoy never
+becomes dominant.
+
+**And the dominance would not matter even if it happened.** A hull-yaw-damping bracket directly
+perturbs the hull-versus-buoy balance this lead is about, and it was swept 100x -- more than
+twice the 45x the mechanism invokes -- in both directions.
+
+The bracket, run 2026-08-05 on the E-int teacher (model_4999.pt) against its own baseline eval
+static_260804_203719 -- same GPU, same branch, same DORAEMON anchor:
+
+| point | hull yaw damping | result |
+|:--|:--|:--|
+| baseline | linear 0.15, quadratic 0.5 | reference |
+| low | linear 0.015, quadratic 0.05 | ZERO REAL flags; survival unchanged at all four levels |
+| high | linear 1.5, quadratic 5.0 | ZERO REAL flags; survival unchanged at all four levels |
+
+Across a **100x span** nothing clears a decision floor on any field, axis or DR level. The
+largest movement anywhere is ss_error_std +0.169 deg at hard against a 0.60 deg floor, and the
+hard-level ss_error actually improves slightly (-0.058 deg) with more damping. Both ends are
+sub-floor.
+
+The intervention is verified to have bitten rather than assumed to have: `dr_lin_damp_5` records
+0.1597 at baseline and 0.01597 in the low arm, exactly the intended 10x, and the tool's own
+BITE-CHECK passes on all four levels. It is also verified to be surgical: 23 of the 24 dr+fault
+keys are elementwise identical between conditions, and the single differing key is the one that
+was supposed to differ. This matters here because a previous eval-side injector in this project
+ran happily and changed nothing, and the silent no-op was caught only by a byte-identical
+comparison.
+
+**Verdict**: RESOLVED. The lead's probe-design blocker also dissolved independently -- it was
+waiting on a Stonefish-side route (no link3, no external-wrench service), and Stonefish was
+dropped entirely by user decision on 2026-08-05. The buoy half of this page's concern is
+handled on the buoy_added_mass page, which was resolved by measurement the same day and found
+a numerical stability cliff rather than a coefficient error. Deliberately not duplicated here
+so that question keeps one home.
+
+Recorded by the backlog-closeout program (.omx/programs/backlog-closeout/PLAN.md section 3).
+Status flipped to resolved; no experiment is scheduled for this lead.
+

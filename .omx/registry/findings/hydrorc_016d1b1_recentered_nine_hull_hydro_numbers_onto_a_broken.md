@@ -2,15 +2,15 @@
 title: "HydroRC 016d1b1 recentered nine hull hydro numbers onto a broken engine approximation, and the damage concentrates on yaw -- the axis where the 2026-07-28 paired gate failed; retire the commit rather than rebuild it minus one line"
 tags: ["stonefish", "hydrodynamics", "added-mass", "damping", "hydro-recenter", "yaw", "cylinder-approximation", "system-id", "sim-to-real", "plant-change", "envs-main", "marinelab"]
 created: 2026-07-30T02:28:59.725325
-updated: 2026-07-30T02:28:59.725325
+updated: 2026-08-04T16:49:24.714620
 sources: ["marinelab:exp/hydro-recenter@016d1b1", "marinelab@f45d612", "stonefish-reply-20260730", "code-verify-20260730", "handoff-stonefish-servo-pc-20260729", "diagnose-20260728-081953"]
 links: []
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
-status: needs-apply-before-retrain
+qualityScore: 90
+qualityReasons: ["generic-only-tags"]
+status: resolved
 blocked-on: "each 016d1b1 damping axis needs re-derivation from geometry or literature before HydroRC-v2 is proposed; and the rotational-drag question to the Stonefish side decides whether yaw 0.011 is structurally near-zero"
 ---
 
@@ -125,4 +125,62 @@ HIGH on the Cd constant being 2.34x below the analytical Cd_cross given their st
 MEDIUM on the specific yaw mechanism (cylinder of revolution has no axial-rotation drag), which is a
 deduction from their premises and not from Stonefish source this session read -- the open question
 above is what would settle it]
+
+---
+
+## Update (2026-08-04T16:49:24.714620)
+
+## VERDICT 2026-08-05 -- RESOLVED (backlog-closeout program)
+
+Two things settle this without the per-axis re-derivation the lead was waiting on.
+
+**First, the damage never landed.** Commit 016d1b1 is not on marinelab main -- it exists only
+on branch `exp/hydro-recenter`, and `git merge-base --is-ancestor 016d1b1 HEAD` is false. The
+shipped plant still carries the pre-recenter analytical values (albc.py:56/60: linear yaw 0.15,
+quadratic yaw 0.5). The yaw 0.011 that this page identifies as the concentrated damage exists
+only inside the rejected commit. This page's own recommendation was to retire that commit
+rather than rebuild it minus one line; retiring it is already the de-facto state, and it stays
+that way.
+
+**Second, the remaining question is now measured.** The open item was whether every 016d1b1
+damping axis must be re-derived from geometry or literature before a HydroRC-v2 could be
+proposed. That is only worth doing if hull damping is a lever the policy can feel.
+
+The bracket, run 2026-08-05 on the E-int teacher (model_4999.pt) against its own baseline eval
+static_260804_203719 -- same GPU, same branch, same DORAEMON anchor:
+
+| point | hull yaw damping | result |
+|:--|:--|:--|
+| baseline | linear 0.15, quadratic 0.5 | reference |
+| low | linear 0.015, quadratic 0.05 | ZERO REAL flags; survival unchanged at all four levels |
+| high | linear 1.5, quadratic 5.0 | ZERO REAL flags; survival unchanged at all four levels |
+
+Across a **100x span** nothing clears a decision floor on any field, axis or DR level. The
+largest movement anywhere is ss_error_std +0.169 deg at hard against a 0.60 deg floor, and the
+hard-level ss_error actually improves slightly (-0.058 deg) with more damping. Both ends are
+sub-floor.
+
+The intervention is verified to have bitten rather than assumed to have: `dr_lin_damp_5` records
+0.1597 at baseline and 0.01597 in the low arm, exactly the intended 10x, and the tool's own
+BITE-CHECK passes on all four levels. It is also verified to be surgical: 23 of the 24 dr+fault
+keys are elementwise identical between conditions, and the single differing key is the one that
+was supposed to differ. This matters here because a previous eval-side injector in this project
+ran happily and changed nothing, and the silent no-op was caught only by a byte-identical
+comparison.
+
+**Verdict**: the plant is insensitive to hull yaw damping across two orders of magnitude, so a
+per-axis re-derivation is not justified by any control benefit that could follow from it. No
+HydroRC-v2 is proposed. The other half of this page's blocker -- the rotational-drag question
+to the Stonefish side, which was to decide whether yaw 0.011 is structurally near-zero -- died
+with the 2026-08-05 user decision to drop Stonefish entirely, and it is moot regardless now
+that the axis is measured not to matter.
+
+**Scope, stated honestly**: this measures how much a TRAINED policy's control performance
+depends on hull yaw damping at eval time. It does not measure whether training on a different
+damping would produce a different policy. That is a weaker claim than 'hull yaw damping is
+irrelevant', and it is the claim being made. It is however exactly the claim the open item
+needed, because the item was about whether to spend effort re-deriving coefficients.
+
+Recorded by the backlog-closeout program (.omx/programs/backlog-closeout/PLAN.md section 3).
+Status flipped to resolved; no experiment is scheduled for this lead.
 

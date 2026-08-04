@@ -9851,3 +9851,11 @@
 - **Pages:** eval_py_rebuilds_env_cfg_from_hydra_defaults_so_obs_widening_fla.md
 - **Summary:** created 'eval.py rebuilds env cfg from Hydra defaults, so obs-widening flags must be re-passed at eval time'
 
+## [2026-08-04T16:49:24.714620] add
+- **Pages:** hydrorc_016d1b1_recentered_nine_hull_hydro_numbers_onto_a_broken.md
+- **Summary:** updated 'HydroRC 016d1b1 recentered nine hull hydro numbers onto a broken engine approximation, and the damage concentrates on yaw -- the axis where the 2026-07-28 paired gate failed; retire the commit rather than rebuild it minus one line'
+
+## [2026-08-04T16:49:24.840526] add
+- **Pages:** hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md
+- **Summary:** updated "HydroRC IS half-recentered (buoy/link3 nominals untouched) -- but the '10x under added mass' framing dies to the effective-vs-effective correction (~2.4x); the lead survives on a different mechanism: HydroRC drops hull yaw damping 45x, so unmeasured analytical buoy damping becomes 1.8x hull's and DOMINATES the retrained plant"
+
