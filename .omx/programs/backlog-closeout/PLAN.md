@@ -418,6 +418,34 @@ way. The controlled, quotable part of this sweep is only E-int's own within-run 
 `none`.
 
 
+**2026-08-05 02:50 — the latency lead is CLOSED-OUT-OF-SCOPE for gen-1, carried as a gen-2
+requirement. Backlog 3 → 2.** The sweep finished clean: survival 100 % at every level and every
+delay point, so nothing is contaminated. E-int's paired `none` response is 2.55x / 6.46x / 12.24x on
+`att_norm` `ss_error` and 4.84x / 11.54x / 20.55x on roll `ss_jitter` at 20 / 40 / 60 ms. The
+measured bus staleness (0-40 ms on attitude) brackets d1-d2, where this teacher's nominal attitude
+error goes **0.50 → 3.23 deg**. So the user's 2026-07-20 "latency belongs in the final config"
+decision is now confirmed on the actual final teacher rather than on the superseded anchor.
+
+The training half is deliberately not run, and the reason is scheduling plus interpretability, not
+disinterest. BLOCKER 2 admits exactly two fixes: a DORAEMON `_PARAM_DEFS` dim, which is a curriculum
+engine change that would void E-int as the DGX baseline and could not be validated before the
+deadline — the same objection that killed the nominal-corner floor — or a MEASURED `performance_lb`
+recalibration, which needs a pilot run plus the real run, i.e. two of the three GPU0 slots, all of
+which are committed to Runs A and B/C. A naive delay-ON run without either fix reproduces
+`trpo_e1_latdr` exactly and answers nothing; running it merely to have run something would have been
+the worse call. The recipe is written into the page so a gen-2 session starts from it.
+
+Two things were added to the page beyond the verdict. The **Z4 correction** (its `hard` column is
+unpaired; its `none` column stands), and the **Hydra-override trap** pointing at the eval.py page.
+
+Artifact hygiene, because these three eval dirs were unidentifiable: `--control-delay` is an argparse
+flag, so it leaves the Hydra override record EMPTY — and an empty override list was already the
+signature of the failed Koopman eval, so that decoder now means two different things. Each sweep dir
+now carries its own `eval.log` (4 injection markers, one per level) and
+`<E-int run>/eval/README.md` is a full index of all twelve evals with both decoders and the pairing
+matrix.
+
+
 ## 8. STATE AT LAST COMPACTION — read this first on resume (overwrite each time)
 
 **Written 2026-08-05 02:35 KST.** Everything below is live at that moment. Re-derive from disk
