@@ -27,7 +27,7 @@ from common import DR_LEVELS  # type: ignore[import-not-found]
 from .recompute_metrics import floor_verdict, unit_for
 
 DEFAULT_AXES = ("att_norm", "roll", "pitch", "yaw")
-DEFAULT_FIELDS = ("ss_error", "os_env_mean", "n_gt20", "survival_pct")
+DEFAULT_FIELDS = ("ss_error", "ss_error_std", "os_env_mean", "n_gt20", "survival_pct")
 
 
 def _load_summary(eval_dir: str) -> dict:

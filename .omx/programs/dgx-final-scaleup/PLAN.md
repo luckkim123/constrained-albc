@@ -47,10 +47,10 @@ Conditions attached to the declaration:
 
 | Gate | What | Cost |
 |:--|:--|:--|
-| G1 (X2) | **Eval pairing fix**: re-run reference evals (E-int, obs76fault, C3, gen-2 student) with one shared DR source: `eval.py static --doraemon-dr-from <one fixed run> --seed 42`; assert `dr_*`/`fault*` arrays elementwise identical across runs before reading any delta | 4 evals, minutes each |
-| G2 (X3) | **Dispersion floors**: derive and register decision floors for `ss_error_std`, CV, `survival_pct` from the existing 4-run x 4-level corpus (same derivation route as the 0.10 deg ss_error floor) | zero GPU |
-| G3 (X6) | **Obs-width paired re-eval**: E-int vs obs76fault under G1 protocol; re-test the soft/medium pitch regression with SE(delta) — settles obs72-vs-obs76 for the flagship | 2 evals |
-| G4 (X8 widened) | **metrics.yaml token audit**: six drifted tokens (lines 37/38/39/40/64/92 + group lists at 113/116/118, e.g. `doraemon_success_rate` → `DORAEMON/success_rate`); verify every declared token exists in a real event file | 1 edit pass |
+| G1 (X2) | **Eval pairing fix**: re-run reference evals (E-int, obs76fault, C3, gen-2 student) with one shared DR source: `eval.py static --doraemon-dr-from <E-int train dir> --seed 42`; assert `dr_*`/`fault*` arrays elementwise identical across runs before reading any delta | IN PROGRESS 2026-08-04: 4 evals launched (DR source = E-int), assertion script staged |
+| G2 (X3) | **Dispersion floors** — **CLOSED 2026-08-04**: registered `ss_error_std: 0.60 deg` (attitude axes) + `survival_pct: 1.6 pp` in `_analyze/recompute_metrics.py` DECISION_FLOORS; derivation = corrected-plant cross-seed p2p on buoyanchor s30a/s31/s32 standard evals (s30 `static_260725_165657` excluded — FTC-m4 fault eval, `fault_thruster_*` keys verified); eval instrument is deterministic at fixed (ckpt, seed, draws) — C3 eval trio identical to 4 decimals — so floors encode the retrain lottery; verified live: Phase E hard roll +1.429 deg = REAL, survival −3.125 pp = REAL | done, zero GPU |
+| G3 (X6) | **Obs-width paired re-eval**: E-int vs obs76fault under G1 protocol; re-test the soft/medium pitch regression against the paired 0.10 deg floor — settles obs72-vs-obs76 for the flagship | rides G1's evals |
+| G4 (X8 widened) | **metrics.yaml token audit** — **CLOSED 2026-08-04**: full audit found **10** drifted tokens, not 6 (the verifier's 6 plus `reward_total→Reward/total`, `att_roll_err_deg→Track/att/roll_err_deg`, `att_pitch_err_deg→Track/att/pitch_err_deg`, `yaw_rate_err→Track/yaw/rate_err`); all fixed in metric list + groups; final check: 59/59 declared tokens exist in the E-int event file, YAML parses, `pending_approval: false` | done |
 
 Optional user-gated: **X1 3-seed DGX anchor** (4096 x 5000, seeds 30/31/32, 22.5 h) — required
 ONLY if the user overturns the machine rule and wants a DGX-trained model adoptable; a corrected-plant

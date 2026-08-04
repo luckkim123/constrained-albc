@@ -79,8 +79,18 @@ UNITS_BLOCK = {
 # on a 30 deg step), n_gt20 in envs (of 64). Flat numeric dict on purpose --
 # export.py's CSV flattener skips non-dict level values, so this block never
 # leaks into long-format rows.
-DECISION_FLOORS = {"ss_error": 0.10, "os_env_mean": 10.0, "n_gt20": 15.0}
-DECISION_FLOORS_PROTOCOL = "screening n=1 paired same-machine; |delta| below floor = noise"
+# ss_error_std (deg, attitude axes only) and survival_pct (pp of 64 envs) added
+# 2026-08-04 (G2, dgx-final-scaleup): provisional, derived as the corrected-plant
+# cross-seed peak-to-peak on the buoyanchor s30/s31/s32 standard evals
+# (s30 static_260725_164839 -- NOT the _165657 FTC-m4 fault eval -- s31
+# static_260723_092623, s32 static_260723_093433), max across DR levels rounded up:
+# ss_error_std p2p roll 0.36 / pitch 0.58 -> 0.60; survival_pct p2p 1.56 (1 env) -> 1.6.
+# A delta below the cross-seed lottery cannot be attributed to an intervention at n=1.
+DECISION_FLOORS = {"ss_error": 0.10, "os_env_mean": 10.0, "n_gt20": 15.0,
+                   "ss_error_std": 0.60, "survival_pct": 1.6}
+DECISION_FLOORS_PROTOCOL = ("screening n=1 paired same-machine; |delta| below floor = noise; "
+                            "ss_error_std/survival_pct floors provisional (n=3 cross-seed p2p, "
+                            "corrected plant, 2026-08-04)")
 
 
 def floor_verdict(field: str, delta: float, axis: str | None = None) -> str:
@@ -94,7 +104,7 @@ def floor_verdict(field: str, delta: float, axis: str | None = None) -> str:
     floor = DECISION_FLOORS.get(field)
     if floor is None:
         return "NO-FLOOR"
-    if field == "ss_error" and axis is not None and AXIS_UNITS.get(axis) != "deg":
+    if field in ("ss_error", "ss_error_std") and axis is not None and AXIS_UNITS.get(axis) != "deg":
         return "NO-FLOOR"
     if not np.isfinite(delta):
         return "NO-FLOOR"
