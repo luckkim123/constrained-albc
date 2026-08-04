@@ -54,9 +54,9 @@ Conditions attached to the declaration:
 
 | Gate | What | Cost |
 |:--|:--|:--|
-| G1 (X2) | **Eval pairing fix**: re-run reference evals (E-int, obs76fault, C3, gen-2 student) with one shared DR source: `eval.py static --doraemon-dr-from <E-int train dir> --seed 42`; assert `dr_*`/`fault*` arrays elementwise identical across runs before reading any delta | IN PROGRESS 2026-08-04: 4 evals launched (DR source = E-int), assertion script staged |
+| G1 (X2) | **Eval pairing fix** — **CLOSED 2026-08-04**: root cause was NOT the DR source (`--doraemon-dr-from` pins only the distribution) but the global torch RNG — policy-build weight init consumes run-dependent amounts (72D vs 76D actor, student GRU), desyncing per-env draws (23/24 keys differed). Fix = per-level `torch.manual_seed(seed + level_index)` in `run_static` (commit 9eac3a8, mirrors segmented mode). Verified: 4-way assert across E-int/obs76/C3/gen-2 evals (`static_260804_14{3234,4056,4932,5821}`) = 24/24 dr/fault keys elementwise identical at all 4 levels. Paired closure verdicts: **gen-1** (C3 − E-int) only hard ss_error +0.135 (att_norm) / +0.155 (roll) deg REAL, dispersion + survival all below floor — clean distillation; **gen-2** (student − obs76 teacher) hard ss_error +0.30 REAL AND hard ss_error_std +1.82 (att_norm) / +1.81 (roll) deg REAL, i.e. the gen-2 delivery path pays a 3x-floor dispersion cost its teacher does not have; **student-vs-student** (gen-2 − C3, deployment view) hard ss_error −0.14 REAL (gen-2 slightly better mean), dispersion below floor, survival −1.56 pp below floor — the two students are near-equivalent. Superseded unpaired evals moved to `.trash/failed-evals-260804/` | done |
 | G2 (X3) | **Dispersion floors** — **CLOSED 2026-08-04**: registered `ss_error_std: 0.60 deg` (attitude axes) + `survival_pct: 1.6 pp` in `_analyze/recompute_metrics.py` DECISION_FLOORS; derivation = corrected-plant cross-seed p2p on buoyanchor s30a/s31/s32 standard evals (s30 `static_260725_165657` excluded — FTC-m4 fault eval, `fault_thruster_*` keys verified); eval instrument is deterministic at fixed (ckpt, seed, draws) — C3 eval trio identical to 4 decimals — so floors encode the retrain lottery; verified live: Phase E hard roll +1.429 deg = REAL, survival −3.125 pp = REAL | done, zero GPU |
-| G3 (X6) | **Obs-width paired re-eval**: E-int vs obs76fault under G1 protocol; re-test the soft/medium pitch regression against the paired 0.10 deg floor — settles obs72-vs-obs76 for the flagship | rides G1's evals |
+| G3 (X6) | **Obs-width paired re-eval** — **CLOSED 2026-08-04** (numbers land; ADOPTION decision stays with §8 Q3 + tailsplit): under true pairing the unpaired "soft/medium pitch regression" mostly evaporates — only soft pitch +0.111 deg survives (marginally REAL vs 0.10 floor), medium +0.095 is noise. Meanwhile obs76 teacher shows REAL hard-DR gains: ss_error att_norm −0.302 / roll −0.281 deg AND ss_error_std att_norm −1.213 / roll −0.943 / pitch −0.690 deg (beyond the 0.60 seed-lottery floor); survival hard −1.562 pp below floor. Teacher-level, obs76 is the more robust plant at hard; the obs76 LINE still loses it at distillation (see G1 gen-2 verdict). Single-seed screening — do not overturn §1 on this alone | done |
 | G4 (X8 widened) | **metrics.yaml token audit** — **CLOSED 2026-08-04**: full audit found **10** drifted tokens, not 6 (the verifier's 6 plus `reward_total→Reward/total`, `att_roll_err_deg→Track/att/roll_err_deg`, `att_pitch_err_deg→Track/att/pitch_err_deg`, `yaw_rate_err→Track/yaw/rate_err`); all fixed in metric list + groups; final check: 59/59 declared tokens exist in the E-int event file, YAML parses, `pending_approval: false` | done |
 
 Optional user-gated: **X1 3-seed DGX anchor** (4096 x 5000, seeds 30/31/32, 22.5 h) — required
@@ -94,7 +94,7 @@ Verdict shape: **the run is `num_envs=32768` and NOTHING else changes.** The rec
 | wandb group/project | — | `teacher_final_dgx32k` (one string, both flags; user confirms) | group = project = purpose. Do NOT reuse `dgx_scale_32768` (throughput pilot, not comparison-bearing) |
 | fault-DR block | Arm-A adopted values | **byte-identical; verify `fault.enable=true` in launched env.yaml** | The missed `fault.enable` diff voided a 4.9 h run once |
 | max_thrust_scale | (0.85, 1.15) | byte-identical; verify live | Sourced band (T200 voltage window); reverting silently is a protocol breach (gate D-a ack rule) |
-| obs width | 72D vs 76D | **72D** (default; G3 + §8 Q3 can change it) | Phase E: obs76 did not close covariate shift; teacher-side obs76 carries an unresolved soft/medium pitch regression, no seed replicate |
+| obs width | 72D vs 76D | **72D** (default; §8 Q3 + tailsplit re-analysis can change it) | G3 paired result (2026-08-04) REVISED the evidence: the pitch regression shrank to soft +0.111 deg (marginal REAL), and obs76 teacher gains REAL hard-DR robustness (mean −0.30, dispersion −0.9~−1.2 deg). But the gen-2 delivery path pays a REAL +1.8 deg dispersion cost at distillation, leaving the two STUDENTS near-equivalent — and covariate shift stays open. 72D stays default until tailsplit separates delivery-path vs teacher-swap; single-seed screening either way |
 | encoder | elu+LayerNorm+softsign, latent 9, priv 28 | unchanged (settled) | `policy_obs_dim=69` in agent.yaml is a static default — runtime truth is env.yaml observation_space |
 | resume | — | fresh (`resume=false`); resume command pre-staged | Hydra `agent.resume` and group-path `load_run` both fail silently; relaunch mints a NEW run id — re-derive from disk, re-key watchers |
 | git provenance | E-int ran dirty:true | **clean tree, tagged branch, sha in manifest** | dirty:true already cost one voided run |
@@ -176,9 +176,12 @@ be scheduled soon, consider sequencing it BEFORE committing the GPU time.
    X1 anchor (22.5 h) to have any denominator.
 2. **Still want 32768?** 8x memory for 1.25x samples/s, 48.2 h, vs 3x4096 seeds at 22.5 h (a band,
    not a point), vs ~24 h at 16384 (unmeasured interpolation). Resource call.
-3. **obs72 or obs76?** Recommendation obs72 (Phase E verdict + pitch regression); deployability of
-   the 4 real-sensor channels is a requirements decision the metrics do not settle. G3 firms the
-   pitch question cheaply.
+3. **obs72 or obs76?** Recommendation stays obs72, but G3's paired numbers (2026-08-04) weakened
+   the case against obs76: pitch regression is now only soft +0.111 deg (marginal), and the obs76
+   TEACHER is REAL-better at hard (mean −0.30, dispersion −0.9~−1.2 deg). What still favors obs72:
+   the gen-2 distillation pays a REAL +1.8 deg dispersion cost (students end near-equivalent),
+   covariate shift stays open, and deployability of the 4 real-sensor channels is a requirements
+   decision the metrics do not settle. Defer the final call to the tailsplit re-analysis (HOLD).
 4. **Current plant or plant-v2 batch?** Current plant → six deferred items stay deferred (as obs4
    program decided). Plant-v2 → T200 bench + XW540 bench + buoy guard decision must close first.
 5. **Schedule the B1/TAM bench before committing 48 h?** See elevated-stakes note in §7.

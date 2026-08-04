@@ -2,15 +2,15 @@
 title: "metrics.yaml declares doraemon_success_rate but the real TB tag is DORAEMON/success_rate -- a coverage check that trusts the declared token reports the group as unlogged"
 tags: []
 created: 2026-08-03T19:54:01.563410
-updated: 2026-08-03T19:54:01.563410
+updated: 2026-08-04T06:11:42.098428
 sources: []
 links: []
 category: debugging
 confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
-status: needs-apply-before-retrain
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
+status: resolved
 blocked-on: "One-line fix to .omx/profile/metrics.yaml (doraemon group): replace doraemon_success_rate with DORAEMON/success_rate. Not applied yet because editing the profile mid-campaign changes the coverage contract for reports already written against it; apply it together with the next profile revision."
 ---
 
@@ -41,3 +41,8 @@ runs. A final-window mean of 0 is therefore NOT evidence that the curriculum sta
 reads 0.0000 at steps 2350/3012/3675/4337/4735/4947 and 0.12 only at 4999. Any stall claim needs
 the update-step trajectory, not a trailing mean.
 
+---
+
+## Update (2026-08-04T06:11:42.098428)
+
+RESOLVED 2026-08-04 (gate G4, dgx-final-scaleup program, commit 72351a4): the full profile audit found 10 drifted tokens, not just this one - doraemon_success_rate -> DORAEMON/success_rate plus entropy/noise_std/line_search_success/kl/barrier_penalty/reward_total/att_roll_err_deg/att_pitch_err_deg/yaw_rate_err, all fixed in the metric list AND groups (trpo/constraint/doraemon). Verified 59/59 declared tokens exist in the E-int event file. The mid-campaign coverage-contract concern was accepted because the profile revision rode a program boundary (dgx-final-scaleup), not an open campaign report.
