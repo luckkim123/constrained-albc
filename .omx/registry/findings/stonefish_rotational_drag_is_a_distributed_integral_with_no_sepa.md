@@ -2,15 +2,15 @@
 title: "Stonefish rotational drag is a distributed integral with no separate rotational term, so hull yaw pressure drag is exactly zero by construction -- the 45.5x yaw damping gap is an artifact and roll/pitch is corrupted by a force-derived torque correction"
 tags: ["stonefish", "hydrodynamics", "damping", "yaw", "rotational-drag", "cylinder-approximation", "added-inertia", "hydro-recenter", "code-verify", "marinelab", "mesh-vs-primitive"]
 created: 2026-07-30T03:08:04.356936
-updated: 2026-07-30T03:31:36.659471
+updated: 2026-08-04T15:35:29.082528
 sources: ["stonefish-v1.3-source", "code-verify-20260730", "rotational-damping-verdict-20260730", "marinelab-reply-20260730"]
 links: []
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
-status: needs-apply-before-retrain
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
+status: resolved
 blocked-on: "HydroRC-v2 must re-derive every 016d1b1 damping axis from geometry or literature; separately, declaring the hull as a mesh routes it to the correct ellipsoid path and is worth evaluating before any coefficient work"
 ---
 
@@ -473,4 +473,26 @@ obtaining it requires modelling the appendages as geometry, which is an asset ta
 
 Full result: vault docs/stonefish-rotational-damping-verdict-2026-07-30.md.
 [SOURCE: rotational-damping-verdict-20260730] [CONFIDENCE: HIGH]
+
+---
+
+## Update (2026-08-04T15:35:29.082528)
+
+## VERDICT 2026-08-05 -- CLOSED-OUT-OF-SCOPE (backlog-closeout program)
+
+This page's content is a finding about how Stonefish computes rotational drag (a distributed
+integral with no separate rotational term, making hull yaw pressure drag exactly zero by
+construction). It was actionable only as an input to Stonefish-side alignment work, which the
+user cancelled on 2026-08-05.
+
+Its one Isaac-side consequence -- whether the 45.5x yaw damping gap was an artifact, and
+therefore whether HydroRC's yaw 0.011 is structurally near-zero -- is NOT dropped. It lives on
+the hydrorc_016d1b1 page, which is being resolved separately in this same program. Deliberately
+not duplicated here so the question has exactly one home.
+
+The finding itself stays on the page as durable reference: if Stonefish is ever revived, the
+mesh-versus-ellipsoid routing note is the first thing to re-read.
+
+Recorded by the backlog-closeout program (.omx/programs/backlog-closeout/PLAN.md section 3).
+Status flipped to resolved; no experiment is scheduled for this lead.
 

@@ -2,15 +2,15 @@
 title: "Thruster nonlinear curve (T200 sim-to-real): off-by-default deadband + signed-square toggle (d34debc)"
 tags: []
 created: 2026-07-01T10:05:27.006437
-updated: 2026-07-28T09:11:52.534644
+updated: 2026-08-04T15:35:29.200965
 sources: []
 links: ["actuator_hardware_identification_arm_xw540_t260_board_measured_p.md", "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md"]
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
-status: needs-experiment
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
+status: resolved
 blocked-on: "DEFER behind a bench measurement of the real command->thrust curve (PLAN teacher-final-closeout 12.2, corrected 2026-07-27). The page's own 2026-07-02 decision is to keep enable_thrust_curve=False until that curve is measured; the curve is a PLANT MODEL, not a DR perturbation, so an unverified curve can manufacture a worse plant gap than the known linear one. This lead carried NO blocked-on field, so the backlog rendered it as actionable/unblocked -- that overstated it."
 ---
 
@@ -65,4 +65,26 @@ vehicle hardware. Until then this is not a candidate for any retrain.
 
 [EVIDENCE: PLAN teacher-final-closeout section 12.2, row E-t200 ("CORRECTED 2026-07-27: DEFER behind a bench measurement ... The backlog's 'unblocked' field overstates it; roster entry 12.2 as first written repeated that overstatement") and section 12.4, row thruster_nonlinear_curve]
 [CONFIDENCE: HIGH]
+
+---
+
+## Update (2026-08-04T15:35:29.200965)
+
+## VERDICT 2026-08-05 -- DEFERRED-HARDWARE (backlog-closeout program)
+
+This page's own decision of 2026-07-02 is to keep enable_thrust_curve=False until the real
+command-to-thrust curve is measured on a bench, on the grounds that the curve is a PLANT MODEL
+rather than a DR perturbation -- so an unverified curve can manufacture a worse plant gap than
+the known linear one. That reasoning is unchanged and correct.
+
+The user decided on 2026-08-05 to skip every item that requires a physical measurement. The
+bench curve is therefore not going to exist within this program, and no simulation experiment
+can substitute for it. Moved off the experiment queue to the hardware queue: it is not
+abandoned, it is waiting on an input this program cannot produce.
+
+Meanwhile the shipped configuration is the safe one (curve off, linear model, +/-15 percent
+max_thrust DR band), which is exactly what the 2026-07-02 decision prescribed.
+
+Recorded by the backlog-closeout program (.omx/programs/backlog-closeout/PLAN.md section 3).
+Status flipped to resolved; no experiment is scheduled for this lead.
 

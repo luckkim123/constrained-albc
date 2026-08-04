@@ -2,15 +2,15 @@
 title: "sim hydro nominal is analytical (not measured); IMU+pressure can anchor rotation/heave but not surge/sway/TAM"
 tags: ["measurement", "system-id", "domain-randomization", "sim-to-real", "damping", "free-decay", "TAM", "sensors", "fault-tolerant-control", "thruster", "load-cell", "arm-step-response", "max_thrust", "systematic-bias", "user-decision", "batch-pass", "apply-gate", "decision"]
 created: 2026-06-14T07:38:12.841674
-updated: 2026-07-28T09:12:17.947957
+updated: 2026-08-04T15:35:29.556995
 sources: ["envs/main/config.py:139", "envs/main/mdp/events.py", "user-input-2026-07-23", "B0c-implementation-260723", "diagnose-20260723-134359", "next-20260723-203114", "static_260724_073758", "diagnose-20260727-151917", "diagnose-20260728-081953"]
 links: ["curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md", "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md", "adding_a_dr_axis_is_half_a_change_dr_config_s_dr_tuple_fields_tr.md"]
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
-status: needs-apply-before-retrain
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
+status: resolved
 blocked-on: "max_thrust half CLOSED 2026-07-27: gate D-a ADOPTED (+/-15% band, 42.5-57.5 N) after campaign B0c ran (trpo_b0cmaxthrust_s30_260724_024326) and E-int composed it into the final teacher; battery window CONFIRMED 4S LiPo ~14-16.8 V (Z6 memo). REMAINING blocker is the TAM moment-arm band only, still without a real geometric-tolerance source (CAD stack-up / bracket spec) -- which is why this page keeps needs-apply-before-retrain."
 ---
 
@@ -249,4 +249,25 @@ this gate explicitly at `omx queue-launch --ack-gate` rather than silently dropp
 
 [EVIDENCE: PLAN teacher-final-closeout section 12.1 gate D-a ("DECIDED 2026-07-27: ADOPT (user)"), section 12.2 E-int row (thruster_util 0.821 vs 0.950 exact-additivity, H2 refuted), section 12.3 (B0c formal report DONE 2026-07-27, diagnose-20260727-151917), section 12.4 row sim_hydro_nominal ("max_thrust half = gate D-a; TAM moment-arm cannot-close")]
 [CONFIDENCE: HIGH]
+
+---
+
+## Update (2026-08-04T15:35:29.556995)
+
+## VERDICT 2026-08-05 -- DEFERRED-HARDWARE (backlog-closeout program)
+
+This page had two halves. The max_thrust half CLOSED on 2026-07-27: gate D-a was adopted with a
++/-15 percent band (42.5-57.5 N) after campaign B0c ran (trpo_b0cmaxthrust_s30_260724_024326),
+and E-int composed that band into the final teacher. The battery window was confirmed as a 4S
+LiPo at roughly 14-16.8 V.
+
+The remaining half is the TAM moment-arm band, and it is blocked on a real geometric-tolerance
+source -- a CAD stack-up or a bracket specification. That is a measurement, and the user skipped
+measurement items on 2026-08-05. Nothing in simulation can produce a defensible tolerance band
+for a physical bracket; inventing one would put a fabricated number into the plant.
+
+Moved off the experiment queue. The lead reopens the moment a CAD stack-up exists.
+
+Recorded by the backlog-closeout program (.omx/programs/backlog-closeout/PLAN.md section 3).
+Status flipped to resolved; no experiment is scheduled for this lead.
 

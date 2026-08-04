@@ -2,7 +2,7 @@
 title: "C4b DAgger correction measured: partial (2.5-4x in-loop reduction at low-mod DR, under-dispersion floor persists at hard)"
 tags: ["dagger", "student", "distillation", "covariate-shift", "albc", "observability", "dgx", "c4b", "obs4", "phase-c", "inconclusive"]
 created: 2026-07-30T06:06:14.644675
-updated: 2026-08-03T14:11:06.239650
+updated: 2026-08-04T15:35:29.675077
 sources: ["diagnose-20260803-223517"]
 links: ["sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "real_albc_deployment_state_estimation_rates_measured_from_code_a.md"]
 category: debugging
@@ -10,7 +10,7 @@ confidence: high
 schemaVersion: 1
 qualityScore: 70
 qualityReasons: ["no-source-marker", "generic-only-tags"]
-status: needs-experiment
+status: resolved
 blocked-on: "The observability arm this lead asked for RAN 2026-08-03 and returned INCONCLUSIVE. CORRECTED 2026-08-03 after independent review: the pre-registered statistic is anchored on C3, not on the dim=0 control, so the miss is 0.0247 = 2.54 sigma, NOT 0.0044 = 2.92 sigma. Same arm as the obs4 interface page -- count once. The 4 channels measurably reduce latent error (d6 -32.1%, dims with R2>0 going 4/9 to 7/9) but land a comfortable 0.0247 below the GO bar and cost +0.1401 deg of hard-DR roll control. The lead stays OPEN because the hypothesis was neither confirmed nor refuted. Next step is a human choice among Phase D (teacher obs76), a widened-encoder arm, a seed replicate, or recording the null."
 ---
 
@@ -156,4 +156,30 @@ of +0.2460 misses the GO bar of +0.2707 by 0.0247, which is 2.54 sigma from C3, 
 
 This does not change what this lead is waiting for -- the arm was and remains INCONCLUSIVE -- but it
 removes the "almost cleared the bar" reading that a follow-up in the same direction would have leaned on.
+
+---
+
+## Update (2026-08-04T15:35:29.675077)
+
+## VERDICT 2026-08-05 -- CLOSED-NULL (backlog-closeout program)
+
+The observability arm this lead asked for RAN on 2026-08-03 and returned a measured miss, not an
+unanswered question. Against the pre-registered C3 anchor the shortfall is 0.0247 (2.54 sigma)
+below the GO bar, and the four channels cost +0.1401 deg of hard-DR roll control. The channels
+do measurably reduce latent error (d6 -32.1 percent, dims with positive R2 going 4/9 to 7/9),
+but a latent gain that does not reach control is exactly the pattern X1-tailsplit later
+confirmed: +0.169 R2 bought zero control improvement.
+
+Two further arms ran after this lead was written and neither rescued it. Phase D put the four
+channels in the TEACHER (trpo_obs76fault_s30_260804_043926): the obs76 teacher is genuinely a
+better controller at hard DR, but none of that advantage survives distillation to any student.
+X1-tailsplit isolated the delivery path and closed the latent gap without moving control.
+
+The remaining options named on this page were a seed replicate (excluded by the standing
+single-seed screening rule) and a widened-encoder arm (the obs76 page carries that question and
+requires it to pre-register a CONTROL endpoint). Recording the null is therefore the correct
+close: the hypothesis was tested three ways and did not clear its own bar. obs72 stays default.
+
+Recorded by the backlog-closeout program (.omx/programs/backlog-closeout/PLAN.md section 3).
+Status flipped to resolved; no experiment is scheduled for this lead.
 

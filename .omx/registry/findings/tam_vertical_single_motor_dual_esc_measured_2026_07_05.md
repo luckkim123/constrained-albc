@@ -2,15 +2,15 @@
 title: "TAM vertical pair is one physical motor with dual-ESC wiring (measured 2026-07-05)"
 tags: []
 created: 2026-07-05T15:24:24
-updated: 2026-07-14T09:55:52.971012
+updated: 2026-08-04T15:37:58.868938
 sources: []
 links: ["tam_columns_must_match_robot_firmware_esc_channel_order_reorder_.md", "next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba.md"]
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
-status: needs-apply-before-retrain
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
+status: resolved
 blocked-on: "m4 remeasurement (HW fault) + full B1 vertical translation"
 ---
 
@@ -35,3 +35,21 @@ STATUS: measured, high confidence for the "one physical motor, dual-ESC" finding
 ## Update (2026-07-14T09:55:52.971012)
 
 Flagged needs-apply-before-retrain 2026-07-14. Verified NOT applied: envs/main/config.py:93 Fz row (0,0,0,0,1,1) still models T4,T5 as two independent heave channels; header comment lines 86-88 confirm "OPEN (unchanged): Fz/My vertical rows ... redesign blocked on m4 remeasurement". Horizontal TAM (3bb042b) was applied piecemeal; this vertical row was NOT. Any from-scratch reference baseline must apply this together or explicitly record pre-vertical-TAM.
+
+---
+
+## Update (2026-08-04T15:37:58.868938)
+
+## VERDICT 2026-08-05 -- DEFERRED-HARDWARE (backlog-closeout program)
+
+Blocked on an m4 remeasurement that cannot happen because m4 has a hardware fault, plus a full
+B1 vertical-translation characterization. Both are bench work on the physical vehicle, which the
+user skipped on 2026-08-05.
+
+The measured finding on this page (the TAM vertical pair is one physical motor with dual-ESC
+wiring) is durable and already recorded; it is the follow-up characterization that is deferred,
+not the finding. Moved off the experiment queue to the hardware queue.
+
+Recorded by the backlog-closeout program (.omx/programs/backlog-closeout/PLAN.md section 3).
+Status flipped to resolved; no experiment is scheduled for this lead.
+

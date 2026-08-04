@@ -2,15 +2,15 @@
 title: "Thruster static gain gap: Stonefish quadratic rated 20.03 N vs Isaac linear 40 N per unit command; 2.0x at full command and 4.65x in the policy operating band, with zero DR coverage; rotor time constant IS aligned"
 tags: ["sim-to-real", "stonefish", "thruster", "actuator", "saturation", "domain-randomization", "cross-sim-measurement", "thrust-curve"]
 created: 2026-07-29T08:41:33.091940
-updated: 2026-07-29T08:41:33.091940
+updated: 2026-08-04T15:35:28.971556
 sources: ["p1-thrust-sweep-20260729"]
 links: []
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
-status: needs-experiment
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
+status: resolved
 blocked-on: "real T200 bench curve needed to decide WHICH side to align to (open lead thruster_nonlinear_curve, deferred 2026-07-27); alignment knobs already identified on both sides"
 ---
 
@@ -86,4 +86,25 @@ either handle thruster scale in the same experiment or state explicitly which si
 Full result: vault docs/thruster-scale-gap-2026-07-29.md. Raw sweep and scripts at
 tools/p1_joint_swing/{thrust_sweep_260729.csv, run_thrust_sweep.sh, analyze_thrust.py}.
 [SOURCE: p1-thrust-sweep-20260729] [CONFIDENCE: HIGH]
+
+---
+
+## Update (2026-08-04T15:35:28.971556)
+
+## VERDICT 2026-08-05 -- CLOSED-OUT-OF-SCOPE (backlog-closeout program)
+
+The measured gap was Stonefish quadratic 20.03 N versus Isaac linear 40 N per unit command.
+Stonefish was dropped entirely by user decision on 2026-08-05, so the 2.0x / 4.65x figures no
+longer describe a discrepancy between two things we care about -- they describe Isaac against
+an environment we are not using.
+
+The residual question that is genuinely ours -- is Isaac's 40 N per unit command right in
+absolute terms -- is not answerable in simulation. It needs the real T200 bench curve, which
+the user skipped on 2026-08-05 along with the other hardware measurements. That residual is
+carried as DEFERRED-HARDWARE on the thruster_nonlinear_curve page; it is not carried here.
+Note also that max_thrust already carries a +/-15 percent DR band (42.5-57.5 N, gate D-a
+adopted 2026-07-27), so the static gain is not an unrandomized single point in the plant.
+
+Recorded by the backlog-closeout program (.omx/programs/backlog-closeout/PLAN.md section 3).
+Status flipped to resolved; no experiment is scheduled for this lead.
 

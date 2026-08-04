@@ -2,15 +2,15 @@
 title: "IMU 45deg mounting offset + pitch negation is sim-uncompensated (2026-07-05)"
 tags: ["imu", "3dm-gx5", "mounting-offset", "sim-to-real", "deployment-prep", "deferred", "user-decision"]
 created: 2026-07-05T15:24:24
-updated: 2026-07-20T07:24:09.722345
+updated: 2026-08-04T15:37:58.758582
 sources: ["control_law.h", "build_proprio.py"]
 links: ["tam_columns_must_match_robot_firmware_esc_channel_order_reorder_.md"]
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 100
-qualityReasons: []
-status: needs-apply-before-retrain
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
+status: resolved
 blocked-on: "DEFERRED by user decision 2026-07-20: will be applied to sim AFTER a real-robot measurement settles the pitch-negation convention (measurement preferred over datasheet interpretation). Zero sim-side impact meanwhile; firmware already reconciles the signs reaching control. NOT part of the batch experiment pass -- deployment prep, sequenced with robot bring-up."
 ---
 
@@ -63,4 +63,22 @@ CONSEQUENCE for planning: this item does NOT belong in the batch experiment pass
 prep, sequenced with real-robot bring-up, and its cost is one retrain whenever it lands. Keep the
 `needs-apply-before-retrain` flag so a reference retrain cannot silently skip it, but do not treat
 it as a blocker on any sim-side campaign.
+
+---
+
+## Update (2026-08-04T15:37:58.758582)
+
+## VERDICT 2026-08-05 -- DEFERRED-HARDWARE (backlog-closeout program)
+
+Already deferred once by user decision on 2026-07-20, pending a real-robot measurement to settle
+the pitch-negation convention (measurement preferred over datasheet interpretation). The user's
+2026-08-05 decision to skip hardware-measurement items confirms that deferral rather than
+reversing it.
+
+Zero sim-side impact in the meantime: firmware already reconciles the signs that reach control,
+so nothing in training or evaluation is wrong today because of this. This is deployment prep,
+sequenced with robot bring-up, not an experiment. Moved off the experiment queue accordingly.
+
+Recorded by the backlog-closeout program (.omx/programs/backlog-closeout/PLAN.md section 3).
+Status flipped to resolved; no experiment is scheduled for this lead.
 

@@ -2,7 +2,7 @@
 title: "joint1 Stage-1 gate GO: drift is real on unlimited physics, not the +-360deg wall artifact"
 tags: ["joint1", "drift", "cumulative-rotation", "unlimited-physics", "stage-1-gate", "ee-action", "ttf-correction"]
 created: 2026-07-12T18:26:08.556497
-updated: 2026-07-20T07:54:39.772474
+updated: 2026-08-04T15:35:29.790191
 sources: ["diagnose-20260713-031533"]
 links: ["joint1_anti_drift_design_history.md", "engine_gap_flat_target_eval_records_joint1_trajectory_but_render.md"]
 category: decision
@@ -10,7 +10,7 @@ confidence: high
 schemaVersion: 1
 qualityScore: 70
 qualityReasons: ["no-source-marker", "generic-only-tags"]
-status: needs-experiment
+status: resolved
 blocked-on: "Stage 2 requires a station-keeping policy trained on unlimited joint1 physics; no such checkpoint exists yet."
 ---
 
@@ -74,3 +74,26 @@ with IK output wrapped to (-pi,pi] -- a different command signal that needs its 
 ## Update (2026-07-20T07:54:39.772474)
 
 BLOCKED-ON ANNOTATION (2026-07-20 wiki sweep): Stage 1 is finished. The only open scope is Stage 2: re-measure joint1 drift on a policy that station-keeps on unlimited-joint physics -- which requires a retrained (or curriculum-adapted) policy checkpoint; the current teacher was trained against the +-360 wall.
+
+---
+
+## Update (2026-08-04T15:35:29.790191)
+
+## VERDICT 2026-08-05 -- CLOSED-OUT-OF-SCOPE (backlog-closeout program)
+
+Stage 1's verdict stands and is the durable result: the drift is real on unlimited physics, not
+an artifact of the +/-360 deg wall. That finding is not being retracted.
+
+Stage 2 is dropped for gen-1. It needs a prerequisite station-keeping policy trained on
+unlimited joint1 physics, which does not exist -- so it is a two-run chain, roughly 10 GPU0
+hours, competing against a 22.5-hour budget that also has to close every other open lead. The
+decisive argument is not the cost but the relevance: the shipped task is attitude-only
+(roll/pitch plus yaw-rate, 8D action), so arm-joint drift does not bound the deliverable's
+performance. Spending nearly half the remaining budget on an axis the product does not ship
+would be the wrong trade.
+
+Reopen when arm manipulation becomes a shipped task rather than a carried degree of freedom.
+
+Recorded by the backlog-closeout program (.omx/programs/backlog-closeout/PLAN.md section 3).
+Status flipped to resolved; no experiment is scheduled for this lead.
+

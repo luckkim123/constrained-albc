@@ -2,7 +2,7 @@
 title: "Stonefish yaw-gap claim review: main-body hydro yaw torque structurally zero (symmetric added mass kills Munk); PhysX DOES model arm reaction; real gaps = buoy added-mass ~10x under, no arm-link hydro, no yaw-torque DR axis"
 tags: ["sim-to-real", "stonefish", "yaw", "hydrodynamics", "munk-moment", "added-mass", "domain-randomization", "arm-reaction", "servo-velocity-cap", "cross-sim-measurement"]
 created: 2026-07-16T12:56:49.986664
-updated: 2026-07-30T03:09:24.073837
+updated: 2026-08-04T15:35:28.861320
 sources: ["next-20260724-033200", "static_260724_092023", "static_260724_100219", "diagnose-20260728-081953", "p1-stonefish-20260728", "p1-stonefish-20260729", "p1-isaac-20260729", "servo-chatter-probe-20260729", "servo-deployed-20260729", "servo-applied-20260730", "stonefish-reply-20260730"]
 links: ["sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "teacher_dr_harder_yaw_is_the_only_heavy_tail_axis_roll_is_dc_bia.md", "buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md", "yaw_command_is_rate_not_angle_inherited_design_defensible_only_i.md", "actuator_hardware_identification_arm_xw540_t260_board_measured_p.md"]
 category: reference
@@ -10,7 +10,7 @@ confidence: high
 schemaVersion: 1
 qualityScore: 70
 qualityReasons: ["no-source-marker", "generic-only-tags"]
-status: needs-experiment
+status: resolved
 blocked-on: "Deployed Stonefish albc.scn servo gains APPLIED 2026-07-30 (1.0/1.0 -> 0.1/0.1, Kv nonzero, recorded INTERIM in-file). Remaining: XW540-T260 step response, the shared response target that should retune BOTH sims arm actuators; and the T200 bench curve for the thruster static-gain item. Buoy measurement route is closed -- what is left there is an Isaac-side guard-structure decision, not a Stonefish probe."
 ---
 
@@ -589,4 +589,25 @@ the Isaac code does.
 Ledger consequence: proposal next-20260729-124437 (P1-isaac) is closed kept in campaign
 teacher_baseline_buoyfix. This page KEEPS needs-experiment -- its remaining open item is the
 buoy added-mass one, which needs the P-C measurement, not P1.
+
+---
+
+## Update (2026-08-04T15:35:28.861320)
+
+## VERDICT 2026-08-05 -- CLOSED-OUT-OF-SCOPE (backlog-closeout program)
+
+The purpose of this lead was Isaac-to-Stonefish alignment (arm-actuator response target,
+thruster static gain). The user decided on 2026-08-05 to drop Stonefish entirely as a
+reference environment ("stonefish is not going to be used at all, the environment looks too
+different"). With one side of the comparison gone, the alignment question has no second
+side and cannot be answered by any experiment we would run.
+
+What survives and where it lives: the two residual items this page listed are the XW540-T260
+step response and the T200 bench curve. Both require a physical bench measurement, which the
+user also skipped on 2026-08-05, so they are recorded as DEFERRED-HARDWARE on their own pages
+rather than kept here. The Isaac-side buoy added-mass guard-structure decision survives on
+the buoy_added_mass page and is handled there.
+
+Recorded by the backlog-closeout program (.omx/programs/backlog-closeout/PLAN.md section 3).
+Status flipped to resolved; no experiment is scheduled for this lead.
 
