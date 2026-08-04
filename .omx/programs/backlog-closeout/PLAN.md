@@ -394,6 +394,30 @@ Note this is the OPPOSITE of the posttam-era failure, where lb sat at ~101 % of 
 stalled the curriculum at mode -2. Confirm at the end of the run before recording it.
 
 
+**2026-08-05 02:40 — I attributed the delay-sensitivity difference to the wrong variable, and the
+plant diff caught it.** With d1 and d2 in hand, E-int's paired `none` response looked much steeper
+than the Z4 anchor's (roll `ss_jitter` 4.84x vs 2.19x at d1; 11.54x vs 4.80x at d2), and the obvious
+mechanism was E-int's gated integral observation — an integrator in the loop is the textbook
+destabilizer under dead time.
+
+Then I diffed the two runs' recorded `params/env.yaml`. **The anchor already has
+`use_integral_obs: true`, `integral_gated: true`, `integral_dims: 3` and the same 72D observation
+space.** The integral channel is not what separates them, so the mechanism I had reached for cannot
+be the explanation. Retracted before it was written anywhere but here.
+
+What actually differs is **fault DR**: `fault.enable` is `false` on the anchor and `true` on E-int,
+and E-int additionally carries the `max_thrust_scale` (0.85, 1.15) and `fault_severity_range`
+(0.0, 1.0) dims. (`integral_gate_threshold` appears only in E-int's file because the field was ADDED
+by the R1 decouple with a byte-identical default; the anchor's gate ran at the same 0.10 through the
+shared reward sigma.)
+
+So the surviving observation is that the fault/thrust-DR-trained policy has far better nominal
+jitter (0.1331 vs 0.3384) and that entire margin is delay-fragile. That is **cross-run, cross-plant
+and single-seed** — hypothesis-generating, not a controlled contrast, and it must be written that
+way. The controlled, quotable part of this sweep is only E-int's own within-run paired response at
+`none`.
+
+
 ## 8. STATE AT LAST COMPACTION — read this first on resume (overwrite each time)
 
 **Written 2026-08-05 02:35 KST.** Everything below is live at that moment. Re-derive from disk
