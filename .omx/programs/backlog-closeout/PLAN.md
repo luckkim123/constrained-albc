@@ -474,37 +474,73 @@ Verify a watcher with `ps -eo pid,ppid,cmd` and look for the bare `bash <script>
 
 ## 8. STATE AT LAST COMPACTION — read this first on resume (overwrite each time)
 
-**Written 2026-08-05 02:52 KST.** Everything below is live at that moment. Re-derive from disk
-rather than trusting it if the clock has moved much; a relaunch mints a new run id and strands
-every id recorded here.
+**Written 2026-08-05 06:16 KST, with Run A 13 minutes from finishing.** Re-derive from disk rather
+than trusting any id here if the clock has moved much: a relaunch mints a new run id and strands
+every id recorded in this file.
 
-### Open leads: 3, all with a run in flight
+### Open leads: 2
 
 | Lead | Closes on | Status |
 |:--|:--|:--|
-| `curriculum_recalibration_protocol…` | **Run A** | in flight, ETA 06:36 |
-| `reward_sigma…` (R6) | **Run B**, launches when Run A exits | not started |
+| `curriculum_recalibration_protocol…` | **Run A** | iter 9773/9999, ETA **06:29** |
+| `reward_sigma…` (R6) | **Run B** | auto-launches when Run A exits |
 
-`experiment_idea_latency…` is **CLOSED** (02:50, CLOSED-OUT-OF-SCOPE for gen-1). Open leads: **2**.
+`omx wiki list --status needs-apply-before-retrain` returns **zero rows**. Done means
+`--status needs-experiment` does too. Started at 17 leads; 15 are closed.
 
-`omx wiki list --status needs-apply-before-retrain` already returns **zero rows**. Done means
-`--status needs-experiment` does too.
-
-**Already finished this session and NOT to be redone**: the Koopman line is CLOSED as NULL
-(campaign ledger `discarded`, wiki page, CLOSED banner on `koopman-lifting/PLAN.md`); campaign
-drift is fixed (`omx campaign-drift` returns `ok: true`); Gate A's `Train/mean_reward` reference
-band in `HANDOFF-DGX.md` is sharpened to p5-p95 plus the full excursion.
+**Finished this session — do NOT redo any of it.** Nine leads closed by verdict (`8b63074`), two on
+evidence in hand (`e4231f3`), buoy added mass by measurement (`598db89`), both HydroRC leads
+(`8b63074`+), the **latency lead** (`567732f`, CLOSED-OUT-OF-SCOPE for gen-1). The **Koopman line is
+CLOSED as NULL** (campaign `discarded` event, wiki page, CLOSED banner on `koopman-lifting/PLAN.md`).
+Campaign drift fixed. Gate A's `Train/mean_reward` band in `HANDOFF-DGX.md` sharpened to p5-p95 plus
+the full 251.4-273.7 excursion.
 
 ### What is running
 
-- **GPU0 — Run A.** PID 873942, run id `trpo_iterbudget_s30_260805_012813`, group
-  `teacher_iter_budget`, resumed at iteration 4999 heading to 9999, ETA about **06:36**.
-  Stdout `/workspace/constrained-albc/logs_queue/iterbudget_s30.log` — use the ABSOLUTE path,
-  the shell cwd resets to `/workspace` between calls and the relative path silently fails.
-  TB dir: `logs/rsl_rl/albc_trpo_teacher/teacher_iter_budget/latest/`. Plant verified.
-- **GPU1 — IDLE.** All five queue scripts are finished. Nothing is scheduled on it until
-  Run B's eval. (queue3 was KILLED at 02:07 as a proven no-op; queue5 re-ran the sweep correctly.)
-  Poll the PID directly; a `pgrep` pattern self-matches and has killed watchers here before.
+- **GPU0 — Run A.** PID 873942, `trpo_iterbudget_s30_260805_012813`, group `teacher_iter_budget`,
+  resumed at 4999 heading to 9999. Stdout `/workspace/constrained-albc/logs_queue/iterbudget_s30.log`
+  — **use the absolute path**, the shell cwd resets to `/workspace` between tool calls and the
+  relative path silently fails. TB: `logs/rsl_rl/albc_trpo_teacher/teacher_iter_budget/latest/`.
+- **Handoff watcher — PID 1004229**, `/root/.claude/jobs/3999bdb3/tmp/handoff_runB.sh`. Polls Run A's
+  PID, records its last iteration, waits 60 s, runs `finalize_run_log.sh iterbudget_s30`, launches
+  **Run B** verbatim from `teacher_integral_gate/DESIGN.md` §6, then reads
+  `integral_gate_threshold` back out of Run B's OWN `params/env.yaml` and logs either
+  `OVERRIDE VERIFIED` or `OVERRIDE FAILED … KILL IT`. Progress in `handoff_runB_state.txt`.
+  **Check that line before trusting Run B** — today proved an override can be accepted, exit 0, and
+  inject nothing.
+- **GPU1 — idle**, and correctly so. Nothing in the remaining backlog needs it until Run B's eval.
+
+**Verify a watcher with `ps -eo pid,ppid,cmd` and look for the bare `bash <script>` line.** A
+`pgrep -f <script>` matches the tool-call wrapper shell whose command line contains the script name;
+that is how the handoff PID was first recorded wrong (1004223 vs the real 1004229).
+
+### Next actions, in order
+
+1. **When the handoff fires (~06:31)**: read `handoff_runB_state.txt`. Confirm `OVERRIDE VERIFIED`
+   and note Run B's PID and run id. If it says `OVERRIDE FAILED`, kill Run B and relaunch by hand —
+   a five-hour run on the reference arm is unrecoverable this close to the deadline.
+2. **Analyze Run A** with `/isaac-sim/python.sh /root/.claude/jobs/3999bdb3/tmp/saturation.py
+   logs/rsl_rl/albc_trpo_teacher/teacher_iter_budget/latest/`. It answers the three preflight
+   questions and is already calibrated against extend8k. **Do not rewrite it** and do not
+   re-derive the saturation rule: a silent `kl_step` stretch is NOT saturation until a whole
+   250-iteration boundary has been missed, and the script enforces that. Boundaries land on
+   iterations ending **248/498/748**, not the 249/499/749 the preflight plan predicts. Run A has
+   **21** DORAEMON params (`fault_severity`) against extend8k's 20, so `entropy_before` is NOT
+   comparable across them (-22.53 here vs -18.20 there) — compare expansion COUNTS only.
+   Early read at iter 5988: `success_rate` 0.84 vs `alpha` 0.5, i.e. the feasibility gate is INERT,
+   the OPPOSITE of the posttam mode--2 stall. Confirm at the end before recording it.
+3. **Close the curriculum lead** on that. Its Step 0 is what Run A measures; its **Step 1 is blocked
+   on measured hardware variation**, which is the class the user explicitly deferred on 2026-08-05 —
+   so the lead ends DEFERRED-HARDWARE on its remaining item, with Run A's Step-0 numbers recorded.
+4. **Correct Gate A** in `.omx/programs/dgx-final-scaleup/HANDOFF-DGX.md`, which still carries a
+   saturation iteration (~6750-7000) derived from the retired posttam plant.
+5. **When Run B finishes (~11:35)**: eval on GPU1 per `teacher_integral_gate/DESIGN.md` §7, verify
+   24/24 pairing, apply the §5 pre-registered verdict with
+   `/root/.claude/jobs/3999bdb3/tmp/floor_verdict.py`. Then close the R6 lead.
+6. **Run C** is the narrow arm (`0.05`). It must START by about **11:45** to finish before the
+   **17:00 hard GPU0 cutoff**. If Run B slips past that, drop Run C and close R6 on the two points
+   that exist — say so explicitly rather than silently.
+7. **Final report** per §9, ending with both `omx wiki list --status …` queries returning zero rows.
 
 ### Analysis tooling already built and VALIDATED (do not rewrite)
 
@@ -512,79 +548,35 @@ All in `/root/.claude/jobs/3999bdb3/tmp/`, each calibrated against a case with a
 
 | Script | What it does | Validated against |
 |:--|:--|:--|
-| `saturation.py <run_dir>` | the preflight plan's 3 iteration-budget questions from TB scalars | reproduces extend8k exactly (26 expansions, last 6750, success 0.813→0.789, entropy_before 2 distinct values over n=1250); refuses to over-call on in-progress Run A |
-| `floor_verdict.py <base> <treat> [label]` | applies the decision floors, survival first, suppresses survivorship-contaminated levels | 0 REAL on self-comparison; reproduces the buoy-ceiling result (18 flags, all suppressed) |
-| `delay_table.py [d1_dir …]` | delay-response table beside the Z4 anchor sweep | reproduces the Z4 wiki numbers (none d1 2.34x, d3 8.90x) |
+| `saturation.py <run_dir>` | the 3 iteration-budget questions from TB scalars | reproduces extend8k exactly (26 expansions, last 6750, success 0.813→0.789, `entropy_before` 2 distinct values over n=1250); refuses to over-call mid-run |
+| `floor_verdict.py <base> <treat> [label]` | decision floors, survival FIRST, suppresses survivorship-contaminated levels | 0 REAL on self-comparison; reproduces the buoy-ceiling result (18 flags, all suppressed) |
+| `delay_table.py [d1_dir …]` | delay-response table beside the Z4 anchor | reproduces the Z4 wiki numbers (none d1 2.34x, d3 8.90x) |
 
-Run them with `/isaac-sim/python.sh` when they need `tensorboard`; plain `python3` suffices for
-the two that only read JSON/npz.
+`saturation.py` needs `/isaac-sim/python.sh` (tensorboard); the other two run on plain `python3`.
 
-### Which eval is which
+### Two instrument defects found today that will bite again
 
-Every eval of the E-int checkpoint lands in
-`experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_eint_s30_rs2350_260727_195102/eval/`
-under a timestamp, so they are indistinguishable by name. The authoritative decoder is
-**`outputs/2026-08-05/<HH-MM-SS>/.hydra/overrides.yaml`**, whose directory time matches the eval
-directory's timestamp.
-
-| eval dir | overrides | meaning |
-|:--|:--|:--|
-| `static_260804_143234` | — | campaign baseline of record (post-pairing-fix) |
-| `static_260804_203719` | — | same checkpoint reproduced on **GPU1** from this branch; the same-device baseline every 08-05 eval below is paired against |
-| `static_260805_004401` | buoy added_mass + factor 0.8 | buoy **x2** — zero REAL |
-| `static_260805_005359` | buoy added_mass + factor 4.0 | buoy **geometric** — 0/64 alive, run crashed, directory INCOMPLETE |
-| `static_260805_010019` | buoy added_mass + factor 1.257 | buoy **ceiling** — survival -18.75 to -31.25 pp |
-| `static_260805_012834` | hull damping yaw x0.1 | yaw damping **low** — zero REAL |
-| `static_260805_013827` | hull damping yaw x10 | yaw damping **high** — zero REAL |
-| `static_260805_014845` | `control_delay_steps=[1,1]` | delay d1 — **VOID, no-op** |
-| `static_260805_015843` | `control_delay_steps=[2,2]` | delay d2 — **VOID, no-op, killed mid-run** |
-
-The failed arm B eval left `outputs/2026-08-05/01-28-01/` with an EMPTY override list — that
-emptiness is the bug itself (the missing `env.use_marine_feature_obs=True`).
-
-**The two VOID rows are the delay-instrument trap, caught 02:07.** Passing
-`env.randomization.control_delay_steps=[N,N]` as a Hydra override does nothing:
-`apply_dr_config()` rebuilds the randomization config once before env creation (`eval.py:1308`)
-and again at every DR level, and `control_delay_steps` is not a `_DR_TUPLE_FIELDS` dim, so it
-reverts to the dataclass default `(0,0)` each time. d1 came out elementwise identical to
-`static_260804_203719` across all 40 npz keys — and `eval.py`'s own `--control-delay` help text
-calls delay-off "byte-identical to stock", so the identity WAS the signature of a dead injector.
-Both directories carry a `VOID.txt` on disk. The supported instrument is the dedicated flag
-**`--control-delay N`** (`eval.py:1309-1317` and `1462-1468`), which sets the value before
-`env.__init__` so the `DelayBuffer` is allocated AND re-sets it after each per-level
-`apply_dr_config`. The re-run is `gpu1_queue5.sh` (PID 942451), which gates itself: after d1 it
-diffs against the baseline and aborts the remaining points if the count of differing keys is 0.
-That gate was verified to fail on the known no-op (0 keys) and pass on the known-real yaw-damping
-arm (10 keys) before being trusted.
-
-### Next actions, in order
-
-1. **When the delay sweep finishes**: compare d1/d2/d3 against `static_260804_203719` with
-   `compare.py paired`. **The sweep is worthless unless d1, d2 and d3 differ from each other** —
-   a previous eval-side delay injector in this project ran and changed nothing, and the silent
-   no-op was caught only by byte-identical results. Then close `experiment_idea_latency` on the
-   measured answer, recording explicitly that only the CONTROL-ACTION half was measured and the
-   sensor-observation staleness half was not.
-2. **When the arm B eval retry finishes**: verify pairing 24/24, apply the pre-registered verdict
-   in `koopman_marine_obs/DESIGN.md` section 3 (expectation NULL), and close the Koopman program.
-3. **When Run A finishes (~06:28)**: read the three questions in
-   `/workspace/.sp/plans/2026-08-05-preflight-iter-budget-launch.md` — saturation iteration,
-   `success_rate` at and after saturation, whether the post-saturation stretch is quiet. Scan ALL
-   steps for `DORAEMON/kl_step > 0`; it reads exactly 0.0 on every non-boundary iteration, and a
-   resumed run is phase-shifted so boundaries land on iterations ending 249/499/749/999. Then
-   correct **Gate A** in `.omx/programs/dgx-final-scaleup/HANDOFF-DGX.md`, which still carries a
-   saturation iteration derived from the retired posttam plant.
-4. **Immediately after**: launch **Run B** — the command is in
-   `experiments/rsl_rl/albc_trpo_teacher/teacher_integral_gate/DESIGN.md` section 6
-   (`env.integral_gate_threshold=[0.20,0.20,0.20]`, and `env.fault.enable=True` is mandatory).
-   Run C (`[0.05,0.05,0.05]`) follows if the clock allows; **17:00 is a hard cutoff for starting
-   anything on GPU0**.
-5. **Finally**: one report covering all 17 leads, Runs A/B(/C), the Koopman closure and the
-   corrected Gate A — ending with both `omx wiki list --status …` queries returning zero rows.
+- **A Hydra override can be accepted, exit 0, and inject nothing.** `apply_dr_config()` rebuilds the
+  randomization config before env creation AND at every DR level, so any field that is not a
+  `_DR_TUPLE_FIELDS` dim reverts to its dataclass default. When a dedicated CLI flag exists
+  (`--control-delay`), use the flag, never the Hydra path it writes to. Full write-up on the wiki
+  page `eval_py_rebuilds_env_cfg_from_hydra_defaults_so_obs_widening_fla.md`.
+- **An injection that draws from the RNG unpairs the comparison even when it bites.**
+  `_draw_control_delay` skips its `torch.randint` at `d=0`, so d0 and d>=1 consume different RNG and
+  every DR draw after the first reset diverges. Bite and pairing are TWO gates. This also
+  invalidates the `hard` column of the recorded 2026-07-24 Z4 sweep (its `none` column stands);
+  the correction is on the latency page. Deliberately NOT fixed — an env-code change mid-program
+  would void E-int as the baseline.
 
 ### Still user-gated, do not do autonomously
 
-`git push`, sending the DGX handoff, and any hardware action.
+`git push`, sending the DGX handoff, and any hardware action. Everything else in this plan is
+covered by §0's standing authority.
+
+**Housekeeping note, not mine to fix**: ~96 files under `.omx/registry/findings/` carry uncommitted
+metadata-only changes (qualityScore/updated) from a prior session on 2026-08-04. This session
+committed only the 19 files it actually touched, by explicit path, per the concurrent-session rule.
+
 
 ## 9. Final deliverable
 
