@@ -336,6 +336,34 @@ back looking mixed. Recorded on the wiki
 `discarded` event, and as a CLOSED banner on `koopman-lifting/PLAN.md`. Arm C's ≥15 GPU-h is not spent.
 
 
+**2026-08-05 02:27 — the delay sweep bites now, and that exposed a SECOND defect that also sits in
+the 2026-07-24 Z4 result already on the wiki.** With `--control-delay 1` the `none` level differs from
+the baseline on 9 of 40 npz keys, all of them trajectory keys, with **0 of 23 `dr_`/`fault_` keys
+moving** — a clean paired injection. But at `soft` and `medium` **23 of 23 DR keys move too**, which
+means the two runs are no longer being graded on the same physics.
+
+The cause is in the env, proven from code rather than inferred. `_draw_control_delay`
+(`albc_env.py:66-85`) returns early at `hi <= 0` and **skips its `torch.randint`**; at `d >= 1` it
+draws one integer per env per reset. So a `d=0` run and a `d>=1` run consume different amounts of RNG,
+and every DR draw after the first reset diverges. `none` looks paired only because at 0 % DR there is
+nothing to shift.
+
+I checked the recorded Z4 sweep for the same signature and it has it: d0-vs-d1 is 0/23 DR keys at
+`none` and **23/23 at soft, medium and hard**. Among the d>=1 points the pairing survives only where
+survival matches — d2 vs d3 pair at all four levels (both 92.19 % at hard), while d1 breaks against
+them at medium and hard (98.44 %), because a different death count means a different number of resets
+means a different number of `randint` calls.
+
+**Consequence for the wiki.** Z4's `none` column (d1 +134 %, d2 +415 %, d3 +790 %) is a valid paired
+measurement and stands. Z4's `hard` column (d1 1.7x, d2 8.4x, d3 12.8x) is **unpaired** — it compares
+delay against a different DR sample — and the ALBC decision floors explicitly declare themselves
+"paired same-machine", so they do not apply to it. The effect sizes at hard are far too large to be
+sampling noise, so the qualitative claim survives; the specific multipliers do not, and should not be
+quoted as precise. I am NOT fixing the RNG consumption: that is an env-code change mid-program, it
+would void E-int as the comparison baseline, and it is exactly the class of edit this program has
+already declined twice.
+
+
 ## 8. STATE AT LAST COMPACTION — read this first on resume (overwrite each time)
 
 **Written 2026-08-05 02:03 KST.** Everything below is live at that moment. Re-derive from disk

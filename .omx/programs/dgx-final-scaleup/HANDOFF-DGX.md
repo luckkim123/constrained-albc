@@ -174,6 +174,12 @@ fired, the LAST at iter 6750, and the freeze was total — over the remaining 12
 `success_rate` held 0.813 -> 0.789 (min 0.7595), `Train/mean_reward` held 258-268. A saturated box
 really does stop moving; nothing degraded in that stretch.
 
+**Read that `Train/mean_reward` band as p5-p95, not as limits** (re-measured 2026-08-05 over the same
+1250 post-saturation iterations): p5 258.2, median 263.8, p95 268.8, but the FULL excursion is
+**251.4 to 273.7**. A single point at 253 or 272 is inside what the healthy reference run itself did
+and is not a Gate-A finding. What matters is a monotone trend, not an excursion — judge the slope
+over a few hundred iterations, not one sample against the band edge.
+
 - Saturated MUCH earlier than ~6500: the budget arithmetic is wrong — report, do not kill.
 - NOT saturated by ~iter 9000: **this is the failure that matters**, not a scheduling curiosity.
   The recorded case is `trpo_e3_extend10k_260713_224822` (a converged teacher RESUMED for +10000):
