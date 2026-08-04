@@ -1,0 +1,6 @@
+{
+  "campaign_id": "teacher_iter_budget",
+  "created": "2026-08-04T17:05:47.681603+00:00",
+  "auto_initialized": true,
+  "source": "campaign-drift --adopt"
+}

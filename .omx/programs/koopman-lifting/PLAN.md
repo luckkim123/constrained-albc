@@ -1,5 +1,17 @@
 # Koopman x RL — Experiment Plan (low-expectation, cheap-first)
 
+> **STATUS 2026-08-05: LINE CLOSED — NULL.** Arm B ran (`trpo_koopmanB_260804_202709`) and failed both
+> pre-registered ADOPT conditions: `att_norm` `ss_error` improves past its floor at `hard` ONLY (1 of
+> the required 2 levels) and regresses at `medium`, while roll `n_gt20` at `none` goes 0.00 → 20.33
+> against a floor of 15. Pairing was 24/24 dr+fault keys at all four levels against both the
+> pre-registered and the same-device baseline, and survival was 100 % everywhere, so the verdict rests
+> on clean numbers. The failure shape is a transient one — at nominal physics the steady-state error is
+> unchanged (0.4037 → 0.4003) while overshoot rises 7.96 → 13.74 pp and pitch rise time slows 23 % —
+> and it is WORST at the easiest DR level, which is why it is a rejection rather than a robustness
+> trade. §8's exit clause 2 is hereby honored: no Phase 2, arm C's ≥15 GPU-h is not spent.
+> Full record: omx wiki `koopman_phase_1_arm_b_null_marine_feature_lifting_buys_no_contro.md`,
+> campaign ledger event `discarded` on `koopman_marine_obs`.
+
 **Date**: 2026-08-04. **Owner directive**: "되면 좋고 안되면 말고", fast, not launching now.
 **Input**: `constrained-albc/docs/reference/koopman-rl-research.md` (research phase CLOSED; its §7
 delegates thresholds/budgets/branches/naming to this document).
