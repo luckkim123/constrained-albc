@@ -2,7 +2,7 @@
 
 You are the DGX-side session for the `dgx-final-scaleup` program of the constrained-albc project.
 This document is self-contained: everything you need is here or produced by the commands below.
-It carries the defaults `num_envs 32768, obs72 plant, current plant, purpose teacher_final_dgx32k,
+It carries the defaults `num_envs 16384, obs72 plant, current plant, purpose teacher_envscale_dgx,
 seed 30`; **the act of sending you this document IS the workstation-side human approval of exactly
 those defaults** (the workstation user answers PLAN §8 Q1/Q2/Q6 by choosing to send it — if you
 received this some other way, STOP and ask). If any step below fails its check, STOP and report —
@@ -20,7 +20,7 @@ further experiment.
    and a Step 5 crash relaunch. Anything beyond those three — a second training run, an
    off-schedule eval, a re-run at different settings — needs a new human approval.
 2. Change NOTHING except the two knobs already decided and already written into the Step 3 command:
-   `num_envs 32768` and `max_iterations 20000`. Every other "scale-up companion" change was tested
+   `num_envs 16384` and `max_iterations 20000` (see 2b: the reservation is 10000). Every other "scale-up companion" change was tested
    and rejected on record: kl_ub-up is known-bad (E1), performance_lb re-derivation belongs to the
    next purpose, DR-box widening is blocked pending measured hardware bounds, entropy/min_std
    changes were a 5/5 zero-adoption sweep, num_mini_batches stays 4, step_interval stays 250. If you
@@ -44,8 +44,10 @@ further experiment.
    this exact plant, so the 10000 checkpoint differs from it in `num_envs` ALONE and is the
    comparison the run exists to make. Second, everything past 10000 is an unmeasured regime — the
    curriculum saturates at ~7748 and the mechanism behind the measured gain is exhausted there.
-   So: at iteration 10000 (~96.5 h, 4.0 days), STOP AND REPORT with the checkpoint and the eval.
-   Continuing to 20000 costs a second 4 days and is a separate human decision, not the default.
+   So: at iteration 10000 (~48 h, 2.0 days at 16384 — see the wall-clock note below), STOP AND
+   REPORT with the checkpoint and the eval. Continuing to 20000 costs a second ~2 days and is a
+   separate human decision, not the default. **The machine is reserved for 10000, not 20000**
+   (user decision 2026-08-05).
    The larger number is written into the command only so that a still-climbing curve does not
    require a resume.
 
@@ -59,15 +61,23 @@ further experiment.
   (raw python lacks numpy; missing TERM kills the launcher over SSH with "unknown terminal type").
 - Single GPU — do NOT set `CUDA_VISIBLE_DEVICES`.
 - Unified 124,610 MiB memory: `nvidia-smi` reports Memory-Usage "Not Supported". Monitor with
-  `free -m` and `nvidia-smi --query-compute-apps=pid,used_memory`. Measured TRAINING peak at 32768
+  `free -m` and `nvidia-smi --query-compute-apps=pid,used_memory`. The only MEASURED training peak is at 32768
   envs: 83,170 MiB, leaving ~41,400 MiB spare (the source figure carries a 1,000 MiB internal
-  inconsistency). Abort signal: `free -m` "used" above **102,400 MiB**. Every memory number here is
+  inconsistency). **This run is 16384**, so env-side memory should land near 42,000-45,000 MiB with
+  large headroom — but that is an interpolation: read it off the first `free -m` and report the real
+  number instead of assuming it. Abort signal: `free -m` "used" above **102,400 MiB**. Every memory number here is
   in MiB because that is the unit `free -m` prints — do not convert to GB by eye, the headroom is
   only ~41 GB and a GB-vs-GiB slip is ~7% of it. A Step 4b eval starts a SECOND Isaac Sim process on
   this same pool; see the eval-contention exemption in Step 4b before reading a spike as an abort.
-- Expected steady-state: ~34.7 s/iter → **20000 iters ≈ 192.9 h ≈ 8.0 days**. That figure is a CAP,
-  not a fixed commitment: Step 4b's periodic eval + stop rule can end the run earlier (48.2 h at
-  5000, 96.5 h at 10000, 144.7 h at 15000) with no loss, because every earlier checkpoint is on disk.
+- Expected steady-state: **~17.3 s/iter at 16384 — an INTERPOLATION, not a measurement.** The only
+  measured DGX point is 34.73 s/iter at 32768; 16384 is assumed to be half. Replace it with the real
+  number inside the first 100 iterations. At ~17.3 s/iter, **10000 iters ≈ 48 h ≈ 2.0 days** and the
+  20000 cap would be ≈ 96.5 h ≈ 4.0 days. **If sustained s/iter exceeds ~22, the interpolation is
+  wrong — report before continuing rather than silently running long.** That figure is a CAP,
+  not a fixed commitment: Step 4b's periodic eval + stop rule can end the run earlier
+  (at ~17.3 s/iter: 24 h at 5000, 48 h at 10000, 72 h at 15000) with no loss, because every earlier
+  checkpoint is on disk. Note 5000 is BELOW curriculum saturation (~7748) and is not a useful
+  stopping point on merit — it is listed only for costing.
   Plan for exclusive occupancy of about a week and make sure nothing else needs the GPU.
 - cuDNN: the container-side cu13-vs-cu128 conv1d bug does NOT exist on DGX, but verify once before
   trusting any conv path: `python -c "import torch; print(torch.backends.cudnn.version())"` via the
@@ -108,7 +118,7 @@ adopted values before; only the dumped config counts.
 | encoder | hidden [256,128,64], latent 9, elu, output_norm true, privileged_dim 28 |
 | seed | 30 |
 | save_interval | 50 |
-| num_envs | 32768 |
+| num_envs | **16384** (user decision 2026-08-05; the earlier 32768 is superseded) |
 | max_iterations | 20000 (the Step 3 command's value; a shorter value means the wrong run) |
 | resume | false |
 
@@ -117,7 +127,7 @@ env.yaml's observation_space. Do not flag 69-vs-72 as a mismatch.
 
 ## Step 2 — memory/throughput sanity (optional but cheap)
 
-If you want a pre-flight, a 50-iter smoke at 32768 envs with `--logger` disabled is acceptable
+If you want a pre-flight, a 50-iter smoke at 16384 envs with `--logger` disabled is acceptable
 (record s/iter and `free -m` peak, then kill). Do NOT reuse its run dir for the flagship.
 
 ## Step 3 — launch
@@ -126,11 +136,11 @@ If you want a pre-flight, a 50-iter smoke at 32768 envs with `--logger` disabled
 cd ~/workspace/constrained-albc
 TERM=xterm ~/workspace/isaaclab/isaaclab.sh -p scripts/train.py \
   --task Isaac-ConstrainedALBC-TRPO-v0 \
-  --num_envs 32768 --max_iterations 20000 --headless \
-  --run_group teacher_final_dgx32k \
-  --logger wandb --log_project_name teacher_final_dgx32k \
+  --num_envs 16384 --max_iterations 20000 --headless \
+  --run_group teacher_envscale_dgx \
+  --logger wandb --log_project_name teacher_envscale_dgx \
   env.fault.enable=True \
-  agent.run_name=dgx32k_s30
+  agent.run_name=dgx16k_s30
 ```
 
 - **`env.fault.enable=True` is REQUIRED and is not optional polish.** `FaultInjectionCfg.enable`
@@ -142,7 +152,7 @@ TERM=xterm ~/workspace/isaaclab/isaaclab.sh -p scripts/train.py \
   Phase D obs76 teacher were both launched with exactly this override; omitting it is the same diff
   that voided a 4.9 h run and made `trpo_obs76_s30_260803_233239` VOID. Step 1 will catch it, but
   only after the env has been built — verify the dumped `env.yaml` rather than assuming.
-- run_id is minted at train time by make_run_id (`trpo_dgx32k_s30_<ts>`); record the actual id
+- run_id is minted at train time by make_run_id (`trpo_dgx16k_s30_<ts>`); record the actual id
   from the created log dir immediately — every watcher/report keys on it.
 - `--run_group` and `--log_project_name` carry the SAME string (group = wandb project = purpose).
 - Run it inside tmux/nohup so SSH drops don't kill it; capture stdout to the run's `launch.log`.
@@ -166,13 +176,13 @@ KILL the run and report if ANY of:
 - NaN in metric lines.
 Healthy expectations: success_rate ≈ 0.75–0.90 (anchor measured 0.815 at lb=250),
 kl_step at the 0.12 cap on accepted updates, `DORAEMON/ess_ratio` HIGHER than workstation runs
-(buffer window narrows ~11 → ~1.4 iters at 32768 envs — expected, not an anomaly).
+(buffer window narrows ~11 -> ~2.9 iters at 16384 envs, ~1.4 at 32768 - expected, not an anomaly).
 
 Repeat a lighter look at ~iter 1000 and ~2500 (checkpoints land every 50 iters ≈ 29 min).
 
 ### Step 4b — the three gates that matter for a 20000-iteration run
 
-This run is 20000 iterations (192.9 h ≈ 8.0 days). The curriculum is expected to finish expanding
+This run is reserved for 10000 iterations (~48 h ≈ 2.0 days at 16384; the 20000 cap would be ~4.0 days). The curriculum is expected to finish expanding
 around iteration 7750, so roughly two thirds of the run trains on a frozen, fully-expanded DR box.
 That regime has never been run at this length, and 17,500 of the 20,000 iterations happen after the
 last Step 4 look at iteration 2500 — these three gates are what make that stretch safe.
@@ -204,7 +214,7 @@ saturation point sits ~1000 iterations later than the older plant below, because
 one extra DR dim.
 
 The measurement is at 4096 envs on a resumed chain; the boundary schedule is iteration-based and
-`kl_ub`-capped so it should carry to 32768 envs from scratch, but the feasibility gate that decides
+`kl_ub`-capped so it should carry to 16384 envs from scratch, but the feasibility gate that decides
 whether a boundary expands or contracts is env-count sensitive. Treat 7748 as the expectation, not a
 guarantee.
 
@@ -292,7 +302,7 @@ iteration 5000 to about -6e-7/iter at 7500-8000, and carrying that measured rate
 iteration 20000 near **0.076**, still above the floor. (A naive linear extrapolation from the
 pre-5000 slope would instead predict floor contact around iteration 18000 — the measured 5000-8000
 segment contradicts it, which is exactly why this needs watching rather than predicting: the run
-goes 12000 iterations past any measurement that exists.) Note the DGX run uses 32768 envs, so its
+goes 12000 iterations past any measurement that exists.) Note the DGX run uses 16384 envs, so its
 trajectory will NOT overlay E-int's — treat the band as indicative, not as a pairing.
 
 **The aggregate tag alone is a weak instrument — use the per-dim read.** On recorded posttam runs
@@ -388,12 +398,12 @@ cd ~/workspace/constrained-albc
 # RESUME_SRC MUST sit at the EXPERIMENT ROOT, NOT inside the run_group dir:
 ln -s <abs_path_to_crashed_run_dir> logs/rsl_rl/albc_trpo_teacher/RESUME_SRC
 TERM=xterm ~/workspace/isaaclab/isaaclab.sh -p scripts/train.py \
-  --task Isaac-ConstrainedALBC-TRPO-v0 --num_envs 32768 --headless \
+  --task Isaac-ConstrainedALBC-TRPO-v0 --num_envs 16384 --headless \
   --resume --load_run RESUME_SRC --checkpoint model_<last>.pt \
   --max_iterations <20000 minus completed iters> \
-  --run_group teacher_final_dgx32k --logger wandb --log_project_name teacher_final_dgx32k \
+  --run_group teacher_envscale_dgx --logger wandb --log_project_name teacher_envscale_dgx \
   env.fault.enable=True \
-  agent.run_name=dgx32k_s30_resume
+  agent.run_name=dgx16k_s30_resume
 ```
 
 Three things about this command are load-bearing; getting any of them wrong is worse than the crash.
@@ -408,7 +418,7 @@ Three things about this command are load-bearing; getting any of them wrong is w
   `get_checkpoint_path` scans `log_root_path` directly with `os.scandir` + `re.match` on the entry
   name (`isaaclab_tasks/utils/parse_cfg.py:193-195`), and `log_root_path` does NOT include the
   `--run_group` layer (`train.py:216`). Putting it beside the run dirs inside
-  `teacher_final_dgx32k/` is one level too deep and fails with
+  `teacher_envscale_dgx/` is one level too deep and fails with
   `ValueError: No runs present in the directory`.
 - **`--max_iterations` on a resume is the REMAINING count**, not the target: rsl_rl computes
   `tot_iter = start_iter + num_learning_iterations` from the checkpoint's stored `iter`.
@@ -436,7 +446,7 @@ new one, and neither is complete alone. Say so explicitly in your report.
    is SPLIT — the trajectory is not carried across a resume (Step 5), so keep and sync BOTH run
    directories.
 3. Sync back to the workstation (the workstation runs the paired eval under its shared-DR
-   protocol): the full `logs/rsl_rl/albc_trpo_teacher/teacher_final_dgx32k/<run_id>/` dir and the
+   protocol): the full `logs/rsl_rl/albc_trpo_teacher/teacher_envscale_dgx/<run_id>/` dir and the
    `experiments/` mirror entry. If you eval locally, use exactly
    `eval.py static --seed 42 --num_envs 64 --headless` with the checkpoint path THROUGH the
    run's `train` symlink, and NEVER pass `--output_dir`.

@@ -112,6 +112,52 @@ one-variable. Resume is lossless here: the runner restores policy, critic **and 
 (`load(path, load_optimizer=True)`) plus DORAEMON's Beta state from `doraemon_state.pt`
 (`constraint_encoder_runner.py:286-313`). It is user-gated like every training launch.
 
+### 0d. DECIDED 2026-08-05 (user) — the run is 16384 x 10000
+
+**These two values are the user's decision and supersede every other env-count and budget figure in
+this document, including §3's `num_envs` row and §0c's own 32768-based costing.**
+
+| knob | value | note |
+|:--|:--|:--|
+| `num_envs` | **16384** | Compromise between the measured 4096 baseline and the 32768 proposal |
+| `max_iterations` | **10000 reserved** | Command still writes 20000; the machine is booked and budgeted for 10000, with the §0c gate at 10000 as the default stopping point |
+
+**Derived quantities at 16384** (recompute of §3b Tier 1 — the coupling logic is unchanged, only the
+multiplier moves from 8x to 4x):
+
+| quantity | 4096 (Run A reference) | **16384 (this run)** | 32768 (superseded proposal) |
+|:--|--:|--:|--:|
+| batch per update | 262,144 | **1,048,576** | 2,097,152 |
+| critic minibatch (`num_mini_batches` 4) | 65,536 | **262,144** | 524,288 |
+| critic Adam steps / iteration | 20 | **20** | 20 |
+| episodes finished / iteration | ~175 | **~700** | ~1,400 |
+| DORAEMON buffer time window | ~11.4 iters | **~2.9 iters** | ~1.43 iters |
+
+**Cost — the wall-clock is an INTERPOLATION, not a measurement.** The only measured points are
+34.73 s/iter at 32768 on the DGX and 3.4 s/iter at 4096 on the workstation (different machines, not
+comparable). Linear interpolation from the 32768 measurement gives ~17.3 s/iter, so
+**10000 x 17.3 s = 48 h = 2.0 days** — half the 32768 figure and a quarter of the original 8-day
+plan. Treat this as an estimate to be replaced by the real s/iter within the first 100 iterations;
+if sustained s/iter exceeds ~22, the interpolation is wrong and the schedule needs re-planning
+(report, do not silently run long).
+
+**Memory is also an interpolation.** 32768 peaked at 83,170 of 124,610 MiB. Env-side memory is
+roughly linear, so 16384 should land near 42–45 GB with large headroom — comfortable, but confirm
+from the first `nvidia-smi` reading rather than assuming.
+
+**One honest flag on 16384, stated once because the decision is the user's to make.** The nearest
+measured neighbour on this axis is **8192, which measured NULL** (Arm N, fixed box). 16384 is a
+single doubling above that null and half of the untested 32768. So the compromise halves the cost
+and also moves the run closer to the one env-scale point that has already come back empty. That is
+not a reason to cancel — the env axis genuinely has no datapoint above 8192 on the current plant,
+and 2 days is a proportionate price for it — but the run should be launched expecting a null and
+valued as *pricing the axis*, not as producing the final teacher. §0b's ranking is unchanged: the
+iteration lever is the one with a measured 73 % effect.
+
+**What does not change from §0c**: 10000 is still where the run becomes readable, because Run A is
+4096 x 10000 on this exact plant and the 10000 checkpoint differs from it in `num_envs` alone. That
+argument does not depend on whether the env count is 16384 or 32768.
+
 ## 3b. Parameter coupling under scale-up — derived from code, not asserted
 
 The standing question "if `num_envs` or `max_iterations` moves, what else must move?" deserves the
@@ -309,7 +355,7 @@ Verdict shape: **the run is `num_envs=32768` and NOTHING else changes.** The rec
 | entropy_coef_per_dim / min_std / init_noise_std | per-dim cfg | unchanged | A2/A3 tested exactly these → DISCARD (5/5 zero-adoption sweep); Andrychowicz et al. 2020 agrees for trust-region methods |
 | save_interval | 50 | 50 (~29 min/ckpt) | Crash costs ≤ 29 min of 192.9 h, and at 20000 iterations the 400 checkpoints ARE the dose-response deliverable (2.4 GB), not just crash insurance. E-int itself exists only because its predecessor crashed at iter ~2390 and resumed. PRE-STAGE the resume command (§5) |
 | seed | 30 | 30 single | Screening protocol; multi-seed only if user overturns machine rule (X1) |
-| wandb group/project | — | `teacher_final_dgx32k` (one string, both flags; user confirms) | group = project = purpose. Do NOT reuse `dgx_scale_32768` (throughput pilot, not comparison-bearing) |
+| wandb group/project | — | `teacher_envscale_dgx` (one string, both flags; user confirms) | group = project = purpose. Do NOT reuse `dgx_scale_32768` (throughput pilot, not comparison-bearing) |
 | fault-DR block | Arm-A adopted values | **byte-identical; verify `fault.enable=true` in launched env.yaml** | The missed `fault.enable` diff voided a 4.9 h run once |
 | max_thrust_scale | (0.85, 1.15) | byte-identical; verify live | Sourced band (T200 voltage window); reverting silently is a protocol breach (gate D-a ack rule) |
 | obs width | 72D vs 76D | **72D — settled on the metrics** (only §8 Q3's requirements question is open) | Two paired results, 2026-08-04. G3: the obs76 TEACHER is REAL-better at hard (mean −0.30, dispersion −0.9~−1.2 deg) and the old pitch regression shrank to a marginal soft +0.111 deg. X1-tailsplit: that advantage does NOT reach a student — even after fixing the delivery defect, the obs76 line's best student sits at 3.130 deg hard roll dispersion, worst of the five arms, and is not board-exportable. (X1's sub-floor control deltas are NOT the evidence here — a 6.7% latent-RMSE move prices at ~0.057 deg, below floor by construction; the deciding fact is the five-arm table in §1.) So 76D buys a better teacher and not a better student. Single-seed screening throughout |
@@ -337,7 +383,7 @@ Two rules make the cost bounded:
    att_norm ss_error = stop and keep the best checkpoint. There is no penalty for stopping: the
    earlier checkpoint is already on disk.
 
-Wall-clock if the curve turns early: 48.2 h (stop at 5000), 96.5 h (10000), 144.7 h (15000).
+Wall-clock if the curve turns early — RECOMPUTED for the decided 16384 at ~17.3 s/iter (interpolated): 24 h (stop at 5000, below saturation so not a real option), **48 h (10000, the reserved budget)**, 72 h (15000). The 32768-based figures this line used to carry (48.2 / 96.5 / 144.7 h) are superseded by §0d.
 
 ## 5. Launch checklist (DGX side — expanded in HANDOFF-DGX.md)
 
@@ -457,7 +503,7 @@ be scheduled soon, consider sequencing it BEFORE committing the GPU time.
 4. **Current plant or plant-v2 batch?** Current plant → six deferred items stay deferred (as obs4
    program decided). Plant-v2 → T200 bench + XW540 bench + buoy guard decision must close first.
 5. **Schedule the B1/TAM bench before committing 48 h?** See elevated-stakes note in §7.
-6. **Purpose string** `teacher_final_dgx32k` — confirm before launch (fixed for every run of the
+6. **Purpose string** `teacher_envscale_dgx` — confirm before launch (fixed for every run of the
    purpose).
 7. **Re-test C3's adoption under SE statistics (X9) before it is written up?** Zero GPU; changes
    the claim's strength, not the shipped artifact. NOTE: X9 was framed around teacher-vs-student
@@ -485,5 +531,5 @@ X40 gen-2 deploy pack export (only if gen-2 ever adopted).
 ## 10. Handoff
 
 `HANDOFF-DGX.md` (beside this file) is the paste-as-is prompt for the DGX-side session. It embeds
-the recommended defaults (32768 / obs72 / current plant / purpose `teacher_final_dgx32k` / seed 30)
+the recommended defaults (32768 / obs72 / current plant / purpose `teacher_envscale_dgx` / seed 30)
 — review §8 answers first, then paste.
