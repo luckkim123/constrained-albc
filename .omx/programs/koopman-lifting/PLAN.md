@@ -50,15 +50,22 @@ the exact point at which the whole line gets closed. It does not attempt the res
 **This document exists to survive context compaction.** A session resuming from it needs nothing
 else except the files it points at. Do not reconstruct any of the below from memory.
 
-**State on 2026-08-05 20:00 KST.** The line is REOPENED (see the STATUS block above for why).
-Steps 1 and 2 are DONE and verified; nothing is running; nothing is queued; no GPU is held.
-**The line is now waiting on an owner decision, not on work** — see §12.8's closing paragraph.
+**State on 2026-08-05 20:15 KST.** The line is REOPENED (see the STATUS block above for why).
+Steps 1-3 are all underway: **arms 3-5 ARE RUNNING on GPU0**, launched with owner approval.
+A resuming session should check on them before doing anything else — `nvidia-smi`, then
+`logs/rsl_rl/albc_trpo_teacher/koopman_linearity/`. Expect ~4.6 h per arm, ~14 h for all three,
+sequential on the same device (the paired floors require one device). Nothing else is queued.
 
 | Step | State |
 |:---|:---|
 | §12.3 step 1 — `--save-action` instrument + instrumented eval | **DONE**, commits `611e5c4` + `8ca33e0` |
 | §12.3 step 2 — excitation instrument + the offline A4 fit + kill gate | **DONE 2026-08-05**, 0 GPU-h of training. Gate **does not fire**. Full result and the six readings: **§12.8**. Instrument: commit `a0daf23` |
-| §12.3 step 3 — arms 3-5 (~15 GPU-h) | **Owner decision, not a technical blocker.** The gate no longer blocks it; §12.8 argues the expected return is small and names the alternative (write up the offline study instead) |
+| §12.3 step 3 — arms 3-5 (~15 GPU-h) | **RUNNING**, owner-approved 2026-08-05. Tags `koopC` / `koopTwin` / `koopRand` in campaign `koopman_linearity`. Implementation `e86958e`, launch record and the §12.7 settlement in **§12.9**, pre-registration in that campaign's `DESIGN.md` |
+
+**When the arms finish**, judge them per §12.5's four-outcome table and §12.6's verdict hygiene.
+The baseline is E-int `trpo_eint_s30_rs2350_260727_195102`; arm B `trpo_koopmanB_260804_202709`
+is the low anchor. §12.8 predicts arm C does not clear the control bar, so an honest null is the
+expected result and it costs the main paper nothing.
 
 **Facts a compacted session will otherwise lose, in priority order:**
 
@@ -598,3 +605,78 @@ for a venue-tier upgrade. Against that, reading 1 is already a controlled negati
 level obtained for free, and §12.1 argued the isolation is the contribution — so a defensible
 alternative is to write up the offline study and not run arms 3–5 at all. **Not decided here.**
 
+
+### 12.9 Step 3 launched (2026-08-05) — the three arms, and what settling §12.7 cost
+
+**Owner approved step 3 on 2026-08-05** ("일단 이 머신에서 koopman 말고 더 할거 없잖아... 한번
+실험 돌려보자"), with the DGX flagship occupying the other machine. §12.8's argument that the
+expected return is small stands and was put to the owner before this; the decision was to run.
+
+Campaign: `experiments/rsl_rl/albc_trpo_teacher/koopman_linearity/` (DESIGN.md holds the
+pre-registration). A separate campaign from `koopman_marine_obs` because that one's DESIGN
+scopes itself to arm B and to a different question; arm B stays the cited low anchor.
+Implementation commit `e86958e`. Protocol matches arm B: 4096 envs, 5000 iters, seed 30, from
+scratch, GPU0, sequential — same device for all three, which the paired floors require.
+
+**§12.7 is SETTLED, and not at its default.** The default was to feed the one-step prediction
+`K phi_x(o_t)`. Step 2 refutes it directly: at H1 every model sits at the persistence null
+(0.185-0.211 vs 0.1905), so the one-step prediction IS the current observation, and feeding it
+would widen the policy input with duplicates — the exact shape of arm B's failure. Swept
+`h` in {1, 5, 10, 25, 50} x {action held, autonomous} on the metric that decides it (the five
+channels the policy actually receives, against the persistence null):
+
+| h | action held | autonomous |
+|--:|--:|--:|
+| 1 | 23.9 % | 7.3 % |
+| 5 | 31.2 % | 30.4 % |
+| 10 | **36.2 %** | 35.7 % |
+| 25 | 35.4 % | 36.0 % |
+| 50 | 34.9 % | 36.1 % |
+
+Chosen: **h = 25 with a zero-order hold on the action**. It is on the plateau (within 0.8 pp of
+the peak), it is the horizon every §12.8 number was measured at so the offline study and the
+arms speak about the same object, and the hold keeps `B` in the loop so the operator stays a
+control model as the policy drifts during RL rather than being tied to E-int's frozen closed
+loop. Holding the action only matters at `h=1` (23.9 % vs 7.3 %); from `h=5` on the two are
+within a point of each other. The choice was made on held-out data across a flat plateau, so
+selection pressure is negligible — but it was made on test data, and that is stated rather than
+buried.
+
+**What the arms hand the policy.** Five channels, `[roll, pitch, p, q, r]` predicted 0.5 s
+ahead, in raw observation units, appended last (72 -> 77). Five so the widening is comparable to
+arm B's seven and the "does widening alone cost transients" effect stays legible. Fed from the
+PREVIOUS step's already-noised observation, arm B's rule, so the module adds a representation and
+not a second independently-noisy measurement the policy could average into a denoised attitude.
+
+**Two verifications that could have failed and did not.** The three modules hand the policy
+genuinely DIFFERENT channels — pairwise relative L2 difference 0.345-0.448 across 22 560
+held-out real observations, with the body-rate channels correlating only 0.55-0.77; had they
+been near-identical the three runs would have been one experiment run three times. And none of
+them merely echoes the current observation (relative L2 from `o_t`: 0.76-0.81), which is what
+§12.7's rejection of the one-step form was about.
+
+**Four defects the gates caught before any GPU-hour was spent**, recorded because each would
+have produced plausible numbers from a wrong module:
+1. The union-of-levels env split was level-major, so a flat cut put the ENTIRE `hard` level in
+   the test set; the linear arms then scored worse than the persistence null. Caught only
+   because the null was reported alongside the RMSE.
+2. The evaluator's 2000 random windows made the persistence null NON-MONOTONIC in the horizon
+   (0.36, 1.95, 0.93, 1.41) — physically impossible. Rare windows straddling a 250-step command
+   change dominated it. Replaced with a dense deterministic grid.
+3. The h-step ZOH map was folded into two constant matrices for the linear arms — exact in exact
+   arithmetic, but Isaac Lab enables TF32, under which folded and iterated differ by 1.5e-2
+   sigma (measured: 5.96e-6 with TF32 off). On the attitude channel that is 0.19 deg, above the
+   0.1 deg floor. The fold was dropped; every arm iterates, which also removes an asymmetry
+   between the linear and MLP arms.
+4. The probe outputs saved for the load-time gate were computed from RAW observations passed to
+   a function expecting STANDARDIZED ones — a 4.8 sigma disagreement with the deployed path,
+   caught by that gate on the first real launch.
+
+One earlier reading is corrected here: the claim that the ZOH assumption at `h=25` was itself
+the problem came from reasoning about `||B||=4.87` being integrated 25 times, and the numbers
+that appeared to confirm it were produced by the broken evaluator in defect 2. With the dense
+evaluator, `h=25` ZOH is fine (roll 2.296 deg against a 3.352 deg null).
+
+**Plant parity was verified from a recorded launch, not from reading code** — `--fault` is
+required, `fault.enable` is `False` by default, and a run without it trains a different plant
+(this is what voided `trpo_obs76_s30_260803_233239`). See DESIGN.md §5 for the full residual.
