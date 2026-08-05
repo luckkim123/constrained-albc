@@ -113,22 +113,52 @@ This does **not** invalidate teacher-vs-teacher verdicts at 5000: every arm stop
 budget fraction, so the exams were comparable. It does mean no run at that length supports a claim of
 robustness to the *declared* box.
 
-### Run B — R6 integral-gate widen arm (`trpo_gate020_s30_260805_063110`) — *pending*
+### Run B — R6 integral-gate widen arm (`trpo_gate020_s30_260805_063110`) — NULL
 
-Launched 06:31:05 with a 95-second GPU0 gap after Run A, via an armed handoff. The override was
-verified at 06:35:05 by reading `integral_gate_threshold` = (0.2, 0.2, 0.2) and `fault.enable: true`
-back out of the run's own recorded `params/env.yaml` — a check this program added after the
-control-delay sweep proved an override can be accepted, exit 0, and inject nothing.
+Launched 06:31:05 with a 95-second GPU0 gap after Run A, via an armed handoff, and verified at
+06:35:05 by reading `integral_gate_threshold` = (0.2, 0.2, 0.2) and `fault.enable: true` back out of
+the run's own recorded `params/env.yaml` — a check this program added after the control-delay sweep
+proved an override can be accepted, exit 0, and inject nothing. Finished 4999/5000 at 11:26:33.
 
-*Verdict pending. Pre-registered in `teacher_integral_gate/DESIGN.md` §5: ADOPT only if `ss_error`
-improves past the 0.10 deg floor on at least 2 of 4 DR levels AND `os_env_mean` / `n_gt20` do not
-regress past theirs. Expectation is null-to-small, because the policy already receives an ungated
-3D bias-EMA channel carrying the same information.*
+**Pairing checked before any number was read**, because the decision floors declare themselves
+"paired same-machine": 23 of 23 per-env draw arrays elementwise identical at all four DR levels,
+against both E-int baselines (which are themselves mutually paired, so the DESIGN-named GPU0 one and
+the same-device GPU1 one are interchangeable — the verdict run against both differs only in the
+fourth decimal). Survival 100 % at every level in both arms, so nothing is contaminated.
 
-### Run C — R6 narrow arm — *pending decision*
+**§5 clause 1 fails and decides the verdict.** It requires `ss_error` to IMPROVE past the 0.10 deg
+floor on at least 2 of 4 levels. There are zero improvements and six REAL regressions — pitch and
+`att_norm` at soft, medium and hard, +0.12 to +0.21 deg. Clause 2 passes, which no longer matters.
 
-Confirmed at the Run B checkpoint per `DESIGN.md` §3. Must start by ~11:45 to clear the 17:00 GPU0
-cutoff.
+What widening actually did is more interesting than "no effect": it trades DC accuracy for
+consistency. Mean attitude error rises at soft/medium/hard while env-to-env dispersion falls sharply
+at hard (`att_norm ss_error_std` -0.8483, roll -0.7828) and pitch overshoot drops to about a third of
+baseline at every level. That is the exact mirror of the trade `DESIGN.md` §5 warned about.
+
+**And the heavy tail the probe was aimed at got worse.** Roll `n_gt20` rises in 4 of 4 cells
+(0 → 6, 0.33 → 7, 1 → 5.67, 5 → 5.67). Each delta is below the 15-env floor, so none is individually
+REAL — but per-cell floors do not aggregate, and a 4-of-4 sign pattern against the mechanism's own
+prediction belongs in the record rather than in the noise bucket. The mechanism argued that widening
+the band would admit the sustained-offset population into the accumulator and help precisely these
+envs; it did the opposite.
+
+Two limitations, both stated rather than buried. Run B ended on **18 expansions / KL 2.1600** against
+E-int's **19 / 2.2800** — about 5 % less curriculum, so part of the regression may be curriculum
+shortfall rather than the gate. The two matched exactly at 9 and 9 at iteration 2519, so the gap
+opened only in the second half and a mid-run check alone would have been falsely reassuring; this
+check existed only because Run A had just shown that a 5000-iteration run stops at ~65 % of budget.
+Separately, E-int reached 5000 as a resume chain while this is a fresh run — established practice in
+this campaign (the Koopman arm and Phase D were both accepted under it) but a real difference.
+
+### Run C — R6 narrow arm (`trpo_gate005_s30_260805_112701`) — *pending*
+
+Confirmed as the narrow arm (0.05) at the Run B mid-run checkpoint per `DESIGN.md` §3, on a read
+showing Run B healthy and both arms at an identical 9 expansions. Launched 11:26:55 with a
+**22-second** GPU0 gap; override verified at 11:30:55 (gate 0.05, `fault.enable: true`). ETA ~16:17,
+clearing the 17:00 cutoff. Its handoff carried a 12:00 guard that would have skipped the launch and
+said so in the state file rather than starting a run that could not be evaluated in time.
+
+*Verdict pending; same eval protocol and the same §5 rule.*
 
 ### GPU1 — evals
 

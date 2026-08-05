@@ -541,6 +541,40 @@ Campaign drift on `teacher_integral_gate` adopted; the launch and this decision 
 ledger.
 
 
+### 2026-08-05 11:45 — Run B evaluated: the widen arm is NULL, and worse on the primary metric
+
+Run B finished 4999/5000 at 11:26:33 with zero errors. Run C launched 22 seconds later and its
+override verified at 11:30:55 (gate 0.05, `fault.enable: true`) — the second clean handoff today.
+
+**Pairing first, because the floors require it.** 23 of 23 per-env draw arrays are elementwise
+identical at all four DR levels, against BOTH E-int baselines — and those two baselines are
+themselves mutually paired, so the `DESIGN.md` §7 choice (GPU0 `143234`) and the same-device choice
+(GPU1 `203719`) are interchangeable here. Running the verdict against both gave answers differing
+only in the fourth decimal. Survival is 100 % everywhere, so nothing is survivorship-contaminated.
+
+**Verdict NULL.** §5 clause 1 needs `ss_error` to IMPROVE past 0.10 deg on ≥2 of 4 levels. There are
+zero improvements and six REAL regressions (pitch and att_norm at soft/medium/hard, +0.12 to +0.21).
+Clause 2 passes but does not matter once clause 1 fails.
+
+What it actually did is more interesting than "no effect": widening trades DC accuracy for
+consistency. Mean error up at soft/medium/hard, env-to-env dispersion sharply down at hard
+(`att_norm ss_error_std` -0.8483, roll -0.7828), pitch overshoot down to about a third of baseline
+at every level. And the heavy tail the probe was aimed at got **worse**: roll `n_gt20` rises in 4 of
+4 cells (0→6, 0.33→7, 1→5.67, 5→5.67). Every one of those is below the 15-env floor, so none is
+individually REAL — but per-cell floors do not aggregate and a 4-of-4 sign pattern is not nothing.
+The stated mechanism predicted the opposite.
+
+**Limitation found by a check the design did not ask for.** Run B ended on 18 expansions / KL 2.1600
+against E-int's 19 / 2.2800 — about 5 % less curriculum. The two matched exactly at 9 and 9 at
+iteration 2519, so the gap opened only in the second half and the mid-run check alone would have
+been falsely reassuring. Part of the regression may be curriculum shortfall rather than the gate.
+This bounds how hard the "actively worse" reading can be pushed; it does not rescue the arm, because
+clause 1 needs an improvement and there is none. Recorded in the group README and the ledger.
+
+Results are in `experiments/rsl_rl/albc_trpo_teacher/teacher_integral_gate/README.md` (that tree is
+gitignored here, as is its `DESIGN.md` — the durable copy is this plan, the ledger, and §9's report).
+
+
 ## 8. STATE AT LAST COMPACTION — read this first on resume (overwrite each time)
 
 **Written 2026-08-05 06:16 KST, with Run A 13 minutes from finishing.** Re-derive from disk rather
@@ -567,20 +601,16 @@ the full 251.4-273.7 excursion.
 
 ### What is running
 
-- **GPU0 — Run B.** PID 1191063, `trpo_gate020_s30_260805_063110`, group `teacher_integral_gate`,
-  fresh 5000-iteration run, launched 06:31:05, ETA ~11:26. Stdout
-  `/workspace/constrained-albc/logs_queue/gate020_s30.log` — **use the absolute path**, the shell cwd
-  resets to `/workspace` between tool calls and the relative path silently fails. TB:
-  `logs/rsl_rl/albc_trpo_teacher/teacher_integral_gate/latest/`. **Override already verified** at
-  06:35:05 against the run's own `params/env.yaml`: gate (0.2, 0.2, 0.2), `fault.enable: true`.
-  Nothing further to check on that front.
-- **Handoff watcher — PID 1406056**, `/root/.claude/jobs/3999bdb3/tmp/handoff_runC.sh`. Same pattern
-  as the Run B one, launching **Run C** (narrow arm, `0.05`, `agent.run_name=gate005_s30`) with a
-  **12:00 cutoff guard** and an override check that tests for `0.05`. Progress in
-  `handoff_runC_state.txt`. **Read `OVERRIDE VERIFIED` there before trusting Run C.**
-- **Run A is DONE** — finished 9998/9999 at 06:29:30, stdout finalized into the run dir's
-  `launch.log`. Its handoff watcher exited cleanly. Neither needs attention again.
-- **GPU1 — idle**, and correctly so. Nothing in the remaining backlog needs it until Run B's eval.
+- **GPU0 — Run C.** PID 1539828, `trpo_gate005_s30_260805_112701`, group `teacher_integral_gate`,
+  narrow arm (0.05), launched 11:26:55, ETA ~16:17. Stdout
+  `/workspace/constrained-albc/logs_queue/gate005_s30.log`. Override VERIFIED at 11:30:55.
+  **Always use the absolute path for stdout** — the shell cwd resets to `/workspace` between tool
+  calls and a relative path silently fails. TB:
+  `logs/rsl_rl/albc_trpo_teacher/teacher_integral_gate/latest/`.
+- **Runs A and B are DONE.** Run A finished 9998/9999 at 06:29:30; Run B finished 4999/5000 at
+  11:26:33 and is evaluated (verdict NULL, §7). Both stdouts are finalized into their run dirs'
+  `launch.log`. Both handoff watchers exited cleanly. None of this needs attention again.
+- **GPU1 — idle**, and correctly so, until Run C's eval at ~16:17.
 
 **Verify a watcher with `ps -eo pid,ppid,cmd` and look for the bare `bash <script>` line.** A
 `pgrep -f <script>` matches the tool-call wrapper shell whose command line contains the script name;
