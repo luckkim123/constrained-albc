@@ -119,7 +119,7 @@ adopted values before; only the dumped config counts.
 | seed | 30 |
 | save_interval | 50 |
 | num_envs | **16384** (user decision 2026-08-05; the earlier 32768 is superseded) |
-| max_iterations | 20000 (the Step 3 command's value; a shorter value means the wrong run) |
+| max_iterations | 20000 in the command, **10000 reserved** — these are not in conflict: the flag is a pure loop bound, so the run is stopped at the 10000 gate (2b) unless a human decides otherwise. Do not lower the FLAG below 20000; do not run past 10000 without that decision |
 | resume | false |
 
 Note: `policy_obs_dim=69` in agent.yaml is a stale static default — the runtime truth is
