@@ -179,6 +179,29 @@ sp_static.add_argument(
     "12.3) needs it paired with --save-policy-obs.",
 )
 sp_static.add_argument(
+    "--excite-std",
+    type=float,
+    default=0.0,
+    help="System-ID excitation: add band-limited noise of this std to the action before it is "
+    "logged and stepped (0 = off, the normal deterministic pass). The inference policy makes u a "
+    "deterministic function of o (measured 96.5%% linearly predictable), so an unexcited pass "
+    "cannot identify the input matrix B of a lifted model. Drawn from a dedicated generator, so "
+    "DR draws and initial states still match an unexcited run. Cannot be combined with z-ablation.",
+)
+sp_static.add_argument(
+    "--excite-tau",
+    type=float,
+    default=0.1,
+    help="Time constant (s) of the first-order low-pass on the excitation noise. Default 0.1 s. "
+    "White noise at 50 Hz is filtered out by vehicle inertia and barely moves the state.",
+)
+sp_static.add_argument(
+    "--excite-seed",
+    type=int,
+    default=0,
+    help="Seed for the dedicated excitation generator (does not touch the env RNG stream).",
+)
+sp_static.add_argument(
     "--doraemon-dr",
     action=argparse.BooleanOptionalAction,
     default=True,
@@ -718,6 +741,9 @@ def run_evaluation(
     save_policy_obs: bool = False,
     save_action_std: bool = False,
     save_action: bool = False,
+    excite_std: float = 0.0,
+    excite_tau: float = 0.1,
+    excite_seed: int = 0,
 ) -> dict:
     """Run one evaluation pass and collect per-step data.
 
@@ -737,6 +763,19 @@ def run_evaluation(
     diagnostic forward (which never mutates it). Paired with save_policy_obs it yields the
     (o_t, a_t) sequence an offline EDMD / lifting fit needs -- action_magnitude keeps only
     the L2 norm and joint1_cmd only dim 0, so neither reconstructs the vector.
+
+    excite_std > 0 adds a band-limited perturbation to the action before it is logged and
+    stepped, for offline system identification only. The inference policy is deterministic
+    (u = pi(o) exactly), which measured 96.5 % linearly predictable from o -- so on an
+    unexcited pass the input matrix B of any fitted lifted model is confounded with A and
+    is identified only along this policy's own closed loop. Two properties make the pass
+    usable as a paired counterpart to an unexcited one:
+
+    * The noise is drawn from a DEDICATED generator, so the env's own RNG stream is
+      untouched and the DR draws / initial states match an excite_std=0 run exactly.
+    * It is first-order low-passed with time constant excite_tau. White noise at 50 Hz is
+      attenuated by vehicle inertia, so it perturbs the state far less than its amplitude
+      suggests; band-limiting puts the energy where the plant actually responds.
     """
     if save_action_std and not hasattr(policy_nn, "_update_distribution"):
         raise AttributeError(
@@ -810,6 +849,21 @@ def run_evaluation(
     # has _vel_cmd_lin -> has_lin_vel True -> code path byte-identical (zero regression).
     has_lin_vel = hasattr(raw_env, "_vel_cmd_lin")
 
+    # Action excitation (system-ID only; off unless --excite-std is given).
+    excite_state = None
+    if excite_std > 0.0:
+        if _ablation_active:
+            # delta_action is ||a(z) - a(z_ablated)||; both forwards would carry the SAME
+            # perturbation only if it were injected after them, and it is injected before
+            # so the logged action stays the applied one. Rather than silently corrupt one
+            # of the two diagnostics, refuse the combination.
+            raise SystemExit("[FATAL] --excite-std cannot be combined with z-ablation: the "
+                             "perturbation would contaminate delta_action. Run them separately.")
+        excite_gen = torch.Generator(device=device)
+        excite_gen.manual_seed(excite_seed)
+        excite_state = torch.zeros(num_envs, raw_env.cfg.action_space, device=device)
+        excite_alpha = float(np.exp(-step_dt / excite_tau)) if excite_tau > 0 else 0.0
+
     for step_idx in range(total_steps):
         # Inject commands from trajectory. _ang_cmd (attitude + yaw rate) is always
         # present; lin-vel is injected only when the env tracks it.
@@ -823,6 +877,15 @@ def run_evaluation(
 
         with torch.inference_mode():
             actions = policy(obs)  # ablated action (z_ablation active) -> stepped into env
+            if excite_state is not None:
+                # AR(1) band-limited noise, unit stationary std * excite_std. Injected here
+                # so everything downstream -- the action log, action_magnitude, joint1_cmd,
+                # and env.step -- sees one consistent applied action.
+                excite_state.mul_(excite_alpha).add_(
+                    torch.randn(excite_state.shape, generator=excite_gen, device=device)
+                    * ((1.0 - excite_alpha**2) ** 0.5)
+                )
+                actions = actions + excite_std * excite_state
             if save_policy_obs:
                 policy_obs_log.append(obs["policy"].detach().cpu().numpy())
             if save_action:
@@ -958,6 +1021,12 @@ def run_evaluation(
         out["action_std"] = np.stack(action_std_log, axis=0)  # (T, num_envs, action_dim)
     if action_log:
         out["action"] = np.stack(action_log, axis=0)  # (T, num_envs, action_dim: 8 main)
+    if excite_std > 0.0:
+        # Provenance travels with the data: a fit must never treat an excited pass as if
+        # it were the closed-loop one. Absent keys == excite_std 0 (byte-identical off path).
+        out["excite_std"] = np.array(excite_std, dtype=np.float32)
+        out["excite_tau"] = np.array(excite_tau, dtype=np.float32)
+        out["excite_seed"] = np.array(excite_seed, dtype=np.int64)
     return out
 
 
@@ -1521,6 +1590,9 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
             save_policy_obs=args_cli.save_policy_obs,
             save_action_std=args_cli.save_action_std,
             save_action=args_cli.save_action,
+            excite_std=args_cli.excite_std,
+            excite_tau=args_cli.excite_tau,
+            excite_seed=args_cli.excite_seed,
         )
         all_data[level] = data
 
