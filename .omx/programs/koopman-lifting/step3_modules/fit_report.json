@@ -1,0 +1,66 @@
+{
+  "data": "experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_eint_s30_rs2350_260727_195102/eval/static_260805_192608",
+  "horizon": 25,
+  "autonomous": false,
+  "out_idx": [
+    3,
+    4,
+    6,
+    7,
+    8
+  ],
+  "psi_dim": 64,
+  "args": {
+    "data": "experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_eint_s30_rs2350_260727_195102/eval/static_260805_192608",
+    "out": null,
+    "psi_dim": 64,
+    "steps": 6000,
+    "batch": 256,
+    "lr": 0.001,
+    "lam": 0.1,
+    "seed": 0,
+    "horizon": 25,
+    "autonomous": false,
+    "arms": [
+      "arm_c",
+      "twin",
+      "random"
+    ],
+    "n_test_per_level": 16
+  },
+  "arms": {
+    "arm_c": {
+      "rmse_std_all72": 1.354027509689331,
+      "persistence_rmse_std_all72": 1.469491720199585,
+      "rmse_roll_deg": 3.284187078475952,
+      "persistence_rmse_roll_deg": 3.3522756099700928,
+      "rmse_pitch_deg": 3.244225263595581,
+      "rmse_fed5_std": 0.6296313405036926,
+      "persistence_rmse_fed5_std": 1.0390204191207886,
+      "wall_s": 17.51690411567688,
+      "fed5_gain_pct": 39.401446890092686
+    },
+    "twin": {
+      "rmse_std_all72": 1.1744158267974854,
+      "persistence_rmse_std_all72": 1.469491720199585,
+      "rmse_roll_deg": 1.9385212659835815,
+      "persistence_rmse_roll_deg": 3.3522756099700928,
+      "rmse_pitch_deg": 2.7655692100524902,
+      "rmse_fed5_std": 0.6287001967430115,
+      "persistence_rmse_fed5_std": 1.0390204191207886,
+      "wall_s": 30.13088822364807,
+      "fed5_gain_pct": 39.49106435511508
+    },
+    "random": {
+      "rmse_std_all72": 1.387391448020935,
+      "persistence_rmse_std_all72": 1.469491720199585,
+      "rmse_roll_deg": 2.2823901176452637,
+      "persistence_rmse_roll_deg": 3.3522756099700928,
+      "rmse_pitch_deg": 3.893714189529419,
+      "rmse_fed5_std": 0.6925124526023865,
+      "persistence_rmse_fed5_std": 1.0390204191207886,
+      "wall_s": 15.548850297927856,
+      "fed5_gain_pct": 33.3494857407725
+    }
+  }
+}
