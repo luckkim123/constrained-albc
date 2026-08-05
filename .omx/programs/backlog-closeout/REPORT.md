@@ -5,8 +5,10 @@ whole ledger without per-item approval, deadline 2026-08-05 24:00 KST.
 **Definition of done**: `omx wiki list --status needs-experiment` and
 `--status needs-apply-before-retrain` both return zero rows. Not "the campaign concluded".
 
-> **STATUS: DRAFT — one lead (R6) still open pending Run B.** Sections marked *pending* are filled
-> when Run B's eval lands (~11:26). Everything else is final.
+> **STATUS: DRAFT — one lead (R6) still open pending Run C.** Run B (widen) is written up below and
+> came back NULL; the narrow arm Run C closes the lead. Sections marked *pending* are filled when
+> Run C's eval lands (run ETA ~16:18, eval runs unattended on GPU1 straight after). Everything else
+> is final.
 
 ---
 
@@ -82,7 +84,7 @@ anchor, and judged against the decision floors.
 
 | Lead | Closes on |
 |:--|:--|
-| `reward_sigma…` (R6 integral-gate threshold) | **Run B**, running now — *pending* |
+| `reward_sigma…` (R6 integral-gate threshold) | Run B done (**NULL**); **Run C** narrow arm running, ETA ~16:18 — *pending* |
 
 ## 3. Runs
 
@@ -223,3 +225,12 @@ omx wiki list --status needs-apply-before-retrain --root /workspace/constrained-
 ```
 
 `needs-apply-before-retrain` has returned `{"pages": [], "corrupt_pages": []}` since 06:00.
+`needs-experiment` is down to the single R6 row, which Run C closes.
+
+**No lead is hiding in a third state.** A direct frontmatter scan of all 513 pages under
+`.omx/registry/findings/` (14:12) reads **73 `resolved`, 1 `needs-experiment`, 439 untagged**, and no
+other status value exists in the store — so "both queries return zero" is not a narrow question that
+could pass while open work sits under some other label. Twenty-three additional pages contain the
+string `needs-experiment` in their *body* (each one records the status it was closed from); only the
+R6 page carries it in frontmatter. The scan and `omx wiki list` are independent readers and agree on
+that count.
