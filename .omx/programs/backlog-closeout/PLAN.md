@@ -577,68 +577,68 @@ gitignored here, as is its `DESIGN.md` — the durable copy is this plan, the le
 
 ## 8. STATE AT LAST COMPACTION — read this first on resume (overwrite each time)
 
-**Written 2026-08-05 06:16 KST, with Run A 13 minutes from finishing.** Re-derive from disk rather
-than trusting any id here if the clock has moved much: a relaunch mints a new run id and strands
-every id recorded in this file.
+**Written 2026-08-05 13:58 KST, with Run C at 2522/5000.** Re-derive from disk rather than trusting
+any id here if the clock has moved much: a relaunch mints a new run id and strands every id
+recorded in this file.
 
 ### Open leads: 1
 
 | Lead | Closes on | Status |
 |:--|:--|:--|
-| `reward_sigma…` (R6) | **Run B** | running, `trpo_gate020_s30_260805_063110`, ETA ~11:26 |
+| `reward_sigma…` (R6) | **Run C** | running, `trpo_gate005_s30_260805_112701`, ETA ~16:18 |
 
 `omx wiki list --status needs-apply-before-retrain` returns **zero rows**. Done means
-`--status needs-experiment` does too. Started at 17 leads; 16 are closed. The curriculum lead closed
-`resolved` at 06:36 on Run A — see the §7 entry, and do not re-open it: its only remaining item
-(Step 1, source bounds from measured hardware) is in the class the user deferred.
+`--status needs-experiment` does too. Started at 17 leads; 16 are closed.
 
-**Finished this session — do NOT redo any of it.** Nine leads closed by verdict (`8b63074`), two on
-evidence in hand (`e4231f3`), buoy added mass by measurement (`598db89`), both HydroRC leads
-(`8b63074`+), the **latency lead** (`567732f`, CLOSED-OUT-OF-SCOPE for gen-1). The **Koopman line is
-CLOSED as NULL** (campaign `discarded` event, wiki page, CLOSED banner on `koopman-lifting/PLAN.md`).
-Campaign drift fixed. Gate A's `Train/mean_reward` band in `HANDOFF-DGX.md` sharpened to p5-p95 plus
-the full 251.4-273.7 excursion.
+**Finished — do NOT redo any of it.** Nine leads closed by verdict (`8b63074`), two on evidence in
+hand (`e4231f3`), buoy added mass by measurement (`598db89`), both HydroRC (`ee3bcac`), the latency
+lead (`567732f`), and the **curriculum lead** on Run A (`e2ada17`). The **Koopman line is CLOSED as
+NULL**. **Run A and Run B are both DONE and analyzed** — Run A closed the curriculum lead and
+corrected DGX Gate A/B; Run B's widen arm is **NULL** (`f0f9aac`). The §9 report already exists at
+`.omx/programs/backlog-closeout/REPORT.md` with all 16 closed leads, Run A and Run B written up —
+only Run C's section, the verification section and the DRAFT banner remain.
 
 ### What is running
 
 - **GPU0 — Run C.** PID 1539828, `trpo_gate005_s30_260805_112701`, group `teacher_integral_gate`,
-  narrow arm (0.05), launched 11:26:55, ETA ~16:17. Stdout
-  `/workspace/constrained-albc/logs_queue/gate005_s30.log`. Override VERIFIED at 11:30:55.
-  **Always use the absolute path for stdout** — the shell cwd resets to `/workspace` between tool
-  calls and a relative path silently fails. TB:
-  `logs/rsl_rl/albc_trpo_teacher/teacher_integral_gate/latest/`.
-- **Runs A and B are DONE.** Run A finished 9998/9999 at 06:29:30; Run B finished 4999/5000 at
-  11:26:33 and is evaluated (verdict NULL, §7). Both stdouts are finalized into their run dirs'
-  `launch.log`. Both handoff watchers exited cleanly. None of this needs attention again.
-- **GPU1 — idle**, and correctly so, until Run C's eval at ~16:17.
+  narrow arm (0.05), launched 11:26:55, ETA ~16:18. Override VERIFIED at 11:30:55 against its own
+  `params/env.yaml`. Stdout `/workspace/constrained-albc/logs_queue/gate005_s30.log` — **use the
+  absolute path**, the shell cwd resets to `/workspace` between tool calls and a relative path
+  silently fails.
+- **Post-run watcher — PID 1733149**, `/root/.claude/jobs/3999bdb3/tmp/post_runC.sh`. On Run C's
+  exit it finalizes the stdout and **runs the eval on GPU1 itself** (anchored, no `--output_dir`,
+  checkpoint through the `train` symlink). State in `post_runC_state.txt`; eval stdout in
+  `eval_gate005.log`. So on resume the eval is likely already done — **check that file before
+  launching anything**. It was armed because the harness-managed background wait could not be
+  confirmed alive in `ps`, while the two on-disk handoff scripts today both worked.
+- **GPU1 — idle** until that eval fires.
 
 **Verify a watcher with `ps -eo pid,ppid,cmd` and look for the bare `bash <script>` line.** A
 `pgrep -f <script>` matches the tool-call wrapper shell whose command line contains the script name;
-that is how the handoff PID was first recorded wrong (1004223 vs the real 1004229).
+that is how a handoff PID was first recorded wrong (1004223 vs the real 1004229).
 
 ### Next actions, in order
 
-The Run A half is finished (handoff verified, Run A analyzed, curriculum lead closed, Gate A/B
-corrected), and Run B's mid-run checkpoint is done — Run C is confirmed as the narrow arm and its
-handoff is armed. What remains:
-
-1. **When Run B finishes (~11:24)**: eval on GPU1 per `teacher_integral_gate/DESIGN.md` §7, verify
-   24/24 pairing, apply the §5 pre-registered verdict with
-   `/root/.claude/jobs/3999bdb3/tmp/floor_verdict.py`. Then close the R6 lead.
-   **Re-run the comparability check at 5000**, the one the design did not anticipate: count Run B's
-   DORAEMON expansions against E-int's 19. Run A proved a 5000-iteration run on this plant stops at
-   ~65 % of its KL budget, so both arms are compared at a *partially expanded* box, and what has to
-   hold is that they expanded at the same pace. At iteration 2519 both stood at 9, so this is a
-   confirmation rather than an open risk — but confirm it, and put it in the report's limitations
-   either way.
-2. **Check `handoff_runC_state.txt`** once Run C launches (~11:25): `OVERRIDE VERIFIED` means the
-   gate really reads 0.05. `CUTOFF` means Run B ran past 12:00 and Run C was deliberately skipped —
-   in that case close R6 on the widen arm alone and **say so explicitly in the report**, do not let
-   it vanish.
-3. **When Run C finishes (~16:25)**: same eval and the same §5 verdict, then close R6 on both arms.
-4. **Final report** — `.omx/programs/backlog-closeout/REPORT.md` already carries all 16 closed leads,
-   Run A, and the corrections; fill its Run B/C sections, drop the DRAFT banner, and end with both
-   `omx wiki list --status …` queries returning zero rows.
+1. **Read `post_runC_state.txt`.** If it says `POST-RUNC DONE` with an eval dir and 4 npz files, the
+   eval is done — go to step 2. If it says `CHECKPOINT MISSING` or the eval produced no
+   `summary.json`, run the eval by hand per `teacher_integral_gate/DESIGN.md` §7.
+2. **Verify pairing BEFORE reading any metric**, with
+   `python3 /root/.claude/jobs/3999bdb3/tmp/pairing_matrix.py <E-int eval dir> <Run C eval dir>`.
+   The decision floors declare themselves "paired same-machine", so this is a precondition. Run B
+   came back 23/23 identical at all four levels against both E-int baselines; expect the same.
+3. **Apply the §5 verdict** with `floor_verdict.py`, exactly as for Run B. Clause 1 needs `ss_error`
+   to IMPROVE past 0.10 deg on >=2 of 4 levels. Also pull `n_gt20`, `os_env_mean` and per-axis CV —
+   `DESIGN.md` §5 requires the report to carry them, and for Run B they carried the whole story.
+4. **Re-run the comparability check**: count Run C's DORAEMON expansions against E-int's 19 and Run
+   B's 18. Run A proved a 5000-iteration run stops at ~65 % of its KL budget, so the arms are
+   compared at a partially expanded box and what must hold is that they expanded at the same pace.
+   Run B ended one expansion short despite matching 9-9 at iteration 2519 — the mid-run check alone
+   was falsely reassuring, so do this at 5000.
+5. **Close the R6 lead** on both arms (`omx wiki add … --status resolved`, exact title to merge not
+   fork), record the verdict in the ledger and in
+   `experiments/rsl_rl/albc_trpo_teacher/teacher_integral_gate/README.md`.
+6. **Finish `REPORT.md`**: fill the Run C section, drop the DRAFT banner, complete §6 Verification,
+   and end with both `omx wiki list --status …` queries returning zero rows.
 
 ### Analysis tooling already built and VALIDATED (do not rewrite)
 
@@ -646,25 +646,34 @@ All in `/root/.claude/jobs/3999bdb3/tmp/`, each calibrated against a case with a
 
 | Script | What it does | Validated against |
 |:--|:--|:--|
-| `saturation.py <run_dir>` | the 3 iteration-budget questions from TB scalars | reproduces extend8k exactly (26 expansions, last 6750, success 0.813→0.789, `entropy_before` 2 distinct values over n=1250); refuses to over-call mid-run |
-| `floor_verdict.py <base> <treat> [label]` | decision floors, survival FIRST, suppresses survivorship-contaminated levels | 0 REAL on self-comparison; reproduces the buoy-ceiling result (18 flags, all suppressed) |
-| `delay_table.py [d1_dir …]` | delay-response table beside the Z4 anchor | reproduces the Z4 wiki numbers (none d1 2.34x, d3 8.90x) |
+| `saturation.py <run_dir>` | the 3 iteration-budget questions from TB scalars | reproduces extend8k exactly; refuses to over-call mid-run |
+| `floor_verdict.py <base> <treat> [label]` | decision floors, survival FIRST, suppresses survivorship-contaminated levels | 0 REAL on self-comparison; reproduces the buoy-ceiling result |
+| `pairing_matrix.py <a> <b> [names]` | 4-level x 23-key pairing matrix (dr_ + fault_, 0-d flags excluded) | all-PAIRED on a self-comparison; reproduces the delay sweep's known none-PAIRED / 23-differing pattern |
+| `delay_table.py [d1_dir …]` | delay-response table beside the Z4 anchor | reproduces the Z4 wiki numbers (none d1 2.34x, d3 8.90x) — **pass the d-dirs as arguments**, with none it only prints d0 |
 
-`saturation.py` needs `/isaac-sim/python.sh` (tensorboard); the other two run on plain `python3`.
+`saturation.py` needs `/isaac-sim/python.sh` (tensorboard); the others run on plain `python3`.
+
+### Facts a resuming session must not re-derive
+
+- **Saturation on this plant is iteration 7748**, 30 expansions, KL budget 3.5209. E-int at 5000 had
+  0 of 21 dims at Beta(1,1) and 2.2800 spent (65 %). Boundaries land on iterations ending
+  248/498/748 because the phase shifts one iteration per resume.
+- **A silent `kl_step` stretch is NOT saturation** until a whole 250-iteration boundary has been
+  missed; `doraemon_state.pt` at Beta(1,1) is the direct evidence, a quiet metric is not.
+- **`DORAEMON/mode` < 0 in the first ~500 iterations is normal** for a fresh run, not a stall.
+- **The two E-int eval baselines (`static_260804_143234` GPU0, `static_260804_203719` GPU1) are
+  mutually paired** at all four levels, so either may be used; verdicts differ in the 4th decimal.
 
 ### Two instrument defects found today that will bite again
 
 - **A Hydra override can be accepted, exit 0, and inject nothing.** `apply_dr_config()` rebuilds the
   randomization config before env creation AND at every DR level, so any field that is not a
   `_DR_TUPLE_FIELDS` dim reverts to its dataclass default. When a dedicated CLI flag exists
-  (`--control-delay`), use the flag, never the Hydra path it writes to. Full write-up on the wiki
-  page `eval_py_rebuilds_env_cfg_from_hydra_defaults_so_obs_widening_fla.md`.
+  (`--control-delay`), use the flag. This is why every arm launch here reads its override back out
+  of the run's own recorded `params/env.yaml`.
 - **An injection that draws from the RNG unpairs the comparison even when it bites.**
-  `_draw_control_delay` skips its `torch.randint` at `d=0`, so d0 and d>=1 consume different RNG and
-  every DR draw after the first reset diverges. Bite and pairing are TWO gates. This also
-  invalidates the `hard` column of the recorded 2026-07-24 Z4 sweep (its `none` column stands);
-  the correction is on the latency page. Deliberately NOT fixed — an env-code change mid-program
-  would void E-int as the baseline.
+  `_draw_control_delay` skips its `torch.randint` at `d=0`. Bite and pairing are TWO gates. This
+  invalidated the `hard` column of the recorded 2026-07-24 Z4 sweep; the `none` column stands.
 
 ### Still user-gated, do not do autonomously
 
@@ -673,8 +682,7 @@ covered by §0's standing authority.
 
 **Housekeeping note, not mine to fix**: ~96 files under `.omx/registry/findings/` carry uncommitted
 metadata-only changes (qualityScore/updated) from a prior session on 2026-08-04. This session
-committed only the 19 files it actually touched, by explicit path, per the concurrent-session rule.
-
+commits only the files it actually touches, by explicit path, per the concurrent-session rule.
 
 ## 9. Final deliverable
 
