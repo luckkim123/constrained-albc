@@ -1,6 +1,31 @@
 # Koopman x RL — Experiment Plan (low-expectation, cheap-first)
 
-> **STATUS 2026-08-05: LINE CLOSED — NULL.** Arm B ran (`trpo_koopmanB_260804_202709`) and failed both
+> **STATUS 2026-08-05: REOPENED under a changed objective.** See §12 for the new phase.
+>
+> The 2026-08-04 closure below stands as a record of what was DECIDED, not of what was MEASURED.
+> Two facts make the difference, and both were pre-registered in this document rather than
+> discovered after the fact. First, **no Koopman operator was ever fitted in a training arm** —
+> arm B shipped the dictionary half (7 hand-designed observables) with no `K`, so the
+> Koopman-specific content, the linear evolution operator, was absent from the only training run
+> the line ever produced. §5 says so itself: a null there "is evidence about *this dictionary at
+> 2000-5000 iters single-seed*, **not about lifting in general**". Second, the clause that closed
+> the line, §8 exit clause 2, is a **budget** decision — "arm B returns NULL **and no one is
+> willing to spend the ≥15 GPU-h** that arm C's control set costs" — taken under the then-current
+> owner directive in §1: *"되면 좋고 안되면 말고"*, a cheap side-bet on control gains.
+>
+> **The objective changed on 2026-08-05: paper contribution is now primary, control performance
+> secondary** (owner, deep-interview Round 0/3). That re-prices the control set. Under a control
+> goal the nonlinear twin and the random expansion are overhead paid to attribute a win; under a
+> paper goal **they are the experiment** — the linear-vs-nonlinear latent-dynamics question is
+> open everywhere in the literature (research doc §6 item 2: "our control-arm pair would be the
+> first direct test"), and no published work isolates it, KIPPO included.
+>
+> **Arm B's NULL is retained unchanged** and is not re-litigated: it remains the low anchor, and
+> the record below is its verdict. 2 of the 5 arms the study needs are therefore already complete.
+>
+> ---
+>
+> **2026-08-04 closure record (unchanged).** Arm B ran (`trpo_koopmanB_260804_202709`) and failed both
 > pre-registered ADOPT conditions: `att_norm` `ss_error` improves past its floor at `hard` ONLY (1 of
 > the required 2 levels) and regresses at `medium`, while roll `n_gt20` at `none` goes 0.00 → 20.33
 > against a floor of 15. Pairing was 24/24 dr+fault keys at all four levels against both the
@@ -8,7 +33,7 @@
 > on clean numbers. The failure shape is a transient one — at nominal physics the steady-state error is
 > unchanged (0.4037 → 0.4003) while overshoot rises 7.96 → 13.74 pp and pitch rise time slows 23 % —
 > and it is WORST at the easiest DR level, which is why it is a rejection rather than a robustness
-> trade. §8's exit clause 2 is hereby honored: no Phase 2, arm C's ≥15 GPU-h is not spent.
+> trade. §8's exit clause 2 was honored at the time: no Phase 2, arm C's ≥15 GPU-h not spent.
 > Full record: omx wiki `koopman_phase_1_arm_b_null_marine_feature_lifting_buys_no_contro.md`,
 > campaign ledger event `discarded` on `koopman_marine_obs`.
 
@@ -262,3 +287,107 @@ neither resolves nor conflicts with them — but a plant fix landing later inval
    confidence — this is the low anchor, and it is expected to behave like one).
 4. If arm B is somehow positive, the first suspicion is not "Koopman works" but a per-axis
    trade-off hiding in the CV table (rules/03), and the report must rule that out before adopting.
+
+---
+
+## 12. Phase 2 (2026-08-05 reopen) — does the LINEARITY CONSTRAINT contribute?
+
+### 12.1 This is a study, not an ablation arm
+
+The owner's objective is a **venue-tier upgrade for a paper whose contributions already stand
+without Koopman** (observability / curriculum / distillation / FTC results, 55 substantive wiki
+decisions). That framing decides the design, because the three ways Koopman could enter the paper
+are not equally valuable:
+
+| Framing | Value to venue tier |
+|:---|:---|
+| "we added Koopman and it improved control" | High, but low probability — see 12.4 |
+| "we added Koopman and it did not" (bolt-on ablation) | **Near zero.** Reads as a failed add-on occupying pages |
+| **"we isolated whether the linear constraint contributes, with controls no prior work has run"** | **Holds either way** — the contribution is the isolation, not the sign |
+
+Only the third survives a null. So the roster below is not "arm C plus its controls" — the
+controls ARE the measurement, and the write-up must be framed that way from the proposal on, not
+retrofitted after the result (research doc rule 9, screening honesty).
+
+The question this study answers, stated once: **when a latent-dynamics auxiliary representation
+helps on-policy RL, is the credit due to the LINEARITY of the learned operator, or merely to
+having an auxiliary latent-dynamics objective at all?** No published work separates these. KIPPO
+never swaps its `K` for an MLP; TD-MPC2 is an existence proof that unconstrained latent
+consistency scales without linearity.
+
+### 12.2 Arm roster — 5 arms, 2 already complete
+
+| # | Arm | Isolates | Status |
+|:--|:---|:---|:---|
+| 1 | baseline (E-int `trpo_eint_s30_rs2350_260727_195102`) | reference | **DONE** |
+| 2 | arm B — hand dictionary, no `K` | is a fixed nonlinear basis alone enough? | **DONE — NULL** |
+| 3 | arm C — learned dictionary + learned `K`, frozen before RL | the full Koopman lift | TODO |
+| 4 | nonlinear twin — same size, same losses, `K` → MLP | **linearity itself** | TODO |
+| 5 | random expansion — frozen random lift, no training | expansion-vs-structure | TODO |
+
+Arm 4 is the load-bearing one. Without it the study cannot attribute anything to Koopman, and
+with it the study answers an open question regardless of sign.
+
+### 12.3 Sequencing — buy the cheap information first
+
+Do NOT spend the 15 GPU-h before the ~0.25 GPU-h check clears. §6 already flags this ordering and
+it is now binding.
+
+1. **Phase 0b instrumentation** (§4, ~10 lines, 0.25 GPU-h). Add `--save-action` next to the
+   existing `--save-policy-obs`, default off so existing outputs stay byte-identical, then one
+   instrumented eval pass. Existing logs carry neither the policy-obs vector nor the applied 8D
+   action, so no offline fit is possible without this.
+2. **Offline A4 study** (0 GPU beyond step 1). Fit `phi_x` + `K` on the collected rollouts plus a
+   scripted-excitation pass; sweep latent `m`; read the reconstruction/prediction plateau,
+   per-dim variance floor, and effective rank. Two decisions come out of it: whether a learned
+   lifting produces a *meaningful* linear approximation on this plant at all, and what `m` to use
+   (§6: choose `m` from the plateau, not from priors).
+   **Kill gate:** if the learned lift's multi-step prediction error is not separable from the
+   random-expansion control offline, stop here — arms 3–5 are not worth 15 GPU-h. This gate must
+   be able to fail; state the measured separation before proceeding.
+3. **Arms 3–5** (3 runs, ~15 GPU-h), single-seed paired same-seed same-machine, launched only
+   after explicit owner approval (`omx queue-launch`, never auto-fired).
+
+### 12.4 Pre-registered predictions (record before any run)
+
+1. Arm C does **not** clear the control adoption bar. Moderate-to-high confidence. Grounds: this
+   stack has no consumer of the linear structure (the lift feeds an MLP policy), the closest
+   on-policy precedent OFENet wins 5/5 MuJoCo but 3/5 within seed noise, and arm B already showed
+   that adding input width costs transient quality on this plant.
+2. Arm C and the nonlinear twin do **not** separate past a decision floor. Moderate confidence —
+   this is the study's central prediction and the one worth being wrong about.
+3. `phi_x` does not encode plant parameters better than `z` does (research doc §3: recon+prediction
+   latents do not reliably encode low-variance parameters; K0 already showed `z` encodes exactly
+   what it was given).
+
+### 12.5 Paper-inclusion decision rule (pre-registered — protects the main paper)
+
+The main paper does not wait on this and does not depend on it.
+
+| Outcome | Meaning | Paper action |
+|:---|:---|:---|
+| Arm C beats baseline past floors **and** beats the twin | linearity is doing work | Primary contribution section |
+| Arm C beats baseline but **not** the twin | the aux latent-dynamics objective helps; linearity gets no credit | Include, but the claim is "auxiliary latent-dynamics prediction helps" — do **not** call it Koopman |
+| Neither beats baseline, but C and twin **separate** from each other | linearity changes something that does not reach control | Methods subsection, controlled negative |
+| Nothing separates (flat) | the axis is inert at this scale | **Do not include as a contribution.** One limitations paragraph at most. Do not delay submission |
+
+### 12.6 Verdict hygiene (this project's own paid-for lessons)
+
+- Read **survival before accuracy** — an arm that kills envs makes its deltas survivorship-biased.
+- Count the **sign pattern across all cells**, not the flag list; per-cell floors do not aggregate.
+- Verify pairing (`dr_*` keys identical at every level) as a gate BEFORE reading any delta, and
+  again as a second gate if any arm draws RNG the others skip.
+- The decision floors declare themselves paired; these arms are teacher-vs-teacher on the same
+  seed and machine, so the precondition holds — state that it was checked, do not assume it.
+- Per-axis + CV table (rules/03) is part of the report, not optional.
+
+### 12.7 Open design decision, to be settled before arm C is specified
+
+**Where is the linearity consumed?** If `phi_x`'s output is simply concatenated to the policy
+input, the linear operator `K` never acts at inference and the arm degenerates toward arm B with a
+learned basis. Candidate consumers, in increasing order of cost: (a) feed `K phi_x(o_t)` — the
+one-step *prediction* — as an extra policy input; (b) use the prediction residual as a deployable
+observer/FDI channel (the arm G line, where linearity genuinely earns its keep); (c) linear MPC —
+ruled out on compute (0.219 s/step measured vs the ≤25 Hz embedded bus). Option (a) is the
+cheapest that keeps `K` in the loop and is the current default. Settle this before writing the
+arm C proposal.

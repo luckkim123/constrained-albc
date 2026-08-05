@@ -41,6 +41,7 @@ _MAT_VAR_DESC: dict[str, tuple[str, str]] = {
     "lin_vel_z":        ("m/s",      "body-frame heave velocity, shape (T, num_envs)"),
     "lin_vel_norm":     ("m/s",      "linear velocity magnitude, shape (T, num_envs)"),
     "action_magnitude": ("unitless",     "L2 norm of the 8-D action, shape (T, num_envs)"),
+    "action":           ("unitless",     "applied 8-D action as stepped (2 arm delta + 6 thruster), shape (T, num_envs, 8); present only under --save-action"),
     "delta_action":     ("action-norm", "||a(z) - a(z_ablated)|| per env-step; z-ablation diagnostic (#1-A); (T, num_envs); zeros when ablation off"),
     "terminated":       ("bool",        "per-step termination flag, shape (T, num_envs)"),
     "time_to_failure":  ("s",        "time of first termination per env, shape (1, num_envs)"),

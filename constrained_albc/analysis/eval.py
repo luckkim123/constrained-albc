@@ -170,6 +170,15 @@ sp_static.add_argument(
     "data_<level>.npz (additive; off by default).",
 )
 sp_static.add_argument(
+    "--save-action",
+    action="store_true",
+    default=False,
+    help="Also store the APPLIED 8D action per step into data_<level>.npz (additive; off by "
+    "default). action_magnitude keeps only the L2 norm and joint1_cmd only dim 0, so the full "
+    "vector is otherwise never logged; the Koopman offline fit (programs/koopman-lifting PLAN "
+    "12.3) needs it paired with --save-policy-obs.",
+)
+sp_static.add_argument(
     "--doraemon-dr",
     action=argparse.BooleanOptionalAction,
     default=True,
@@ -708,6 +717,7 @@ def run_evaluation(
     device,
     save_policy_obs: bool = False,
     save_action_std: bool = False,
+    save_action: bool = False,
 ) -> dict:
     """Run one evaluation pass and collect per-step data.
 
@@ -716,11 +726,17 @@ def run_evaluation(
     - vx, vy, vz: linear velocity commands (m/s, body frame)
     - yaw_rate: yaw rate command (rad/s)
 
-    save_policy_obs / save_action_std: purely additive diagnostics. When set, also
-    accumulate the realized 69D policy obs (pre-step) and the per-step action std
+    save_policy_obs / save_action_std / save_action: purely additive diagnostics. When set,
+    also accumulate the realized 69D policy obs (pre-step), the per-step action std
     (from a non-sampling distribution populate, NOT .act() -- the stepped action stays
-    the deterministic act_inference mean either way) into the returned dict under
-    "policy_obs" / "action_std". Off by default -> no extra memory, no extra keys.
+    the deterministic act_inference mean either way), and the APPLIED 8D action into the
+    returned dict under "policy_obs" / "action_std" / "action". Off by default -> no extra
+    memory, no extra keys.
+
+    save_action logs the SAME tensor env.step() receives, captured before the z-ablation
+    diagnostic forward (which never mutates it). Paired with save_policy_obs it yields the
+    (o_t, a_t) sequence an offline EDMD / lifting fit needs -- action_magnitude keeps only
+    the L2 norm and joint1_cmd only dim 0, so neither reconstructs the vector.
     """
     if save_action_std and not hasattr(policy_nn, "_update_distribution"):
         raise AttributeError(
@@ -766,6 +782,7 @@ def run_evaluation(
     # to before this diagnostic existed).
     policy_obs_log: list[np.ndarray] = []
     action_std_log: list[np.ndarray] = []
+    action_log: list[np.ndarray] = []
 
     # Force full reset via throwaway step
     raw_env.episode_length_buf[:] = raw_env.max_episode_length
@@ -808,6 +825,11 @@ def run_evaluation(
             actions = policy(obs)  # ablated action (z_ablation active) -> stepped into env
             if save_policy_obs:
                 policy_obs_log.append(obs["policy"].detach().cpu().numpy())
+            if save_action:
+                # Captured here, before the z-ablation branch below: that branch restores
+                # true z for one extra forward and reads `actions_normal`, leaving `actions`
+                # itself untouched, so this is exactly the tensor env.step() gets.
+                action_log.append(actions.detach().cpu().numpy())
             if save_action_std:
                 # Non-sampling: populates policy_nn.distribution from the already-computed
                 # (deterministic) `actions` mean, does NOT call .act()/.sample(), and does
@@ -934,6 +956,8 @@ def run_evaluation(
         out["policy_obs"] = np.stack(policy_obs_log, axis=0)  # (T, num_envs, policy_obs_dim: 69 main / 87 full_dof)
     if action_std_log:
         out["action_std"] = np.stack(action_std_log, axis=0)  # (T, num_envs, action_dim)
+    if action_log:
+        out["action"] = np.stack(action_log, axis=0)  # (T, num_envs, action_dim: 8 main)
     return out
 
 
@@ -1496,6 +1520,7 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
             device=device,
             save_policy_obs=args_cli.save_policy_obs,
             save_action_std=args_cli.save_action_std,
+            save_action=args_cli.save_action,
         )
         all_data[level] = data
 
