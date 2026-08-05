@@ -511,6 +511,36 @@ steady state is 0.666 against alpha 0.5, and `mode` was 0 on all 20 logged updat
 killed it.
 
 
+### 2026-08-05 09:05 — Run B mid-run checkpoint; Run C confirmed as the narrow arm
+
+`DESIGN.md` §3 makes Run C a decision, not a schedule entry: it is "confirmed at the Run B
+checkpoint and may be replaced if the mid-run read makes a different question more valuable". Read
+at iteration 2519 of 5000 (ETA 11:24):
+
+- **Healthy.** `DORAEMON/mode` is negative only at iterations 0/250/500 and sits at 0 from 750
+  onward; the E-int reference needed until 1250 to get there, so Run B is better behaved early, not
+  worse. `Train/mean_reward` 261.8 against the reference's 260.5. Zero NaN, zero errors in stdout.
+- **Comparable.** Both arms have fired exactly **9 DORAEMON expansions** by iteration 2519. This is
+  the check Run A's finding made necessary — a 5000-iteration run on this plant stops at ~65 % of
+  its KL budget, so both arms are compared at a partially expanded box, and the thing that had to be
+  verified was that they expand at the same PACE. They do.
+
+**Decision: Run C stays the narrow arm (0.05).** Nothing in the read points at a better question. A
+one-armed R6 would close on the widen direction alone and leave "what about narrowing?" as an
+implicit open question — which is precisely the kind of silent leftover this program exists to stop.
+The design's own §5 also defines its CLOSED-NULL over *both* arms.
+
+Handoff armed as **PID 1406056** (`handoff_runC.sh`), verified from the bare `bash <script>` line in
+`ps -eo pid,ppid,cmd`, not from `pgrep`. It carries a **12:00 cutoff guard**: if Run B ends after
+that, Run C is not launched and the state file says so, because a 5-hour run started later cannot
+clear the 17:00 GPU0 cutoff with time left to evaluate it. Its override check tests for the
+substring `0.05`, which the default `0.1` and Run B's `0.2` both fail — verified against all three
+strings before arming.
+
+Campaign drift on `teacher_integral_gate` adopted; the launch and this decision are both in the
+ledger.
+
+
 ## 8. STATE AT LAST COMPACTION — read this first on resume (overwrite each time)
 
 **Written 2026-08-05 06:16 KST, with Run A 13 minutes from finishing.** Re-derive from disk rather
@@ -544,8 +574,12 @@ the full 251.4-273.7 excursion.
   `logs/rsl_rl/albc_trpo_teacher/teacher_integral_gate/latest/`. **Override already verified** at
   06:35:05 against the run's own `params/env.yaml`: gate (0.2, 0.2, 0.2), `fault.enable: true`.
   Nothing further to check on that front.
+- **Handoff watcher — PID 1406056**, `/root/.claude/jobs/3999bdb3/tmp/handoff_runC.sh`. Same pattern
+  as the Run B one, launching **Run C** (narrow arm, `0.05`, `agent.run_name=gate005_s30`) with a
+  **12:00 cutoff guard** and an override check that tests for `0.05`. Progress in
+  `handoff_runC_state.txt`. **Read `OVERRIDE VERIFIED` there before trusting Run C.**
 - **Run A is DONE** — finished 9998/9999 at 06:29:30, stdout finalized into the run dir's
-  `launch.log`. The handoff watcher exited cleanly. Neither needs attention again.
+  `launch.log`. Its handoff watcher exited cleanly. Neither needs attention again.
 - **GPU1 — idle**, and correctly so. Nothing in the remaining backlog needs it until Run B's eval.
 
 **Verify a watcher with `ps -eo pid,ppid,cmd` and look for the bare `bash <script>` line.** A
@@ -554,28 +588,27 @@ that is how the handoff PID was first recorded wrong (1004223 vs the real 100422
 
 ### Next actions, in order
 
-Steps 1-4 of the previous list are DONE (handoff verified, Run A analyzed, curriculum lead closed,
-Gate A/B corrected). What remains:
+The Run A half is finished (handoff verified, Run A analyzed, curriculum lead closed, Gate A/B
+corrected), and Run B's mid-run checkpoint is done — Run C is confirmed as the narrow arm and its
+handoff is armed. What remains:
 
-1. **Mid-run read on Run B, around 09:00.** Two purposes. (a) Confirm it is healthy — `mode` >= 0,
-   `success_rate` declining but above alpha, no NaN. (b) **Decide whether Run C stays the narrow arm**
-   (`0.05`): `DESIGN.md` §3 says Run C is confirmed at the Run B checkpoint and may be replaced if
-   the mid-run read makes a different question more valuable. This is the decision point; do not
-   arm the Run B → Run C handoff before making it.
-2. **Arm the Run B → Run C handoff** once that decision is made, same pattern as
-   `handoff_runB.sh` (poll the training PID directly, never `pgrep -f`; verify the override out of
-   the new run's own `params/env.yaml`). Run C must START by about **11:45** to finish before the
-   **17:00 hard GPU0 cutoff**. If Run B slips past that, drop Run C and close R6 on the two points
-   that exist — say so explicitly rather than silently.
-3. **When Run B finishes (~11:26)**: eval on GPU1 per `teacher_integral_gate/DESIGN.md` §7, verify
+1. **When Run B finishes (~11:24)**: eval on GPU1 per `teacher_integral_gate/DESIGN.md` §7, verify
    24/24 pairing, apply the §5 pre-registered verdict with
    `/root/.claude/jobs/3999bdb3/tmp/floor_verdict.py`. Then close the R6 lead.
-   **Add one comparability check the design did not anticipate**: count Run B's DORAEMON expansions
-   and compare against E-int's 19 at the same iteration count. Run A proved a 5000-iteration run on
-   this plant stops at ~65 % of its KL budget, so both arms are being compared at a *partially
-   expanded* box. If the counts differ materially the arms saw different exams and that belongs in
-   the report's limitations, not buried.
-4. **Final report** per §9, ending with both `omx wiki list --status …` queries returning zero rows.
+   **Re-run the comparability check at 5000**, the one the design did not anticipate: count Run B's
+   DORAEMON expansions against E-int's 19. Run A proved a 5000-iteration run on this plant stops at
+   ~65 % of its KL budget, so both arms are compared at a *partially expanded* box, and what has to
+   hold is that they expanded at the same pace. At iteration 2519 both stood at 9, so this is a
+   confirmation rather than an open risk — but confirm it, and put it in the report's limitations
+   either way.
+2. **Check `handoff_runC_state.txt`** once Run C launches (~11:25): `OVERRIDE VERIFIED` means the
+   gate really reads 0.05. `CUTOFF` means Run B ran past 12:00 and Run C was deliberately skipped —
+   in that case close R6 on the widen arm alone and **say so explicitly in the report**, do not let
+   it vanish.
+3. **When Run C finishes (~16:25)**: same eval and the same §5 verdict, then close R6 on both arms.
+4. **Final report** — `.omx/programs/backlog-closeout/REPORT.md` already carries all 16 closed leads,
+   Run A, and the corrections; fill its Run B/C sections, drop the DRAFT banner, and end with both
+   `omx wiki list --status …` queries returning zero rows.
 
 ### Analysis tooling already built and VALIDATED (do not rewrite)
 
