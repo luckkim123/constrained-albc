@@ -5,17 +5,14 @@ whole ledger without per-item approval, deadline 2026-08-05 24:00 KST.
 **Definition of done**: `omx wiki list --status needs-experiment` and
 `--status needs-apply-before-retrain` both return zero rows. Not "the campaign concluded".
 
-> **STATUS: DRAFT — one lead (R6) still open pending Run C.** Run B (widen) is written up below and
-> came back NULL; the narrow arm Run C closes the lead. Sections marked *pending* are filled when
-> Run C's eval lands (run ETA ~16:18, eval runs unattended on GPU1 straight after). Everything else
-> is final.
+> **STATUS: FINAL — 2026-08-05 16:45 KST.** Both closing queries return zero rows; see section 6.
 
 ---
 
 ## 1. Result
 
-**17 leads in, 16 closed, 1 running.** `needs-apply-before-retrain` is at **zero** and has been since
-06:00. Nothing was closed by declaring it finished: every one of the 16 carries a verdict, the
+**17 leads in, 17 closed.** Both `needs-experiment` and `needs-apply-before-retrain` return zero
+rows. Nothing was closed by declaring it finished: every one of the 17 carries a verdict, the
 evidence behind it, and the commit that recorded it.
 
 Two of the three "plant is wrong, apply before any retrain" blockers turned out to be **real model
@@ -23,8 +20,8 @@ errors that the policy is measurably insensitive to** — which is a different a
 than either "fixed" or "still open". They are accepted for gen-1 with the error documented, rather
 than applied, because applying them would have voided E-int as the DGX flagship's baseline.
 
-Two findings came out larger than the leads that produced them, and both are corrections to things
-the workspace already believed:
+Three findings came out larger than the leads that produced them, and the first two are corrections
+to things the workspace already believed:
 
 - **No 5000-iteration teacher on this plant ever reached its DR ceiling.** E-int — the shipped
   teacher, the DGX baseline, and every student's source — ended with **0 of 21 DORAEMON dims at
@@ -32,6 +29,11 @@ the workspace already believed:
 - **The `hard` column of the recorded 2026-07-24 Z4 latency sweep was never a paired comparison.**
   An injection that draws from the RNG shifts every subsequent DR draw, so `d=0` and `d>=1` are not
   the same envs. The `none` column stands; the rest was corrected in place.
+- **The integral-gate threshold is at its optimum, not inert.** The R6 sweep was expected to return
+  a flat null in both directions. Widening did. Narrowing did not: it is actively harmful, taking
+  roll `n_gt20` from 0 to 42 of 64 envs at `none`, and the ungated bias-EMA path that justified the
+  null expectation does not compensate for it. A knob confirmed to sit at an optimum is a stronger
+  result than a knob confirmed to do nothing.
 
 ## 2. The ledger — all 17
 
@@ -80,11 +82,11 @@ anchor, and judged against the decision floors.
 | `experiment_idea_latency…` | CLOSED-OUT-OF-SCOPE for gen-1, carried as a gen-2 requirement | Measured E-int's delay response (below). Training the delay in needs either a curriculum-engine change or a measured `performance_lb` recalibration — two of three committed GPU0 slots, unvalidatable before the deadline. A naive delay-ON run reproduces `trpo_e1_latdr` and answers nothing. The full recipe is recorded so gen-2 starts from it. |
 | `curriculum_recalibration_protocol…` | RESOLVED; Step 1 DEFERRED-HARDWARE | Run A (below). Its 2026-07-21 premise — runs at this length are box-exhausted, so bounds-widening is the only lever — is false on the current plant. |
 
-### Open (1)
+### Closed on the R6 three-point sweep (1) — this session
 
-| Lead | Closes on |
-|:--|:--|
-| `reward_sigma…` (R6 integral-gate threshold) | Run B done (**NULL**); **Run C** narrow arm running, ETA ~16:18 — *pending* |
+| Lead | Verdict | Basis |
+|:--|:--|:--|
+| `reward_sigma…` (R6 integral-gate threshold) | **CLOSED-NULL**; default confirmed at its optimum | Runs B and C below. Both arms null under the pre-registered rule, so `(0.10, 0.10, 0.10)` stands — but the default also beats both probes on roll `n_gt20` at all four DR levels, so the knob is at an optimum rather than inert. |
 
 ## 3. Runs
 
@@ -152,15 +154,56 @@ check existed only because Run A had just shown that a 5000-iteration run stops 
 Separately, E-int reached 5000 as a resume chain while this is a fresh run — established practice in
 this campaign (the Koopman arm and Phase D were both accepted under it) but a real difference.
 
-### Run C — R6 narrow arm (`trpo_gate005_s30_260805_112701`) — *pending*
+### Run C — R6 narrow arm (`trpo_gate005_s30_260805_112701`) — NULL, fails both clauses
 
-Confirmed as the narrow arm (0.05) at the Run B mid-run checkpoint per `DESIGN.md` §3, on a read
-showing Run B healthy and both arms at an identical 9 expansions. Launched 11:26:55 with a
-**22-second** GPU0 gap; override verified at 11:30:55 (gate 0.05, `fault.enable: true`). ETA ~16:17,
-clearing the 17:00 cutoff. Its handoff carried a 12:00 guard that would have skipped the launch and
-said so in the state file rather than starting a run that could not be evaluated in time.
+Confirmed as the narrow arm (0.05) at the Run B mid-run checkpoint per `DESIGN.md` §3. Launched
+11:26:55 with a **22-second** GPU0 gap; override verified at 11:30:55. Finished 4999/5000 at 16:21
+with zero error-pattern lines; its handoff carried a 12:00 guard that would have skipped the launch
+rather than start a run that could not be evaluated in time.
 
-*Verdict pending; same eval protocol and the same §5 rule.*
+Same protocol: pairing checked before any metric (23/23 at all four levels against both E-int
+baselines), survival read before accuracy (100 % except hard 98.44 %, one env of 64 — below the
+1.6 pp floor, so nothing is survivorship-contaminated).
+
+**Twenty REAL flags, every one of them worse, zero improvements.** Clause 1 fails — `att_norm`
+`ss_error` regresses REAL at all four levels (+0.4572 / +0.2729 / +0.3313 / +0.4402). Clause 2 fails
+too, which the widen arm survived: roll `os_env_mean` breaches its 10.0 floor at none/soft/medium
+and roll `n_gt20` breaches its 15-env floor at **all four** levels (+42.00, +33.00, +27.33, +16.33).
+
+**The three points together say more than either arm alone.** On roll `n_gt20` — the heavy-tail
+metric the mechanism targets — the default wins at every level, reading 0.10 / 0.20 / 0.05 per cell:
+
+| level | roll `n_gt20` (of 64 envs) |
+|:--|:--|
+| none | **0.00** / 6.00 / 42.00 |
+| soft | **0.33** / 7.00 / 33.33 |
+| medium | **1.00** / 5.67 / 28.33 |
+| hard | **5.00** / 5.67 / 21.33 |
+
+Both directions are worse — mildly when widening, off a cliff when narrowing. The knob is not inert;
+it is already at or beside its optimum, which is a more useful answer than a flat null. The
+mechanism the lead argued is confirmed with its sign: the gate is a settling-band accumulator, so
+narrowing it excludes exactly the sustained-offset envs that need integral action.
+
+**The pre-registration was half wrong in the informative direction.** `DESIGN.md` §5 expected
+null-to-small both ways because the policy already gets an ungated 3D bias-EMA buffer (`_bias_ema`,
+P-B1). True for widening; false for narrowing — that parallel path does not rescue a too-narrow
+gate.
+
+**Single-variable was verified, not assumed.** `agent.yaml` is identical line for line between the
+two fresh arms; `env.yaml` differs only in the three gate values once base64 pickle blobs and
+run-identity fields are excluded. A decisive negative earns the same scrutiny as a positive.
+
+**An independent instrument had already ranked it last.** Before any eval, Run C's training showed
+reward 251.8 against `performance_lb` 250.0 and DORAEMON success 0.5849 against `alpha` 0.5 — the
+success bar running through the middle of its return distribution — which throttled its own
+curriculum to 17 expansions against 18 (widen) and 19 (E-int), on byte-identical DORAEMON settings.
+DORAEMON success is `episode_return >= performance_lb` (`doraemon.py:306`), so the treatment cannot
+contaminate that criterion by construction.
+
+**Limits.** One seed per arm, so the ranking is solid but the curve's shape between 0.05 and 0.20 is
+not; and E-int is a resume chain against two fresh arms, so only widen-vs-narrow is a clean
+same-protocol pair.
 
 ### GPU1 — evals
 
@@ -217,7 +260,16 @@ Two instrument defects were found and written up, because both will bite again:
 
 ## 6. Verification
 
-*Pending completion.* The closing check is both queries returning zero rows:
+**Both queries return zero rows, verified 2026-08-05 16:45 KST:**
+
+```
+$ omx wiki list --status needs-experiment --root /workspace/constrained-albc
+{"pages": [], "corrupt_pages": []}
+$ omx wiki list --status needs-apply-before-retrain --root /workspace/constrained-albc
+{"pages": [], "corrupt_pages": []}
+```
+
+The commands, for re-running:
 
 ```
 omx wiki list --status needs-experiment --root /workspace/constrained-albc
