@@ -50,14 +50,15 @@ the exact point at which the whole line gets closed. It does not attempt the res
 **This document exists to survive context compaction.** A session resuming from it needs nothing
 else except the files it points at. Do not reconstruct any of the below from memory.
 
-**State on 2026-08-05 19:00 KST.** The line is REOPENED (see the STATUS block above for why).
-Phase 0b is DONE and verified; nothing is running; nothing is queued; no GPU is held.
+**State on 2026-08-05 20:00 KST.** The line is REOPENED (see the STATUS block above for why).
+Steps 1 and 2 are DONE and verified; nothing is running; nothing is queued; no GPU is held.
+**The line is now waiting on an owner decision, not on work** — see §12.8's closing paragraph.
 
 | Step | State |
 |:---|:---|
 | §12.3 step 1 — `--save-action` instrument + instrumented eval | **DONE**, commits `611e5c4` + `8ca33e0` |
-| §12.3 step 2 — scripted-excitation collection, then the offline A4 fit + kill gate | **NEXT, not started, 0 GPU** |
-| §12.3 step 3 — arms 3-5 (~15 GPU-h) | Hard-gated behind step 2's kill gate AND explicit owner approval |
+| §12.3 step 2 — excitation instrument + the offline A4 fit + kill gate | **DONE 2026-08-05**, 0 GPU-h of training. Gate **does not fire**. Full result and the six readings: **§12.8**. Instrument: commit `a0daf23` |
+| §12.3 step 3 — arms 3-5 (~15 GPU-h) | **Owner decision, not a technical blocker.** The gate no longer blocks it; §12.8 argues the expected return is small and names the alternative (write up the offline study instead) |
 
 **Facts a compacted session will otherwise lose, in priority order:**
 
@@ -79,11 +80,23 @@ Phase 0b is DONE and verified; nothing is running; nothing is queued; no GPU is 
 4. **Phase 0b data is already collected** — do not re-run it:
    `experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_eint_s30_rs2350_260727_195102/eval/static_260805_181841/`
    4 DR levels, each with `action (7750, 64, 8)` + `policy_obs (7750, 64, 72)`. Verified bit-exact
-   (§12.3 step 1). **Scope caveat that decides step 2's design**: this is the static-eval
-   closed-loop distribution under a *deterministic* policy, so an operator fitted on it is
-   identified only along directions that policy excited. A good fit here would be ambiguous
-   between "the dynamics are near-linear" and "the policy only visited a narrow region" — which is
-   exactly why step 2's scripted-excitation pass is load-bearing and not optional.
+   (§12.3 step 1).
+
+   **Three properties of this data, measured 2026-08-05, that decide step 2's design.** The first
+   two are better than assumed and the third is worse.
+   - The `static` protocol does **not** hold the command at zero. It injects a scripted step
+     sequence — roll and pitch stepping through ±30 deg and yaw-rate through ±0.5 rad/s, changing
+     every 250 steps (5 s) — so the state distribution is a commanded step-response sweep, not
+     regulation about a single point. Attitude actually spans -38.6 to +34.9 deg.
+   - There are **zero terminations** across all 64 envs over the full 155 s, and no periodic reset
+     is visible in the obs (checked at every 1500-step episode boundary). Transition pairs are
+     therefore clean; none straddles a teleport. The fit script hard-fails if this ever changes.
+   - **`u` is 96.5 % linearly predictable from `o`** (R², ridge, 200k samples, raw obs). `eval.py`
+     steps the deterministic inference policy, so `u = pi(o)` exactly. The consequence is specific:
+     in a fitted lifted model `z' = A z + B u`, the term `B u ≈ B C z` is absorbable into `A`, so
+     **`B` is not identified** and the operator is valid only along this policy's own closed loop.
+     This is what makes the excitation pass mandatory — not a narrow state region, which the
+     scripted commands already avoid.
 5. **The eval command that works** (both `.claude/rules/03` traps avoided — no `--output_dir`,
    checkpoint through the `train` symlink), and no obs-widening flags are needed because
    `use_integral_obs` / `use_bias_ema_obs` already default to True and rebuild E-int's 72D geometry:
@@ -94,6 +107,14 @@ Phase 0b is DONE and verified; nothing is running; nothing is queued; no GPU is 
      --checkpoint experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_eint_s30_rs2350_260727_195102/train/model_4999.pt \
      --save-policy-obs --save-action
    ```
+
+   Add `--excite-std 0.10` (commit `a0daf23`) for a system-ID pass that can identify `B`. It is
+   validated: paired at all 4 levels (every `dr_*`/`fault_*` key byte-identical to the unexcited
+   run, which is what the dedicated RNG generator exists for), bites at the commanded amplitude,
+   kills no envs (0/64 at every level), and drops `u` R² from ~0.93 to ~0.74. The paired short
+   validation passes are `eval/static_260805_190144` (0.0) and `.../static_260805_190351` (0.10),
+   both carrying a `NOTE.md` — they are `--segment_duration 1.0`, so their performance metrics are
+   NOT comparable to a standard eval and must never be cited as one.
 
 6. **§12.7 is still open and blocks the arm C spec**: where the linearity is consumed. If `phi_x`
    output is merely concatenated to the policy input, `K` never acts at inference and arm C
@@ -418,14 +439,16 @@ it is now binding.
    Note for the A4 fit: this is the STATIC-eval closed-loop distribution under a deterministic
    policy. Offline operator fits are identified only along directions the logging policy excited,
    so the scripted-excitation pass in step 2 is load-bearing, not optional.
-2. **Offline A4 study** (0 GPU beyond step 1). Fit `phi_x` + `K` on the collected rollouts plus a
-   scripted-excitation pass; sweep latent `m`; read the reconstruction/prediction plateau,
-   per-dim variance floor, and effective rank. Two decisions come out of it: whether a learned
-   lifting produces a *meaningful* linear approximation on this plant at all, and what `m` to use
-   (§6: choose `m` from the plateau, not from priors).
+2. ~~**Offline A4 study**~~ — **DONE 2026-08-05**, see §12.8 for the full result. Fit `phi_x` + `K`
+   on the collected rollouts plus a scripted-excitation pass; sweep latent `m`; read the
+   prediction plateau, per-dim variance floor, and effective rank.
    **Kill gate:** if the learned lift's multi-step prediction error is not separable from the
-   random-expansion control offline, stop here — arms 3–5 are not worth 15 GPU-h. This gate must
-   be able to fail; state the measured separation before proceeding.
+   random-expansion control offline, stop here — arms 3–5 are not worth 15 GPU-h.
+   **Gate outcome: DOES NOT FIRE.** The learned lift separates from the random expansion in all
+   10 measured configurations, same sign every time, 2.6–20.5 sigma. The gate was able to fail —
+   the random expansion is itself indistinguishable from no lift at all (§12.8), which is what a
+   dead instrument would have looked like. But the gate tested separability, not size, and the
+   size is the reason step 3 is still not obviously worth buying: see §12.8's decision.
 3. **Arms 3–5** (3 runs, ~15 GPU-h), single-seed paired same-seed same-machine, launched only
    after explicit owner approval (`omx queue-launch`, never auto-fired).
 
@@ -472,3 +495,106 @@ observer/FDI channel (the arm G line, where linearity genuinely earns its keep);
 ruled out on compute (0.219 s/step measured vs the ≤25 Hz embedded bus). Option (a) is the
 cheapest that keeps `K` in the loop and is the current default. Settle this before writing the
 arm C proposal.
+
+### 12.8 Step 2 result (2026-08-05) — the offline study, and what it decides
+
+**Zero GPU-hours of training were spent.** Everything below comes from the Phase 0b rollouts plus
+two short instrument-validation passes. Artifacts: `step2_fit_lift.py` (the fit),
+`step2_fit/fit_{none,hard}.json` (full-length sweep, widths 0/16/32/64/128, 3 seeds),
+`step2_fit/excite_{base_short,excited}_{none,hard}.json` (excited-vs-paired-unexcited refit).
+
+**What was fitted.** `phi(o) = [o ; psi(o)]` with the raw observation always inside the lift, so
+predicting `o` is the same linear readout (first 72 rows) for every model — no decoder, and the
+"shrink the latent to shrink the loss" degenerate solution buys nothing. Multi-step rollout applies
+the operator repeatedly (`z <- A z + B u`) with the true logged action and **without re-lifting**;
+re-lifting each step would make every model a nonlinear predictor and would not test linearity at
+all. All models share one objective, optimizer and budget, differing only in what is learnable.
+Train/test split is by ENV (48/16), so the test set is held-out plants wherever DR is on.
+
+**Four model classes.** `raw` (no lift, linear operator) / `random` (frozen random lift, linear
+operator — the offline stand-in for arm 5) / `learned` (learned lift, linear operator — arm 3) /
+`nested_nl` (same learned lift, operator gains a residual MLP initialised to zero). The last one
+**nests** the linear model rather than replacing `K` with a same-size MLP as arm 4 specifies. That
+is deliberate: a nested comparison cannot be confounded by one architecture merely optimizing more
+easily, so "does relaxing linearity help" gets a clean answer. It is not a substitute for arm 4.
+
+**Measured, width 64 (the plateau), H25 = 0.5 s ahead, 3 seeds:**
+
+| Protocol | Level | `u` R^2 | learned beats random | dropping linearity buys |
+|:---|:---|---:|---:|---:|
+| full 5 s segments, unexcited | none | 0.971 | +11.0 % (2.8 sigma) | +40.7 % (8.6 sigma) |
+| full 5 s segments, unexcited | hard | 0.953 | **+1.6 % (2.6 sigma)** | +4.1 % (4.6 sigma) |
+| short 1 s segments, unexcited | none | 0.943 | +17.6 % (8.1 sigma) | +39.3 % (31.9 sigma) |
+| short 1 s segments, unexcited | hard | 0.928 | +14.2 % (7.1 sigma) | +25.8 % (16.3 sigma) |
+| short 1 s segments, **excited** | none | 0.740 | +11.1 % (20.5 sigma) | +16.2 % (28.8 sigma) |
+| short 1 s segments, **excited** | hard | 0.753 | +9.5 % (12.0 sigma) | +11.7 % (13.3 sigma) |
+
+Percentages are RMSE reductions in standardized observation units; sigma is against the 3-seed
+spread. Absolute errors are NOT comparable across protocol rows — the 1 s protocol changes the
+command five times as often, so it is far more transient-rich and every model does relatively more
+work. Compare within a row.
+
+**Six readings, in decreasing order of how much they should change anyone's mind.**
+
+1. **The linear constraint is never free.** Relaxing it helps in 10 of 10 configurations,
+   4.6–31.9 sigma, and it survives excitation (39.3 % -> 16.2 % at `none`, 25.8 % -> 11.7 % at
+   `hard`). The shrinkage under excitation is itself informative: part of the apparent nonlinear
+   advantage on unexcited data was the model exploiting the confounded closed loop, and part was
+   real. **Pre-registered prediction 2 in §12.4 — "arm C and the nonlinear twin do not separate
+   past a decision floor" — is refuted at the PREDICTION level**, for 0 GPU-h. Whether it survives
+   at the CONTROL level is exactly what arms 3–5 would buy, and the whole §12.1 framing says the
+   isolation is the contribution regardless of sign.
+2. **The random expansion is inert, so the learned dictionary is doing real work.** At `none`
+   full-length the random lift scores 0.4651 / 0.4624 / 0.4632 / 0.4685 at widths 16/32/64/128
+   against 0.4680 with no lift at all — every one inside the seed spread. Width alone buys
+   nothing; only a *learned* dictionary moves the number. This is also what makes the kill gate a
+   real gate: a dead pipeline would have shown the learned lift landing in that same band.
+3. **The binding error term is plant generalization, not model class.** At `hard` full-length the
+   train/test gap is +0.58 to +0.62 against a test error of 0.85–0.90 — roughly two thirds of the
+   error is failure to transfer to held-out plants, and it is nearly identical for every model
+   class including no-lift. The entire model family spans ~6 % while the gap spans ~65 %. Lifting
+   does not touch the dominant term. (The `nested_nl` model has the *largest* gap at `hard`, so its
+   extra capacity partly buys train accuracy that does not transfer.)
+4. **The size of the win is below what this project has already priced as control-irrelevant —
+   in the realistic condition.** In the full-length `hard` row, the closest thing here to normal
+   operation, learned-beats-random is **1.6 %** RMSE. The X1 tail-split measured that a **6.69 %**
+   RMSE improvement in latent quality produced a sub-floor (zero) control change. So the offline
+   signal in the realistic condition is about 4x smaller than one already demonstrated to move
+   nothing. In transient-rich conditions it reaches 9.5–17.6 %, comparable to or above that
+   threshold — but "above a level that produced nothing" is not evidence that it will produce
+   something. This is the single largest argument against spending the 15 GPU-h, and it is an
+   argument about arm C's CONTROL result, not about the study's value.
+5. **`m` from the plateau, as §6 required: ~64 added dimensions, ~12 effective.** Learned-linear at
+   `none` full-length goes 0.4288 (w=16) -> 0.4189 (32) -> 0.4122 (64) -> 0.4123 (128): flat past
+   64. Participation-ratio rank of `psi` saturates at 11–12 for the learned lift no matter how wide
+   it is, while the random lift's rank keeps climbing (9.3 -> 19.5). The learned dictionary
+   concentrates; per-dim `psi` std also falls (0.689 -> 0.334) as width grows.
+6. **A wider dictionary makes `B` LESS identifiable, not more.** `u` R^2 rises monotonically with
+   lift width and with learning: 0.965 (raw) -> 0.9828 (learned, w=128) on the unexcited data. A
+   richer basis explains the deterministic policy better, so more of `B u` becomes absorbable into
+   `A`. Anyone fitting a Koopman-with-control model on on-policy rollouts should expect this to get
+   worse exactly as they make the dictionary better.
+
+**Caveats that bound all of the above.**
+- `nested_nl` is a nested residual, not arm 4's same-size `K -> MLP` swap. It answers "does
+  relaxing linearity help"; it does not report what arm 4 would score.
+- Everything is fitted on rollouts of a FROZEN policy. Arm C freezes `phi_x` and `K` before RL and
+  the policy then moves, so these numbers are an upper bound on what a frozen operator delivers
+  during training.
+- One excitation amplitude (`--excite-std 0.10`) was tested, and it only brings `u` R^2 down to
+  ~0.74. Residual confounding remains; a sweep was not run.
+- Effect size depends strongly on how transient-rich the command protocol is (rows 1–2 vs 3–6).
+  Any single number quoted without its protocol is misleading.
+- `none` is not a generalization test: 23 of 23 `dr_*` keys are constant across envs there, so its
+  held-out envs differ only by disturbance realization. Read `hard` for transfer claims.
+
+**The decision this hands to the owner.** The literal gate passes, so §12.3 step 3 is not
+blocked by it — but step 3 also requires explicit approval, and the offline evidence has changed
+what that approval is buying. Reading 4 says arm C is unlikely to clear the control bar (which
+only strengthens pre-registered prediction 1), so under §12.5 the likely landing zones are outcome
+4 (flat -> "do not include as a contribution", one limitations paragraph) or outcome 3 (C and twin
+separate but neither beats baseline -> a methods subsection). That is a modest return on 15 GPU-h
+for a venue-tier upgrade. Against that, reading 1 is already a controlled negative at the modeling
+level obtained for free, and §12.1 argued the isolation is the contribution — so a defensible
+alternative is to write up the offline study and not run arms 3–5 at all. **Not decided here.**
+
