@@ -333,10 +333,27 @@ with it the study answers an open question regardless of sign.
 Do NOT spend the 15 GPU-h before the ~0.25 GPU-h check clears. §6 already flags this ordering and
 it is now binding.
 
-1. **Phase 0b instrumentation** (§4, ~10 lines, 0.25 GPU-h). Add `--save-action` next to the
-   existing `--save-policy-obs`, default off so existing outputs stay byte-identical, then one
-   instrumented eval pass. Existing logs carry neither the policy-obs vector nor the applied 8D
-   action, so no offline fit is possible without this.
+1. ~~**Phase 0b instrumentation**~~ — **DONE 2026-08-05** (commit `611e5c4`). `--save-action`
+   added next to `--save-policy-obs` in `analysis/eval.py` (7 sites) plus an `_MAT_VAR_DESC`
+   entry; default off, `if action_log:` guards the key, so with the flag off `array_data` is
+   unchanged and both `data_<level>.npz` and `.mat` stay byte-identical (structural — the off
+   path was not separately re-run).
+
+   Instrumented pass complete on the E-int baseline (`model_4999.pt`, 64 envs, headless, no
+   `--output_dir`, checkpoint via the `train` symlink):
+   **`experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_eint_s30_rs2350_260727_195102/eval/static_260805_181841/`**
+
+   All 4 DR levels carry `action` `(7750, 64, 8)` paired with `policy_obs` `(7750, 64, 72)`.
+   **Correctness gate passed and it was able to fail**: `norm(action, axis=-1)` reproduces the
+   independently-computed `action_magnitude` with max abs error **exactly 0.0** at every level,
+   which is what distinguishes the applied tensor from the z-ablation branch's `actions_normal`
+   or any pre/post-processed variant. Actions are non-degenerate (std 0.171 at `none` rising to
+   0.186 at `hard`). No obs-widening flags were needed: `use_integral_obs` and
+   `use_bias_ema_obs` already default to True, so the rebuilt cfg reproduces E-int's 72D geometry.
+
+   Note for the A4 fit: this is the STATIC-eval closed-loop distribution under a deterministic
+   policy. Offline operator fits are identified only along directions the logging policy excited,
+   so the scripted-excitation pass in step 2 is load-bearing, not optional.
 2. **Offline A4 study** (0 GPU beyond step 1). Fit `phi_x` + `K` on the collected rollouts plus a
    scripted-excitation pass; sweep latent `m`; read the reconstruction/prediction plateau,
    per-dim variance floor, and effective rank. Two decisions come out of it: whether a learned
