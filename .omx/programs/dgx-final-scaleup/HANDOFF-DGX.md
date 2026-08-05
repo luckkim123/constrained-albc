@@ -25,12 +25,30 @@ further experiment.
    next purpose, DR-box widening is blocked pending measured hardware bounds, entropy/min_std
    changes were a 5/5 zero-adoption sweep, num_mini_batches stays 4, step_interval stays 250. If you
    think a knob needs to differ, that is a STOP-and-report, not a judgment call.
-   Do not "correct" `max_iterations` back to 5000: the old rule of thumb that iteration-extension is
-   net-negative (extend8k, moreiters) is WITHDRAWN — PLAN §3 retracted it because `moreiters` was
+   Do not "correct" `max_iterations` back to 5000. That rule of thumb is not merely withdrawn on
+   paper — it is now **measured false on this plant**. `trpo_iterbudget_s30_260805_012813`
+   (2026-08-05) resumed the reference teacher 4999 -> 9998 with nothing changed but the budget, and
+   the anchored paired eval returned **six REAL flags, all better, all at hard DR**, with hard
+   `att_norm` dispersion falling 2.3782 -> 0.6524 (a **73 % cut**) and nothing REAL at
+   none/soft/medium. Extending is the strongest measured lever this project has. The old rule of thumb
+   that iteration-extension is net-negative (extend8k, moreiters) is WITHDRAWN — PLAN §3 retracted it because `moreiters` was
    cited backwards (it IMPROVED at the fair `none` level), the effect's sign is
    `performance_lb`-dependent, and both datapoints sit on the retired posttam plant. 20000 is a
    recorded user decision (2026-08-04) whose risk is carried by Step 4b's gates, not an unreviewed
    extension.
+2b. **DECISION GATE AT ITERATION 10000 — do not skip it, and do not treat 20000 as a commitment.**
+   `max_iterations` is a pure loop bound (verified: `constraint_trpo.py:636-642` is a lone
+   `logger.info`; DORAEMON never reads it), so the first 10000 iterations of this run are identical
+   to a 10000-iteration run. Two things follow. First, **10000 is where this run becomes readable**:
+   the workstation reference `trpo_iterbudget_s30_260805_012813` is 4096 envs x 10000 iterations on
+   this exact plant, so the 10000 checkpoint differs from it in `num_envs` ALONE and is the
+   comparison the run exists to make. Second, everything past 10000 is an unmeasured regime — the
+   curriculum saturates at ~7748 and the mechanism behind the measured gain is exhausted there.
+   So: at iteration 10000 (~96.5 h, 4.0 days), STOP AND REPORT with the checkpoint and the eval.
+   Continuing to 20000 costs a second 4 days and is a separate human decision, not the default.
+   The larger number is written into the command only so that a still-climbing curve does not
+   require a resume.
+
 3. `isaaclab/` is a pristine fork — never commit or write project files into it.
 4. All numbers you report are single-seed screening on a non-reference machine (a +109%
    cross-machine isolation term is on record). Report measurements, never adoption conclusions.
