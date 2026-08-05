@@ -45,6 +45,70 @@ the exact point at which the whole line gets closed. It does not attempt the res
 
 ---
 
+## 0. Resume here after compaction (read first)
+
+**This document exists to survive context compaction.** A session resuming from it needs nothing
+else except the files it points at. Do not reconstruct any of the below from memory.
+
+**State on 2026-08-05 19:00 KST.** The line is REOPENED (see the STATUS block above for why).
+Phase 0b is DONE and verified; nothing is running; nothing is queued; no GPU is held.
+
+| Step | State |
+|:---|:---|
+| §12.3 step 1 — `--save-action` instrument + instrumented eval | **DONE**, commits `611e5c4` + `8ca33e0` |
+| §12.3 step 2 — scripted-excitation collection, then the offline A4 fit + kill gate | **NEXT, not started, 0 GPU** |
+| §12.3 step 3 — arms 3-5 (~15 GPU-h) | Hard-gated behind step 2's kill gate AND explicit owner approval |
+
+**Facts a compacted session will otherwise lose, in priority order:**
+
+1. **The objective is a PAPER, and Koopman is optional to it.** Owner, 2026-08-05: the existing
+   paper's contributions already stand without Koopman; Koopman is being tried because it *might*
+   lift the submission to a higher-tier journal. Consequences that bind every later decision: the
+   main paper must never wait on or depend on this line, and §12.5's four-outcome inclusion rule
+   is what protects it. A flat null costs one limitations paragraph, nothing more.
+2. **Never cite arm B as "Koopman did not work".** Arm B fitted **no operator** — it appended 7
+   hand-designed observables and no `K` exists anywhere in that code path. It is a negative control
+   for **dictionary-only feature engineering**, not for Koopman. A reviewer will catch the
+   overclaim immediately and it is not defensible. Wiki slug:
+   `arm_b_is_a_dictionary_only_control_not_a_koopman_result_it_fitte.md`.
+3. **Correct the X1 wiki page before any paper text reuses it.** The page titled
+   `X1 tail-split ... latent reconstruction and closed-loop dispersion are decoupled` carries a
+   reading that was RETRACTED on 2026-08-04. The defensible statement is not "decoupled" but "the
+   exchange rate was measured and it is poor": ΔR² +0.169 is only a 6.69 % RMSE cut, so a sub-floor
+   control change was PREDICTED, not evidence of decoupling.
+4. **Phase 0b data is already collected** — do not re-run it:
+   `experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_eint_s30_rs2350_260727_195102/eval/static_260805_181841/`
+   4 DR levels, each with `action (7750, 64, 8)` + `policy_obs (7750, 64, 72)`. Verified bit-exact
+   (§12.3 step 1). **Scope caveat that decides step 2's design**: this is the static-eval
+   closed-loop distribution under a *deterministic* policy, so an operator fitted on it is
+   identified only along directions that policy excited. A good fit here would be ambiguous
+   between "the dynamics are near-linear" and "the policy only visited a narrow region" — which is
+   exactly why step 2's scripted-excitation pass is load-bearing and not optional.
+5. **The eval command that works** (both `.claude/rules/03` traps avoided — no `--output_dir`,
+   checkpoint through the `train` symlink), and no obs-widening flags are needed because
+   `use_integral_obs` / `use_bias_ema_obs` already default to True and rebuild E-int's 72D geometry:
+
+   ```
+   CUDA_VISIBLE_DEVICES=0 /isaac-sim/python.sh constrained_albc/analysis/eval.py static \
+     --task Isaac-ConstrainedALBC-TRPO-v0 --num_envs 64 --headless \
+     --checkpoint experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_buoyfix/trpo_eint_s30_rs2350_260727_195102/train/model_4999.pt \
+     --save-policy-obs --save-action
+   ```
+
+6. **§12.7 is still open and blocks the arm C spec**: where the linearity is consumed. If `phi_x`
+   output is merely concatenated to the policy input, `K` never acts at inference and arm C
+   degenerates into "arm B with a learned basis". Settle it using step 2's fit quality, not priors.
+7. **Two gaps the owner has not answered**: target journal and deadline (sets the arm C timeline,
+   blocks nothing cheap), and the numeric C-vs-twin separation floor (depends on §12.7).
+8. **The wider paper context is NOT in this file.** The four candidate paper stories synthesised
+   from the 55 substantive wiki decisions live in the omx wiki page
+   `four_candidate_paper_stories_for_the_albc_line_synthesised_from_.md`. Koopman has a place in
+   only two of them (A as a negative
+   control, C as a comparison arm) and none in the other two. Read it before assuming this line is
+   the paper.
+
+---
+
 ## 1. What the research document already decided (not re-litigated here)
 
 - Proposal 1 (lift all inputs incl. `p_t`/commands) and Proposal 2 (drop encoder+student): both NOT
