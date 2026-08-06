@@ -50,22 +50,22 @@ the exact point at which the whole line gets closed. It does not attempt the res
 **This document exists to survive context compaction.** A session resuming from it needs nothing
 else except the files it points at. Do not reconstruct any of the below from memory.
 
-**State on 2026-08-05 20:15 KST.** The line is REOPENED (see the STATUS block above for why).
-Steps 1-3 are all underway: **arms 3-5 ARE RUNNING on GPU0**, launched with owner approval.
-A resuming session should check on them before doing anything else — `nvidia-smi`, then
-`logs/rsl_rl/albc_trpo_teacher/koopman_linearity/`. Expect ~4.6 h per arm, ~14 h for all three,
-sequential on the same device (the paired floors require one device). Nothing else is queued.
+**State on 2026-08-06 12:00 KST.** The line is REOPENED (see the STATUS block above for why),
+and **the 5-arm roster of §12.2 is now COMPLETE**. Nothing is running, queued, or holding a GPU.
+The verdict is §12.10: **outcome 3** — no arm beats the baseline, but arm C and the nonlinear twin
+separate decisively and the LINEAR arm is the worse one, so on this plant the linear-evolution
+constraint reaches control and costs. Paper action per the pre-registered §12.5 rule is a methods
+subsection as a controlled negative, never a primary contribution.
 
 | Step | State |
 |:---|:---|
 | §12.3 step 1 — `--save-action` instrument + instrumented eval | **DONE**, commits `611e5c4` + `8ca33e0` |
 | §12.3 step 2 — excitation instrument + the offline A4 fit + kill gate | **DONE 2026-08-05**, 0 GPU-h of training. Gate **does not fire**. Full result and the six readings: **§12.8**. Instrument: commit `a0daf23` |
-| §12.3 step 3 — arms 3-5 (~15 GPU-h) | **RUNNING**, owner-approved 2026-08-05. Tags `koopC` / `koopTwin` / `koopRand` in campaign `koopman_linearity`. Implementation `e86958e`, launch record and the §12.7 settlement in **§12.9**, pre-registration in that campaign's `DESIGN.md` |
+| §12.3 step 3 — arms 3-5 (~15 GPU-h) | **DONE 2026-08-06**, verdict in **§12.10**. Tags `koopC` / `koopTwin` / `koopRand` in campaign `koopman_linearity` (its `README.md` is the result SSOT, `arms_comparison.png` the figure). Implementation `e86958e`, §12.7 settlement in §12.9 |
 
-**When the arms finish**, judge them per §12.5's four-outcome table and §12.6's verdict hygiene.
-The baseline is E-int `trpo_eint_s30_rs2350_260727_195102`; arm B `trpo_koopmanB_260804_202709`
-is the low anchor. §12.8 predicts arm C does not clear the control bar, so an honest null is the
-expected result and it costs the main paper nothing.
+**Judging pitfall a future comparison in this line must not repeat**: any arm-vs-baseline eval
+needs `--doraemon-dr-from <baseline>/train`, or each run is evaluated on its own learned DORAEMON
+curriculum and the paired floors do not apply. See §12.10.
 
 **Facts a compacted session will otherwise lose, in priority order:**
 
@@ -680,3 +680,54 @@ evaluator, `h=25` ZOH is fine (roll 2.296 deg against a 3.352 deg null).
 **Plant parity was verified from a recorded launch, not from reading code** — `--fault` is
 required, `fault.enable` is `False` by default, and a run without it trains a different plant
 (this is what voided `trpo_obs76_s30_260803_233239`). See DESIGN.md §5 for the full residual.
+
+### 12.10 Step 3 VERDICT (2026-08-06) — outcome 3: the linear constraint costs control
+
+All three arms ran to 5000 iterations and were evaluated paired. Full record and the figure:
+`experiments/rsl_rl/albc_trpo_teacher/koopman_linearity/{README.md, arms_comparison.png}`.
+
+**Gates first.** Survival 100 % for every arm at every DR level, so nothing below is
+survivorship-biased. Pairing 96/96 against the baseline AND 96/96 arm-to-arm. That pairing was
+not free: `--doraemon-dr` defaults to auto-loading each run's OWN learned curriculum, which makes
+soft/medium/hard a different test distribution per arm (3/24 keys matched) and voids floors whose
+own protocol string declares them "screening n=1 **paired** same-machine". `--doraemon-dr-from`
+exists for exactly this and is required for any arm-vs-baseline comparison in this line.
+
+**Result.** No arm beats the baseline — worse in 58/72 cells (arm C), 57/72 (random), 55/72
+(twin), against 40/72 for arm B. But **arm C and the twin separate decisively, and the LINEAR arm
+is the worse one**: arm C is worse than the twin in 51/72 cells with 15 floor crossings, including
+`att_norm` `ss_error` at soft/medium/hard (+0.233 / +0.410 / +0.554 deg against a 0.1 floor) and
+`ss_error_std` at medium/hard (+0.799 / +1.908 against 0.6).
+
+| `att_norm` ss_error (deg) | none | soft | medium | hard |
+|:--|--:|--:|--:|--:|
+| baseline | 0.500 | 0.477 | 0.467 | 1.012 |
+| arm B | 0.545 | 0.531 | 0.567 | 0.802 |
+| **arm C (linear)** | **0.843** | **0.830** | **1.018** | **1.551** |
+| twin (nonlinear op) | 0.626 | 0.597 | 0.608 | 0.996 |
+| random lift | 0.567 | 0.464 | 0.443 | 1.635 |
+
+Two controls do their job. The separation is **not** a prediction-quality artefact: on the five
+channels the policy receives, the two modules score 39.4 % (C) and 39.5 % (twin) against the
+persistence null, indistinguishable, while their outputs correlate only 0.60-0.99 per channel —
+the channels differ in content, not accuracy. And it is **not** the cost of widening the
+observation: C and the twin widen it identically, and arm B widens it more while regressing less.
+
+**§12.5 verdict: outcome 3** — neither beats baseline, C and the twin separate. Paper action per
+the pre-registered rule is a methods subsection as a controlled negative, not a primary
+contribution, and the main paper does not wait on it. The finding is sharper than outcome 3's
+wording: on this plant the linear-evolution constraint does reach control, and it costs. That is
+the same direction §12.8 measured offline (relaxing linearity improved multi-step prediction in
+10 of 10 configurations), now confirmed in closed loop.
+
+Pre-registered prediction 1 (arm C does not clear the control bar) **CONFIRMED**. Prediction 2
+(C and the twin do not separate) **REFUTED**, at the control level as well as the prediction level.
+
+**Bounds.** n = 1 per arm, single seed, screening floors; the direction is consistent across
+levels and metrics but no arm has a replicate. The twin is the CONTROL, not a Koopman arm — it is
+also worse than baseline, so "nonlinear is better" means the linear constraint costs, not that
+this stack should adopt the twin. The random-lift arm is a distinct shape rather than uniformly
+worse: it matches or beats the baseline at soft/medium and collapses at hard (across-env
+dispersion 7.375 deg vs 2.378), which is its own finding about expansion without structure.
+
+**The 5-arm roster of §12.2 is now COMPLETE.** Nothing in this line is queued or running.
