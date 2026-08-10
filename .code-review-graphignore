@@ -1,0 +1,30 @@
+# What code-review-graph must not index. CRG reads THIS file only —
+# .graphifyignore and .gitignore do not reach it (incremental.py:392).
+# CRG indexes `git ls-files`, so gitignored trees (logs/, experiments/,
+# wandb/, outputs/, scratch/) are already excluded by not being tracked.
+# Listed anyway: they become tracked the moment someone force-adds one.
+logs/
+logs_queue/
+experiments/
+wandb/
+outputs/
+scratch/
+deploy/
+
+# Tracked-but-not-core: fixtures and vendored notebooks contribute nodes
+# that answer no question about the algorithm.
+references/
+
+# Hidden directories: harness state and tooling config, not source.
+# Some of these ARE tracked (.omx registry findings, .github workflows), so
+# `git ls-files` hands them to CRG unless named here.
+.*/
+.omx/
+.claude/
+.github/
+.sp/
+.omp/
+.omd/
+.vscode/
+.idea/
+.pytest_cache/
