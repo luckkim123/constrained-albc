@@ -36,3 +36,9 @@ scratch/
 .ruff_cache/
 .superpowers/
 .omx/state/
+
+# --- Code-graph indexes (regenerated from source; .graphifyignore stays tracked) ---
+.graphify/
+graphify-out/
+.code-review-graph/
+.tokensave/
