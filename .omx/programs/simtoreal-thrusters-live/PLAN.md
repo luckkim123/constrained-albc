@@ -713,6 +713,58 @@ rosrun dynamic_reconfigure dynparam set /albc_controller imu_yaw_offset 102   # 
 **판정**: 팔이 3시(낮은 쪽)로 가면 +102 확정 -> `albc_rl.launch`·`albc_controller.yaml`·
 `ALBCController.cfg` **세 곳** 수정. 여전히 9시면 사슬 재추적. 되돌리기는 같은 명령에 `-78`.
 
+#### 책상 감사 (2026-08-12 저녁, 로봇 방전 중 · 로봇 미사용)
+
+**1. 어제의 자기검사 3종은 180° 오차를 구조적으로 못 잡는다.**
+`tilt_azimuth.py` `_check()` 를 읽은 결과다:
+
+| 검사 | 무엇을 보나 | 180° 에 민감? |
+|:---|:---|:---|
+| 1 (90° 간격) | 이웃 raised-side 방위의 **차이** | **아니오** — 전역 180° 는 차이를 안 바꾼다 |
+| 2 (handedness) | 그 차이의 **부호** | **아니오** — 같은 이유 |
+| 3 (θ1=0 방위) | `delta = 그리퍼방위 - gripper_j1`; `|delta|>90` 이면 "REAR, 정책 금지" | **예 - 이것 하나뿐** |
+
+🔴 **그리고 검사 3 의 처방이 오차를 숨기는 경로다.** `|delta|` 가 크면
+"**J1 Homing Offset 에 흡수하라**"고 지시한다(`tilt_azimuth.py:273-276`). 즉 **프레임 180°
+오차를 팔 영점 변경으로 옮겨 없애 보이게** 만드는 절차가 내장돼 있다 - J1 Homing 이 어제
+하루에 네 번 바뀐 것과 같은 자리다.
+
+**2. 그래서 로봇 없이 되는 결정 실험이 하나 더 있다.** `check` 서브커맨드는 **CSV 만 읽고
+아무것도 발행·이동하지 않는다**. 오늘 J1 영점이 **IMU 없이** 독립 검증됐으므로
+(`tick 0 -> link1 3시`), 어제 4방향 자료를 **오늘의 올바른 `--gripper-j1` 값으로 다시 채점**하면
+검사 3 이 +x/-x 판정을 낸다. 기울일 필요가 없다.
+
+```
+rosrun albc_control tilt_azimuth.py check --gripper-j1 <오늘 값>
+```
+
+⚠️ **원자료는 보드에만 있다** - `~/albc_diag/tilt_azimuth.csv`, vault 에 사본 없음(확인함).
+**보드가 켜지면 첫 작업은 이 파일 백업이다.**
+
+**3. 반사여도 +102 산술은 성립한다.** `tilt_azimuth.py:47-49` 가 합성 사상의 행렬식이 -1,
+즉 **회전이 아니라 반사**이고 `alpha_out = 135° - alpha_in` (offset 45° 일 때)라고 적는다.
+일반형은 `alpha_out = 90° + θ - alpha_in` 이므로 **θ 에 180° 를 더하면 `alpha_out` 이 정확히
+180° 돌아간다**. 행렬로도 같다: offset 회전 `R(-θ)` 에서 `θ+180` 은 `R -> -R` 이라 출력 두
+성분이 동시에 부호를 바꾼다. 입력단의 `raw_pitch = -(PITCH)` 반사와 무관하다.
+
+**4. 오늘 0d 는 "공중에 들라"는 요구를 안 지켰을 수 있다 - 그래도 결론은 견딘다.**
+`tilt_azimuth.py:12-26` 은 로봇이 바닥에 닿은 채 한쪽만 들면 접촉 모서리를 축으로 돌아
+방위가 왜곡된다고 경고한다(2026-08-11 실측: 방위 기울기 -1.243 vs -1.000, 판독당 ±10~20°).
+오늘 0d 지시에 이 요구를 넣지 않았다. **다만 이 오염은 ±20° 급이라 180° 반전을 만들 수 없다.**
+0d 의 축 대응(교차항 ~0)과 부호 반전 판정 둘 다 이 오차에 견딘다.
+
+**5. `imu_yaw_offset` 수정 대상은 3곳이 아니라 13곳 / 11파일이다** (세션이 앞서 "세 곳"이라
+말한 것은 오류):
+
+| 분류 | 위치 |
+|:---|:---|
+| **런타임 정본** | `albc_control/config/albc_controller.yaml:33`, `albc_rl/launch/albc_rl.launch:11`, `albc_rl/launch/albc_rl_fieldtest.launch:28` |
+| **기본값·폴백** | `albc_control/cfg/ALBCController.cfg:22`, `albc_rl/cfg/GyroOffset.cfg:12`, `albc_rl/scripts/rl_inference_node.py:116`, `albc_control/src/albc_controller.cpp:177`, `hero_agent/src/agent.cpp:191`, `hero_agent/include/hero_agent/state_monitor.h:174`, `albc_control/scripts/measurement/tilt_azimuth.py:293` |
+| 주석·문서 | `albc_rl/scripts/build_proprio.py:100`, `rl_inference_node.py:57`, `GyroOffset.cfg:6` |
+
+`state_monitor.h:174` 는 `hero_agent` 안에 **하드코딩**이라 yaml 만 고치면 남는다.
+`agent.cpp:191` 은 `/albc_controller/imu_yaw_offset` 를 읽되 폴백이 -78 이다.
+
 #### 부수 관측
 
 - **수평에서도 EE target 이 계속 흐른다** - `ty` 가 초당 약 0.0014 씩, 두 수평 구간 모두.
