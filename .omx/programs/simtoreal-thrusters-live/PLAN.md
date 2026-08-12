@@ -240,7 +240,7 @@ yaw 계수가 `(+, −, −, −)` 로 **3-1 비대칭**이다. 4개 45° 벡터
 
 | 산출물 | 값 | 상태 | 소비자 |
 |:---|:---|:---|:---|
-| `imu_yaw_offset` | **−78.0°** | ✅ 확정 (0f) | 코드 9곳 — 전부 정합 |
+| `imu_yaw_offset` | **+102.0°** | ✅ 확정 (0k·0l, 독립 계보 3개) | 코드 10곳 / 11파일 — 전부 정합 |
 | 프레임 ±180° | **+x = 3시, +y = 12시** | ✅ 확정 (0g-4 · 0h, 독립 계보 2개) | 관측 규약, TAM 해석 |
 | J1 Homing Offset | **−1509** | ✅ 확정 (0h, 두 점 측정 잔차 0.3°) | `J1 관절각 = 팔 방위` |
 | J2 Homing Offset | **−61** | ✅ 확정 (0h, 영점 사용자 2회 확인) | 배포 홈 π/2 |
@@ -253,13 +253,13 @@ yaw 계수가 `(+, −, −, −)` 로 **3-1 비대칭**이다. 4개 45° 벡터
 | `control_delay_steps` | **(0, 0) — 지연 0 으로 학습** | ✅ 확정 (0i-1, 학습 로그) | 백로그 (재학습 라이딩) |
 | J2 목표각 하드 레일 | **없음 (sim·보드 공통 설계)** | ✅ 확정 (0i-2) | Phase 1 중단 기준 |
 
-**남은 건식 작업 1건** (2026-08-12 저녁 갱신 — 3건 중 2건 완료):
+**남은 건식 작업 0건** (2026-08-12 밤 갱신 — 3건 전부 완료):
 
 1. ~~**J2 회전 방향**~~ — ✅ **완료 (0j)**. tick 증가 = 반시계 = 더 접힘
-2. ~~**0d TDC 기울임판**~~ — 실행 완료 (§0k). 🔴 **게이트 불합격 — `imu_yaw_offset` 180° 가설**
+2. ~~**0d TDC 기울임판**~~ — ✅ **완료 (§0k 불합격 → §0l 재검증 통과)**. `imu_yaw_offset` −78.0 → **+102.0**
 3. ~~**0e 배포 홈자세 복귀**~~ — ✅ **완료 (0j)**. J1 = 1 tick, J2 = 1026 tick
 
-이 셋이 끝나면 수조 입수 시 남는 미측정은 **`thruster_sign` 하나**이고, m0 부터 잰다.
+**건식이 닫혔다.** 수조 입수 시 남는 미측정은 **`thruster_sign` 하나**이고, m0 부터 잰다.
 
 ---
 
@@ -374,7 +374,7 @@ yaw 180° 를 10° 틀리게 돌려도 편향 오차는 0.29° 라 결론 불변
 tick 환산 `Δtick = δ_rad / π × 2048`. **EEPROM 쓰기 전 사용자 확인** — 2026-08-11 오전에
 잘못된 δ 로 −517 을 썼다 되돌린 전례가 있다.
 
-### 0d. TDC 자세제어 건식 검증 — 🔴 **실행 완료 2026-08-12 저녁 · 게이트 불합격 (결과는 §0k)**
+### 0d. TDC 자세제어 건식 검증 — ✅ **완료 2026-08-12 (1차 §0k 불합격 → 2차 §0l 통과)**
 
 🔴 **2026-08-12 감사 — 이 항목이 통째로 건너뛰어졌다.** 물이 필요 없는 작업인데 Phase 0
 에서 빠졌고, 게이트("반대면 Phase 1 이전에 부호 재검토")도 판정된 적이 없다.
@@ -777,6 +777,151 @@ rosrun albc_control tilt_azimuth.py check --gripper-j1 <오늘 값>
   스러스터 토픽을 건드리지 않으므로 건식에서 공회전 위험이 없다.
 - 토픽 이름은 **`/albc/status`** 다. `status_publisher.h` 의 헤더 주석이 `/albc_status` 라
   적었지만 실제 `advertise` 는 `/albc/status` - 주석이 낡았다.
+
+### 0l. §0k 가설 검증 — **`imu_yaw_offset` = +102.0 확정. 건식 마감**
+
+2026-08-12 밤. §0k 의 180° 가설을 **세 갈래 독립 근거**로 확정하고, 코드 반영·보드 배포·
+재기동 검증까지 끝냈다. 그 과정에서 −78.0 을 만들어낸 **계측 스크립트의 결함**과, 별개로
+오래 끌던 **ROS 배포판 혼선**의 근본 원인도 잡혔다.
+
+#### 근거 1 — 라이브 재검증 (계기)
+
+`launch-albc` 구동 상태에서 `dynparam set /albc_controller imu_yaw_offset 102` 로 런타임
+교체 후 기울임. 기록 `/tmp/0d_B_offset102.csv` (4651 행, 93.1 s).
+
+| | −78.0 (§0k) | **+102.0** |
+|:---|---:|---:|
+| 3시 아래로 → pitch (규약은 양수 요구) | −44.0 ✗ | **+40.8 ✓** |
+| EE target 이 간 곳 | 9시 ✗ | **3.2시 ✓** |
+| 자세가 지시한 낮은 쪽 | — | 3.2시 (**차이 2.1°**) |
+
+사용자가 **4방향 전부** 확인했고 전부 정상. 4방향 통과는 90° 간격 검사를 라이브로
+통과한 것과 같다.
+
+#### 근거 2 — 어제 자료의 재채점 (로봇 미사용)
+
+2026-08-11 4방향 손기울임 원값을 offset 만 바꿔 재계산하고, **오늘의 IMU 무관 J1 영점**
+(`J1 = 0 tick → link1 이 3시`, 그리퍼는 12시이므로 `--gripper-j1 = +90.0`)으로 채점:
+
+| offset | θ1=0 이 가리키는 방향 | 판정 |
+|:---|---:|:---|
+| +45 (기록 당시) | — | 90° 간격 검사 FAIL (worst 13.6°) |
+| −78 | −179.56° | −x REAR — sim 과 모순 |
+| **+102** | **+0.44°** | **+x FRONT — 일치** |
+
+잔차 **0.44°**. 간격 검사는 두 값 모두 PASS(worst 9.1°)로 **180° 를 구분하지 못한다** —
+§0k 가 지적한 구조적 맹목이 수치로 확인됐다.
+
+⚠️ **`tilt_azimuth.py check` 서브커맨드는 이 자료에 쓸 수 없다.** 두 가지 이유다:
+(a) `high_side_deg` **열을 그대로 읽는데** 그 값은 측정 당시 `offset_deg=45.0` 으로 이미
+구워져 있다 — offset 을 바꿔도 채점이 안 바뀐다. (b) `keep` 필터가 "최근 4개 서로 다른
+라벨"을 잡는데 CSV 끝에 `check-1_5`·`bias-B`·`bias-A`·`arm-up` 이 쌓여 있어 정작 90°
+간격 4방향이 창 밖으로 밀려났다. 그래서 원값에서 직접 재계산했다.
+
+#### 근거 3 — −78 을 만든 결함 자체 (근본 원인)
+
+🔴 **`tilt_azimuth.py` 의 `high_side_deg` 열은 180° 뒤집혀 있다.**
+
+`azimuth_deg()`(`:100`)는 world-up 의 수평 성분 방위인데, 이것은 **이미 올라간 쪽**을
+가리킨다. 그런데 `:169` 가 `high = wrap180(a_cor + 180.0)` 로 한 번 더 뒤집어 **낮은 쪽**을
+"raised side" 로 기록한다. 원인은 docstring(`:35-40`)의 전제 오류다 — "for a nose-up
+pitch (>0)" 라고 적었지만 FLU 오른손계에서 **pitch > 0 은 nose-DOWN** 이다.
+
+회전행렬로 직접 확인한 4케이스 (근사 없음, 저장소 코드 미사용):
+
+| 자세 | 물리적으로 위인 쪽 | `azimuth_deg` | 스크립트가 raised 라 부르는 값 |
+|:---|:---|---:|---:|
+| roll +15° | 12시 (+y) | +90.0 = 12시 | −90.0 |
+| roll −15° | 6시 (−y) | −90.0 = 6시 | +90.0 |
+| pitch +15° | 9시 (−x) | +180.0 = 9시 | +0.0 |
+| pitch −15° | 3시 (+x) | +0.0 = 3시 | −180.0 |
+
+네 케이스 전부 `azimuth_deg` 가 정답이고 `+180` 이 오답이다. **−78 은 이 뒤집힌 라벨로
+적합한 값**이므로 정확히 180° 어긋났다 — §0k 가 "출처가 의심 대상"이라 적은 것의
+구체적 기제이며, 세 근거 중 유일하게 *왜 틀렸는지*를 설명한다.
+
+⚠️ **아직 안 고쳤다.** 열의 의미가 바뀌면 기존 CSV 행의 해석도 바뀌므로 값 수정과
+분리해 남겨뒀다. 고칠 때는 docstring 전제부터 정정하고, 2026-08-12 이전 행은 옛(뒤집힌)
+규약임을 파일에 명시할 것.
+
+#### 코드 반영
+
+커밋 `d70e2bd` — **11파일 12곳**. §0k 가 "13곳/11파일" 이라 적었으나 실사 결과 12곳이다.
+
+| 분류 | 위치 |
+|:---|:---|
+| 런타임 정본 | `albc_controller.yaml:45`, `albc_rl.launch:11`, `albc_rl_fieldtest.launch:28` |
+| 기본값·폴백 | `ALBCController.cfg:22`, `GyroOffset.cfg:12`, `rl_inference_node.py:116`, `albc_controller.cpp:177`, `agent.cpp:191`, `state_monitor.h:175`, `tilt_azimuth.py:293` |
+| 주석·문서 | `build_proprio.py:100`, `rl_inference_node.py:57` |
+
+검증: `test_build_proprio.py` **37/37 통과** (Mac). 보드 pytest 는 2.8.7 이라 `approx` 가
+없어 7건이 뜨는데(3.0 에서 추가) 이 변경과 무관한 기존 환경 제약이다.
+
+#### 부수 1 — ROS 배포판 혼선의 근본 원인과 영구 수정
+
+증상은 `rosrun dynamic_reconfigure dynparam` 이 `package not found` 로 죽는 것이었다.
+원인은 `.bashrc` 가 아니었다:
+
+- `.bashrc:73` 이 lunar 를 source 한 뒤 `:74` 의 `devel/setup.bash` 가 **kinetic 으로
+  덮어썼다**. `devel/_setup_util.py:265` 에 `CMAKE_PREFIX_PATH = '/opt/ros/kinetic'` 이
+  **2026-06-14 빌드 시점 환경으로 구워져** 있고 조건 없이 실행된다.
+- 그런데 **lunar 가 238패키지 완본**이고 kinetic 은 **61패키지 스텁**이며, 빌드된
+  바이너리는 `/opt/ros/lunar` 라이브러리 9개를 링크한다 — 경로만 잘못된 쪽을 앞세우고
+  있었다. `dynamic_reconfigure` 는 lunar 에만 있어서 못 찾은 것.
+
+**클린 재빌드로 영구 해결**(사용자 승인). `build`·`devel` 을 `*.bak.2026-08-12` 로 옮기고
+lunar 만 source 한 상태에서 `catkin_make -j3`. 결과:
+
+| | 재빌드 전 | 재빌드 후 |
+|:---|:---|:---|
+| `_setup_util.py:265` | `/opt/ros/kinetic` | **`/opt/ros/lunar`** |
+| `ROS_DISTRO` | kinetic (경고 동반) | **lunar**, 혼선 경고 소멸 |
+| `ROS_PACKAGE_PATH` | `src:/opt/ros/kinetic/share` | **`src:/opt/ros/lunar/share`** |
+| `rosrun dynamic_reconfigure dynparam` | 실패 | **정상** |
+
+과도기에 `.bashrc` 에 넣었던 `dynparam` alias 는 불필요해져 **제거**했다
+(백업 `~/.bashrc.bak.2026-08-12`).
+
+#### 부수 2 — 클린 빌드를 막던 `hero_agent` CMake 결함
+
+첫 재빌드가 configure 에서 즉사했다:
+
+```
+CMake Error at devel/share/hero_agent/cmake/hero_agentConfig.cmake:148
+  Project 'characterization_tests' tried to find library 'hero_agent'.
+  The library is neither a target nor built/installed properly.
+```
+
+`hero_agent/CMakeLists.txt` 가 `catkin_package(... LIBRARIES hero_agent ...)` 로 라이브러리를
+내보내는데 **패키지는 `add_executable(agent)` 하나뿐**이라 그 타깃이 존재하지 않는다.
+따뜻한 devel 이 가려주고 있었을 뿐이다(구 devel 에도 `libhero_agent.so` 는 없었다 —
+`lib/hero_agent/` 실행파일 디렉터리와 `.pc` 뿐). 바로 옆 `albc_control` 이 올바른 형태다 —
+같은 executable-only 패키지인데 `INCLUDE_DIRS` 만 내보낸다. 소비자
+(`tests/characterization`)는 헤더만 쓰므로 한 줄 삭제로 해결. 커밋 `04749e8`.
+
+#### 재빌드 후 기동 검증 (건식 마감 조건)
+
+전 바이너리가 새로 만들어졌으므로 재기동 확인이 필요했다. 사용자 기동 후:
+
+- `rosout.log` **ERROR 0건**. WARN 은 `dynamic_reconfigure` 라이브러리의 mutex 권고
+  (기존, 코드 무관)와 카메라 캘리브레이션 파일 안내뿐.
+- `Reconfigure: mode=TDC mult=3.00 M=0.0120 Kp=0.120` — TDC 정상 진입, 게인이 yaml 정합
+  (`M_td 0.004 × 3.0`, `Kp_td 0.04 × 3.0`).
+- `rosparam get /albc_controller/imu_yaw_offset` → **102.0**. 이 값이 런타임 `dynparam set`
+  의 잔재가 아니라 **yaml 에서 읽힌 것**임은 rosmaster 시작 시각으로 확정 — 마스터가 뜬 지
+  3.5분(epoch 1786457843 vs 1786458052)인데 `dynparam set` 은 그보다 30분 전이라 파라미터
+  서버가 물려받을 수 없다.
+
+#### 보드 배포 경로 (재확인)
+
+보드는 **DNS 가 없어 `git pull origin` 이 안 된다**(`Could not resolve host: github.com`).
+`git bundle create <범위>` → `scp` → 보드에서 `git pull /tmp/x.bundle <브랜치>` 가 경로다.
+이번에 `1673058 → 04749e8` 을 이렇게 전달했다(믹서 커밋 `4380047` 포함, 3커밋 밀려 있었다).
+
+#### 남은 것
+
+- **`thruster_sign`** — 수조 Phase 2b-0, m0 최우선. 유일한 미측정.
+- **`tilt_azimuth.py` 180° 열 반전 수정** — 미결정(위 참조).
 
 ## Phase 1 — 수 오전, 수조 (1.5h)
 
