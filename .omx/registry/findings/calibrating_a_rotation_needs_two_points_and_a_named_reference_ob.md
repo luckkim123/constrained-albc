@@ -1,16 +1,18 @@
 ---
 title: "Calibrating a rotation needs TWO points and a NAMED reference object -- the ALBC J1 zero moved four times in one day for want of both"
 tags: ["sim2real", "calibration", "agent-jetson", "arm", "measurement-discipline"]
-created: 2026-08-12T13:45:00
-updated: 2026-08-12T13:45:00
+created: 2026-08-14T06:46:47.666657
+updated: 2026-08-14T06:46:47.666657
 sources: [".omx/programs/simtoreal-thrusters-live/PLAN.md"]
 links: []
-category: sim2real
+category: convention
 confidence: high
 schemaVersion: 1
+qualityScore: 100
+qualityReasons: []
 ---
 
-# Calibrating a rotation needs TWO points and a NAMED reference object
+# Calibrating a rotation needs TWO points and a NAMED reference object -- the ALBC J1 zero moved four times in one day for want of both
 
 The ALBC arm's J1 Homing Offset was rewritten **four times on 2026-08-12** and landed back
 on the value it already had. Every wasted step traces to one of two omissions.
@@ -80,3 +82,5 @@ Today's decisive measurement removed the IMU from the loop entirely by comparing
 3. Measure at **two commanded points 90 deg apart**; report both.
 4. Prefer a reference that does **not** share an instrument with the thing being calibrated.
 5. Never confirm with a wide multiple-choice bin; ask for the observed value.
+
+RECATEGORISED 2026-08-14: this page was originally hand-written with `category: sim2real`, a value omx_core's CATEGORIES rejects, so it had never passed through `omx wiki add`. Re-added through the CLI at the same slug with category=convention. Body preserved verbatim.

@@ -2,9 +2,9 @@
 title: "thrust_deadband 0.075 is inert today (enable_thrust_curve false) and wrong for the day it is not: the board measures 0.16 half-span, asymmetric"
 tags: ["albc", "thruster", "deadband", "esc", "plant", "retrain", "sim2real", "mixer"]
 created: 2026-08-14T05:33:06.787041
-updated: 2026-08-14T05:33:06.787041
-sources: ["trpo_iterbudget_s30_260805_012813"]
-links: ["esc_deadband_and_the_six_channel_pwm_unification_that_removed_it.md"]
+updated: 2026-08-14T06:48:12.231927
+sources: ["trpo_iterbudget_s30_260805_012813", "wiki-curation-2026-08-14"]
+links: ["esc_deadband_and_the_six_channel_pwm_unification_that_removed_it.md", "esc_deadband_is_1450_1545_us_on_this_uuv_the_vertical_channels_p.md"]
 category: reference
 confidence: high
 schemaVersion: 1
@@ -50,4 +50,22 @@ avoidance) and the board deadband measurement in
 `.omx/programs/simtoreal-thrusters-live/PLAN.md` section 0g / 0i-5c.
 Related: [[esc_deadband_and_the_six_channel_pwm_unification_that_removed_it]]
 [CONFIDENCE: HIGH -- both the config values and the board measurement were read directly]
+
+---
+
+## Update (2026-08-14T06:48:12.231927)
+
+LINK REPAIR 2026-08-14. This page's ESC-deadband reference pointed at the slug
+`esc_deadband_and_the_six_channel_pwm_unification_that_removed_it`, which no longer exists. That page
+was hand-written with an invalid `category: sim2real` AND a filename that did not match its own title,
+so the 2026-08-14 curation re-created it through the CLI at its correct title-derived slug:
+
+[[esc_deadband_is_1450_1545_us_on_this_uuv_the_vertical_channels_p]]
+
+Content is unchanged and the 2026-08-13 STOP/CORRECTION header is preserved. The stale link above
+cannot be removed (the `links` field unions on merge and is never rewritten), so this note is the
+repair -- follow the slug in this block, not the one in the earlier body.
+
+STATUS UNCHANGED: still needs-apply-before-retrain. Nothing in this repair touches the underlying
+finding, which is that the sim deadband constant and the board's measured half-span disagree.
 
