@@ -10470,3 +10470,19 @@ dmissible_cross_run_evidence_.md, against_the_control_the_aggregate_hard_r2_rise
 - **Pages:** thrust_deadband_0_075_is_inert_today_enable_thrust_curve_false_a.md
 - **Summary:** updated 'thrust_deadband 0.075 is inert today (enable_thrust_curve false) and wrong for the day it is not: the board measures 0.16 half-span, asymmetric'
 
+## [2026-08-14T06:50:44.128488] add
+- **Pages:** how_to_read_omx_wiki_lint_on_this_corpus_oversized_means_accumul.md
+- **Summary:** created 'How to read omx wiki lint on this corpus: oversized means accumulated updates, and contradiction-candidate is a tag-collision heuristic that never reads a claim'
+
+## [2026-08-14T06:51:35.841507] add
+- **Pages:** engine_gap_qualityscore_is_computed_on_the_incoming_append_only_.md
+- **Summary:** created 'engine-gap: qualityScore is computed on the incoming append only, so a one-line housekeeping update permanently downgrades a rich page'
+
+## [2026-08-14T06:52:29.119640] gc-apply
+- **Pages:** omx_wiki_page_grammar_for_this_workspace_title_category_body_sec.md
+- **Summary:** deleted 1, merged 0 source(s)
+
+## [2026-08-14T06:52:33.732096] add
+- **Pages:** omx_wiki_page_grammar_for_this_workspace_title_category_body_sec.md
+- **Summary:** created 'omx wiki page grammar for this workspace: title, category, body sections, and what a merge can never change'
+

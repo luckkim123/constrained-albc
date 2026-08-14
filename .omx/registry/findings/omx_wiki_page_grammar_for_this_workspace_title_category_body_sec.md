@@ -1,10 +1,10 @@
 ---
 title: "omx wiki page grammar for this workspace: title, category, body sections, and what a merge can never change"
-tags: ["omx", "wiki", "convention", "grammar", "style", "curation", "meta", "links", "slug", "truncation", "cross-store"]
-created: 2026-08-14T06:43:07.024045
-updated: 2026-08-14T06:47:57.120496
+tags: ["omx", "wiki", "convention", "grammar", "style", "curation", "links", "slug", "meta"]
+created: 2026-08-14T06:52:33.732096
+updated: 2026-08-14T06:52:33.732096
 sources: ["wiki-curation-2026-08-14"]
-links: ["page_0000b26e.md"]
+links: []
 category: convention
 confidence: high
 schemaVersion: 1
@@ -83,9 +83,7 @@ they had to be deleted and re-added to be fixed.
 
 RELATED: omx wiki has no delete subcommand by design; constrained-albc experiment conventions.
 
----
 
-## Update (2026-08-14T06:47:57.120496)
 
 LINK RULES, added 2026-08-14 after auditing the five broken refs this wiki carries. Every one of them
 is one of three failure modes, and all three are avoidable at write time.
@@ -100,7 +98,7 @@ is one of three failure modes, and all three are avoidable at write time.
    `albc_cudnn_fix_is_a_library_path_not_a_package`, `feedback_read_metric_units_from_code` and
    `feedback_derive_a_metrics_healthy_target`. Those are real files -- but they live in
    `~/.claude/projects/-workspace/memory/`, are named with HYPHENS, and are a different store
-   entirely. A `[[...]]` in an omx wiki page can only ever resolve to an omx wiki page. If the
+   entirely. A a wiki-link in an omx wiki page can only ever resolve to an omx wiki page. If the
    knowledge matters here, write it here; cite the other store in prose, not as a link.
 
 3. A LINK IS NOT REPAIRABLE IN PLACE. `links` is extracted from content and UNIONED on merge, so a
@@ -114,4 +112,3 @@ three hand-written pages found in this pass had exactly that drift: their filena
 their own `title:` field, so both were re-created at their correct title-derived slugs during the
 2026-08-14 curation. If you ever find a page whose filename is not the slugified form of its title,
 that page did not come from the CLI and its merge behaviour is broken.
-
