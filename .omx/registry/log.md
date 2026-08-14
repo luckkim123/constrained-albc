@@ -10530,3 +10530,27 @@ dmissible_cross_run_evidence_.md, against_the_control_the_aggregate_hard_r2_rise
 - **Pages:** sigma_decay_under_an_expanding_dr_curriculum_literature_verdict_.md
 - **Summary:** updated 'Sigma decay under an expanding DR curriculum: literature verdict and the projection-not-clamp correction'
 
+## [2026-08-14T07:49:19.963903] add
+- **Pages:** open_on_land_the_policy_winds_j2_to_pi_and_beyond_and_the_board_.md
+- **Summary:** updated 'OPEN: on land the policy winds J2 to pi and beyond, and the board feeds it IMU at 20 Hz / joints at 10 Hz against a 50 Hz control loop'
+
+## [2026-08-14T07:49:38.891620] add
+- **Pages:** joint_target_runaway_is_not_a_sim_to_real_gap_both_sides_unbound.md
+- **Summary:** updated 'Joint target runaway is NOT a sim-to-real gap (both sides unbounded); the real asymmetry is the accumulator reset'
+
+## [2026-08-14T07:50:51.283885] add
+- **Pages:** the_deployed_teacher_trained_with_control_delay_steps_0_0_while_.md
+- **Summary:** updated 'The deployed teacher trained with control_delay_steps (0,0) while the robot serves observations 1.2 to 4.7 control steps stale, and DORAEMON has no dim to cover it'
+
+## [2026-08-14T07:51:11.190550] add
+- **Pages:** thrust_deadband_0_075_is_inert_today_enable_thrust_curve_false_a.md
+- **Summary:** updated 'thrust_deadband 0.075 is inert today (enable_thrust_curve false) and wrong for the day it is not: the board measures 0.16 half-span, asymmetric'
+
+## [2026-08-14T07:53:20.321999] add
+- **Pages:** the_dgx16k_teacher_s_latent_target_carries_about_half_the_signal.md
+- **Summary:** created "The dgx16k teacher's latent target carries about half the signal-to-noise of E-int's, which is a candidate mechanism for C3 non-transfer measurable without any student"
+
+## [2026-08-14T07:53:39.523923] add
+- **Pages:** the_c3_recipe_does_not_transfer_across_teachers_on_a_same_width_.md
+- **Summary:** updated 'The C3 recipe does not transfer across teachers: on a same-width dgx16k teacher it loses at every DR level and reverses its hard win'
+

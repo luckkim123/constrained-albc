@@ -1,16 +1,17 @@
 ---
 title: "The C3 recipe does not transfer across teachers: on a same-width dgx16k teacher it loses at every DR level and reverses its hard win"
-tags: ["albc", "student", "distillation", "c3", "gru", "dagger", "teacher-swap", "transfer", "dgx16k", "eval", "reproducibility"]
+tags: ["albc", "student", "distillation", "c3", "gru", "dagger", "teacher-swap", "transfer", "dgx16k", "eval", "reproducibility", "teacher-lineage", "non-transfer", "latent", "probe-designed"]
 created: 2026-08-10T02:39:53.980778
-updated: 2026-08-10T02:39:53.980778
-sources: ["trpo_sddgx16k_c3_gruselect_s30_260809_222658", "static_260810_011725"]
-links: ["x1_tail_split_restores_the_gen_2_latent_collapse_but_moves_no_co.md", "training_loss_latent_is_not_a_valid_corroborator_of_an_eval_side.md", "gru_memory_and_corrected_dagger_mixing_compound_c3_is_the_campai.md"]
+updated: 2026-08-14T07:53:39.523923
+sources: ["trpo_sddgx16k_c3_gruselect_s30_260809_222658", "static_260810_011725", "wiki-backlog-20260814"]
+links: ["x1_tail_split_restores_the_gen_2_latent_collapse_but_moves_no_co.md", "training_loss_latent_is_not_a_valid_corroborator_of_an_eval_side.md", "gru_memory_and_corrected_dagger_mixing_compound_c3_is_the_campai.md", "the_dgx16k_teacher_s_latent_target_carries_about_half_the_signal.md"]
 category: decision
 confidence: high
 schemaVersion: 1
 qualityScore: 100
 qualityReasons: []
 status: needs-experiment
+blocked-on: "nothing -- the next probe is a no-training latent census across teachers; a training arm is only needed if that census fails to order them"
 ---
 
 # The C3 recipe does not transfer across teachers: on a same-width dgx16k teacher it loses at every DR level and reverses its hard win
@@ -54,4 +55,42 @@ Do NOT compare these in-loop MSE values against C3's numbers directly. The teach
 ## What this constrains
 
 [[gru_memory_and_corrected_dagger_mixing_compound_c3_is_the_campai]] should be read as a result about C3-on-E-int, not about the C3 recipe as such. Two teacher swaps have now failed to carry it: obs76 Phase E (confounded with delivery path) and dgx16k (this run, unconfounded). The mechanism that ties the C3 advantage to its original teacher is unidentified, and no probe currently isolates it.
+
+---
+
+## Update (2026-08-14T07:53:39.523923)
+
+A PROBE NOW EXISTS 2026-08-14. This page closed with "the mechanism that ties the C3 advantage to its
+original teacher is unidentified, and no probe currently isolates it." A candidate mechanism has since
+been measured, and it suggests a probe that needs NO training run.
+
+THE CANDIDATE: the two teachers differ in how much signal their latent target carries, measured on the
+teacher side alone. At the anchor-fair `none` level the dgx16k teacher's `l_true_envvar` is 58% of
+E-int's and its across-env-to-within-episode SNR is 53% of E-int's. Detail, caveats and the confidence
+argument: [[the_dgx16k_teacher_s_latent_target_carries_about_half_the_signal]].
+
+THE PROBE THIS BUYS -- a latent census across teachers, zero GPU-training cost:
+- For every teacher this line has distilled from (E-int, obs76, dgx16k, and the buoyfix anchor),
+  read `l_true_envvar_mean` and `l_true_tvar_mean` at `none` from the latent block of an eval.
+- Rank the teachers by SNR and compare that ranking against the control verdict their C3-recipe
+  students actually achieved.
+- DECISION RULE, fixed before looking: if the SNR ranking reproduces the student-verdict ranking
+  across four teachers, target difficulty is the mechanism and the fix is to SELECT teachers by latent
+  SNR before spending a distillation run. If the rankings disagree on any pair, target difficulty is
+  ruled out as the sole mechanism and the next candidate is the teacher's control policy shape rather
+  than its latent.
+- COST: one static eval per teacher that lacks one, latent block only. No training.
+
+WHY THIS IS THE RIGHT SHAPE. A teacher-lineage effect has to be explainable by a property of the
+TEACHER, and until now every quantity on the table was measured through a student -- which is why the
+two teacher swaps could show the effect without isolating it. `l_true` statistics are the first
+teacher-only quantity anyone has put a number on.
+
+WHAT WOULD STILL NEED A TRAINING ARM. If the census orders the teachers correctly, the causal claim
+still wants one confirmation: distil the C3 recipe from a HIGH-SNR teacher other than E-int and check
+the advantage reappears. That is the arm to queue, and only after the free census says it is worth it.
+
+PRECONDITION NOTED. The dgx16k eval saved no npz, only `summary_latent.json`, so the census is limited
+to the aggregates unless evals are re-run with the latent arrays saved. The aggregates are sufficient
+for the ranking test; per-dim or per-env follow-up would need the arrays.
 

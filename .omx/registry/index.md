@@ -1,6 +1,6 @@
 # Wiki Index
 
-> 266 pages | Last updated: 2026-08-14T07:48:46.944411
+> 267 pages | Last updated: 2026-08-14T07:53:39.523923
 
 ## convention
 
@@ -192,6 +192,7 @@
 - [teacher encoder: 0 dead latent dims, keys on lateral CoG/CoB offsets](teacher_encoder_0_dead_latent_dims_keys_on_lateral_cog_cob_offse.md) - # teacher encoder: 0 dead latent dims, keys on lateral CoG/CoB offsets
 - [teacher hard-DR: CV explodes without heavy-tail (DC-bias dispersion)](teacher_hard_dr_cv_explodes_without_heavy_tail_dc_bias_dispersio.md) - # teacher hard-DR: CV explodes without heavy-tail (DC-bias dispersion)
 - [teacher segmented: post-switch roll transient jumps under hard DR](teacher_segmented_post_switch_roll_transient_jumps_under_hard_dr.md) - # teacher segmented: post-switch roll transient jumps under hard DR
+- [The dgx16k teacher's latent target carries about half the signal-to-noise of E-int's, which is a candidate mechanism for C3 non-transfer measurable without any student](the_dgx16k_teacher_s_latent_target_carries_about_half_the_signal.md) - # The dgx16k teacher's latent target carries about half the signal-to-noise o...
 - [The frozen actor's sensitivity to latent error is strongly level-dependent: hard crosses the control floor at a 4x smaller perturbation than none/soft/medium](the_frozen_actor_s_sensitivity_to_latent_error_is_strongly_level.md) - # The frozen actor's sensitivity to latent error is strongly level-dependent:...
 - [The mean-preserving Beta clamp silently triples concentration for nominal-0 DR dims (30 -> 100), and those 4 dims are exactly the ones that end under-expanded](the_mean_preserving_beta_clamp_silently_triples_concentration_fo.md) - # The mean-preserving Beta clamp silently triples concentration for nominal-0...
 - [The obs76 teacher is a REAL-better controller than E-int at hard DR, but none of its advantage survives distillation to any student](the_obs76_teacher_is_a_real_better_controller_than_e_int_at_hard.md) - # The obs76 teacher is a REAL-better controller than E-int at hard DR, but no...

@@ -1,16 +1,17 @@
 ---
 title: "OPEN: on land the policy winds J2 to pi and beyond, and the board feeds it IMU at 20 Hz / joints at 10 Hz against a 50 Hz control loop"
-tags: ["sim2real", "agent-jetson", "policy", "latency", "arm", "open-lead"]
+tags: ["sim2real", "agent-jetson", "policy", "latency", "arm", "open-lead", "j2", "driver", "blocked-hardware"]
 created: 2026-08-14T06:46:47.837427
-updated: 2026-08-14T06:46:47.837427
-sources: ["albc_bags/fieldtest_2026-08-11-12-43-33.bag", "albc_bags/fieldtest_2026-08-11-12-52-36.bag"]
+updated: 2026-08-14T07:49:19.963903
+sources: ["albc_bags/fieldtest_2026-08-11-12-43-33.bag", "albc_bags/fieldtest_2026-08-11-12-52-36.bag", "wiki-backlog-20260814"]
 links: []
 category: reference
-confidence: medium
+confidence: high
 schemaVersion: 1
 qualityScore: 100
 qualityReasons: []
 status: needs-experiment
+blocked-on: "HARDWARE: J1-J2 daisy-chain cable severed 2026-08-13, J1 at -35.54 rad with HW error 0x20 OVERLOAD; needs physical repair AND the driver-side baseline fix before any run"
 ---
 
 # OPEN: on land the policy winds J2 to pi and beyond, and the board feeds it IMU at 20 Hz / joints at 10 Hz against a 50 Hz control loop
@@ -138,3 +139,38 @@ OPEN 3 are land artefacts and no retrain is justified. If it does not, these two
 candidates to narrow, in that order.
 
 RECATEGORISED 2026-08-14: this page was originally hand-written with `category: sim2real`, a value omx_core's CATEGORIES rejects, so it had never passed through `omx wiki add`. Re-added through the CLI at the same slug with category=reference and the open lead moved from a TAG into the real `status` field, where queue-launch, the route hook and exp-design can finally see it. Body preserved verbatim.
+
+---
+
+## Update (2026-08-14T07:49:19.963903)
+
+BLOCKED-ON CORRECTED 2026-08-14. This lead carried an EMPTY blocked-on field, so the per-turn backlog
+hook and exp-design have been reading it as "unblocked" -- schedulable today. It is not: the arm it
+would run on is physically broken.
+
+THE HARDWARE STATE, from this page's own 2026-08-13 correction: the J1->J2 daisy-chain cable is
+SEVERED, J1 reads -35.54 rad (-5.66 turns) with `HW Error 0x20 OVERLOAD`, and J2 (ID 12) pings 5/5
+COMM_RX_CORRUPT. The correction already says "Do not schedule Phase 1 off this page." The status field
+now says the same thing to the machine.
+
+WHAT UNBLOCKS IT, IN ORDER. Both are required; the repair alone is not enough, because the mechanism
+that broke the arm is still live in the code and would break it again on the next restart:
+1. Physical repair of the J1-J2 cable and recovery of J1 from its overload position.
+2. THE DRIVER-SIDE FIX, still unfixed as of 2026-08-14 --
+   `albc_control/src/joint_angle_command.cpp:291-293` sets `absolute_angle = angle1` (cumulative)
+   while `prev_commanded = fmod(angle1, 2*pi)` (wrapped). `updateJoint` unwraps at most ONE 2*pi, so
+   the remaining (k-1) turns enter the driver's UNCLAMPED accumulator on the FIRST command of every
+   restart, doubling per restart (observed -1 -> -2 -> -4 turns). The fix is to unify the baseline
+   representation AND put a hard clamp on `absolute_angle` in the DRIVER.
+
+WHY THE CLAMP MUST BE IN THE DRIVER, restated because it is the generalisable part:
+`JOINT_TARGET_CLAMP = [6*pi, inf]` bounds only the POLICY's internal accumulator. The driver keeps a
+SECOND, unbounded accumulator. A rail in the policy layer was demonstrated not to reach the hardware --
+it was demonstrated by the hardware breaking. Any joint-limit guarantee has to live in the driver.
+
+SCOPE NOTE. Neither unblocking step is an EXPERIMENT: one is a repair, the other is a code fix in
+`albc_control`. This page keeps `needs-experiment` because the open QUESTION it holds (what the policy
+does on the real arm, and OPEN 2's tilt test) is still unanswered and does need a run -- but the run
+cannot be scheduled until both steps land. A session picking this lead up should expect to be doing
+firmware-adjacent repair work, not analysis.
+

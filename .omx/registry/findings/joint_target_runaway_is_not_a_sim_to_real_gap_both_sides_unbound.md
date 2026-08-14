@@ -1,16 +1,17 @@
 ---
 title: "Joint target runaway is NOT a sim-to-real gap (both sides unbounded); the real asymmetry is the accumulator reset"
-tags: ["albc", "arm", "joint", "vibration", "sim-to-real", "deployment", "delta-scale", "accumulator", "reset", "retrain-decision"]
+tags: ["albc", "arm", "joint", "vibration", "sim-to-real", "deployment", "delta-scale", "accumulator", "reset", "retrain-decision", "joint1", "controller-form", "sim2real", "blocked-hardware"]
 created: 2026-08-09T08:40:54.319258
-updated: 2026-08-09T08:40:54.319258
-sources: []
-links: []
+updated: 2026-08-14T07:49:38.891620
+sources: ["wiki-backlog-20260814"]
+links: ["open_on_land_the_policy_winds_j2_to_pi_and_beyond_and_the_board.md"]
 category: reference
 confidence: high
 schemaVersion: 1
 qualityScore: 100
 qualityReasons: []
 status: needs-experiment
+blocked-on: "HARDWARE: the remaining gap is arm CONTROLLER FORM (firmware ~1kHz PID with integral + profile-velocity trapezoid vs Isaac ImplicitActuator Kp=100/Kd=3), blocked on the XW540-T260 step-response bench; the arm is also physically broken since 2026-08-13"
 ---
 
 # Joint target runaway is NOT a sim-to-real gap (both sides unbounded); the real asymmetry is the accumulator reset
@@ -106,3 +107,39 @@ ImplicitActuator Kp=100/Kd=3), still blocked on the XW540-T260 step response.
 J1 = -35.54 rad / HW error 0x20, J2 ping 5/5 COMM_RX_CORRUPT; bag analysis of five runs,
 max per-tick command step 0.10 rad with 0 steps above pi]
 [CONFIDENCE: HIGH for 1 and 2, MEDIUM for the delay verdict in 3]
+
+---
+
+## Update (2026-08-14T07:49:38.891620)
+
+BLOCKED-ON CORRECTED 2026-08-14, and the remaining scope narrowed to one item.
+
+This lead carried an EMPTY blocked-on field, so the backlog hook read it as schedulable. It is not.
+Reading the page against its own 2026-08-13 correction, THREE of its four threads are already closed
+and the fourth is hardware-blocked:
+
+| thread | state |
+|:--|:--|
+| runaway is a sim-to-real gap | CLOSED, refuted -- both sides unbounded, so clamping sim alone would MANUFACTURE a gap |
+| deployed accumulator re-seeds from a constant | CLOSED, fixed -- `robot/albc_rl/numpy_port/np_policy.py:228-230` now seeds from the measured joint angle |
+| no real-robot log ever analysed for vibration | CLOSED -- analysed 2026-08-13 from `~/albc_bags/`; thrusters at `max abs(cmd)=0`, so the oscillation is arm-only, and equal-per-second-gain across rates left 50 Hz unstable / 10 Hz calm, pointing at LOOP DELAY (confidence MEDIUM) |
+| **arm CONTROLLER FORM** | **STILL OPEN, hardware-blocked** |
+
+THE ONE REMAINING ITEM. The real joint runs a ~1 kHz firmware PID with an integral term
+(P=800/I=1/D=40) plus a profile-velocity trapezoid; Isaac runs an ImplicitActuator at Kp=100/Kd=3 with
+neither. That is plant-change batch v2 item 4 and it is blocked on the XW540-T260 STEP RESPONSE bench,
+which has not been run. Small-signal damping is explicitly NOT the gap -- onboard-measured overshoot
+2-3% gives zeta 0.74-0.78 against Isaac's designed 0.7, and the card that measured it says not to
+retune Kp/Kd. So this needs a bench measurement, not a simulation sweep.
+
+SECOND-ORDER BLOCK. The arm is physically broken as of 2026-08-13 (J1-J2 cable severed, J1 at
+-35.54 rad with OVERLOAD), so even the bench cannot be run until it is repaired -- see
+[[open_on_land_the_policy_winds_j2_to_pi_and_beyond_and_the_board_]], which also carries the driver
+fix that must land so the repair is not undone on the next restart.
+
+WHAT THE CLOSED THREADS LEAVE BEHIND, worth keeping. The reset fix this page recommended SHIPPED and
+then severed the J2 cable, because it was incomplete on the other side of the contract: the policy
+began publishing a CUMULATIVE angle while the driver's startup baseline stayed WRAPPED. The
+generalisable lesson is on the sibling page -- a rail in the policy layer does not reach the hardware,
+and any joint-limit guarantee has to live in the driver.
+
