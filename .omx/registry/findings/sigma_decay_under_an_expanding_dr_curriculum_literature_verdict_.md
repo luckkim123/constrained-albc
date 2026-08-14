@@ -1,16 +1,16 @@
 ---
 title: "Sigma decay under an expanding DR curriculum: literature verdict and the projection-not-clamp correction"
-tags: ["exploration", "entropy", "doraemon", "curriculum", "literature", "gsde"]
+tags: ["exploration", "entropy", "doraemon", "curriculum", "literature", "gsde", "sigma", "M2", "closed", "arm-w"]
 created: 2026-08-10T01:20:25.614865
-updated: 2026-08-10T02:38:19.621710
-sources: ["arXiv:2311.01885", "arXiv:1912.06680", "arXiv:1810.02541", "arXiv:2212.07536", "arXiv:1908.00261", "arXiv:2509.10771", "arXiv:2405.19153", "arXiv:2005.05719", "arXiv:2510.10959", "arXiv:2601.19624"]
-links: []
+updated: 2026-08-14T07:48:46.944411
+sources: ["arXiv:2311.01885", "arXiv:1912.06680", "arXiv:1810.02541", "arXiv:2212.07536", "arXiv:1908.00261", "arXiv:2509.10771", "arXiv:2405.19153", "arXiv:2005.05719", "arXiv:2510.10959", "arXiv:2601.19624", "wiki-backlog-20260814"]
+links: ["exploration_is_not_coupled_to_curriculum_width_dr_grew_10_29x_wh.md", "where_is_arm_w_losing_the_8_points_of_return_per_dr_dimension_qu.md"]
 category: pattern
 confidence: high
 schemaVersion: 1
 qualityScore: 100
 qualityReasons: []
-status: needs-experiment
+status: resolved
 ---
 
 # Sigma decay under an expanding DR curriculum: literature verdict and the projection-not-clamp correction
@@ -50,4 +50,60 @@ Two consequences.
 2) `state_dependent_std` being a dead key means gSDE-style state-dependent correlated exploration (arXiv:2005.05719), listed among the untried remedies, is NOT a flag to switch on. There is no implementation behind the key - only a config field. Costing that lead as "toggle a setting" understates it by an implementation.
 
 This also sharpens the projection-not-clamp finding recorded above: the std parameterisation in this fork is entirely the encoder's own, so upstream rsl_rl's `noise_std_type` semantics do not describe our policy at all. Reason about `constraint_trpo.py` and the encoder, never about upstream defaults.
+
+---
+
+## Update (2026-08-14T07:48:46.944411)
+
+M2 EXECUTED IN ITS COMPARATIVE FORM, 2026-08-14 -- and this page's own pre-registered rule closes the
+"is it a defect" question as NO.
+
+WHY THIS WAS STILL OPEN. The M2 work recorded in
+[[exploration_is_not_coupled_to_curriculum_width_dr_grew_10_29x_wh]] measured ARM W ONLY. It settled
+that exploration is not coupled to curriculum width, which is a different question. The test THIS page
+names -- "compare the std trajectory of the reference run that DID saturate against Arm W" -- had
+never been run, because it needs both runs side by side.
+
+MEASURED (`Policy/mean_noise_std` and `Noise/std_min`, 2500-iteration buckets, both event files):
+
+| iters | reference `trpo_iterbudget_s30` (saturated, locked 21/21 at 7748) | Arm W `trpo_rampw_kl006_s30` | Arm W / ref |
+|:--|--:|--:|--:|
+| 2500-4999 | 0.0881 | 0.0933 | 1.06x |
+| 5000-7499 | 0.0864 | 0.0870 | **1.01x** |
+| 7500-9999 | 0.0844 | 0.0851 | **1.01x** |
+
+`Noise/std_min` is 0.0500 in EVERY bucket of the reference, including its earliest; Arm W reads 0.0510
+at 2500-4999 and 0.0500 from 5000 on. The reference therefore pins **at least as early** as Arm W, not
+"markedly later".
+
+VERDICT AGAINST THE PRE-REGISTERED RULE. The rule was: reference also pins std_min at 0.0500 around
+5000 AND its std_mean within +-10% of Arm W's => sigma is not the separating variable, question closes
+NO; only a reference std_mean >=1.5x higher, or markedly later pinning, promotes exploration to a
+candidate cause. Both conditions are met with room to spare -- 1.01x against a 1.5x promotion
+threshold, and equal-or-earlier pinning. **Exploration is not the variable separating the run that
+saturated from the run that did not.**
+
+THE REFUTATION IS ACTUALLY STRONGER THAN THE RULE ASKED. At every overlapping window Arm W carries
+MARGINALLY MORE action noise than the reference (+0.7 to +0.8%), and it is the one that failed. The
+failing arm explores at least as much as the succeeding one, so "collapsed exploration" cannot be what
+costs Arm W its 8 points of return.
+
+LETTER-VS-PURPOSE, STATED EXPLICITLY. The rule names "its it-15000 std_mean". That exact comparison is
+NOT EXECUTABLE: the reference run ends at model_9998 while Arm W ran to model_19999, so there is no
+reference value at 15,000. What is executable is the same comparison at all three overlapping windows,
+and the answer there is unambiguous. Read the verdict as "answered at matched iterations up to 9,999",
+not as "answered at 15,000". Arm W's further decline past the reference's end (0.0851 -> 0.0808 over
+10,000 more iterations, -5%) has no counterpart to compare against and is not part of this verdict.
+
+WHAT THIS DOES NOT CLOSE. Everything else on this page stands: the literature verdict (sigma decay is
+standard on-policy behaviour, not an anomaly), the projection-not-clamp correction to our own code,
+the dead `state_dependent_std` / `noise_std_type` keys, and the untried-remedy roster (RND, L2-Init,
+gSDE -- the last needing an implementation, not a flag). Those are reference material, not open probes.
+The remaining question about Arm W's deficit is WHERE the return is lost, which is
+[[where_is_arm_w_losing_the_8_points_of_return_per_dr_dimension_qu]] and is blocked on two engine-gaps.
+
+EVIDENCE: `.omx/scratch/wiki-backlog-20260814/py/tb_traj.py`, tags `Policy/mean_noise_std` and
+`Noise/std_min`, bucket 2500, over
+`logs/rsl_rl/albc_trpo_teacher/teacher_iter_budget/trpo_iterbudget_s30_260805_012813` and
+`logs/rsl_rl/albc_trpo_teacher/teacher_final_ramp/trpo_rampw_kl006_s30_260809_161913`.
 

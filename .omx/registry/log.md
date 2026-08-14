@@ -10526,3 +10526,7 @@ dmissible_cross_run_evidence_.md, against_the_control_the_aggregate_hard_r2_rise
 - **Pages:** where_is_arm_w_losing_the_8_points_of_return_per_dr_dimension_qu.md
 - **Summary:** updated 'Where is Arm W losing the 8 points of return: per-DR-dimension quintile decomposition (M3)'
 
+## [2026-08-14T07:48:46.944411] add
+- **Pages:** sigma_decay_under_an_expanding_dr_curriculum_literature_verdict_.md
+- **Summary:** updated 'Sigma decay under an expanding DR curriculum: literature verdict and the projection-not-clamp correction'
+
