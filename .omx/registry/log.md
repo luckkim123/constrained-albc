@@ -10518,3 +10518,11 @@ dmissible_cross_run_evidence_.md, against_the_control_the_aggregate_hard_r2_rise
 - **Pages:** engine_gap_qualityscore_is_computed_on_the_incoming_append_only_.md
 - **Summary:** updated 'engine-gap: qualityScore is computed on the incoming append only, so a one-line housekeeping update permanently downgrades a rich page'
 
+## [2026-08-14T07:44:36.077029] add
+- **Pages:** doraemon_becomes_feasibility_limited_at_the_ceiling_the_kl_ub_0_.md
+- **Summary:** updated 'DORAEMON becomes feasibility-limited at the ceiling: the kl_ub 0.06 arm reached 98.6 percent of full DR then contracted because mean_reward sits below performance_lb'
+
+## [2026-08-14T07:46:42.763605] add
+- **Pages:** where_is_arm_w_losing_the_8_points_of_return_per_dr_dimension_qu.md
+- **Summary:** updated 'Where is Arm W losing the 8 points of return: per-DR-dimension quintile decomposition (M3)'
+
