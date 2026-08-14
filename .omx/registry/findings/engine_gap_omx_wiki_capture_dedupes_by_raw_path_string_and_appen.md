@@ -1,15 +1,16 @@
 ---
 title: "engine-gap: omx wiki capture dedupes by raw path string and appends without an equality check, so one report can be captured twice byte-identically"
-tags: ["engine-gap", "omx", "wiki", "capture-flush", "dedupe", "hygiene", "worktree", "dead-pointer"]
+tags: ["engine-gap", "omx", "wiki", "capture-flush", "dedupe", "hygiene", "worktree", "dead-pointer", "implemented", "omx-0.11.2"]
 created: 2026-08-14T06:42:05.550564
-updated: 2026-08-14T06:44:34.800250
-sources: ["wiki-curation-2026-08-14"]
+updated: 2026-08-14T07:25:38.032540
+sources: ["wiki-curation-2026-08-14", "omx-core 3e8147d", "omx-core 9ef2487"]
 links: []
 category: decision
 confidence: high
 schemaVersion: 1
 qualityScore: 100
 qualityReasons: []
+status: resolved
 ---
 
 # engine-gap: omx wiki capture dedupes by raw path string and appends without an equality check, so one report can be captured twice byte-identically
@@ -73,4 +74,38 @@ source is gone. Re-resolve the same run path against the main repo before treati
 surviving copy of a finding. Applying that rule here changed the 2026-08-14 curation audit from
 "16 stubs are the only record" to "all 289 stubs have a live source report", which is what made the
 mass delete safe.
+
+---
+
+## Update (2026-08-14T07:25:38.032540)
+
+[STATUS] implemented 2026-08-14 in omx-core v0.11.2 (commits 3e8147d, 9ef2487) -- this spec is closed.
+
+WHAT LANDED, against the two [WHERE] items above:
+1. `capture.py flush_produced_reports` now keys dedupe on `report_path.resolve()`, falling back to the
+   raw string on OSError. One file under two spellings is one report, so it is read, integrity-verified
+   and captured once.
+2. `ingest.py ingest_knowledge` skips an identical re-add instead of appending it. Comparison is
+   block-level against the existing content with the `## Update (ts)` header and the title H1 stripped,
+   so a re-capture is recognised across its changing timestamp. The action returns as `unchanged` --
+   the value `wiki sync` already used. INV-2 holds: tags/sources/links/confidence/status still merge
+   and `updated` still advances; only a byte-equal body is skipped.
+
+This also makes true what `flush_produced_reports`' own docstring already claimed
+("capture_session is append-merge so re-flushing is a no-op merge"), which it was not.
+
+VERIFICATION: three regression tests, each watched failing first --
+`test_flush_dedupes_two_spellings_of_one_report_path`,
+`test_identical_content_does_not_append_a_second_time`,
+`test_returns_the_score_the_page_actually_carries`. Full suite `pytest -q` 1071 passed / 2 skipped;
+the 4 wandb failures are a missing optional dependency and reproduce identically on main. Confirmed
+end-to-end through the real CLI on a scratch root: an identical re-add returns `"action": "unchanged"`
+and adds no second block.
+
+STILL OPEN (deliberately not in the patch): rewriting the stored `sources` entry to a REPO-RELATIVE
+path. That would make a pointer survive a worktree retirement -- the 16 stubs naming the retired
+`constrained-albc-student` worktree are the motivating case -- but it changes the format of data
+already on disk and needs a migration. The verification rule stands meanwhile: a wiki source pointer
+that fails to resolve is NOT evidence the source is gone; re-resolve the run path against the main
+repo first.
 

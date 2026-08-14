@@ -1,15 +1,16 @@
 ---
 title: "engine-gap: qualityScore is computed on the incoming append only, so a one-line housekeeping update permanently downgrades a rich page"
-tags: ["engine-gap", "omx", "wiki", "quality", "lint", "scoring"]
+tags: ["engine-gap", "omx", "wiki", "quality", "lint", "scoring", "implemented", "omx-0.11.2"]
 created: 2026-08-14T06:51:35.841507
-updated: 2026-08-14T06:51:35.841507
-sources: ["wiki-curation-2026-08-14"]
+updated: 2026-08-14T07:25:54.068364
+sources: ["wiki-curation-2026-08-14", "omx-core 3e8147d", "omx-core 9ef2487"]
 links: []
 category: decision
 confidence: high
 schemaVersion: 1
 qualityScore: 100
 qualityReasons: []
+status: resolved
 ---
 
 # engine-gap: qualityScore is computed on the incoming append only, so a one-line housekeeping update permanently downgrades a rich page
@@ -51,4 +52,35 @@ the page's score honest.
 [STATUS] proposed
 
 RELATED: how to read omx wiki lint on this corpus.
+
+---
+
+## Update (2026-08-14T07:25:54.068364)
+
+[STATUS] implemented 2026-08-14 in omx-core v0.11.2 (commits 3e8147d, 9ef2487) -- this spec is closed,
+and the [WORKAROUND] above is retired: a terse close no longer costs the page anything.
+
+WHAT LANDED: `ingest_knowledge` recomputes the score from the MERGED body (`score_page(appended,
+merged_tags, title=existing.title)`) whenever a score is supplied, instead of storing the caller's
+chunk score. The spec's minimal alternative (`max(existing, incoming)`) was NOT taken -- recomputing is
+the same number of lines and is correct rather than merely monotone.
+
+ONE THING THE SPEC DID NOT ANTICIPATE, found by verifying live: the CLI computed its OWN chunk score
+and printed that, so after the fix it advertised a number the page did not have. Measured before the
+follow-up commit -- a one-line close printed `quality_score: 50` while the page on disk carried 80.
+`ingest_knowledge` now returns `quality_score`/`quality_reasons` from the WikiPage it wrote and the CLI
+prints those. `quality_forced_low` still derives from the incoming chunk, because that gate is about
+what is being written, not about what the page already holds.
+
+VERIFICATION: `test_quality_score_reflects_the_merged_body_not_the_new_chunk` and
+`test_returns_the_score_the_page_actually_carries`, both watched failing first. End-to-end on a scratch
+root, all three CLI lines agree with the file at 80 / ["no-source-marker"]: created, unchanged
+(identical re-add), and updated (one-line close, no demotion). This page's own update is the
+dogfood case -- it was written through the fixed CLI and scored 100.
+
+CONSEQUENCE FOR THE THREE FLAGGED PAGES: `engine_gap_heavy_tail_json_pct_peak_gt_thresh_exceeds_100_at_ood`,
+`joint_dr_params_kp_kd_effort_friction_need_no_dedicated_measurem` and
+`tam_plant_correctness_fix_collapses_the_void_hard_dr_roll_heavy_` still carry their stale 40 on disk,
+because nothing rescores a page that is not re-added. They will correct themselves on the next update
+to each; until then, read `low-quality` on those three as an artifact of the old scorer, not a verdict.
 

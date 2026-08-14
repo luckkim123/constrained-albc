@@ -10498,3 +10498,15 @@ dmissible_cross_run_evidence_.md, against_the_control_the_aggregate_hard_r2_rise
 - **Pages:** 32768_envs_fit_on_the_dgx_gb10_83_2_121_7_gb_peak_no_fallback_at.md, a_random_expansion_lift_is_inert_on_the_albc_plant_while_a_learn.md, adding_a_dr_axis_is_half_a_change_dr_config_s_dr_tuple_fields_tr.md, albc_stage_2_is_teacher_driven_off_policy_bc_with_mixed_latent_a.md, attitude_only_per_axis_cv_roll_drives_the_heavy_tail_crossover_y.md, canonical_final_teacher_baseline_buoyfix_anchor_trpo_buoyanchor_.md, constraint_health_index.md, doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md, e3_extend10k_regressed_the_policy_training_budget_is_not_the_p7_.md, e5_alpha075_ood_per_axis_generalization_gap_universal_failure_ro.md, engine_gap_analyze_training_py_needs_the_logs_run_dir_not_the_ex.md, engine_gap_doraemon_per_parameter_curriculum_expansion_is_invisi.md, engine_gap_omx_cli_gaps_found_re_analyzing_teacher_2026_06_06_ro.md, engine_gap_omx_plot_is_unusable_on_this_workspace_tb_blocked_by_.md, engine_gap_omx_reduce_tb_final_unusable_here_cli_on_system_pytho.md, engine_gap_omx_wiki_capture_dedupes_by_raw_path_string_and_appen.md, engine_gap_the_analysis_engine_and_omx_reduce_are_both_unusable_.md, eval_command_box_was_half_the_trained_envelope_from_2026_04_06_t.md, every_5000_iteration_teacher_on_the_buoyfix_plant_stops_at_65_pe.md, exp_analyze_must_run_analyze_training_py_for_training_side_diagn.md
 - **Summary:** query 'x' -> 20 of 261
 
+## [2026-08-14T07:25:38.032540] add
+- **Pages:** engine_gap_omx_wiki_capture_dedupes_by_raw_path_string_and_appen.md
+- **Summary:** updated 'engine-gap: omx wiki capture dedupes by raw path string and appends without an equality check, so one report can be captured twice byte-identically'
+
+## [2026-08-14T07:25:54.068364] add
+- **Pages:** engine_gap_qualityscore_is_computed_on_the_incoming_append_only_.md
+- **Summary:** updated 'engine-gap: qualityScore is computed on the incoming append only, so a one-line housekeeping update permanently downgrades a rich page'
+
+## [2026-08-14T07:26:12.915857] add
+- **Pages:** how_to_read_omx_wiki_lint_on_this_corpus_oversized_means_accumul.md
+- **Summary:** updated 'How to read omx wiki lint on this corpus: oversized means accumulated updates, and contradiction-candidate is a tag-collision heuristic that never reads a claim'
+

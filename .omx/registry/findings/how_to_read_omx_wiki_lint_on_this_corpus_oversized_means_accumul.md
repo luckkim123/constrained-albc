@@ -1,9 +1,9 @@
 ---
 title: "How to read omx wiki lint on this corpus: oversized means accumulated updates, and contradiction-candidate is a tag-collision heuristic that never reads a claim"
-tags: ["omx", "wiki", "lint", "curation", "triage", "meta"]
+tags: ["omx", "wiki", "lint", "curation", "triage", "meta", "omx-0.11.2"]
 created: 2026-08-14T06:50:44.128488
-updated: 2026-08-14T06:50:44.128488
-sources: ["wiki-curation-2026-08-14"]
+updated: 2026-08-14T07:26:12.915857
+sources: ["wiki-curation-2026-08-14", "omx-core 3e8147d", "omx-core 9ef2487"]
 links: []
 category: convention
 confidence: high
@@ -48,4 +48,24 @@ genuine), `broken-ref` (always real, and never repairable in place), `low-qualit
 and `open-lead` (the actionable-status roster, which is the launch gate's only input). `orphan` and
 `stale` are informational -- an orphan is often a correctly-standalone reference page, and a page can be
 untouched for 60 days because it is settled.
+
+---
+
+## Update (2026-08-14T07:26:12.915857)
+
+AMENDMENT 2026-08-14, same day: `low-quality` is now trustworthy going forward but NOT on the three
+pages currently flagged. omx-core v0.11.2 fixed the scorer -- `qualityScore` is computed on the merged
+body instead of the incoming chunk, so a one-line close no longer demotes a rich page. Nothing
+rescores a page that is not re-added, so the three historical victims keep their stale 40 on disk
+until each is next updated:
+  engine_gap_heavy_tail_json_pct_peak_gt_thresh_exceeds_100_at_ood   (2404 bytes, sourced)
+  joint_dr_params_kp_kd_effort_friction_need_no_dedicated_measurem   (4733 bytes, sourced)
+  tam_plant_correctness_fix_collapses_the_void_hard_dr_roll_heavy_   (9394 bytes, sourced)
+Read a `low-quality` flag by checking the page's SIZE first: thousands of bytes with sources means the
+old scorer, not a weak page. A genuinely thin page is short.
+
+The `oversized` and `contradiction-candidate` readings above are unaffected -- both are structural
+properties of an append-only store, and neither was a scorer bug.
+
+DETAIL: engine-gap qualityScore is computed on the incoming append only (now [STATUS] implemented).
 
