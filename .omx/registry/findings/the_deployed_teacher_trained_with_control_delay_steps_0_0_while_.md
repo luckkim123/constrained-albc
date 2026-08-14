@@ -1,17 +1,17 @@
 ---
 title: "The deployed teacher trained with control_delay_steps (0,0) while the robot serves observations 1.2 to 4.7 control steps stale, and DORAEMON has no dim to cover it"
-tags: ["albc", "deployment", "latency", "staleness", "control-delay", "doraemon", "retrain", "sim2real", "delaybuffer", "decision", "range", "z4", "feasibility-gate", "board-side", "performance-lb"]
+tags: ["albc", "deployment", "latency", "staleness", "control-delay", "doraemon", "retrain", "sim2real", "delaybuffer", "decision", "range", "z4", "feasibility-gate", "board-side", "performance-lb", "gate-correction", "seed-variance"]
 created: 2026-08-14T05:32:58.452008
-updated: 2026-08-14T10:25:49.391040
-sources: ["trpo_iterbudget_s30_260805_012813", "wiki-backlog-20260814", "diagnose-20260814-172325"]
-links: ["an_off_doraemon_channel_that_costs_return_stalls_the_curriculum.md", "experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md", "uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload.md"]
+updated: 2026-08-14T15:07:16.951471
+sources: ["trpo_iterbudget_s30_260805_012813", "wiki-backlog-20260814", "diagnose-20260814-172325", "diagnose-20260814-235911"]
+links: ["an_off_doraemon_channel_that_costs_return_stalls_the_curriculum.md", "experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md", "uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload.md", "the_doraemon_feasibility_floor_sits_inside_this_config_s_seed_di.md"]
 category: reference
 confidence: high
 schemaVersion: 1
 qualityScore: 100
 qualityReasons: []
 status: needs-apply-before-retrain
-blocked-on: "RANGE DECIDED 2026-08-14: (0,1) for the next FROM-SCRATCH teacher round, behind a ~500-iteration feasibility gate. No longer blocked on a user decision. Blocked on that round existing -- R30/R31 already launched 2026-08-10 at (0,0) and must not be changed. The larger half of the fix is board-side and needs no training at all."
+blocked-on: "RANGE DECIDED 2026-08-14: (0,1) on the next FROM-SCRATCH teacher round. GATE CORRECTED 2026-08-15: the ~500-iteration feasibility check needs at least TWO seeds -- this config straddles alpha across seeds with no delay applied, so a single-seed threshold read is a coin flip. Still blocked on that round existing; the larger half of the fix is board-side and needs no training."
 ---
 
 # The deployed teacher trained with control_delay_steps (0,0) while the robot serves observations 1.2 to 4.7 control steps stale, and DORAEMON has no dim to cover it
@@ -191,4 +191,38 @@ fire. Note the guard at `albc_env.py:446` is a `ValueError`, not a warning -- a 
 Koopman module path and a nonzero delay DIES at construction, by design, because the frozen
 operator was fitted on the undelayed action. The Koopman line reopened 2026-08-05 under a paper
 objective, so the two must be scheduled separately.
+
+---
+
+## Update (2026-08-14T15:07:16.951471)
+
+## GATE CORRECTION 2026-08-15: the feasibility check cannot be single-seed
+
+The range decision above stands. The gate attached to it does not, and the correction comes from
+measurement rather than argument.
+
+The gate as written was: run about 500 iterations at (0,1), proceed if `DORAEMON/success_rate` stays at
+or above alpha 0.5 and `Train/mean_reward` at or above `performance_lb` 250. The teacher-final-replicate
+round has since evaluated two from-scratch runs at the incumbent's exact settings, 10000 iterations,
+differing ONLY in seed, and with NO delay applied they landed on opposite sides of that threshold:
+
+| | incumbent | R30 seed 30 | R31 seed 31 |
+|:--|--:|--:|--:|
+| Train/mean_reward final-50 | 253.35 | 240.11 | 244.47 |
+| DORAEMON/success_rate final-50 | 0.650 | 0.469 | 0.536 |
+| DORAEMON/mode at end | 0.0 normal | 1.0 recovery | 0.0 normal |
+
+So the config already straddles alpha without the intervention the gate is supposed to price. A
+single-seed run of the gate would return PASS or FAIL by seed draw, and the delay would be adopted or
+dropped on that. Detail:
+[[the_doraemon_feasibility_floor_sits_inside_this_config_s_seed_di]].
+
+REVISED GATE. Either (a) run the ~500-iteration check on at least two seeds and require BOTH to clear,
+or (b) replace the threshold criterion with a paired one -- run the same seed with and without the
+delay and compare the return trajectories against each other rather than against the floor. Option (b)
+is cheaper and strictly more informative, because what the gate actually needs to know is the COST OF
+THE DELAY, not whether this config happens to clear a floor it already straddles.
+
+This does not change the range, the rejected alternatives, or the board-side priority recorded above.
+It changes only how the go/no-go is measured.
 
