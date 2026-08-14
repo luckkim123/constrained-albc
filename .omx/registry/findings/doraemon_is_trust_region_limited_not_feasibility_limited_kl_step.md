@@ -4,7 +4,7 @@ tags: ["doraemon", "kl_ub", "curriculum", "expansion-budget", "p-a9", "dgx", "co
 created: 2026-07-16T05:49:54.801488
 updated: 2026-07-23T07:56:12.833488
 sources: ["diagnose-20260721-190151"]
-links: ["doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step.md"]
+links: ["doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md"]
 category: pattern
 confidence: high
 schemaVersion: 1

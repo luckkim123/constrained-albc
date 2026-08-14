@@ -76,3 +76,24 @@ The "IMPLICATION FOR THE OBS4 PROGRAM" note on this page cites plan
 document now lives at `constrained-albc/.omx/programs/obs4-deployable-obs/PLAN.md`, moved
 byte-identically on 2026-08-04. The implication itself is unchanged; only the path is.
 
+---
+
+## MERGED FROM the duplicate page (2026-08-14)
+
+Folded in from `stonefish_role_narrowed_to_integration_smoke_bench_user_ratified.md`, which
+records the same 2026-08-03 decision 13 minutes earlier. These facts appear only there:
+
+- **Lineage.** This decision converts the **2026-07-30 session recommendation** (rotational-damping
+  verdict aftermath) into a standing decision.
+- **Rationale for point 1.** The distributed integral is only as good as the integrated geometry
+  (bare cylinder + thin rod + six geometry-less thrusters), and **neither simulator has ever been
+  contrasted with the real robot**.
+- **Probe P-D is explicitly retired** (numerical-damping equivalence calibration) -- its purpose is
+  dissolved by this decision.
+- **HydroRC-v2**: the `016d1b1` numbers are retired; it stays geometry-or-literature derived.
+- **Where the smoke bench lives**: `stonefish_sim/smoke_bench/` (`smoke_run.sh` + `smoke_check.py`),
+  PASS/FAIL on the narrowed criteria only, rms printed as unscored context.
+- **July probe artifacts** archived at `stonefish_dev:/workspace/probe_archive/2026-07/`.
+- **Vault SSOT** (path verified 2026-08-14):
+  `0_Project/in_progress/albc/sim_validation/docs/stonefish-role-decision-2026-08-03.md`.
+  The duplicate page's body cites `krit/simulator/docs/` for this, which is wrong.

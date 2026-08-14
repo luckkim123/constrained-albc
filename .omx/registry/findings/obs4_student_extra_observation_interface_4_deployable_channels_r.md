@@ -4,7 +4,7 @@ tags: ["obs4", "student-extra-obs", "observation-interface", "zero-order-hold", 
 created: 2026-08-03T09:06:21.064863
 updated: 2026-08-04T06:38:49.829416
 sources: ["diagnose-20260803-223517"]
-links: ["sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "albc_cudnn_fix_is_a_library_path_not_a_package.md", "real_albc_deployment_state_estimation_rates_measured_from_code_a.md", "c4b_dagger_correction_measured_partial_2_5_4x_in_loop_reduction.md", "container_cudnn_is_cu13_against_cu128_torch_every_conv1d_fails_s.md", "feedback_read_metric_units_from_code.md"]
+links: ["sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "albc_cudnn_fix_is_a_library_path_not_a_package.md", "real_albc_deployment_state_estimation_rates_measured_from_code_a.md", "c4b_dagger_correction_measured_partial_2_5_4x_in_loop_reduction_.md", "container_cudnn_is_cu13_against_cu128_torch_every_conv1d_fails_s.md", "feedback_read_metric_units_from_code.md"]
 category: decision
 confidence: high
 schemaVersion: 1

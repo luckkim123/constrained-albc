@@ -1,0 +1,364 @@
+---
+title: "obs4 student extra-observation interface: 4 deployable channels ride the observation dict through ONE shared student_input, zero-order held at the real 25 Hz bus rate; implemented and pushed 2026-08-03, not yet run"
+tags: ["obs4", "student-extra-obs", "observation-interface", "zero-order-hold", "imu", "pressure", "distillation", "phase-b", "phase-c", "inconclusive"]
+created: 2026-08-03T09:06:21.064863
+updated: 2026-08-04T06:38:49.829416
+sources: ["diagnose-20260803-223517"]
+links: ["sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "albc_cudnn_fix_is_a_library_path_not_a_package.md", "real_albc_deployment_state_estimation_rates_measured_from_code_a.md", "c4b_dagger_correction_measured_partial_2_5_4x_in_loop_reduction.md", "container_cudnn_is_cu13_against_cu128_torch_every_conv1d_fails_s.md", "feedback_read_metric_units_from_code.md"]
+category: decision
+confidence: high
+schemaVersion: 1
+qualityScore: 70
+qualityReasons: ["no-source-marker", "generic-only-tags"]
+status: resolved
+blocked-on: "Phase D CLEARED 2026-08-04. The controlled run trpo_obs76fault_s30_260804_043926 (one variable: policy_obs 72->76, fault-DR matched to E-int) PASSES the pre-registered H1 gate on both clauses with margin -- hard att_norm ss_error +0.0108 deg against a 0.10 floor, none roll n_gt20 +4.33 envs against a 15-env floor -- so the obs76 teacher is ELIGIBLE. Report diagnose-20260804-093500. The earlier attempt trpo_obs76_s30_260803_233239 is VOID (fault.enable false vs E-int true) -- do not cite its numbers. This lead is now blocked ONLY on the human-gated Phase E re-distill (C3 recipe, GRU+select, lambda=1.0, extra_obs_dim=0, from the new teacher). Recommended cheap pre-check before Phase E: encoder_tools.py sweep on both teacher checkpoints, because Grad/enc_step is ~36% lower in BOTH obs76 runs and that is the quantity Phase E's student must reconstruct."
+---
+
+# obs4 student extra-observation interface: 4 deployable channels ride the observation dict through ONE shared student_input, zero-order held at the real 25 Hz bus rate; implemented and pushed 2026-08-03, not yet run
+
+The student distillation path can now take 4 extra observation channels that the real robot can
+actually produce. Implemented as obs4 Phase A on branch `exp/obs4-extraobs` @`7c16b93` (baseline tag
+`baseline-260803-obs4`, 11 commits, tests 443 -> 459, every task independently reviewed plus one
+whole-branch fix wave). `main` is untouched. Plan and full task list:
+`/workspace/.sp/plans/2026-08-03-obs4-student-then-teacher76-program.md`.
+
+## The channels, and why exactly these 4
+
+IMU specific force `a_imu_b = R_wb^T (a_w - g_w)` (3D, body frame, gravity INCLUDED because that is
+what an accelerometer reads) + pressure-derived heave rate (1D, first-order LPF over a differentiated
+noisy depth). Not a design preference -- it is the whole deployable set. The robot carries IMU and
+pressure only, no DVL, so surge/sway velocity cannot be added no matter how useful it would be
+([[sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an]]).
+
+## Four decisions worth not re-deriving
+
+**Transport = a key on the observation dict** (`observations["student_extra"]`), NOT an env attribute
+written by a per-step push. The alternative is dead. `RslRlVecEnvWrapper` TensorDict-wraps the WHOLE
+dict returned by `_get_observations()` with no key filtering, so a third key rides through untouched
+-- VERIFIED on a real Isaac boot (4 envs, GPU0: the third key was accepted, channel[2] read 9.810 at
+reset, and the zero-order-hold pairs were visible in the step stream). The env-attribute route would
+have needed a push site in every consumer.
+
+**Every encoder forward goes through ONE shared `student_input`** in `_core/student/models.py`. There
+are FOUR forward sites -- DAgger collect, the GRU training loss, the end-of-rollout hidden recompute,
+and eval in-loop -- and the fourth is the one a reader misses. This is the structural answer to the
+`38d979e` class of bug (an eval-side copy of a training forward that silently dropped normalization
+and invalidated two months of in-loop verdicts): divergence is impossible when there is one function,
+so the test only has to prove routing. An AST gate over the shipped source enforces it
+(`tests/test_student_extra_parity.py`), written as (must_route, allowed_unrouted) rather than a flat
+set equality so that `_compute_loss_tcn` legitimately calling the encoder does not trip it.
+
+**GRU only.** The TCN path is deliberately unwidened and raises rather than silently accepting a
+mismatched width. GRU is the adopted student anyway (arm A0g). Related: the cuDNN `LD_LIBRARY_PATH`
+preamble is a TCN concern only -- `StudentEncoderGRU` has no Conv1d
+([[albc_cudnn_fix_is_a_library_path_not_a_package]] if that page exists; the fix is Isaac's own
+prebundled cu12 cuDNN first on the path).
+
+**Zero-order hold, `extra_obs_hold_steps=2`.** The load-bearing physical decision. Every channel these
+4 derive from arrives on `/hero_agent/sensors` at <= ~25 Hz against a 50 Hz control tick
+([[real_albc_deployment_state_estimation_rates_measured_from_code_a]]). Training them fresh at 50 Hz
+would validate information the robot cannot deliver. The exact rate is recoverable from any real bag
+(firmware ships `loop_speed` in the sensors DEPTH field; rate = loop_speed/4) -- re-set the knob once
+such a bag exists, do not guess it away.
+
+## Two failure modes that were designed out
+
+The four sensor params (`use_student_extra_obs`, `depth_noise_std`, `heave_lag_tau`,
+`accel_noise_std`, `extra_obs_hold_steps`) are persisted into the student checkpoint as
+`env_sensor_cfg` and restored by `eval.py` before `gym.make`. Without that, training at hold=4 and
+evaluating at hold=2 mismeasures with no error -- the same silent-divergence shape as 38d979e, one
+layer out. Old checkpoints without the field still load, with a `[WARN]`.
+
+Everything defaults OFF and the OFF path was proven not to consume any RNG, so existing seeded runs
+stay bit-reproducible and the feature can sit on the branch indefinitely without contaminating a
+comparison.
+
+## Carry this into the B2 proposal
+
+With `depth_noise_std=0.01` the ON and OFF arms draw different RNG, so B2 vs C3 is a
+DISTRIBUTION-LEVEL comparison, not "the same trajectories plus four channels". Setting it to 0 buys
+pairing at the cost of an unrealistically clean sensor. That trade-off is a pre-registration decision,
+not an implementation detail. The lead this arm closes is
+[[c4b_dagger_correction_measured_partial_2_5_4x_in_loop_reduction_]] -- its read-out is whether
+`l_hat_envvar / l_true_envvar` rises off the ~0.12-0.16 floor, most at hard DR where DAgger did least.
+Deploy export refuses gen-1 extra-obs students in BOTH spec files, so nothing half-wired can ship.
+
+---
+
+## Update (2026-08-03T09:07:04.300885)
+
+
+### Correction (same day): cuDNN link
+
+The cuDNN page referenced above is
+[[container_cudnn_is_cu13_against_cu128_torch_every_conv1d_fails_s]] -- the earlier bracket in this
+page named an auto-memory slug, not a wiki slug, and hedged on its existence. The claim itself stands:
+the preamble is a TCN concern only because `StudentEncoderGRU` contains no Conv1d, and the fix is a
+library path (Isaac's own prebundled cu12 cuDNN ahead of the container's cu13), not a package install.
+
+---
+
+## Update (2026-08-03T09:08:57.106332)
+
+
+### Where the implementation record lives
+
+Per-task briefs, implementer reports, every independent review verdict, and the whole-branch fix-wave
+report are under
+`constrained-albc/.superpowers/sdd/2026-08-03-obs4-student-then-teacher76-program/` (git-ignored
+scratch, so it dies with the working tree -- read it before deleting the branch). The reviewed defect
+list, including the three test gates that passed or failed for the wrong reason, is in the plan's
+Review log table.
+
+---
+
+## Update (2026-08-03T09:54:42.683163)
+
+
+### B0 -- the missing eval-side dump (found 2026-08-03 during proposal review)
+
+The interface is complete on the TRAINING side and gated on the eval side, but nothing records the
+four channels for inspection. `eval.py` writes `latent_<level>.npz` = {`l_hat`, `l_true`} and
+`data_<level>.npz` = attitude/DR/joint arrays; `student_extra` appears in it only in the `env_cfg`
+setup block. So the four-point bite check the arm depends on -- nonzero, time-varying, channel[2]
+near +9.81, and consecutive samples repeating in PAIRS at `extra_obs_hold_steps=2` -- has no data
+source. That is the E2-delay failure reproduced inside the gate written to prevent it.
+
+B0 adds a `student_extra` capture alongside the existing latent dump. **Its definition of done
+includes proving the instrument unperturbed**: re-run C3's eval from the same checkpoint under the
+patched `eval.py` and confirm `latent_hard.npz` is numerically unchanged. C3's baseline came from the
+unpatched instrument and B2's would come from the patched one, so the contrast spans an instrument
+change -- and `38d979e` is what that costs when it is asserted instead of checked.
+
+Eval-side rather than training-side because eval is the only side carrying the `env_sensor_cfg`
+restore path, the one genuine train/eval divergence risk; the transfer argument is that both sides
+call the same `compute_student_extra_obs` on the same cfg with the same env-global `_extra_tick`.
+
+---
+
+## Update (2026-08-03T10:45:38.859259)
+
+
+### CORRECTION: nn.GRU DOES use cuDNN -- "no Conv1d" was the wrong reason
+
+An earlier section of this page said the cuDNN `LD_LIBRARY_PATH` preamble is "a TCN concern only"
+because `StudentEncoderGRU` has no `Conv1d`. **That is a non-sequitur and it is now measured wrong.**
+`Conv1d` is not the only cuDNN consumer: `nn.GRU` calls `torch._cudnn_rnn_flatten_weight` inside
+`flatten_parameters()` as soon as the module is moved with `.to(device)`.
+
+Measured 2026-08-03 on the workstation: `eval.py static --encoder_type gru` dies at
+`student_policy.py:93 make_student_encoder(cfg).to(device)` with
+`RuntimeError: cuDNN error: CUDNN_STATUS_NOT_INITIALIZED`, and completes with
+
+    LD_LIBRARY_PATH=/isaac-sim/exts/omni.isaac.ml_archive/pip_prebundle/nvidia/cudnn/lib:$LD_LIBRARY_PATH
+
+**The two paths are protected asymmetrically, which is why nobody hit this.** `train_student.py`
+disables cuDNN by DEFAULT (`--enable_cudnn` off => `torch.backends.cudnn.enabled = False`, lines
+145-146) as the documented workstation workaround, so TRAINING is safe. `eval.py` has **no cuDNN
+handling at all** (zero occurrences), so EVAL is not. The gap is pre-existing and hits every
+GRU-student eval on this host, not just the obs4 arm. See
+[[container_cudnn_is_cu13_against_cu128_torch_every_conv1d_fails_s]] -- that page's title says
+"every conv1d fails", which is narrower than the truth: cuDNN cannot INITIALIZE here, so every
+cuDNN consumer fails, RNN kernels included.
+
+### Two metric defects found while building B0, both "the number does not mean its name"
+
+**`time_varying` judged against zero.** numpy's `std` over identical values returns ~1e-16 (float64)
+or ~1e-6 (float32), never exactly 0.0, so a `> 0` test PASSES on a genuinely frozen channel. Now
+judged relative to the channel's own magnitude.
+
+**The heave noise floor was 1.985x too high.** Taking it as `depth_noise_std / sensor_dt` (0.250)
+ignores the `sqrt(2)` from differencing two INDEPENDENT depth samples AND the first-order LPF, with
+the MA(1) correlation the differencing creates. Simulating the producer's real chain gives **0.126**.
+Under the wrong floor a channel that is 100% noise scored 0.504 and a usable channel at s/n 1.5 read
+as "below its own noise" -- and the proposal pre-registers a threshold on this number, so the unit
+error would have produced a wrong verdict rather than a noisy one. Same class as
+[[feedback_read_metric_units_from_code]] if that page exists in this wiki; the general rule is that a
+derived quantity's units come from the arithmetic that computes it, never from its label.
+
+---
+
+## Update (2026-08-03T13:54:37.300266)
+
+UPDATE 2026-08-03: the arm RAN. Phase B and Phase C are complete; this page's title still says
+"not yet run" only because the title is the append-merge key.
+
+WHAT RAN. B2 = trpo_sdeint_b2_extraobs_s30_260803_215117 (extra_obs_dim 4, env.use_student_extra_obs
+True, extra_obs_hold_steps 2, otherwise C3's recipe: GRU, select, fixed beta 0.5, seed 30, 2048 envs,
+frozen E-int teacher). A dim=0 control on the same commit d81e2fd was added because C3's manifest is
+dirty:true on a deleted worktree; the control also settled that doubt (see the C3 provenance page).
+
+BOTH PRE-REGISTERED GATES PASSED. Bite check: all four channels nonzero and time-varying with zero
+degenerate envs at every DR level, gravity mean 9.338 (convention held), repeat fraction 0.49987
+against an expected 0.5 so the 25 Hz hold is physically present, heave_snr 2.227 / 2.456 / 3.218 /
+4.214 across none / soft / medium / hard -- monotone in DR difficulty, so the channel is most
+informative exactly where latent fidelity is decision-grade. Not VOID.
+
+RESULT. Against the dim=0 control, aggregate hard latent R2 +0.0905 -> +0.2460, delta +0.1555 =
++2.92 sigma against the 3-sigma GO bar of +0.1599. Both estimators agree on the band, so no demotion.
+The channels DO carry information: d6 MSE -32.1%, d7 -37.0%, d8 -58.0%, dims with R2>0 rising 4/9 to
+7/9, and the training-side loss_latent independently -5.9%. Three caveats sit against that: roughly
+40% of the aggregate delta is denominator movement rather than error reduction; the pre-registered
+d4 corroboration FAILED (d4 got 6.3% worse); and hard-DR att_norm ss_error regressed +0.1401 deg past
+its own 0.1 floor, roll-specific (n_gt20 4.67 -> 7.00) while pitch and yaw improved.
+
+DELIVERED SCOPE, unchanged: only the velocity-channel half of the c4b ask (heave rate, z only). The
+history-window half is untouched and xy velocity stays unavailable (no DVL).
+
+TWO LIVE READINGS OF THE HARD REGRESSION, which point at different next arms. (a) Capacity crowding:
+four inputs added to an unwidened 128-unit GRU produced a redistribution, five dims better and four
+worse -- test with a widened encoder for 13 minutes. (b) Frozen-actor mismatch: the actor was trained
+on the teacher's z distribution and never saw this student's shifted l_hat; the regression
+concentrating at hard is consistent with C1-latsens measuring actor latent sensitivity 4x higher
+there than elsewhere, and only gen-2 (teacher obs76) removes that asymmetry. Both are live; the
+report marks the capacity reading MED, not established.
+
+---
+
+## Update (2026-08-03T14:11:06.139256)
+
+## Correction 2026-08-03 (post-review): the pre-registered anchor is C3, not the control
+
+An independent review of the Phase C report found the headline sigma was computed against
+trpo_sdeint_b2ctl_dim0_s30_260803_220234 (the dim=0 control), an arm added AFTER the pre-registration
+was written and originally scoped only to test C3's dirty-tree provenance.
+
+The pre-registration's "Outcome regions" table does not take a delta at all. It partitions B2's own
+absolute aggregate hard R2 into bands whose INCONCLUSIVE floor IS C3's aggregate R2, and its sigma
+column is headed "Sigma from C3".
+
+| anchor | status | B2 delta (est A) | sigma | miss vs GO | band |
+|:--|:--|--:|--:|--:|:--|
+| C3 +0.1108 | PRE-REGISTERED | +0.1352 | +2.54 | 0.0247 | INCONCLUSIVE |
+| CTL +0.0905 | supplementary | +0.1555 | +2.92 | 0.0044 | INCONCLUSIVE |
+
+The categorical verdict is unchanged, and the control remains the better-matched comparison (same commit,
+paired against C3). What changes is the narrative: 0.0247 is a comfortable miss, not a razor-thin one.
+
+The generalizable lesson, which is why this correction is recorded rather than silently applied: when a
+control arm is added to a pre-registered experiment after the fact, it does not inherit the
+pre-registration's decision table. Report the literal pre-registered statistic first and the better-controlled
+one as a supplement, and state the gap between them. Both reports were re-authored through the
+exp-analyze RE-analysis path to carry both anchors side by side.
+
+---
+
+## Update (2026-08-03T15:01:48.855779)
+
+## Hypothesis (a) capacity crowding is ELIMINATED (2026-08-03 night)
+
+Phase C left two readings of the per-dim redistribution and the hard-DR control regression:
+(a) capacity crowding, four new inputs competing inside an unwidened 128-unit GRU; and
+(b) frozen-actor mismatch, the actor trained on the teacher's z having never seen a student's
+l_hat. The widened-encoder arm was the direct discriminator, and it came back against (a).
+
+| measure at hard | B2 (GRU 128) | WIDE (GRU 256) | direction |
+|:--|--:|--:|:--|
+| latent `sum(MSE)` | 0.4996 | 0.5672 | +13.5% WORSE |
+| d6 MSE (the pre-registered dim) | 0.0369 | 0.0617 | +67.1% WORSE |
+| `att_norm ss_error` (deg) | 0.6975 | 1.3198 | +0.6223, clears the 0.1 floor |
+| aggregate R2, error-only delta | -- | -0.1020 | worse |
+| train `loss_latent` | 0.004572 | 0.004154 | -9.1% BETTER |
+
+Doubling the width is exactly what (a) predicts should help. Every denominator-free eval measure
+moved the wrong way instead. At one seed with independent env draws this is suggestive, not
+conclusive, and it is elimination rather than direct evidence for (b) -- but (b) is the reading
+left standing, and no amount of student capacity addresses it because the mismatch lives in the
+frozen actor.
+
+Note the last row: the training loss moved OPPOSITE to the eval. See the separate page on why
+`loss_latent` is not a valid corroborator of an eval-side latent claim.
+
+---
+
+## Update (2026-08-03T15:15:41.962890)
+
+## Run-id correction (2026-08-03 night)
+
+Phase D was launched twice. The first attempt, `trpo_obs76_s30_260803_232531`, died at iteration 1
+on the sensor-model double-advance bug and was trashed; the relaunch after the fix minted
+`trpo_obs76_s30_260803_233239`, which is the run that is actually training. Any note citing the
+`..._232531` id refers to the dead attempt.
+
+The generalizable point: `make_run_id` stamps a fresh timestamp at every launch, so a relaunch
+after a crash-fix ALWAYS changes the run id. Anything written down between the two launches --
+watcher/chain scripts, wiki blocked-on fields, memory notes -- points at a directory that will
+never be created. Re-derive the id from disk (`ls` the group dir) after any relaunch rather than
+reusing what was recorded before it.
+
+---
+
+## Update (2026-08-03T19:54:33.510722)
+
+## Phase D status update 2026-08-04
+
+Attempt 1 ran to completion and produced a VOID result on its intended question. The full
+account is in the run's report (`diagnose-20260804-045000`) and the methodological lesson is on
+its own page: a one-variable claim must be checked against the BASELINE RUN's recorded
+`config/env.yaml`, because E-int was launched dirty and its `fault.enable: true` was invisible to
+the committed-diff check the launch note relied on.
+
+What attempt 1 does establish, and what carries forward to the re-run:
+
+- gen-2 is mechanically sound -- a 76D policy trains 5000 iterations to completion with unchanged
+  latent scale (`Encoder/z_std` 0.391 vs 0.393), the same binding constraint (`thruster_util`)
+  and 100% survival at every DR level.
+- Two leads to re-test under the controlled comparison: (i) an axis trade in which pitch degrades
+  monotonically with DR (+0.0391/+0.0922/+0.1052/+0.3062 deg) while roll improves at three of
+  four levels and sheds a 63.19 deg hard-DR peak down to 3.36 deg; (ii) a weaker encoder learning
+  signal (`Policy/encoder_grad_norm` -17.8%, `Grad/enc_step` -36.3%) which should NOT move with
+  observation width at all and therefore probably tracks the easier plant.
+
+---
+
+## Update (2026-08-04T00:44:37.284207)
+
+## Phase D CLEARED 2026-08-04 -- this lead now waits only on the human Phase E gate
+
+The controlled Phase D passed H1 on both clauses. What it means for this lead:
+
+- gen-2 is validated end to end: a 76D policy trains to completion, keeps the latent scale, keeps
+  `thruster_util` as the binding constraint at the baseline's exact pressure, and survives every
+  DR level at 100%.
+- The widened observation improves exactly the properties that make a teacher hard to distill
+  from: it removes the 63 deg roll tail, cuts the pitch tail 13.06 -> 2.80 deg, and drops hard-DR
+  env-to-env spread 37.2%.
+- Two caveats travel with the GO: a REAL pitch steady-state regression at soft (+0.1336 deg) and
+  medium (+0.1204 deg) that falls outside H1's clauses, and a ~36% weaker encoder learning signal
+  present in BOTH obs76 runs.
+
+Full account: wiki `obs4_phase_d_result_2026_08_04_folding_the_4_deployable_channels`.
+
+---
+
+## Update (2026-08-04T03:59:06.353299)
+
+## Path correction 2026-08-04 -- the program plan moved into the omx program tree
+
+Every reference on this page to
+`/workspace/.sp/plans/2026-08-03-obs4-student-then-teacher76-program.md` is STALE. The document
+now lives at `constrained-albc/.omx/programs/obs4-deployable-obs/PLAN.md`, moved byte-identically
+on 2026-08-04, with `omx program-status` as its machine-readable state.
+
+Why it moved: `/workspace` is not a git repository at all, so `.sp/plans/` had no version control
+and no tooling coverage. A multi-phase program that schedules runs across days outlives the
+"throwaway scratch" contract `.sp/` is built on. The cost was concrete -- this program's plan
+carried a run id that had been voided hours earlier and nothing flagged it, while `campaign-drift`
+caught the equivalent staleness on the campaign side the same night.
+
+Campaigns: `teacher_obs76` (Phase D) and `student_distill_obs76` (Phase E) are attached to the
+program. Phases B and C ran inside `student_distill_eint`, which stays owned by
+`teacher-final-closeout`.
+
+The sibling Koopman plan moved the same day to
+`constrained-albc/.omx/programs/koopman-lifting/PLAN.md` (commit cc1eb31).
+
+---
+
+## Update (2026-08-04T06:38:49.829416)
+
+PROGRAM-LEVEL CLOSE 2026-08-04. All three delivery routes for the 4 deployable channels have now been built and run: gen-1 side channel (B2), gen-2 folded into policy_obs and z-scored by the teachers frozen normalizer (Phase E), and gen-2 tail-split recovering the gen-1 convention (X1). Verdict across the three: NONE produced a decision-grade CONTROL gain in a student against the registered floors. The channels do measurably change latent reconstruction - X1 recovered hard aggregate R2 from -0.1044 to +0.0645 - but that recovery bought no control improvement, which is the counterexample to this interfaces motivating premise.
+
+What the interface itself delivered, and keeps: a verified, fail-loud implementation (mutual exclusion with extra_obs_dim, GRU-only guard, four forward sites routed through one helper, checkpoint-persisted flags read by eval and the deploy spec, 29 passing tests across test_student_extra_obs.py and test_student_extra_parity.py). If the channels are ever wanted for a deployability reason rather than a performance one, the plumbing is ready and tail-split is the assembly to use.
+
+DEPLOYABILITY CAVEAT that must travel with any adoption: deploy/specs/student_gru.py deliberately REJECTS tail-mode checkpoints (ExportContractError - npforward has no split-plus-static-scale contract), so the best-latent student in the campaign is currently not board-exportable. Extending the deploy spec is a prerequisite, not a formality.

@@ -4,7 +4,7 @@ tags: ["fault-tolerant-control", "ftc", "thruster-fault", "authority-gap", "TAM"
 created: 2026-07-25T06:49:57.904689
 updated: 2026-07-27T05:07:35.167958
 sources: ["handoff-2026-07-24-ftc", "authority_gap.py-260725", "oms-scholar-researcher-surveys-260725", "diagnose-20260727-140324"]
-links: ["real_robot_has_2_faulted_thrusters_user_judges_buoyancy_restorin.md", "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md", "tam_columns_must_match_robot_firmware_esc_channel_order_reorder.md", "plant_fix_needs_apply_before_retrain_main_hull_volume_0_009_0_00.md", "thruster_util_is_the_binding_constrainttrpo_constraint_in_7_of_7.md", "per_env_heavy_tail_analysis_current_capability_hard_ceiling_and.md", "an_off_doraemon_channel_that_costs_return_stalls_the_curriculum.md", "eval_metric_units_and_decision_floors_os_env_mean_is_percent_of.md", "ftc_fault_dr_a_b_result_2026_07_27_fault_dr_adopted_5_12x_less_m.md"]
+links: ["real_robot_has_2_faulted_thrusters_user_judges_buoyancy_restorin.md", "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md", "tam_columns_must_match_robot_firmware_esc_channel_order_reorder_.md", "plant_fix_needs_apply_before_retrain_main_hull_volume_0_009_0_00.md", "thruster_util_is_the_binding_constrainttrpo_constraint_in_7_of_7.md", "per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md", "an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md", "eval_metric_units_and_decision_floors_os_env_mean_is_percent_of_.md", "ftc_fault_dr_a_b_result_2026_07_27_fault_dr_adopted_5_12x_less_m.md"]
 category: reference
 confidence: high
 schemaVersion: 1

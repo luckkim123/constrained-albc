@@ -14,6 +14,23 @@ status: resolved
 blocked-on: "m4 remeasurement (HW fault) + full B1 vertical translation"
 ---
 
+> # CORRECTION 2026-08-13 -- the core claim below is REFUTED.
+>
+> **m0 and m3 are NOT the same physical motor.** They sit at different clock positions:
+> **m0 = 3 o'clock, m3 = 9 o'clock** (gripper = 12 o'clock), measured by `b1_channel_probe.py`
+> one channel at a time and recorded in `deployed_tam.json.measured_channel_map`.
+> The 2026-08-12 dry probe (PLAN 0f) drove them separately and saw two different thrusters.
+>
+> **m3 is DEAD, not intermittent.** `deployed_tam.json` records `m3: DEAD`. The
+> "intermittent" reading below came from a run contaminated by ESC-deadband creeping
+> (the vertical channels then idled at 1470 us, inside the 1450..1545 deadband, so a
+> still-looking channel could twitch and a driven one could look weak). That firmware
+> defect is fixed; the observation it produced is not evidence.
+>
+> What survives: m3's fault is a per-unit hardware defect, not a design difference --
+> so sim should model six healthy thrusters and handle faults via `FaultInjectionCfg`.
+
+
 # TAM vertical pair is one physical motor with dual-ESC wiring (measured 2026-07-05)
 
 Scope: envs/main + envs/full_dof TAM vertical channels (m0, m3). B1 watertank measurement session 3, 2026-07-05. Companion to [[tam_columns_must_match_robot_firmware_esc_channel_order_reorder_]] and the retrain manifest [[next_from_scratch_retrain_manifest_what_rides_on_the_post_tam_ba]].

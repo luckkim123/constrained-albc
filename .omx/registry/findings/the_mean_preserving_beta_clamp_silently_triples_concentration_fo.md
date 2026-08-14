@@ -4,7 +4,7 @@ tags: ["doraemon", "curriculum", "beta", "init_concentration", "fault_severity",
 created: 2026-07-28T09:12:53.564095
 updated: 2026-07-29T08:24:52.913601
 sources: ["diagnose-20260727-140324", "curriculum_trajectory.json", "doraemon.py:118-145", "next-20260728-180215", "diagnose-20260729-171553", "trpo_ftc1sevinit_s30_260729_105510"]
-links: ["curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md", "severity_init_head_start_converts_to_curriculum_2_50x_but_makes.md"]
+links: ["curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md", "severity_init_head_start_converts_to_curriculum_2_50x_but_makes_.md"]
 category: pattern
 confidence: high
 schemaVersion: 1

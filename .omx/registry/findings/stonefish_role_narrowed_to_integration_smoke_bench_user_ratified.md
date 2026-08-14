@@ -12,6 +12,22 @@ qualityScore: 80
 qualityReasons: ["no-source-marker"]
 ---
 
+> # DUPLICATE 2026-08-14 -- the same 2026-08-03 decision is recorded on two pages, 13 minutes apart.
+>
+> The sibling is `stonefish_role_narrowed_to_integration_smoke_bench_ratified_2026.md`
+> (created 06:10 against this page's 05:57; it carries `status: resolved`, a later 08-04 update,
+> the open-dispatch list, and the C3-vs-A0-TCN pack correction). **Prefer the sibling.** Every
+> fact unique to this page has been copied there under "MERGED FROM the duplicate page".
+>
+> **One stale path here.** The body cites the vault SSOT as
+> `0_Project/in_progress/krit/simulator/docs/stonefish-role-decision-2026-08-03.md`. That is
+> wrong -- verified 2026-08-14, the file is at
+> `0_Project/in_progress/albc/sim_validation/docs/stonefish-role-decision-2026-08-03.md`,
+> which is what this page's own Update block says. The `krit/simulator/docs/` directory exists
+> but does not hold the file, so the wrong path fails silently as an empty directory listing
+> rather than as a missing file.
+
+
 # Stonefish role narrowed to integration smoke bench (user-ratified 2026-08-03): no coefficient source, no performance verdicts; priority moves to thruster/real-robot anchors; third simulator rejected
 
 Stonefish's role is narrowed to an INTEGRATION SMOKE BENCH, user-ratified 2026-08-03. This converts the 2026-07-30 session recommendation (rotational-damping verdict aftermath) into a standing decision.

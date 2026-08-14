@@ -4,7 +4,7 @@ tags: ["priv_obs", "encoder", "experiment_lead", "consolidation", "p_t_layout", 
 created: 2026-07-12T12:01:49.559370
 updated: 2026-07-23T07:56:12.748027
 sources: ["diagnose-20260721-190151", "/workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_baseline_posttam/trpo_privslim24d_260721_114717/analysis/diagnose-20260721-190151/report.md"]
-links: ["doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step.md"]
+links: ["doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md"]
 category: reference
 confidence: high
 schemaVersion: 1

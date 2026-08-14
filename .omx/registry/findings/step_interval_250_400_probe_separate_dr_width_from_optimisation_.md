@@ -4,7 +4,7 @@ tags: ["doraemon", "step_interval", "dr-width", "transient-overshoot", "thruster
 created: 2026-07-20T04:17:04.272956
 updated: 2026-07-24T08:30:50.403121
 sources: ["diagnose-20260720-124259", "next-20260720-131526", "marinelab/marinelab/algorithms/doraemon.py", "diagnose-20260721-020253", "static_260721_014808"]
-links: ["extend8k_saturated_the_dr_config_box_at_iter_7000_all_20_params_.md", "curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md", "doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step.md"]
+links: ["extend8k_saturated_the_dr_config_box_at_iter_7000_all_20_params_.md", "curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md", "doraemon_difficulty_has_3_separable_levers_kl_ub_step_size_step_.md"]
 category: decision
 confidence: high
 schemaVersion: 1

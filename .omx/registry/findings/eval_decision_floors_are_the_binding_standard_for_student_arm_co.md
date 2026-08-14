@@ -1,15 +1,15 @@
 ---
 title: "Eval decision floors are the binding standard for student-arm comparisons (0.1 deg / 15 envs)"
-tags: ["eval", "decision-floor", "screening", "student", "distillation", "albc", "methodology"]
+tags: ["eval", "decision-floor", "screening", "student", "distillation", "albc", "methodology", "dispersion", "survival", "G2"]
 created: 2026-07-29T07:25:58.151005
-updated: 2026-08-04T04:35:03.203619
-sources: ["diagnose-20260729-161459"]
+updated: 2026-08-04T05:16:51.396286
+sources: ["diagnose-20260729-161459", "dgx-final-scaleup-G2"]
 links: []
 category: reference
 confidence: high
 schemaVersion: 1
-qualityScore: 90
-qualityReasons: ["generic-only-tags"]
+qualityScore: 80
+qualityReasons: ["no-source-marker"]
 ---
 
 # Eval decision floors are the binding standard for student-arm comparisons (0.1 deg / 15 envs)
@@ -92,3 +92,8 @@ says 0.51 and 0.59 SE), because that pair's hard dispersion is 3x larger. Genera
 and the noise test agree when dispersion is ordinary and diverge exactly where a heavy tail makes the
 floor over-sensitive. Run both; when they disagree, the arithmetic wins.
 
+---
+
+## Update (2026-08-04T05:16:51.396286)
+
+G2 CLOSED 2026-08-04 (dgx-final-scaleup): dispersion and survival floors are now REGISTERED in _analyze/recompute_metrics.py DECISION_FLOORS: ss_error_std = 0.60 deg (attitude axes only, same deg-guard as ss_error) and survival_pct = 1.6 pp (1 env of 64). Derivation: corrected-plant cross-seed peak-to-peak on the buoyanchor standard evals s30 static_260725_164839 / s31 static_260723_092623 / s32 static_260723_093433 (s30 static_260725_165657 EXCLUDED - it carries fault_thruster_* keys, it is the FTC-m4 fault eval); p2p max across levels: roll ss_std 0.36, pitch ss_std 0.58 -> 0.60; survival 1.56 -> 1.6. PROVISIONAL n=3. paired.py DEFAULT_FIELDS now includes ss_error_std. Verified live on the Phase E pair: hard roll ss_error_std delta +1.429 deg = REAL (2.4x floor), hard survival -3.125 pp = REAL, all sub-floor deltas BELOW-FLOOR, yaw NO-FLOOR. Note: eval is DETERMINISTIC at fixed (ckpt, seed, DR draws) - the C3 trio of evals is identical to 4 decimals - so repeat-eval noise is ~0 and the floors encode the cross-seed retrain lottery, the binding attribution limit at n=1.

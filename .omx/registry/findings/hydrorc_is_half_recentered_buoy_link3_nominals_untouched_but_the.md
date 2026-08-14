@@ -4,7 +4,7 @@ tags: ["stonefish", "hydrodynamics", "buoy", "link3", "added-mass", "domain-rand
 created: 2026-07-27T11:28:30.027308
 updated: 2026-08-04T16:49:24.840526
 sources: ["marinelab:exp/hydro-recenter@016d1b1", "marinelab@f45d612", "next-20260727-174905", "code-review-20260727", "diagnose-20260728-081953", "code-verify-20260729", "handoff-stonefish-servo-pc-20260729"]
-links: ["stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md", "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md", "stonefish_base_hull_effective_hydro_measured_2026_07_27_damping.md"]
+links: ["stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md", "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md", "buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md", "stonefish_base_hull_effective_hydro_measured_2026_07_27_damping_.md"]
 category: reference
 confidence: high
 schemaVersion: 1
