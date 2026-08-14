@@ -1,9 +1,9 @@
 ---
 title: "The C3 recipe does not transfer across teachers: on a same-width dgx16k teacher it loses at every DR level and reverses its hard win"
-tags: ["albc", "student", "distillation", "c3", "gru", "dagger", "teacher-swap", "transfer", "dgx16k", "eval", "reproducibility", "teacher-lineage", "non-transfer", "latent", "probe-designed"]
+tags: ["albc", "student", "distillation", "c3", "gru", "dagger", "teacher-swap", "transfer", "dgx16k", "eval", "reproducibility", "teacher-lineage", "non-transfer", "latent", "probe-designed", "provenance", "retraction"]
 created: 2026-08-10T02:39:53.980778
-updated: 2026-08-14T07:53:39.523923
-sources: ["trpo_sddgx16k_c3_gruselect_s30_260809_222658", "static_260810_011725", "wiki-backlog-20260814"]
+updated: 2026-08-14T08:36:41.563656
+sources: ["trpo_sddgx16k_c3_gruselect_s30_260809_222658", "static_260810_011725", "wiki-backlog-20260814", "diagnose-20260814-172325"]
 links: ["x1_tail_split_restores_the_gen_2_latent_collapse_but_moves_no_co.md", "training_loss_latent_is_not_a_valid_corroborator_of_an_eval_side.md", "gru_memory_and_corrected_dagger_mixing_compound_c3_is_the_campai.md", "the_dgx16k_teacher_s_latent_target_carries_about_half_the_signal.md"]
 category: decision
 confidence: high
@@ -11,7 +11,7 @@ schemaVersion: 1
 qualityScore: 100
 qualityReasons: []
 status: needs-experiment
-blocked-on: "nothing -- the next probe is a no-training latent census across teachers; a training arm is only needed if that census fails to order them"
+blocked-on: "A REAL dgx16k C3 training run. The run this page cites never trained; queue it with TERM=xterm and --headless (human gate). Not blocked on any probe."
 ---
 
 # The C3 recipe does not transfer across teachers: on a same-width dgx16k teacher it loses at every DR level and reverses its hard win
@@ -93,4 +93,54 @@ the advantage reappears. That is the arm to queue, and only after the free censu
 PRECONDITION NOTED. The dgx16k eval saved no npz, only `summary_latent.json`, so the census is limited
 to the aggregates unless evals are re-run with the latent arrays saved. The aggregates are sufficient
 for the ranking test; per-dim or per-env follow-up would need the arrays.
+
+---
+
+## Update (2026-08-14T08:36:41.563656)
+
+## RETRACTION 2026-08-14: the run behind this page never trained
+
+The result table above, the survival numbers, the loss_latent comparison and the latent-shape
+paragraph all come from ONE eval, static_260810_011725, under run
+trpo_sddgx16k_c3_gruselect_s30_260809_222658. That run never trained, so none of those numbers
+can be attributed to a C3 student distilled from the dgx16k teacher. THE HEADLINE CLAIM IS
+UNSUPPORTED -- not disproven, unmeasured.
+
+Evidence (five independent sources, full chain in the report):
+- .omx/programs/dgx-final-teacher/HANDOFF.md lines 527-539, written 2026-08-10 01:20 KST, i.e. 79
+  minutes BEFORE this page was created, logs three launch attempts. Two died on a missing TERM;
+  the third booted the GUI experience for lack of --headless, built the 2048-env scene, sat 25
+  minutes and exited rc=0 having, in that document's own words, TRAINED NOTHING -- zero
+  "Learning iteration" lines.
+- No logs/rsl_rl/albc_trpo_student/student_distill_dgx16k/ directory exists on disk.
+- Both dgx16k manifests read status failed, paths.evals empty, final_metrics empty, and both
+  config/ directories contain zero files.
+- No wandb run matches sddgx16k.
+- The 2026-08-10 relaunch under student_final_round distils from teacher_iter_budget model_9998
+  and teacher_final_ramp model_16000 -- neither is the dgx16k teacher. No dgx16k student has ever
+  been trained on this project.
+
+The eval directory now carries its own PROVENANCE.md saying the same and instructing that the
+artifact not be attributed to this arm in any comparison.
+
+## What this costs the line
+
+This page was the ONLY unconfounded teacher swap on the line -- its own justification says so
+("Both teachers have observation_space = 72 ... a pure teacher-lineage swap with NO delivery-path
+change"). Retracting it leaves obs76 Phase E, which is confounded with the 72->76 delivery-path
+change, as the sole remaining teacher-swap observation. So "the C3 recipe does not transfer" now
+rests on ONE confounded instance.
+
+## Status correction
+
+blocked-on was "nothing -- the next probe is a no-training latent census across teachers". The
+census has now been run (analysis diagnose-20260814-172325) and its answer is stronger than "the
+census failed to order them": the phenomenon the census was meant to explain has not been
+observed. The next action is the training arm that was believed to have already run.
+
+Queue (do NOT launch -- human gate): teacher
+logs/rsl_rl/albc_trpo_teacher/teacher_envscale_dgx/trpo_dgx16k_s30_260805_185713/model_13400.pt,
+C3 verbatim (GRU 128 / head 64, dagger_mix select, beta fixed 0.5, lambda_latent 1.0, 2048 envs x
+1000 iter, seed 30), with TERM=xterm AND --headless. A working template with both guards already
+exists at logs/rsl_rl/albc_trpo_student/student_final_round/*/launch.sh.
 

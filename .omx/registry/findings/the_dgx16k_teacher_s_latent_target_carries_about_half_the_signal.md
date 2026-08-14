@@ -1,9 +1,9 @@
 ---
 title: "The dgx16k teacher's latent target carries about half the signal-to-noise of E-int's, which is a candidate mechanism for C3 non-transfer measurable without any student"
-tags: ["latent", "distillation", "c3", "teacher-lineage", "non-transfer", "target-difficulty", "snr"]
+tags: ["latent", "distillation", "c3", "teacher-lineage", "non-transfer", "target-difficulty", "snr", "retraction", "provenance", "census"]
 created: 2026-08-14T07:53:20.321999
-updated: 2026-08-14T07:53:20.321999
-sources: ["wiki-backlog-20260814"]
+updated: 2026-08-14T08:37:14.001617
+sources: ["wiki-backlog-20260814", "diagnose-20260814-172325"]
 links: ["the_c3_recipe_does_not_transfer_across_teachers_on_a_same_width.md", "eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md"]
 category: pattern
 confidence: medium
@@ -65,4 +65,69 @@ teachers WITHOUT running a student, which is what a mechanism for a teacher-line
 like. It also suggests the cheap next probe: measure `l_true_envvar` and SNR at `none` on every teacher
 this line has, and check whether it orders the teachers the same way their students' control verdicts
 do. That needs no training -- only the latent block of an eval each.
+
+---
+
+## Update (2026-08-14T08:37:14.001617)
+
+## WITHDRAWN 2026-08-14: the dgx16k column has no measured teacher behind it
+
+The dgx16k column of the table above comes entirely from static_260810_011725, an eval whose
+subject is unrecoverable: the run it sits under never trained (zero "Learning iteration" lines, no
+log directory, empty config/, no wandb run; full chain on
+[[the_c3_recipe_does_not_transfer_across_teachers_on_a_same_width_]] and in analysis
+diagnose-20260814-172325). The 0.58x spread and 0.53x SNR figures are therefore WITHDRAWN, and
+with them caveat 1's "n=1 for dgx16k" framing -- the correct count is n=0.
+
+Confidence is dropped from medium to low: the E-int column survives, the comparison does not.
+
+## What the census this page proposed actually found
+
+This page proposed the cheap probe: measure l_true_envvar and SNR at none on every teacher and
+check whether it orders the teachers as their students' control verdicts do. That census was run
+2026-08-14 over 26 evals / 15 arms / 4 lineages. Three lineages had valid data; dgx16k had none.
+
+l_true_envvar at none, clean post-fix evals, per teacher:
+- buoyfix       0.020847-0.022419, mean 0.021422, SNR mean 9.95
+- obs76         0.013049-0.015238, mean 0.013850, SNR mean 10.19
+- E-int         0.007656-0.009617, mean 0.008951, SNR mean 6.61
+- dgx16k        VOID, never trained
+
+THREE RESULTS, in descending order of how much they constrain:
+
+1. THE STATISTIC INVERTS ACROSS DR LEVELS, which by itself kills the proposed action. In the one
+   fully paired pair (E-int C3 static_260804_144932 vs obs76 C3 static_260804_145821, 27/27
+   identical dr keys at ALL four levels, so soft/medium/hard are legitimately comparable here) the
+   obs76/E-int SNR ratio runs none 1.58x, soft 0.73x, medium 0.72x, hard 0.89x, and the
+   l_true_envvar ratio runs 1.81x, 1.36x, 0.86x, 0.85x. none is the ONLY level at which obs76
+   leads on either statistic -- and none is the level this page reads. A selection statistic whose
+   sign depends on which level you read it at cannot select teachers.
+
+2. NO MONOTONE RELATION across the three valid lineages. Latent-signal ranking is
+   buoyfix > obs76 > E-int; student control ranking is E-int approximately equal to obs76, both
+   far ahead of buoyfix (roll ss_error 0.415 / 0.372-0.441 / 0.522-0.613 deg; n_gt20 0.333 /
+   2.33-3.33 / 13.00-21.33 envs of 64). The teacher with the WEAKEST latent target has the
+   joint-best student. buoyfix is recipe-confounded (TCN/DAgger, not C3-GRU) and unpaired, so it
+   constrains rather than proves.
+
+3. l_true IS NOT A PURE TEACHER PROPERTY, which is the premise this page rests on. l_true =
+   f_teacher(s_t) and s_t comes from the student's own rollout. Measured directly on the C1-latsens
+   sweep -- same teacher, same student WEIGHTS, only the latent handed to the frozen actor
+   perturbed -- l_true_envvar at none moves from 0.009078 to 0.007787, i.e. -14.2%. Across ten
+   distinct students on the E-int teacher the span is 1.26x. Teacher separation still clears that
+   band (1.55x E-int to obs76, 2.39x E-int to buoyfix) but by only about 1.2-1.9x, which is
+   thinner than a teacher-only reading implies.
+
+## Correction to this page's own noise bound
+
+Caveat 1 bounds E-int repeat noise at "~18% on l_true_envvar at none (0.008949 vs 0.007315)".
+Those two evals are static_260729_194845 and static_260804_144932, which straddle the per-level
+reseed introduced by commit 9eac3a8. That is a PROTOCOL CHANGE, not repeat noise, and it bounds
+nothing. Use instead the two bounds measured above: 1.26x across ten students on one teacher
+(rollout + arm variation), and -14.2% under pure latent perturbation (rollout alone).
+
+Separately: five of the six a0g_gru evals are the C1-latsens perturbation sweep, not repeats
+(roll ss_jitter 0.126 / 0.149 / 0.197 / 0.298 / 0.538 when sorted, launched in three concurrent
+pairs 18:08-18:28 on 2026-07-29, 34 minutes before commit a8ae34a added the injector). Treating
+them as repeat measurements inflates any noise bound roughly fourfold.
 
