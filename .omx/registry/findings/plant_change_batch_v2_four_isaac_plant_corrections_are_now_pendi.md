@@ -1,15 +1,15 @@
 ---
 title: "Plant-change batch v2: four Isaac plant corrections are now pending and each alone forces a teacher retrain, so they are batched behind one sizing gate instead of decided individually"
-tags: ["plant", "batch", "retrain", "buoy", "added-mass", "damping", "thruster", "actuator", "sim-to-real", "guard-structure", "sequencing"]
+tags: ["plant", "batch", "retrain", "buoy", "added-mass", "damping", "thruster", "actuator", "sim-to-real", "guard-structure", "sequencing", "deadband", "precondition", "item3", "gate-attachment"]
 created: 2026-07-29T11:46:55.315005
-updated: 2026-08-03T06:10:45.185310
-sources: ["stonefish-reply-20260729", "buoy-hydro-rig-20260729", "thruster-static-gain-20260729", "servo-chatter-p1-correction-20260729", "stonefish-reply-20260730", "code-verify-20260730"]
-links: []
+updated: 2026-08-14T10:24:55.349603
+sources: ["stonefish-reply-20260729", "buoy-hydro-rig-20260729", "thruster-static-gain-20260729", "servo-chatter-p1-correction-20260729", "stonefish-reply-20260730", "code-verify-20260730", "diagnose-20260814-172325"]
+links: ["thrust_deadband_0_075_is_inert_today_enable_thrust_curve_false_a.md"]
 category: decision
 confidence: high
 schemaVersion: 1
-qualityScore: 70
-qualityReasons: ["no-source-marker", "generic-only-tags"]
+qualityScore: 100
+qualityReasons: []
 ---
 
 # Plant-change batch v2: four Isaac plant corrections are now pending and each alone forces a teacher retrain, so they are batched behind one sizing gate instead of decided individually
@@ -107,4 +107,39 @@ bench measurements), but any future candidate must be checked against it. The be
 NO booked date, which is why the obs4 program (2026-08-03 plan) proceeds on the current plant
 generation rather than waiting for this batch. See wiki page
 stonefish_role_narrowed_to_integration_smoke_bench_ratified_2026.
+
+---
+
+## Update (2026-08-14T10:24:55.349603)
+
+## PRECONDITION ATTACHED TO ITEM 3, 2026-08-14 (user-approved)
+
+When the T200 bench curve lands and item 3 (thruster static gain and shape) is applied,
+`thrust_deadband` MUST be re-derived from that same curve IN THE SAME EDIT. This is not a separate
+task and it has no separate owner -- it rides on item 3 because the bench measurement that unblocks
+item 3 is exactly the measurement that supplies the deadband.
+
+WHY IT NEEDS SAYING. The config ships `thrust_deadband: 0.075` and that number is wrong: the board
+measures the real deadband at about 0.16 of half-span and ASYMMETRIC, -0.167 / +0.150. The 0.075
+fit assumed +/-25 us of a +/-400 us half-span; the board's numbers are +/-48 us of +/-300 us. A
+single symmetric scalar cannot express the measured asymmetry at all, so the re-derivation may also
+have to decide whether the field stays a scalar.
+
+The value is INERT today and only today: `marinelab/assets/uuv_cfg.py:143` still reads
+`enable_thrust_curve: bool = False`, and `marinelab/core/thruster.py:178` returns the state
+unchanged when the curve is off (verified 2026-08-14). The failure mode is therefore narrow and
+specific -- somebody flips the curve on without touching the deadband -- and it is exactly the
+flip this batch governs.
+
+WHERE THE REQUIREMENT NOW LIVES, so it cannot be lost:
+1. this page, as this section;
+2. a comment block immediately above `enable_thrust_curve` in
+   `marinelab/marinelab/assets/uuv_cfg.py` -- the line anyone enabling the curve must edit.
+Attaching it at the switch is the point: it fires when the condition becomes true rather than
+standing on every unrelated launch.
+
+CONSEQUENCE FOR THE DEADBAND PAGE. [[thrust_deadband_0_075_is_inert_today_enable_thrust_curve_false_a]]
+carried `status: needs-apply-before-retrain`, which refuses EVERY launch including the ones that
+never touch the thruster model. That status is released as of 2026-08-14; the requirement is not
+dropped, it is relocated here and to the switch.
 

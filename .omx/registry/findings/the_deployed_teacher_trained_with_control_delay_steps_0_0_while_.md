@@ -1,17 +1,17 @@
 ---
 title: "The deployed teacher trained with control_delay_steps (0,0) while the robot serves observations 1.2 to 4.7 control steps stale, and DORAEMON has no dim to cover it"
-tags: ["albc", "deployment", "latency", "staleness", "control-delay", "doraemon", "retrain", "sim2real", "delaybuffer"]
+tags: ["albc", "deployment", "latency", "staleness", "control-delay", "doraemon", "retrain", "sim2real", "delaybuffer", "decision", "range", "z4", "feasibility-gate", "board-side", "performance-lb"]
 created: 2026-08-14T05:32:58.452008
-updated: 2026-08-14T07:50:51.283885
-sources: ["trpo_iterbudget_s30_260805_012813", "wiki-backlog-20260814"]
-links: ["an_off_doraemon_channel_that_costs_return_stalls_the_curriculum.md", "experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md"]
+updated: 2026-08-14T10:25:49.391040
+sources: ["trpo_iterbudget_s30_260805_012813", "wiki-backlog-20260814", "diagnose-20260814-172325"]
+links: ["an_off_doraemon_channel_that_costs_return_stalls_the_curriculum.md", "experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md", "uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload.md"]
 category: reference
 confidence: high
 schemaVersion: 1
 qualityScore: 100
 qualityReasons: []
 status: needs-apply-before-retrain
-blocked-on: "a user decision on the delay range to train against; the mechanism itself is wired and needs no implementation"
+blocked-on: "RANGE DECIDED 2026-08-14: (0,1) for the next FROM-SCRATCH teacher round, behind a ~500-iteration feasibility gate. No longer blocked on a user decision. Blocked on that round existing -- R30/R31 already launched 2026-08-10 at (0,0) and must not be changed. The larger half of the fix is board-side and needs no training at all."
 ---
 
 # The deployed teacher trained with control_delay_steps (0,0) while the robot serves observations 1.2 to 4.7 control steps stale, and DORAEMON has no dim to cover it
@@ -107,4 +107,88 @@ infrastructure, no probe.
 
 STATUS KEPT at needs-apply-before-retrain: the fact still invalidates any dependent run that claims
 deployment realism, and the gate should keep refusing until the range is chosen.
+
+---
+
+## Update (2026-08-14T10:25:49.391040)
+
+## RANGE DECIDED 2026-08-14 (user-approved): (0,1) on the next from-scratch round, gated
+
+### This is not a fresh range question -- (0,3) was already trained and it failed structurally
+
+E1-latdr (`trpo_e1_latdr_260713_124923`, 2026-07-13) ran `control_delay_steps (0,0) -> (0,3)`.
+Mean return fell to ~197 against `performance_lb` 250, `doraemon_success_rate` 0.09 against alpha
+0.5, DORAEMON sat at mode -2 for the ENTIRE run, `kl_step ~ 0`, and the curriculum CONTRACTED its
+own dims (inertia_scale Beta-std 0.111 against the baseline's widened 0.268) while policy entropy
+collapsed. Full mechanism:
+[[an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_]].
+
+### There is no margin to absorb that cost today
+
+Measured on the deployed teacher `trpo_iterbudget_s30_260805_012813`:
+`Train/mean_reward` final-50 = 253.35 against `performance_lb` 250.0 (config.py:608), a margin of
+1.3%; `DORAEMON/success_rate` final-50 = 0.65 against alpha 0.5. Every DORAEMON dim is already at
+Beta(1,1) (std 0.289), i.e. the curriculum is saturated with no easing left to give.
+
+### The Z4 instrument exists and it sizes the per-step cost
+
+`teacher-final-closeout` records "Z4 instrument does not exist" -- that is STALE. `eval.py` carries
+`--control_delay` and the sweep was run on the buoyanchor teacher
+(`trpo_buoyanchor_s30_260722_134743/sweeps/z4_delay/d{0,1,2,3}`). att_norm ss_error at `none`,
+delay-free-trained policy:
+
+| injected delay | 0 | 1 | 2 | 3 |
+|:--|--:|--:|--:|--:|
+| att ss_error (deg) | 0.630 | 1.474 | 3.239 | 5.604 |
+| vs d=0 | -- | 2.3x | 5.1x | 8.9x |
+
+At `hard`, d=2 and d=3 also drop survival to 92.19%. The cost is steeply superlinear in the step
+count, which is why the range choice is not a matter of taste. Caveat: the injector draws RNG, so
+d>0 does not share env draws with d=0 at soft/medium/hard; `none` is unaffected because its dr_*
+are constant.
+
+### The decision
+
+1. **R30/R31 stay (0,0).** They launched 2026-08-10 14:04 and the round's ONLY purpose is config
+   identity with the incumbent (user: run it with the same settings as the incumbent, two seeds).
+   There was never a retrain this could ride along with -- the one scheduled round left with the
+   delay deliberately off.
+2. **Next FROM-SCRATCH teacher round: (0,1)**, i.e. 0-20 ms, behind a ~500-iteration feasibility
+   gate reading `Train/mean_reward` and `DORAEMON/success_rate`. Proceed to the full run only if
+   success stays at or above alpha 0.5 and mean reward at or above 250; otherwise drop the axis.
+   Roughly 30 minutes to answer, against 9.6 h (workstation) / 15.3 h (DGX) for the full run.
+
+REJECTED, with reasons: (0,3) and (0,5) -- (0,3) is directly measured to stall and (0,5) is
+strictly worse. Adding `control_delay_steps` to DORAEMON `_PARAM_DEFS` -- nine DR params already
+bypass DORAEMON as uniform-only
+([[uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload_]]), so bypassing IS the
+established pattern here; an integer delay also does not fit the Beta-continuous sampler, and a
+new dim dilutes the others. Lowering `performance_lb` -- the user's own round design already
+rejects it: "a curriculum gate, not a quality dial. Changing it makes this round incomparable to
+the incumbent".
+
+### The larger half of the fix is board-side and costs no training at all
+
+This knob delays the ACTION. The measured problem is OBSERVATION staleness, and it is asymmetric:
+attitude 1.2 control steps, joints 4.7. One scalar cannot represent that split, and the obs-path
+DelayBuffer is still unwired, so **the 4.7-step joint staleness is out of this knob's reach
+entirely**. Its actual cause is a board defect -- joint states publish at 10.0 Hz against a 50 Hz
+control loop. Raising that publish rate removes the dominant term at zero training cost, and the
+user has confirmed the board code is freely modifiable. Do that FIRST; (0,1) then covers what is
+left, which is the 1.2-step attitude path, and the sizing matches by construction.
+
+### What would change the range
+
+A feasibility gate at (0,1) that clears comfortably (success well above 0.5) argues for widening to
+(0,2) on the round after. A board fix that puts joints at 50 Hz leaves only the 1.2-step attitude
+path, which is exactly what (0,1) spans -- in that case (0,1) is not a compromise, it is the right
+number.
+
+### Koopman interaction
+
+Not affected today: `koopman_module_path` defaults to `""` (config.py:708), so the guard cannot
+fire. Note the guard at `albc_env.py:446` is a `ValueError`, not a warning -- a run carrying both a
+Koopman module path and a nonzero delay DIES at construction, by design, because the frozen
+operator was fitted on the undelayed action. The Koopman line reopened 2026-08-05 under a paper
+objective, so the two must be scheduled separately.
 

@@ -1,17 +1,17 @@
 ---
 title: "thrust_deadband 0.075 is inert today (enable_thrust_curve false) and wrong for the day it is not: the board measures 0.16 half-span, asymmetric"
-tags: ["albc", "thruster", "deadband", "esc", "plant", "retrain", "sim2real", "mixer", "conditional-gate"]
+tags: ["albc", "thruster", "deadband", "esc", "plant", "retrain", "sim2real", "mixer", "conditional-gate", "gate-downgrade", "precedent", "conditional-blocker"]
 created: 2026-08-14T05:33:06.787041
-updated: 2026-08-14T07:51:11.190550
-sources: ["trpo_iterbudget_s30_260805_012813", "wiki-curation-2026-08-14", "wiki-backlog-20260814"]
-links: ["esc_deadband_and_the_six_channel_pwm_unification_that_removed_it.md", "esc_deadband_is_1450_1545_us_on_this_uuv_the_vertical_channels_p.md"]
+updated: 2026-08-14T10:25:13.827552
+sources: ["trpo_iterbudget_s30_260805_012813", "wiki-curation-2026-08-14", "wiki-backlog-20260814", "diagnose-20260814-172325"]
+links: ["esc_deadband_and_the_six_channel_pwm_unification_that_removed_it.md", "esc_deadband_is_1450_1545_us_on_this_uuv_the_vertical_channels_p.md", "plant_change_batch_v2_four_isaac_plant_corrections_are_now_pendi.md", "buoy_added_mass_is_wrong_in_both_sims_and_in_opposite_d.md"]
 category: reference
 confidence: high
 schemaVersion: 1
 qualityScore: 100
 qualityReasons: []
-status: needs-apply-before-retrain
-blocked-on: "conditional: fires only if enable_thrust_curve is turned on. Verified still False 2026-08-14, so the no-op condition currently HOLDS and nothing is invalidated today"
+status: resolved
+blocked-on: "RESOLVED = off this queue, NOT applied in code. The requirement moved to plant_change_batch_v2 item 3 and to a comment above enable_thrust_curve in marinelab/assets/uuv_cfg.py. It fires when the curve is switched on; it no longer stands on every launch."
 ---
 
 # thrust_deadband 0.075 is inert today (enable_thrust_curve false) and wrong for the day it is not: the board measures 0.16 half-span, asymmetric
@@ -109,4 +109,49 @@ terms. It traces to an assumed "+-25 us out of +-400 us half-span"; the board me
 +-300 us, so both numerator and denominator were wrong, and the real deadband is ~0.16 and ASYMMETRIC
 (-0.167 / +0.150) where the knob is a single scalar. Whoever turns the curve on inherits all three
 problems at once.
+
+---
+
+## Update (2026-08-14T10:25:13.827552)
+
+## GATE DOWNGRADED 2026-08-14 (user-approved): blocking status released, requirement relocated
+
+The facts on this page are unchanged and still correct. What changes is where the requirement is
+enforced.
+
+WHY THE BLOCKING STATUS WAS WRONG FOR THIS ITEM. `needs-apply-before-retrain` refuses EVERY
+launch, including the many that never touch the thruster model. This fact invalidates a run only
+under one condition -- somebody enables the thrust curve without also fixing the deadband -- and
+that condition is currently false and cannot be made true casually.
+
+THE CONDITION IS ALREADY GUARDED BY A STRONGER GATE. Enabling `enable_thrust_curve` is not a free
+edit: it IS item 3 of [[plant_change_batch_v2_four_isaac_plant_corrections_are_now_pendi]], whose
+own text says "The thruster nonlinear-curve lead is the same measurement as the item 3 gate, not a
+separate item". That batch carries a standing user decision from 2026-07-29 that the four
+corrections are NOT decided one at a time and that nothing is applied until the batch is decided as
+a unit, and it is blocked on a T200 bench session that has no booked date (the 2026-08-05 user
+decision skipped the hardware-measurement items). So reaching the trap requires bypassing a user
+decision, and a wiki status is not what stops that.
+
+PRECEDENT, and this is what settled it. Of 291 pages on this root only TWO carried a blocking
+status; the established pattern for a conditional or parked item is `resolved` with the reason in
+`blocked-on` (81 pages). Decisively, the SIBLING item in this very batch --
+[[buoy_added_mass_is_wrong_in_both_sims_and_in_opposite_d]], item 1, same conditional structure,
+same gate -- already carries `resolved`. This page carrying a blocking status while its sibling did
+not was an inconsistency, not a stricter standard.
+
+THE COST OF GETTING THIS WRONG IN THE OTHER DIRECTION is what the omx skill warns about: inflating
+the blocking status teaches the next session to ack past the gate, which costs more than an empty
+roster ever did. With only two blocking pages, each one has to be genuinely unconditional. The
+control-delay page is (any retrain trains on the wrong distribution). This one is not.
+
+WHERE THE REQUIREMENT LIVES NOW -- two attachments, both at the point of change:
+1. `plant_change_batch_v2` item 3: the deadband must be re-derived from the bench curve in the
+   SAME edit that applies item 3.
+2. `marinelab/marinelab/assets/uuv_cfg.py`, a comment block immediately above
+   `enable_thrust_curve`: "BEFORE FLIPPING THIS TO True: re-derive thrust_deadband below in the
+   SAME edit", with the board numbers inline.
+
+Attachment 2 is the load-bearing one. It sits on the exact line a person must edit to create the
+condition, so it cannot be missed by anyone who is in a position to cause the failure.
 
