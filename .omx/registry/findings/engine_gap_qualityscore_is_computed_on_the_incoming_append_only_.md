@@ -1,9 +1,9 @@
 ---
 title: "engine-gap: qualityScore is computed on the incoming append only, so a one-line housekeeping update permanently downgrades a rich page"
-tags: ["engine-gap", "omx", "wiki", "quality", "lint", "scoring", "implemented", "omx-0.11.2"]
+tags: ["engine-gap", "omx", "wiki", "quality", "lint", "scoring", "implemented", "omx-0.11.2", "released"]
 created: 2026-08-14T06:51:35.841507
-updated: 2026-08-14T07:25:54.068364
-sources: ["wiki-curation-2026-08-14", "omx-core 3e8147d", "omx-core 9ef2487"]
+updated: 2026-08-14T07:32:37.370003
+sources: ["wiki-curation-2026-08-14", "omx-core 3e8147d", "omx-core 9ef2487", "omx-core 385bb81", "omx-core PR#13"]
 links: []
 category: decision
 confidence: high
@@ -83,4 +83,21 @@ CONSEQUENCE FOR THE THREE FLAGGED PAGES: `engine_gap_heavy_tail_json_pct_peak_gt
 `tam_plant_correctness_fix_collapses_the_void_hard_dr_roll_heavy_` still carry their stale 40 on disk,
 because nothing rescores a page that is not re-added. They will correct themselves on the next update
 to each; until then, read `low-quality` on those three as an artifact of the old scorer, not a verdict.
+
+---
+
+## Update (2026-08-14T07:32:37.370003)
+
+POINTER CORRECTION 2026-08-14. The commit SHAs cited in the block above (3e8147d, 9ef2487) were the
+BRANCH commits and no longer exist: PR #13 was squash-merged, so neither is reachable from main
+(verified with `git merge-base --is-ancestor`). The fix now lives in ONE commit.
+
+RELEASED: omx-core v0.11.2, commit 385bb81 on main, tagged v0.11.2, merged from
+https://github.com/luckkim123/oh-my-experiments/pull/13. CI green on both required checks --
+`test` pass and `tag-drift` pass. CI additionally proves the 4 local `wandb` failures were purely a
+missing optional dependency here: the same suite is fully green on the runner.
+
+Cite 385bb81, not the branch SHAs. This correction is itself an instance of the rule this curation
+pass wrote down -- a pointer ages independently of the knowledge it points at, and a squash merge is
+one of the ways it ages within the hour.
 

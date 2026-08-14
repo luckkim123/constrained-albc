@@ -10510,3 +10510,11 @@ dmissible_cross_run_evidence_.md, against_the_control_the_aggregate_hard_r2_rise
 - **Pages:** how_to_read_omx_wiki_lint_on_this_corpus_oversized_means_accumul.md
 - **Summary:** updated 'How to read omx wiki lint on this corpus: oversized means accumulated updates, and contradiction-candidate is a tag-collision heuristic that never reads a claim'
 
+## [2026-08-14T07:32:37.279641] add
+- **Pages:** engine_gap_omx_wiki_capture_dedupes_by_raw_path_string_and_appen.md
+- **Summary:** updated 'engine-gap: omx wiki capture dedupes by raw path string and appends without an equality check, so one report can be captured twice byte-identically'
+
+## [2026-08-14T07:32:37.370003] add
+- **Pages:** engine_gap_qualityscore_is_computed_on_the_incoming_append_only_.md
+- **Summary:** updated 'engine-gap: qualityScore is computed on the incoming append only, so a one-line housekeeping update permanently downgrades a rich page'
+

@@ -1,9 +1,9 @@
 ---
 title: "engine-gap: omx wiki capture dedupes by raw path string and appends without an equality check, so one report can be captured twice byte-identically"
-tags: ["engine-gap", "omx", "wiki", "capture-flush", "dedupe", "hygiene", "worktree", "dead-pointer", "implemented", "omx-0.11.2"]
+tags: ["engine-gap", "omx", "wiki", "capture-flush", "dedupe", "hygiene", "worktree", "dead-pointer", "implemented", "omx-0.11.2", "released"]
 created: 2026-08-14T06:42:05.550564
-updated: 2026-08-14T07:25:38.032540
-sources: ["wiki-curation-2026-08-14", "omx-core 3e8147d", "omx-core 9ef2487"]
+updated: 2026-08-14T07:32:37.279641
+sources: ["wiki-curation-2026-08-14", "omx-core 3e8147d", "omx-core 9ef2487", "omx-core 385bb81", "omx-core PR#13"]
 links: []
 category: decision
 confidence: high
@@ -108,4 +108,21 @@ path. That would make a pointer survive a worktree retirement -- the 16 stubs na
 already on disk and needs a migration. The verification rule stands meanwhile: a wiki source pointer
 that fails to resolve is NOT evidence the source is gone; re-resolve the run path against the main
 repo first.
+
+---
+
+## Update (2026-08-14T07:32:37.279641)
+
+POINTER CORRECTION 2026-08-14. The commit SHAs cited in the block above (3e8147d, 9ef2487) were the
+BRANCH commits and no longer exist: PR #13 was squash-merged, so neither is reachable from main
+(verified with `git merge-base --is-ancestor`). The fix now lives in ONE commit.
+
+RELEASED: omx-core v0.11.2, commit 385bb81 on main, tagged v0.11.2, merged from
+https://github.com/luckkim123/oh-my-experiments/pull/13. CI green on both required checks --
+`test` pass and `tag-drift` pass. CI additionally proves the 4 local `wandb` failures were purely a
+missing optional dependency here: the same suite is fully green on the runner.
+
+Cite 385bb81, not the branch SHAs. This correction is itself an instance of the rule this curation
+pass wrote down -- a pointer ages independently of the knowledge it points at, and a squash merge is
+one of the ways it ages within the hour.
 
