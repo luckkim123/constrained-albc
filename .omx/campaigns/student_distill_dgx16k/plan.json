@@ -1,0 +1,6 @@
+{
+  "campaign_id": "student_distill_dgx16k",
+  "created": "2026-08-14T07:16:15.073940+00:00",
+  "auto_initialized": true,
+  "source": "campaign-drift --adopt"
+}

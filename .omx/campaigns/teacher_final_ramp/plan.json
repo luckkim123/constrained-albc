@@ -1,0 +1,15 @@
+{
+  "campaign_id": "teacher_final_ramp",
+  "created": "2026-08-09T07:15:39.606971+00:00",
+  "goal": "Does a HALVED curriculum expansion rate, funded to still reach the box ceiling, produce a better teacher than the incumbent model_9998? kl_ub 0.12->0.06 with max_iterations 20000 at 4096 envs.",
+  "baseline_run_id": "trpo_iterbudget_s30_260805_012813",
+  "predecessor": "teacher_iter_budget",
+  "planned": [
+    {
+      "proposal_id": "dgx-final-teacher-armW",
+      "summary": "kl_ub 0.06 + max_iterations 20000 @4096, workstation, deliverable candidate",
+      "label": "W",
+      "added_at": "2026-08-09T07:15:39.724157+00:00"
+    }
+  ]
+}
