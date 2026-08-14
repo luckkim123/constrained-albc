@@ -1,10 +1,10 @@
 ---
 title: "thrust_deadband 0.075 is inert today (enable_thrust_curve false) and wrong for the day it is not: the board measures 0.16 half-span, asymmetric"
-tags: ["albc", "thruster", "deadband", "esc", "plant", "retrain", "sim2real", "mixer", "conditional-gate", "gate-downgrade", "precedent", "conditional-blocker"]
+tags: ["albc", "thruster", "deadband", "esc", "plant", "retrain", "sim2real", "mixer", "conditional-gate", "gate-downgrade", "precedent", "conditional-blocker", "broken-ref-correction"]
 created: 2026-08-14T05:33:06.787041
-updated: 2026-08-14T10:25:13.827552
+updated: 2026-08-14T10:27:25.841981
 sources: ["trpo_iterbudget_s30_260805_012813", "wiki-curation-2026-08-14", "wiki-backlog-20260814", "diagnose-20260814-172325"]
-links: ["esc_deadband_and_the_six_channel_pwm_unification_that_removed_it.md", "esc_deadband_is_1450_1545_us_on_this_uuv_the_vertical_channels_p.md", "plant_change_batch_v2_four_isaac_plant_corrections_are_now_pendi.md", "buoy_added_mass_is_wrong_in_both_sims_and_in_opposite_d.md"]
+links: ["esc_deadband_and_the_six_channel_pwm_unification_that_removed_it.md", "esc_deadband_is_1450_1545_us_on_this_uuv_the_vertical_channels_p.md", "plant_change_batch_v2_four_isaac_plant_corrections_are_now_pendi.md", "buoy_added_mass_is_wrong_in_both_sims_and_in_opposite_d.md", "buoy_added_mass_is_wrong_in_both_sims_and_in_opposite_directions.md"]
 category: reference
 confidence: high
 schemaVersion: 1
@@ -154,4 +154,21 @@ WHERE THE REQUIREMENT LIVES NOW -- two attachments, both at the point of change:
 
 Attachment 2 is the load-bearing one. It sits on the exact line a person must edit to create the
 condition, so it cannot be missed by anyone who is in a position to cause the failure.
+
+---
+
+## Update (2026-08-14T10:27:25.841981)
+
+## Link correction 2026-08-14
+
+The sibling-precedent reference in the section above points at a truncated slug. The correct
+target is [[buoy_added_mass_is_wrong_in_both_sims_and_in_opposite_directions]] -- item 1 of
+plant_change_batch_v2, which carries `status: resolved` under the same conditional structure and
+is the precedent this downgrade follows.
+
+The truncated entry `buoy_added_mass_is_wrong_in_both_sims_and_in_opposite_d` remains in this
+page's frontmatter `links` union and resolves to nothing. `omx wiki add` unions links and never
+removes them, so a bad entry is permanent short of a gc round; it is recorded here rather than
+silently left to mislead. Cause: the slug was copied from a shell listing truncated at 55
+characters, not from the registry.
 
