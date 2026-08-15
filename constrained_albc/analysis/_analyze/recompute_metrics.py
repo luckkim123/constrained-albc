@@ -231,6 +231,21 @@ def _per_env_rise_time(actual: np.ndarray, alive: np.ndarray,
     return float(np.nanmean(rt)), float(np.nanstd(rt))
 
 
+def _per_env_ss_vectors(actual: np.ndarray, alive: np.ndarray, cur_tgt: float
+                        ) -> tuple[np.ndarray, np.ndarray]:
+    """Per-env SS error and SS jitter over last 50 percent of the segment, UNREDUCED.
+
+    Returns (per_env_mean, per_env_std), each shape (n_env,). This is the array
+    _per_env_ss_stats reduces; it exists separately so a caller that needs the
+    per-env vector (paired cross-run comparison, quintile decomposition) can read
+    the same numbers instead of reimplementing them. Everything that needs these
+    values goes through here, so the two cannot drift apart.
+    """
+    ss_start = actual.shape[0] // 2
+    masked = np.where(alive[ss_start:], np.abs(actual[ss_start:] - cur_tgt), np.nan)
+    return np.nanmean(masked, axis=0), np.nanstd(masked, axis=0)
+
+
 def _per_env_ss_stats(actual: np.ndarray, alive: np.ndarray, cur_tgt: float
                       ) -> tuple[float, float, float, float]:
     """Per-env SS error and SS jitter over last 50 percent of the segment.
@@ -239,13 +254,7 @@ def _per_env_ss_stats(actual: np.ndarray, alive: np.ndarray, cur_tgt: float
     SS error per env: mean |actual - target| over last 50% of segment.
     SS jitter per env: std of |actual - target| over last 50% of segment.
     """
-    ss_start = actual.shape[0] // 2
-    ss_actual = actual[ss_start:]
-    ss_alive = alive[ss_start:]
-    ss_err_abs = np.abs(ss_actual - cur_tgt)
-    masked = np.where(ss_alive, ss_err_abs, np.nan)
-    per_env_mean = np.nanmean(masked, axis=0)
-    per_env_std  = np.nanstd(masked, axis=0)
+    per_env_mean, per_env_std = _per_env_ss_vectors(actual, alive, cur_tgt)
     has_mean = np.isfinite(per_env_mean).any()
     has_std  = np.isfinite(per_env_std).any()
     return (float(np.nanmean(per_env_mean)) if has_mean else float("nan"),
@@ -256,10 +265,18 @@ def _per_env_ss_stats(actual: np.ndarray, alive: np.ndarray, cur_tgt: float
 
 # ---------------- Aggregate across segments ----------------
 
-def _compute_enhanced_metrics(npz_path: str, peak_window_sec: float = 2.0) -> dict:
+def _compute_enhanced_metrics(npz_path: str, peak_window_sec: float = 2.0,
+                              with_per_env: bool = False) -> dict:
     """Compute per-axis per-env metrics for all 6 axes (roll, pitch, vx, vy, vz, yaw).
 
     Also computes attitude-norm SS error / jitter (on ||[roll_err, pitch_err]||).
+
+    with_per_env adds a top-level "per_env" key holding the UNREDUCED per-env SS
+    error per axis (list of n_env floats, averaged across segments exactly as the
+    scalar is). Off by default so summary.json stays byte-identical; turn it on
+    for a paired cross-run comparison, which needs per-env differences rather than
+    a difference of group means. The across-env mean of per_env[ax] reproduces
+    out[ax]["ss_error"] -- test_per_env_vector_reproduces_scalar asserts it.
     """
     data = _load_npz(npz_path)
     time = data["time"]
@@ -282,6 +299,8 @@ def _compute_enhanced_metrics(npz_path: str, peak_window_sec: float = 2.0) -> di
             "ss_error", "ss_error_std",
             "ss_jitter", "ss_jitter_std")
     store = {ax: {k: [] for k in keys} for ax in axes}
+    # Per-env SS-error vectors, one (n_env,) array per contributing segment.
+    pe_store: dict[str, list[np.ndarray]] = {ax: [] for ax in (*axes, "att_norm")}
     # Attitude-norm (combined roll+pitch) SS buffers (mean and env-spread std)
     att_norm_ss, att_norm_ss_std = [], []
     att_norm_jit, att_norm_jit_std = [], []
@@ -296,10 +315,10 @@ def _compute_enhanced_metrics(npz_path: str, peak_window_sec: float = 2.0) -> di
             ax_list = _AX_ATT
             # attitude-norm computation
             err_norm = np.sqrt(data["error_roll"][s:e]**2 + data["error_pitch"][s:e]**2)
-            ss_start = (e - s) // 2
-            masked = np.where(alive_seg[ss_start:], err_norm[ss_start:], np.nan)
-            pe_mean = np.nanmean(masked, axis=0)
-            pe_std  = np.nanstd(masked, axis=0)
+            # err_norm is already the |error|, so target 0.0 makes the shared helper
+            # compute exactly what this block used to inline.
+            pe_mean, pe_std = _per_env_ss_vectors(err_norm, alive_seg, 0.0)
+            pe_store["att_norm"].append(pe_mean)
             has_m = np.isfinite(pe_mean).any()
             has_s = np.isfinite(pe_std).any()
             att_norm_ss.append(float(np.nanmean(pe_mean)) if has_m else float("nan"))
@@ -324,6 +343,7 @@ def _compute_enhanced_metrics(npz_path: str, peak_window_sec: float = 2.0) -> di
             m["rise_time"]     = rt_mean
             m["rise_time_std"] = rt_std
             # SS error and jitter (means + stds across envs)
+            pe_store[name].append(_per_env_ss_vectors(seg_actual, alive_seg, cur)[0])
             ss_err, ss_err_std, ss_jit, ss_jit_std = _per_env_ss_stats(seg_actual, alive_seg, cur)
             m["ss_error"]      = ss_err
             m["ss_error_std"]  = ss_err_std
@@ -343,6 +363,11 @@ def _compute_enhanced_metrics(npz_path: str, peak_window_sec: float = 2.0) -> di
         "ss_jitter_std": float(np.nanmean(att_norm_jit_std)) if att_norm_jit_std else float("nan"),
     }
     out["survival_pct"] = float((~terminated[-1]).sum() / terminated.shape[1] * 100.0)
+    if with_per_env:
+        out["per_env"] = {
+            ax: (np.nanmean(np.stack(v, axis=0), axis=0).tolist() if v else [])
+            for ax, v in pe_store.items()
+        }
     return out
 
 
