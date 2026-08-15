@@ -1,8 +1,8 @@
 ---
 title: "The DORAEMON feasibility floor sits inside this config's seed distribution: two replicate seeds ended on opposite sides of alpha with nothing but the seed changed"
-tags: ["doraemon", "performance_lb", "alpha", "seed-variance", "feasibility", "replicate", "mode", "deployment"]
+tags: ["doraemon", "performance_lb", "alpha", "seed-variance", "feasibility", "replicate", "mode", "deployment", "correction", "pre-registered-rule", "decision-level"]
 created: 2026-08-14T15:06:42.900615
-updated: 2026-08-14T15:06:42.900615
+updated: 2026-08-15T04:17:20.505521
 sources: ["diagnose-20260814-235911"]
 links: ["the_deployed_teacher_trained_with_control_delay_steps_0_0_while.md"]
 category: pattern
@@ -63,4 +63,42 @@ incumbent's settings does not reproduce the incumbent's quality (R30 is 0.145 de
 the incumbent's advantage is not recoverable from its config file. That was the whole point of
 removing its unreconstructible resume chain, and the answer is that the chain was not the only thing
 carrying its quality.
+
+---
+
+## Update (2026-08-15T04:17:20.505521)
+
+## CORRECTION 2026-08-15: the "incumbent sits between the seeds" claim is level-dependent and does NOT hold at the decision level
+
+The section above says a seed of the incumbent's own config is not distinguishable from the
+incumbent, and supports it with the `none` ordering. That is true at `none`, `soft` and `medium` and
+FALSE at `hard`. The round's own pre-registered rule (teacher-final-replicate PLAN, "Pre-registered
+before any result is read") says: **"Decide at `hard` and `ood` conditions, never at `none`."** The
+original section was written from the excluded level.
+
+att_norm `ss_error` ordering, group means, 27/27 paired at every level:
+
+| level | ordering | incumbent between the seeds? | seed spread |
+|:--|:--|:--|--:|
+| none | R31 0.4810 < inc 0.5070 < R30 0.6517 | yes | 0.1708 |
+| soft | R31 0.4188 < inc 0.5202 < R30 0.6061 | yes | 0.1873 |
+| medium | R31 0.4778 < inc 0.5133 < R30 0.5937 | yes | 0.1159 |
+| **hard** | **inc 0.8118 < R31 0.8560 < R30 0.9875** | **NO — incumbent is best** | 0.1315 |
+
+WHAT SURVIVES. The seed spread itself is real and floor-exceeding at every level including `hard`
+(0.1315 deg against a 0.10 deg floor), so "seed variance on this config exceeds the decision floor"
+stands. So does the training-side finding this page is titled for -- mode 1.0 against 0.0, success
+0.469 against 0.536 -- because that is measured on the training log and is not a DR-level quantity at
+all.
+
+WHAT DOES NOT. "The incumbent is not distinguishable from a seed draw of its own config" is a
+`none`/`soft`/`medium` statement. At the level the round says to decide on, the incumbent is strictly
+the best of the three, and the deployment verdict is therefore stronger than the original section
+implied, not weaker.
+
+THE GENERAL LESSON, which is why this correction is recorded rather than silently patched: the
+ranking of these three runs CHANGES with DR level. Reading any one level and generalizing is unsafe
+here, and the anchor-fair `none` level -- the one the standing cross-run rule pushes you toward -- is
+exactly the level this round's own protocol excludes from the decision. The two rules point in
+opposite directions and the program-specific one wins.
 
