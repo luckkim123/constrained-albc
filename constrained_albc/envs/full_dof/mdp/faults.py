@@ -16,7 +16,9 @@ Three faults (see FaultInjectionCfg in main/config.py, where the full fault cont
     sensor noise    [N]    -- per-env extra obs-noise scale, applied in _get_observations
     joint health    [N]    -- per-env effort-limit scale, applied at reset
 
-Ported verbatim from main/mdp/faults.py for the DORAEMON obs-noise DR layer. In this
+Forked from main/mdp/faults.py for the DORAEMON obs-noise DR layer, and since drifted:
+main's sample_thruster_health has grown a `severity` kwarg (the fault-severity DORAEMON
+knob) that this copy does not carry, so the two are no longer interchangeable. In this
 full_dof tree only apply_sensor_noise is currently wired up (albc_env.py); the other
 functions are kept for parity with main.
 
