@@ -116,6 +116,23 @@ def _apply_fault_cli(env_cfg, args_cli) -> None:
         env_cfg.fault.thruster_fixed_health = tuple(float(x) for x in ffh.split(","))
 
 
+def _resolve_teacher_checkpoint(agent_cfg, args_cli) -> str:
+    """Resolve the teacher checkpoint the same way in every eval mode.
+
+    --checkpoint wins when given; otherwise the run directory's latest is taken and
+    best_model.pt preferred over it when present. Shared because the three run_* modes
+    each had their own copy and run_segmented's lacked the best_model.pt step, so
+    `eval.py static` and `eval.py segmented` could score different weights from
+    identical arguments (096f5b8 added the preference to two of the three copies).
+    """
+    if args_cli.checkpoint and args_cli.checkpoint != "none":
+        return retrieve_file_path(args_cli.checkpoint)
+    log_root_path = os.path.abspath(os.path.join("logs", "rsl_rl", agent_cfg.experiment_name))
+    resume_path = get_checkpoint_path(log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint)
+    best_model_path = os.path.join(os.path.dirname(resume_path), "best_model.pt")
+    return best_model_path if os.path.isfile(best_model_path) else resume_path
+
+
 parser = argparse.ArgumentParser(description="DR-robustness evaluation for ALBC.")
 subparsers = parser.add_subparsers(dest="mode", required=True)
 
@@ -1087,14 +1104,7 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         resume_path = args_cli.student_ckpt
         print(f"[INFO] Student mode: student_ckpt={resume_path}  teacher_ckpt={args_cli.teacher_ckpt}  encoder={args_cli.encoder_type}")
     elif use_checkpoint:
-        log_root_path = os.path.abspath(os.path.join("logs", "rsl_rl", agent_cfg.experiment_name))
-        if args_cli.checkpoint and args_cli.checkpoint != "none":
-            resume_path = retrieve_file_path(args_cli.checkpoint)
-        else:
-            resume_path = get_checkpoint_path(log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint)
-            best_model_path = os.path.join(os.path.dirname(resume_path), "best_model.pt")
-            if os.path.isfile(best_model_path):
-                resume_path = best_model_path
+        resume_path = _resolve_teacher_checkpoint(agent_cfg, args_cli)
         print(f"[INFO] Checkpoint: {resume_path}")
 
     # ---- Load agent params from run directory if available ----
@@ -1765,14 +1775,7 @@ def run_periodic(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
 
     resume_path = None
     if use_checkpoint:
-        log_root_path = os.path.abspath(os.path.join("logs", "rsl_rl", agent_cfg.experiment_name))
-        if args_cli.checkpoint and args_cli.checkpoint != "none":
-            resume_path = retrieve_file_path(args_cli.checkpoint)
-        else:
-            resume_path = get_checkpoint_path(log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint)
-            best_model_path = os.path.join(os.path.dirname(resume_path), "best_model.pt")
-            if os.path.isfile(best_model_path):
-                resume_path = best_model_path
+        resume_path = _resolve_teacher_checkpoint(agent_cfg, args_cli)
         print(f"[INFO] Checkpoint: {resume_path}")
 
     # ---- Load agent params from run directory ----
@@ -2158,12 +2161,7 @@ def run_segmented(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         print(f"[INFO] Student mode: student_ckpt={resume_path}  teacher_ckpt={args_cli.teacher_ckpt}  encoder={args_cli.encoder_type}")
     else:
         agent_cfg = cli_args.update_rsl_rl_cfg(agent_cfg, args_cli)
-        resume_path = None
-        if args_cli.checkpoint and args_cli.checkpoint != "none":
-            resume_path = retrieve_file_path(args_cli.checkpoint)
-        else:
-            log_root_path = os.path.abspath(os.path.join("logs", "rsl_rl", agent_cfg.experiment_name))
-            resume_path = get_checkpoint_path(log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint)
+        resume_path = _resolve_teacher_checkpoint(agent_cfg, args_cli)
         print(f"[INFO] Checkpoint: {resume_path}")
 
     # Load agent params from run dir -- student mode reuses teacher's params.yaml
