@@ -1,5 +1,11 @@
 # constrained-albc Architecture
 
+> **Measured counterpart**: [`reference/code-graph-architecture-map.md`](reference/code-graph-architecture-map.md)
+> holds the graph-derived module map — communities resolved to their real packages,
+> execution flows ranked by criticality, and coupling warnings resolved to concrete
+> edges. This page describes the *intended* structure; that one describes what the call
+> graph actually shows.
+
 ## Overview
 
 ### Three-layer dependency
