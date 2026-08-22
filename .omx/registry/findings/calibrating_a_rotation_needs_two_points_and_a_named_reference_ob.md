@@ -3,7 +3,7 @@ title: "Calibrating a rotation needs TWO points and a NAMED reference object -- 
 tags: ["sim2real", "calibration", "agent-jetson", "arm", "measurement-discipline"]
 created: 2026-08-14T06:46:47.666657
 updated: 2026-08-14T06:46:47.666657
-sources: [".omx/programs/simtoreal-thrusters-live/PLAN.md"]
+sources: ["vault 0_Project/in_progress/albc/.omx/programs/simtoreal-thrusters-live/PLAN.md"]
 links: []
 category: convention
 confidence: high

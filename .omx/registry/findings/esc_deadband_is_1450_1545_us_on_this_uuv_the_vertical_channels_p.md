@@ -3,7 +3,7 @@ title: "ESC deadband is 1450..1545 us on this UUV: the vertical channels parked 
 tags: ["sim2real", "thruster", "firmware", "agent-jetson", "esc", "deadband"]
 created: 2026-08-14T06:46:47.752350
 updated: 2026-08-14T06:46:47.752350
-sources: [".omx/programs/simtoreal-thrusters-live/PLAN.md", "agent-jetson commit 1673058"]
+sources: ["vault 0_Project/in_progress/albc/.omx/programs/simtoreal-thrusters-live/PLAN.md", "agent-jetson commit 1673058"]
 links: []
 category: reference
 confidence: high

@@ -48,7 +48,7 @@ impression that the plant now models the deadband.
 
 SOURCE: vault `notes/2026-08-12-coordinate-frame-reconciliation-plan.md` section 9e (false-alarm
 avoidance) and the board deadband measurement in
-`.omx/programs/simtoreal-thrusters-live/PLAN.md` section 0g / 0i-5c.
+`vault 0_Project/in_progress/albc/.omx/programs/simtoreal-thrusters-live/PLAN.md` section 0g / 0i-5c.
 Related: [[esc_deadband_and_the_six_channel_pwm_unification_that_removed_it]]
 [CONFIDENCE: HIGH -- both the config values and the board measurement were read directly]
 
