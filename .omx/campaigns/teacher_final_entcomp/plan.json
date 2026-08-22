@@ -1,0 +1,15 @@
+{
+  "campaign_id": "teacher_final_entcomp",
+  "created": "2026-08-09T07:15:39.670425+00:00",
+  "goal": "Was the 16384-env null a tuning artifact? Re-run 16384 with entropy_coef_per_dim scaled to restore the 4096 sigma trajectory (measured 11-29 percent depressed at matched iterations).",
+  "baseline_run_id": "trpo_dgx16k_s30_260805_185713",
+  "predecessor": "teacher_envscale_dgx",
+  "planned": [
+    {
+      "proposal_id": "dgx-final-teacher-armD",
+      "summary": "16384 + entropy_coef x k @kl_ub 0.12, DGX, probe-gated",
+      "label": "D",
+      "added_at": "2026-08-09T07:15:39.780066+00:00"
+    }
+  ]
+}

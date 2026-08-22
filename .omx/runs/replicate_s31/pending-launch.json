@@ -1,0 +1,17 @@
+{
+  "gpu_gate": "DGX GB10, exclusive single run (two concurrent 4096 runs degrade to 12.0 s/iter each, no parallel gain); 5.5 s/iter x 10000 = 15.3h",
+  "launch_delta": "Same config as R30 except seed 30->31. vs incumbent trpo_iterbudget_s30_260805_012813: resume true->false, load_run/load_checkpoint unset, max_iterations 5000-incremental->10000-absolute, seed 30->31. All other keys held identical to the incumbent (num_envs 4096, kl_ub 0.12, performance_lb 250.0, alpha 0.5, step_interval 250, buffer_size 2000, min_episodes 200, entropy_coef_per_dim x1, num_mini_batches 4, obs 72, fault.enable true). RUNS ON DGX at branch main@1062dc2, NOT the workstation commit recorded below: the workstation is 88+8 commits ahead but every one of those is an obs toggle defaulting off, the NULLed koopman line, or analysis-only eval.py changes; no reward/DR/DORAEMON/algorithm file differs. Selection for both arms runs on the workstation with one eval.py and one anchor, so the eval.py divergence cannot confound the comparison.",
+  "open_leads": [
+    "doraemon_becomes_feasibility_limited_at_the_ceiling_the_kl_ub_0_.md",
+    "joint_target_runaway_is_not_a_sim_to_real_gap_both_sides_unbound.md",
+    "sigma_decay_under_an_expanding_dr_curriculum_literature_verdict_.md",
+    "the_c3_recipe_does_not_transfer_across_teachers_on_a_same_width_.md",
+    "where_is_arm_w_losing_the_8_points_of_return_per_dr_dimension_qu.md"
+  ],
+  "predicted_outcome": "Null expected, same band as R30. Its specific job is the seed-variance estimate: paired against R30 it converts every A-beats-B verdict in this campaign from n=1 vs n=1 into a statement with a dispersion.",
+  "proposal_id": "teacher-final-replicate/R31",
+  "queued_at": "2026-08-10T04:59:25.696878+00:00",
+  "queued_commit": "8a41029b3e690d718415c63e09d7bfd8a056051c",
+  "schema_version": 2,
+  "status": "pending approval"
+}

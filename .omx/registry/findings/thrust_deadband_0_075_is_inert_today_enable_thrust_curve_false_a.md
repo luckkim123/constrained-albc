@@ -4,7 +4,7 @@ tags: ["albc", "thruster", "deadband", "esc", "plant", "retrain", "sim2real", "m
 created: 2026-08-14T05:33:06.787041
 updated: 2026-08-14T10:27:25.841981
 sources: ["trpo_iterbudget_s30_260805_012813", "wiki-curation-2026-08-14", "wiki-backlog-20260814", "diagnose-20260814-172325"]
-links: ["esc_deadband_and_the_six_channel_pwm_unification_that_removed_it.md", "esc_deadband_is_1450_1545_us_on_this_uuv_the_vertical_channels_p.md", "plant_change_batch_v2_four_isaac_plant_corrections_are_now_pendi.md", "buoy_added_mass_is_wrong_in_both_sims_and_in_opposite_d.md", "buoy_added_mass_is_wrong_in_both_sims_and_in_opposite_directions.md"]
+links: ["esc_deadband_is_1450_1545_us_on_this_uuv_the_vertical_channels_p.md", "esc_deadband_is_1450_1545_us_on_this_uuv_the_vertical_channels_p.md", "plant_change_batch_v2_four_isaac_plant_corrections_are_now_pendi.md", "buoy_added_mass_is_wrong_in_both_sims_and_in_opposite_directions.md", "buoy_added_mass_is_wrong_in_both_sims_and_in_opposite_directions.md"]
 category: reference
 confidence: high
 schemaVersion: 1

@@ -4,7 +4,7 @@ tags: ["latent", "distillation", "c3", "teacher-lineage", "non-transfer", "targe
 created: 2026-08-14T07:53:20.321999
 updated: 2026-08-14T08:37:14.001617
 sources: ["wiki-backlog-20260814", "diagnose-20260814-172325"]
-links: ["the_c3_recipe_does_not_transfer_across_teachers_on_a_same_width.md", "eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md"]
+links: ["the_c3_recipe_does_not_transfer_across_teachers_on_a_same_width_.md", "eval_py_static_doraemon_dr_grades_each_run_on_its_own_learned_dr.md"]
 category: pattern
 confidence: medium
 schemaVersion: 1

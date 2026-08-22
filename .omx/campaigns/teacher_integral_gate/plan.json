@@ -1,0 +1,6 @@
+{
+  "campaign_id": "teacher_integral_gate",
+  "created": "2026-08-05T00:03:06.540203+00:00",
+  "auto_initialized": true,
+  "source": "campaign-drift --adopt"
+}

@@ -2,16 +2,16 @@
 title: "Joint target runaway is NOT a sim-to-real gap (both sides unbounded); the real asymmetry is the accumulator reset"
 tags: ["albc", "arm", "joint", "vibration", "sim-to-real", "deployment", "delta-scale", "accumulator", "reset", "retrain-decision", "joint1", "controller-form", "sim2real", "blocked-hardware"]
 created: 2026-08-09T08:40:54.319258
-updated: 2026-08-14T07:49:38.891620
+updated: 2026-08-21T06:44:32.907378
 sources: ["wiki-backlog-20260814"]
-links: ["open_on_land_the_policy_winds_j2_to_pi_and_beyond_and_the_board.md"]
+links: ["open_on_land_the_policy_winds_j2_to_pi_and_beyond_and_the_board_.md"]
 category: reference
 confidence: high
 schemaVersion: 1
 qualityScore: 100
 qualityReasons: []
 status: needs-experiment
-blocked-on: "HARDWARE: the remaining gap is arm CONTROLLER FORM (firmware ~1kHz PID with integral + profile-velocity trapezoid vs Isaac ImplicitActuator Kp=100/Kd=3), blocked on the XW540-T260 step-response bench; the arm is also physically broken since 2026-08-13"
+blocked-on: "XW540-T260 step-response bench only. The arm is REPAIRED as of 2026-08-21 (J2 branch harness replaced; 590/590 clean at rest, two rotation runs with zero comm failures), so the words about it being physically broken since 2026-08-13 no longer hold. Nothing else blocks this lead."
 ---
 
 # Joint target runaway is NOT a sim-to-real gap (both sides unbounded); the real asymmetry is the accumulator reset
@@ -142,4 +142,27 @@ then severed the J2 cable, because it was incomplete on the other side of the co
 began publishing a CUMULATIVE angle while the driver's startup baseline stayed WRAPPED. The
 generalisable lesson is on the sibling page -- a rail in the policy layer does not reach the hardware,
 and any joint-limit guarantee has to live in the driver.
+
+---
+
+## Update (2026-08-21T06:44:32.907378)
+
+## UPDATE 2026-08-21 -- the arm is no longer broken
+
+This page's blocked_on carried two clauses. One is still true, one is not.
+
+STILL TRUE: the remaining sim-to-real gap is arm CONTROLLER FORM -- firmware ~1 kHz PID with an
+integral term and a profile-velocity trapezoid, versus Isaac ImplicitActuator Kp=100 / Kd=3. That
+needs the XW540-T260 step-response bench.
+
+NO LONGER TRUE: "the arm is also physically broken since 2026-08-13". The J2 branch harness was
+replaced on 2026-08-21 and verified -- 590/590 clean over a 5-minute rest probe and two rotation
+runs with zero comm failures, hw_err 0x00 on both servos. The bench can be run.
+
+Useful for whoever runs that bench: profile-velocity matters more than it looks. At prof_vel=10
+(about 13.7 deg/s) with prof_acc=20, the servo tracks a stepped +-7 deg trajectory to within 5
+ticks out of water. The measurement tool rotate_probe.py (vault code/, board ~/albc_diag/) already
+drives J1 in small steps while pinging both IDs and aborts on the first comm failure, so it is a
+reasonable starting point for a step-response harness -- but note it logs position only at the end
+of each leg, which is too coarse for a step response and would need per-poll sampling.
 

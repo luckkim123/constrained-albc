@@ -4,7 +4,7 @@ tags: ["albc", "doraemon", "curriculum", "performance_lb", "feasibility", "kl_ub
 created: 2026-08-09T18:10:10.947879
 updated: 2026-08-14T07:44:36.077029
 sources: ["wiki-backlog-20260814"]
-links: ["doraemon_is_trust_region_limited_not_feasibility_limited_kl_step.md", "sigma_decay_under_an_expanding_dr_curriculum_literature_verdict.md", "where_is_arm_w_losing_the_8_points_of_return_per_dr_dimension_qu.md"]
+links: ["doraemon_is_trust_region_limited_not_feasibility_limited_kl_step.md", "sigma_decay_under_an_expanding_dr_curriculum_literature_verdict_.md", "where_is_arm_w_losing_the_8_points_of_return_per_dr_dimension_qu.md"]
 category: debugging
 confidence: high
 schemaVersion: 1

@@ -4,7 +4,7 @@ tags: ["doraemon", "performance_lb", "alpha", "seed-variance", "feasibility", "r
 created: 2026-08-14T15:06:42.900615
 updated: 2026-08-15T04:17:20.505521
 sources: ["diagnose-20260814-235911"]
-links: ["the_deployed_teacher_trained_with_control_delay_steps_0_0_while.md"]
+links: ["the_deployed_teacher_trained_with_control_delay_steps_0_0_while_.md"]
 category: pattern
 confidence: high
 schemaVersion: 1

@@ -1,0 +1,17 @@
+{
+  "gpu_gate": "workstation cuda:0 RTX 4070 12GB, exclusive; 4096 envs measured ~11.3GB; 3.44 s/iter x 10000 = 9.6h",
+  "launch_delta": "vs incumbent trpo_iterbudget_s30_260805_012813: resume true->false (drop the unreconstructible RESUME_SRC chain), load_run/load_checkpoint unset, max_iterations 5000-incremental->10000-absolute. seed 30 held, num_envs 4096 held, kl_ub 0.12 held, performance_lb 250.0 held, alpha 0.5 held, step_interval 250 held, buffer_size 2000 held, min_episodes 200 held, entropy_coef_per_dim x1 held (x2 is a regression vs its correct control), num_mini_batches 4 held, obs 72 / use_bias_ema_obs true held, fault.enable true held. Workstation branch exp/koopman-marine-obs; the 88+8 commits ahead of DGX main are obs toggles defaulting off plus analysis-only eval.py, no reward/DR/DORAEMON/algorithm diff.",
+  "open_leads": [
+    "doraemon_becomes_feasibility_limited_at_the_ceiling_the_kl_ub_0_.md",
+    "joint_target_runaway_is_not_a_sim_to_real_gap_both_sides_unbound.md",
+    "sigma_decay_under_an_expanding_dr_curriculum_literature_verdict_.md",
+    "the_c3_recipe_does_not_transfer_across_teachers_on_a_same_width_.md",
+    "where_is_arm_w_losing_the_8_points_of_return_per_dr_dimension_qu.md"
+  ],
+  "predicted_outcome": "Null expected: lands inside seed noise of the incumbent (21/21 saturation by ~iter 7000, buffer p50 255-261, best none-condition error 0.50-0.51 deg). Delivers a reproducible-provenance final artifact and, with R31, the first seed-variance estimate. A real gain only if the incumbent resume chain left it in a worse basin.",
+  "proposal_id": "teacher-final-replicate/R30",
+  "queued_at": "2026-08-10T04:58:33.150946+00:00",
+  "queued_commit": "8a41029b3e690d718415c63e09d7bfd8a056051c",
+  "schema_version": 2,
+  "status": "pending approval"
+}

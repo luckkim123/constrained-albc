@@ -1,0 +1,33 @@
+{
+  "acknowledged_gates": [
+    "buoy_added_mass_is_wrong_in_both_sims_and_in_opposite_directions.md",
+    "hydrorc_016d1b1_recentered_nine_hull_hydro_numbers_onto_a_broken.md",
+    "imu_45deg_offset_pitch_negation_sim_uncompensated_2026_07_05.md",
+    "metrics_yaml_declares_doraemon_success_rate_but_the_real_tb_tag_.md",
+    "sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md",
+    "stonefish_rotational_drag_is_a_distributed_integral_with_no_sepa.md",
+    "tam_vertical_single_motor_dual_esc_measured_2026_07_05.md"
+  ],
+  "gpu_gate": "GPU1 (RTX 4060) idle at queue time (18 MiB, 0% util); GPU0 partially busy (2.9 GiB, 33%) and not requested. Phase E measured 624 s wall for the identical recipe on GPU1, so X1 costs ~10-11 min train + ~5-8 min eval.",
+  "launch_delta": "X1-tailsplit: single variable vs Phase E (trpo_sdobs76_c3_gruselect_s30_260804_124951) = the student input assembly, switched by the ONE new flag --extra_obs_from_policy_tail (X0 commit 70ceb3f, independent review APPROVE): channels enter raw/static-scaled (gen-1 convention, cat(norm76[:72], obs[72:]/(10,10,10,1))) instead of z-scored by the teacher's frozen 76D stats. Everything else verbatim from Phase E's recorded config.yaml: teacher teacher_obs76/trpo_obs76fault_s30_260804_043926/train/model_4999.pt (kept Phase D ckpt, NO teacher retrain), gru 128/64/1, dagger select beta 0.5, lambda_latent 1.0, 2048 envs, 1000 iters, seed 30, run_group=wandb project student_distill_obs76, env.use_extra_policy_obs=True, tag sdobs76_x1_tailsplit_s30. Command: cd /workspace/isaaclab && CUDA_VISIBLE_DEVICES=1 ./isaaclab.sh -p /workspace/constrained-albc/scripts/train_student.py --encoder_type gru --teacher_run_dir /workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_obs76/trpo_obs76fault_s30_260804_043926/train --teacher_checkpoint model_4999.pt --run_name sdobs76_x1_tailsplit_s30 --run_group student_distill_obs76 --num_envs 2048 --max_iterations 1000 --n_steps_per_rollout 24 --n_epochs 5 --minibatch_size 8192 --lr 0.0005 --lambda_latent 1.0 --extra_obs_from_policy_tail --dagger_beta_start 0.5 --dagger_beta_end 0.5 --dagger_anneal_iters 0 --dagger_mix select --save_interval 100 --seed 30 --logger wandb --headless env.use_extra_policy_obs=True. ACK RATIONALE for all 7 needs-apply-before-retrain gates: NOT triggered -- this run retrains no teacher and reuses the kept Phase D checkpoint; every acked gate is a teacher-plant item (buoy added mass, HydroRC 016d1b1, IMU 45deg deferred-by-user, TAM moment-arm band, Stonefish rotational drag, TAM vertical single-motor) or a profile-revision item (metrics doraemon token, deferred to next profile revision by its own blocked_on), and the plant-v2 batch discipline is untouched. PRE-EVAL CONDITION (review MAJOR-A): an uncommitted concurrent-session WIP hunk (eval.py torch.manual_seed re-seed per level) sits in the working tree and would change the eval RNG stream vs Phase E's stored npz -- park it (git stash push -m with path) for the X1 eval or accept it and re-eval Phase E on the same code; must be dispositioned at launch ack.",
+  "open_leads": [
+    "c4b_dagger_correction_measured_partial_2_5_4x_in_loop_reduction_.md",
+    "campaign_wide_latent_r2_census_11_student_arms_negative_r2_is_no.md",
+    "curriculum_recalibration_protocol_widening_the_dr_box_requires_r.md",
+    "experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md",
+    "hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md",
+    "joint1_stage_1_gate_go_drift_is_real_on_unlimited_physics_not_th.md",
+    "obs4_student_extra_observation_interface_4_deployable_channels_r.md",
+    "obs76_gen_2_student_reproduces_its_teacher_s_mean_tracking_at_ev.md",
+    "reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md",
+    "roll_transient_is_worst_at_none_dr_and_improves_monotonically_as.md",
+    "stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md",
+    "thruster_nonlinear_curve_t200_sim_to_real_off_by_default_deadban.md",
+    "thruster_static_gain_gap_stonefish_quadratic_rated_20_03_n_vs_is.md"
+  ],
+  "proposal_id": "next-20260804-142117",
+  "queued_at": "2026-08-04T06:07:28.156712+00:00",
+  "queued_commit": "70ceb3fbf700564fc210f00981ccd75e863d8811",
+  "schema_version": 1,
+  "status": "pending approval"
+}

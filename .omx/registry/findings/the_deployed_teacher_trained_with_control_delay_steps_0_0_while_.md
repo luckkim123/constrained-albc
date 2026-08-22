@@ -4,7 +4,7 @@ tags: ["albc", "deployment", "latency", "staleness", "control-delay", "doraemon"
 created: 2026-08-14T05:32:58.452008
 updated: 2026-08-14T15:07:16.951471
 sources: ["trpo_iterbudget_s30_260805_012813", "wiki-backlog-20260814", "diagnose-20260814-172325", "diagnose-20260814-235911"]
-links: ["an_off_doraemon_channel_that_costs_return_stalls_the_curriculum.md", "experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md", "uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload.md", "the_doraemon_feasibility_floor_sits_inside_this_config_s_seed_di.md"]
+links: ["an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md", "experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md", "uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload_.md", "the_doraemon_feasibility_floor_sits_inside_this_config_s_seed_di.md"]
 category: reference
 confidence: high
 schemaVersion: 1

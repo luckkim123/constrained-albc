@@ -10554,3 +10554,179 @@ dmissible_cross_run_evidence_.md, against_the_control_the_aggregate_hard_r2_rise
 - **Pages:** the_c3_recipe_does_not_transfer_across_teachers_on_a_same_width_.md
 - **Summary:** updated 'The C3 recipe does not transfer across teachers: on a same-width dgx16k teacher it loses at every DR level and reverses its hard win'
 
+## [2026-08-14T08:13:07.299190] add
+- **Pages:** the_performance_has_plateaued_verdict_was_a_sampling_artifact_of.md
+- **Summary:** created 'The "performance has plateaued" verdict was a sampling artifact of a 4-point eva'
+
+## [2026-08-14T08:13:07.299190] add
+- **Pages:** the_interim_report_s_entropy_section_leaned_on_5_8_dims_pinned_a.md
+- **Summary:** created 'The interim report\'s entropy section leaned on "5/8 dims pinned at their floor" '
+
+## [2026-08-14T08:13:07.299190] add
+- **Pages:** the_invariance_is_measured_not_assumed_four_checkpoints_re_evalu.md
+- **Summary:** created 'The invariance is measured, not assumed. Four checkpoints re-evaluated two days '
+
+## [2026-08-14T08:13:07.299190] add
+- **Pages:** the_recovery_is_real_and_monotone_at_the_sampled_points_every_co.md
+- **Summary:** created 'The recovery is real and monotone AT THE SAMPLED POINTS: every consecutive step '
+
+## [2026-08-14T08:13:07.299190] add
+- **Pages:** the_shape_of_the_curve_between_samples_is_unknown_and_the_9000_e.md
+- **Summary:** created 'The SHAPE of the curve between samples is unknown and the 9000 excursion is not '
+
+## [2026-08-14T08:13:07.299190] add
+- **Pages:** at_the_fitted_slope_model_13400_would_need_roughly_4000_further_.md
+- **Summary:** created 'At the fitted slope, `model_13400` would need roughly 4000 further iterations to'
+
+## [2026-08-14T08:13:07.299190] add
+- **Pages:** ood_does_not_invert_the_in_distribution_ranking_it_dissolves_it_.md
+- **Summary:** created 'OOD does not invert the in-distribution ranking, it dissolves it. `model_7500` b'
+
+## [2026-08-14T08:13:07.299190] add
+- **Pages:** model_13400_is_the_only_checkpoint_with_zero_ood_failures_0_64_v.md
+- **Summary:** created '`model_13400` is the only checkpoint with zero OOD failures (0/64 vs 1/64 at 750'
+
+## [2026-08-14T08:13:07.299190] add
+- **Pages:** diagnosis_the_eval_regression_at_9000_has_no_counterpart_in_the_.md
+- **Summary:** created 'DIAGNOSIS — the eval regression at 9000 has no counterpart in the reward signal.'
+
+## [2026-08-14T08:13:07.299190] add
+- **Pages:** no_divergence_signature_at_any_point_loss_kl_attains_its_maximum.md
+- **Summary:** created 'No divergence signature at any point. `Loss/kl` attains its maximum at its first'
+
+## [2026-08-14T08:13:07.299190] add
+- **Pages:** neither_the_entropy_nor_the_sigma_trajectory_has_an_inflection_a.md
+- **Summary:** created 'Neither the entropy nor the sigma trajectory has an inflection at the regression'
+
+## [2026-08-14T08:13:07.299190] add
+- **Pages:** the_floored_set_is_a_lineage_constant_reproduced_exactly_model_1.md
+- **Summary:** created 'The floored set is a lineage constant, reproduced exactly. `model_13400` sigma i'
+
+## [2026-08-14T08:13:07.299190] add
+- **Pages:** the_floor_cannot_be_the_ceiling_here_on_this_run_s_own_evidence_.md
+- **Summary:** created "The floor cannot be the ceiling here, on this run's own evidence: 5/8 dims were "
+
+## [2026-08-14T08:13:07.299190] add
+- **Pages:** encoder_health_is_clean_and_is_not_the_regression_s_origin_z_std.md
+- **Summary:** created "Encoder health is clean and is not the regression's origin: `z_std` 0.389-0.394 "
+
+## [2026-08-14T08:13:07.299190] add
+- **Pages:** the_one_non_flat_constraint_signal_is_a_14_dip_in_constraint_mar.md
+- **Summary:** created 'The one non-flat constraint signal is a -14% dip in `Constraint/margin/thruster_'
+
+## [2026-08-14T08:13:07.299190] add
+- **Pages:** rp_vel_settling_and_rp_rate_margins_decline_slowly_in_the_final_.md
+- **Summary:** created '`rp_vel_settling` and `rp_rate` margins decline slowly in the final third (9.154'
+
+## [2026-08-14T08:13:07.299190] add
+- **Pages:** no_constraint_was_ever_violated_every_viol_tag_is_the_exact_nega.md
+- **Summary:** created 'No constraint was ever violated. Every `viol` tag is the exact negation of its m'
+
+## [2026-08-14T08:13:07.299190] add
+- **Pages:** gate_a_closed_at_iteration_7250_all_29_expansions_were_accepted_.md
+- **Summary:** created 'Gate A closed at iteration 7250. All 29 expansions were accepted at the KL cap 0'
+
+## [2026-08-14T08:13:07.299190] add
+- **Pages:** saturation_is_iteration_clocked_not_env_clocked_the_reference_li.md
+- **Summary:** created 'Saturation is iteration-clocked, not env-clocked. The reference lineage saturate'
+
+## [2026-08-14T08:13:07.299190] add
+- **Pages:** doraemon_success_rate_is_the_only_training_side_metric_that_trac.md
+- **Summary:** created '`DORAEMON/success_rate` is the only training-side metric that tracks the eval ex'
+
+## [2026-08-14T08:13:07.299190] add
+- **Pages:** the_pre_registered_question_does_4x_envs_buy_anything_is_answere.md
+- **Summary:** created 'The pre-registered question — does 4x envs buy anything — is answered negatively'
+
+## [2026-08-14T08:13:07.299190] add
+- **Pages:** final_quality_past_saturation_remains_open_in_one_narrow_sense_o.md
+- **Summary:** created 'Final quality past saturation remains open in one narrow sense only: the run was'
+
+## [2026-08-14T08:27:08.710172] query
+- **Pages:** training_log_analysis_engine_reference_adapter.md, analysis_engine_map_what_is_grow_able_vs_off_limits.md, exp_analyze_must_run_analyze_training_py_for_training_side_diagn.md, engine_gap_analyze_training_py_only_runs_under_isaac_sim_python_.md, engine_gap_the_analysis_engine_and_omx_reduce_are_both_unusable_.md, engine_gap_analyze_training_py_needs_the_logs_run_dir_not_the_ex.md, engine_gap_eval_adapter_covers_static_segmented_periodic_still_u.md, engine_gap_omx_cli_gaps_found_re_analyzing_teacher_2026_06_06_ro.md, eval_analysis_core_does_stats_adapter_does_heavy_tail.md, engine_gap_eval_adapter_heavy_tail_lacks_median_based_tail_ratio.md, engine_gap_analyze_training_py_emits_no_reward_8_term_decomposit.md, engine_gap_doraemon_per_parameter_curriculum_expansion_is_invisi.md, engine_generic_flags_entropy_collapse_barrier_spike_reward_plate.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, coverage_lint_ok_is_a_floor_not_a_quality_gate_re_analysis_uses_.md, engine_gap_omx_reduce_tb_final_unusable_here_cli_on_system_pytho.md, failure_dr_join_now_covers_fault_channels_not_just_dr_per_env_fa.md, engine_gap_flat_target_eval_records_joint1_trajectory_but_render.md, engine_gap_analyze_training_deep_plot_has_2_blank_panels_inconsi.md, engine_gap_heavy_tail_json_pct_peak_gt_thresh_exceeds_100_at_ood.md
+- **Summary:** query 'analysis engine reference adapter how to analyze' -> 20 of 289
+
+## [2026-08-14T08:27:10.957602] query
+- **Pages:** the_dgx16k_teacher_s_latent_target_carries_about_half_the_signal.md, the_c3_recipe_does_not_transfer_across_teachers_on_a_same_width_.md, student_distillation_converges_to_a_residual_that_rules_out_late.md, gru_memory_and_corrected_dagger_mixing_compound_c3_is_the_campai.md, latent_dim_d4_collapses_at_none_dr_in_every_student_arm_and_the_.md, student_distillation_roll_heavy_tail_is_a_teacher_policy_propert.md, a_distillation_run_is_invisible_to_every_teacher_run_instrument_.md, albc_stage_2_is_teacher_driven_off_policy_bc_with_mixed_latent_a.md, engine_gap_the_analysis_engine_and_omx_reduce_are_both_unusable_.md, the_frozen_actor_s_sensitivity_to_latent_error_is_strongly_level.md, utracker_diffusion_policy_is_rejected_for_albc_on_two_independen.md, canonical_final_teacher_baseline_buoyfix_anchor_trpo_buoyanchor_.md, engine_gap_the_latent_fidelity_ratio_has_no_owning_module_and_it.md, closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md, the_obs76_teacher_is_a_real_better_controller_than_e_int_at_hard.md, cross_run_reference_values_must_be_re_extracted_fresh_never_carr.md, every_5000_iteration_teacher_on_the_buoyfix_plant_stops_at_65_pe.md, teacher_dr_harder_doraemon_curriculum_froze_before_run_end_unuse.md, teacher_encoder_0_dead_latent_dims_keys_on_lateral_cog_cob_offse.md, lambda_latent_is_bracketed_and_closed_no_decision_grade_control_.md
+- **Summary:** query 'teacher latent target distillation transfer l_true envvar' -> 20 of 289
+
+## [2026-08-14T08:36:41.563656] add
+- **Pages:** the_c3_recipe_does_not_transfer_across_teachers_on_a_same_width_.md
+- **Summary:** updated 'The C3 recipe does not transfer across teachers: on a same-width dgx16k teacher it loses at every DR level and reverses its hard win'
+
+## [2026-08-14T08:37:14.001617] add
+- **Pages:** the_dgx16k_teacher_s_latent_target_carries_about_half_the_signal.md
+- **Summary:** updated "The dgx16k teacher's latent target carries about half the signal-to-noise of E-int's, which is a candidate mechanism for C3 non-transfer measurable without any student"
+
+## [2026-08-14T08:37:39.930923] add
+- **Pages:** before_citing_an_eval_verify_its_run_actually_trained_manifest_s.md
+- **Summary:** created 'Before citing an eval, verify its run actually trained: manifest status, log directory, wandb, checkpoint count'
+
+## [2026-08-14T08:41:17.396344] query
+- **Pages:** the_deployed_teacher_trained_with_control_delay_steps_0_0_while_.md, experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md, an_off_doraemon_channel_that_costs_return_stalls_the_curriculum_.md, extra_obs_dim_0_shifts_the_eval_rng_stream_so_an_obs4_arm_never_.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, within_one_run_the_training_log_is_blind_to_eval_regressions_a_3.md, ftc_investigation_2026_07_25_m4_loss_halves_pure_yaw_ceiling_uti.md, failure_dr_join_now_covers_fault_channels_not_just_dr_per_env_fa.md, joint_target_runaway_is_not_a_sim_to_real_gap_both_sides_unbound.md, baseline_repro_reproduces_teacher_deterministically_e4_control.md, before_citing_an_eval_verify_its_run_actually_trained_manifest_s.md, c3_s_dirty_tree_provenance_doubt_is_closed_a_dim_0_control_on_co.md, doraemon_reactivity_makes_every_single_variable_probe_two_variab.md, eval_decision_floors_are_the_binding_standard_for_student_arm_co.md, eval_npz_fault_block_contract_fault_injection_flag_fault_keys_ab.md, fitting_a_koopman_with_control_operator_on_deterministic_on_poli.md, none_level_invariance_holds_within_a_machine_not_across_them_the.md, eval_py_rebuilds_env_cfg_from_hydra_defaults_so_obs_widening_fla.md, an_eval_schedule_too_sparse_to_resolve_the_curve_manufactures_a_.md, any_arm_vs_baseline_eval_in_this_repo_needs_doraemon_dr_from_or_.md
+- **Summary:** query 'delay injection sweep eval control_delay degradation' -> 20 of 209
+
+## [2026-08-14T10:24:55.349603] add
+- **Pages:** plant_change_batch_v2_four_isaac_plant_corrections_are_now_pendi.md
+- **Summary:** updated 'Plant-change batch v2: four Isaac plant corrections are now pending and each alone forces a teacher retrain, so they are batched behind one sizing gate instead of decided individually'
+
+## [2026-08-14T10:25:13.827552] add
+- **Pages:** thrust_deadband_0_075_is_inert_today_enable_thrust_curve_false_a.md
+- **Summary:** updated 'thrust_deadband 0.075 is inert today (enable_thrust_curve false) and wrong for the day it is not: the board measures 0.16 half-span, asymmetric'
+
+## [2026-08-14T10:25:49.391040] add
+- **Pages:** the_deployed_teacher_trained_with_control_delay_steps_0_0_while_.md
+- **Summary:** updated 'The deployed teacher trained with control_delay_steps (0,0) while the robot serves observations 1.2 to 4.7 control steps stale, and DORAEMON has no dim to cover it'
+
+## [2026-08-14T10:27:25.841981] add
+- **Pages:** thrust_deadband_0_075_is_inert_today_enable_thrust_curve_false_a.md
+- **Summary:** updated 'thrust_deadband 0.075 is inert today (enable_thrust_curve false) and wrong for the day it is not: the board measures 0.16 half-span, asymmetric'
+
+## [2026-08-14T15:06:42.900615] add
+- **Pages:** the_doraemon_feasibility_floor_sits_inside_this_config_s_seed_di.md
+- **Summary:** created "The DORAEMON feasibility floor sits inside this config's seed distribution: two replicate seeds ended on opposite sides of alpha with nothing but the seed changed"
+
+## [2026-08-14T15:07:00.531182] add
+- **Pages:** eval_py_static_ood_appends_a_fifth_dr_level_and_unpairs_every_cr.md
+- **Summary:** created 'eval.py static --ood appends a fifth DR level and unpairs every cross-run comparison at soft/medium/hard'
+
+## [2026-08-14T15:07:16.951471] add
+- **Pages:** the_deployed_teacher_trained_with_control_delay_steps_0_0_while_.md
+- **Summary:** updated 'The deployed teacher trained with control_delay_steps (0,0) while the robot serves observations 1.2 to 4.7 control steps stale, and DORAEMON has no dim to cover it'
+
+## [2026-08-15T04:17:20.505521] add
+- **Pages:** the_doraemon_feasibility_floor_sits_inside_this_config_s_seed_di.md
+- **Summary:** updated "The DORAEMON feasibility floor sits inside this config's seed distribution: two replicate seeds ended on opposite sides of alpha with nothing but the seed changed"
+
+## [2026-08-15T04:17:20.590696] add
+- **Pages:** the_pre_registered_per_env_paired_comparison_cannot_be_executed_.md
+- **Summary:** created 'The pre-registered per-env paired comparison cannot be executed: _per_env_ss_stats hides its vector and a docstring-faithful reimplementation misses the published scalar by up to 3.6x the floor'
+
+## [2026-08-15T12:14:10.239304] add
+- **Pages:** the_pre_registered_per_env_paired_comparison_cannot_be_executed_.md
+- **Summary:** updated 'The pre-registered per-env paired comparison cannot be executed: _per_env_ss_stats hides its vector and a docstring-faithful reimplementation misses the published scalar by up to 3.6x the floor'
+
+## [2026-08-17T07:42:15.489753] query
+- **Pages:** onboard_measured_2026_07_06_arm_step_response_valid_sim_zeta_0_7.md, real_robot_has_2_faulted_thrusters_user_judges_buoyancy_restorin.md, buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md, canonical_final_teacher_baseline_buoyfix_anchor_trpo_buoyanchor_.md, ftc_investigation_2026_07_25_m4_loss_halves_pure_yaw_ceiling_uti.md, plant_fix_needs_apply_before_retrain_main_hull_volume_0_009_0_00.md, eval_metric_units_and_decision_floors_os_env_mean_is_percent_of_.md, open_on_land_the_policy_winds_j2_to_pi_and_beyond_and_the_board_.md, seed_noise_floor_on_none_level_attitude_is_huge_75_peak_to_peak_.md, thruster_util_is_the_binding_constrainttrpo_constraint_in_7_of_7.md, uniform_only_dr_full_roster_9_params_doraemon_bypassing_payload_.md, utracker_diffusion_policy_is_rejected_for_albc_on_two_independen.md, baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md, closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md, hydrorc_is_half_recentered_buoy_link3_nominals_untouched_but_the.md, joint_dr_params_kp_kd_effort_friction_need_no_dedicated_measurem.md, literature_map_how_rl_control_actually_handles_steady_state_erro.md, reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md, sim_hydro_nominal_is_analytical_not_measured_imu_pressure_can_an.md, stonefish_yaw_gap_claim_review_main_body_hydro_yaw_torque_struct.md
+- **Summary:** query 'buoyancy' -> 20 of 21
+
+## [2026-08-21T06:42:41.729554] query
+- **Pages:** arm_a_measured_angle_joint1_constraint_recovers_not_diverges_the.md, joint_target_runaway_is_not_a_sim_to_real_gap_both_sides_unbound.md, ee_leak_0_k_anchor_0_does_not_blow_up_joint1_settle_pade_ik_clam.md, joint1_anti_drift_constrain_the_command_cumulative_arm_b_not_the.md, joint1_anti_drift_design_history.md, joint1_centering_reward_is_removed_on_main_6_term_but_alive_on_e.md, joint1_cumulative_ipo_constraint_generalizes_drift_bounded_at_oo.md, joint1_cumulative_rotation_constraint_never_binds_policy_parks_a.md, p1_cross_sim_arm_swing_the_4_7_9_3x_joint_torque_gap_is_withdraw.md, per_env_heavy_tail_analysis_current_capability_hard_ceiling_and_.md, engine_gap_flat_target_eval_records_joint1_trajectory_but_render.md, joint_dr_params_kp_kd_effort_friction_need_no_dedicated_measurem.md, open_on_land_the_policy_winds_j2_to_pi_and_beyond_and_the_board_.md, joint1_stage_1_gate_go_drift_is_real_on_unlimited_physics_not_th.md, real_albc_deployment_state_estimation_rates_measured_from_code_a.md, state_dependent_std_robustness_vs_nominal_trade_off_not_difficul.md, baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md, ftc_investigation_2026_07_25_m4_loss_halves_pure_yaw_ceiling_uti.md, hydrorc_recenter_gate_result_2026_07_28_isaac_paired_gate_fail_r.md, obs4_student_extra_observation_interface_4_deployable_channels_r.md
+- **Summary:** query 'joint bus cable wiring' -> 20 of 110
+
+## [2026-08-21T06:44:15.675571] add
+- **Pages:** open_on_land_the_policy_winds_j2_to_pi_and_beyond_and_the_board_.md
+- **Summary:** updated 'OPEN: on land the policy winds J2 to pi and beyond, and the board feeds it IMU at 20 Hz / joints at 10 Hz against a 50 Hz control loop'
+
+## [2026-08-21T06:44:32.907378] add
+- **Pages:** joint_target_runaway_is_not_a_sim_to_real_gap_both_sides_unbound.md
+- **Summary:** updated 'Joint target runaway is NOT a sim-to-real gap (both sides unbounded); the real asymmetry is the accumulator reset'
+
+## [2026-08-22T12:46:01.323948] query
+- **Pages:** attitude_only_ablation_arms_registered_policy_obs_dim_sync_must_.md, encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md, bias_reward_bias_ema_penalty_theory_review_conditionally_sound_h.md, constrainttrpo_slack_tail_9_of_10_constraints_deep_slack_is_plau.md, obs4_student_extra_observation_interface_4_deployable_channels_r.md, a_random_expansion_lift_is_inert_on_the_albc_plant_while_a_learn.md, obs_noise_model_history_channels_are_re_noised_every_step_sim_pa.md, real_albc_deployment_state_estimation_rates_measured_from_code_a.md, the_deployed_teacher_trained_with_control_delay_steps_0_0_while_.md, where_is_arm_w_losing_the_8_points_of_return_per_dr_dimension_qu.md, a_stateful_observation_component_cannot_assume_get_observations_.md, baseline_open_experiment_leads_backlog_beyond_heavy_tail_triage_.md, buoy_added_mass_is_wrong_in_both_sims_and_in_opposite_directions.md, closed_loop_latent_collapse_suspicion_legacy_student_measured_11.md, eval_py_rebuilds_env_cfg_from_hydra_defaults_so_obs_widening_fla.md, literature_map_how_rl_control_actually_handles_steady_state_erro.md, priv_obs_slim_stage_2_lead_contested_p_t_dims_quad_damp_lin_vel_.md, reward_sigma_integral_obs_gate_coupling_reward_md_7_theory_revie.md, any_arm_vs_baseline_eval_in_this_repo_needs_doraemon_dr_from_or_.md, arm_b_is_a_dictionary_only_control_not_a_koopman_result_it_fitte.md
+- **Summary:** query 'observation dimension ablation' -> 20 of 102
+
+## [2026-08-22T12:46:01.420239] query
+- **Pages:** joint1_anti_drift_design_history.md, obs_noise_model_history_channels_are_re_noised_every_step_sim_pa.md, the_deployed_teacher_trained_with_control_delay_steps_0_0_while_.md, experiment_idea_latency_transport_delay_dr_sensor_obs_control_ac.md, a_random_expansion_lift_is_inert_on_the_albc_plant_while_a_learn.md, action_pipeline_behavior_walk_through_two_clamps_raw_gaussian_vs.md, added_mass_scale_upper_half_is_attenuated_not_inert_the_0_95_i_c.md, buoyancy_gravity_restoring_apply_separately_to_main_body_vs_buoy.md, constraint_health_index.md, diagnosis_md_2026_05_25_retirement_open_item_ledger.md, doraemon_curriculum_saturation_is_iteration_clocked_not_env_cloc.md, e_int_s_stitched_resume_offset_the_doraemon_update_grid_its_faul.md, encoder_latent_z_dim_ablation_coupling_points_constraints_for_a_.md, experiment_launch_checklist_run_id_wandb_latest_alias_naming.md, how_to_read_omx_wiki_lint_on_this_corpus_oversized_means_accumul.md, joint_target_runaway_is_not_a_sim_to_real_gap_both_sides_unbound.md, latent_dim_d4_collapses_at_none_dr_in_every_student_arm_and_the_.md, on_the_albc_plant_the_binding_prediction_error_is_transfer_to_he.md, p1_cross_sim_arm_swing_the_4_7_9_3x_joint_torque_gap_is_withdraw.md, policy_head_design_rationale_and_literature_standing_encoder_inp.md
+- **Summary:** query 'history length' -> 20 of 47
+

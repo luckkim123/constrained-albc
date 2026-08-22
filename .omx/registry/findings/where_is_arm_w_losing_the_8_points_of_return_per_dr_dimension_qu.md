@@ -4,7 +4,7 @@ tags: ["doraemon", "curriculum", "feasibility", "diagnosis", "arm-w", "performan
 created: 2026-08-10T02:35:14.326657
 updated: 2026-08-14T07:46:42.763605
 sources: ["arXiv:2311.01885", "wiki-backlog-20260814"]
-links: ["engine_gap_the_analysis_engine_and_omx_reduce_are_both_unusable.md", "engine_gap_eval_npz_saves_no_raw_obs_std_privileged_blocks_exact.md", "doraemon_becomes_feasibility_limited_at_the_ceiling_the_kl_ub_0.md"]
+links: ["engine_gap_the_analysis_engine_and_omx_reduce_are_both_unusable_.md", "engine_gap_eval_npz_saves_no_raw_obs_std_privileged_blocks_exact.md", "doraemon_becomes_feasibility_limited_at_the_ceiling_the_kl_ub_0_.md"]
 category: debugging
 confidence: high
 schemaVersion: 1

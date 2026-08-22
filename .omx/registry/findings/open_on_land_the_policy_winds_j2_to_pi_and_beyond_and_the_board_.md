@@ -2,7 +2,7 @@
 title: "OPEN: on land the policy winds J2 to pi and beyond, and the board feeds it IMU at 20 Hz / joints at 10 Hz against a 50 Hz control loop"
 tags: ["sim2real", "agent-jetson", "policy", "latency", "arm", "open-lead", "j2", "driver", "blocked-hardware"]
 created: 2026-08-14T06:46:47.837427
-updated: 2026-08-14T07:49:19.963903
+updated: 2026-08-21T06:44:15.675571
 sources: ["albc_bags/fieldtest_2026-08-11-12-43-33.bag", "albc_bags/fieldtest_2026-08-11-12-52-36.bag", "wiki-backlog-20260814"]
 links: []
 category: reference
@@ -11,7 +11,7 @@ schemaVersion: 1
 qualityScore: 100
 qualityReasons: []
 status: needs-experiment
-blocked-on: "HARDWARE: J1-J2 daisy-chain cable severed 2026-08-13, J1 at -35.54 rad with HW error 0x20 OVERLOAD; needs physical repair AND the driver-side baseline fix before any run"
+blocked-on: "UNBLOCKED 2026-08-21 on the hardware side: the J2 branch was replaced and passed 590/590 clean at rest plus two rotation runs with zero comm failures; the driver-side baseline fix shipped 2026-08-17 (agent-jetson 6b85836 + 4239445, on the board). What remains is simply that the run has not been made. Residual risk: multi-turn winding stress is still unproven-safe (the 08-21 rotation test was only +-7 deg), so keep ~joint1_abort_rad at 6pi."
 ---
 
 # OPEN: on land the policy winds J2 to pi and beyond, and the board feeds it IMU at 20 Hz / joints at 10 Hz against a 50 Hz control loop
@@ -173,4 +173,34 @@ SCOPE NOTE. Neither unblocking step is an EXPERIMENT: one is a repair, the other
 does on the real arm, and OPEN 2's tilt test) is still unanswered and does need a run -- but the run
 cannot be scheduled until both steps land. A session picking this lead up should expect to be doing
 firmware-adjacent repair work, not analysis.
+
+---
+
+## Update (2026-08-21T06:44:15.675571)
+
+## UPDATE 2026-08-21 -- the hardware block is gone
+
+The blocked_on text on this page said the J1-J2 cable was severed and the arm needed physical
+repair plus a driver-side baseline fix. Both are done.
+
+TOPOLOGY CORRECTION: the bus is NOT a daisy chain. U2D2 branches to J1 and J2 from a common point
+(operator, 2026-08-21). Do not reason from "the far end of the chain dies first" -- under a branch,
+one healthy ID acquits the whole common trunk at once, which is exactly how the 2026-08-21
+diagnosis localised the fault.
+
+WHAT HAPPENED. After the 2026-08-17 code fix the same J2 branch degraded a third time. Measured
+over 572 rounds: id11 572/572 perfect, id12 295/572 (51.6 percent), 35 state transitions, 26
+ping-OK-but-read-FAIL and 4 garbage voltage reads -- signal corruption, not power loss. The
+operator replaced the harness. After replacement: 590/590 clean over a 5-minute rest probe (zero
+transitions, zero read failures, 12.0/12.1 V rock steady) and two rotation runs with zero comm
+failures over 433 and 84 polls, returning to the start tick.
+
+WHAT IS STILL NOT PROVEN: multi-turn winding stress. The rotation test was deliberately limited to
++-7 deg because the harness is not yet moulded. That stress is what parted the cable on 08-13 and
+again by 08-21, so the driver guard ~joint1_abort_rad (6pi, checked on BOTH commanded and measured
+angle) remains the only thing between the policy and a fourth failure.
+
+Field record and full evidence: vault .omx/programs/simtoreal-thrusters-live/PLAN.md, 2026-08-21
+block. Tools: bus_probe.py and rotate_probe.py in the vault code/ directory, board copies in
+~/albc_diag/ (home, so they survive reboots -- the original lived only in /tmp and was lost).
 

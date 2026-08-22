@@ -1,1 +1,2 @@
 {"ts": "2026-08-14T07:16:15.073940+00:00", "event": "note", "data": {"kind": "adopted", "source": "campaign-drift --adopt"}}
+{"ts": "2026-08-14T15:03:22.052926+00:00", "event": "analyzed", "run_id": "trpo_replicate_s30_260810_140415", "data": {"report": "/workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/teacher_final_replicate/trpo_replicate_s30_260810_140415/analysis/diagnose-20260814-235911/report.md"}}

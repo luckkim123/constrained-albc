@@ -1,0 +1,10 @@
+{
+  "gpu_gate": "workstation GPU0, human approval pending",
+  "launch_delta": "kl_ub 0.12->0.06, max_iterations 10000->20000, num_envs 4096, seed 30, from scratch; all else byte-identical to the E-int recipe",
+  "predicted_outcome": "Uncertain, not confidently positive: the slow ramp is untested on this plant. If it beats the incumbent model_9998 at hard/ood on a common anchor it becomes the shipped teacher; a null is entirely possible and the correct action then is to ship model_9998 unchanged.",
+  "proposal_id": "dgx-final-teacher-armW",
+  "queued_at": "2026-08-09T07:15:09.043085+00:00",
+  "queued_commit": "8a41029b3e690d718415c63e09d7bfd8a056051c",
+  "schema_version": 2,
+  "status": "pending approval"
+}

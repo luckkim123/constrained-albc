@@ -1,0 +1,9 @@
+{
+  "program_id": "dgx-final-teacher",
+  "campaigns": [
+    "teacher_final_ramp",
+    "teacher_final_entcomp"
+  ],
+  "status": "active",
+  "created": "2026-08-09T05:56:13.102310+00:00"
+}

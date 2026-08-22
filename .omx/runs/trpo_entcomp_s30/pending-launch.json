@@ -1,0 +1,10 @@
+{
+  "gpu_gate": "DGX GB10, human approval pending AND the exploration probe must first restore the 4096 sigma trajectory (0.1851 at iter 400-600); if it does not, this run is NOT launched",
+  "launch_delta": "num_envs 4096->16384, entropy_coef_per_dim x k (k fixed by a 3h probe against Arm W measured sigma trajectory), max_iterations 10000, kl_ub 0.12 unchanged, seed 30, from scratch",
+  "predicted_outcome": "Predicted NULL on the aggregate. Three prior env-scale measurements returned nothing (8192 NULL, 16384 within 2 percent at none, G0 at hard/ood); the one new input is that exploration was measured 11-29 percent depressed and is now compensated. Even a win is directional only: single seed, non-reference machine, two knobs moved, 56 percent p2p floor unmet.",
+  "proposal_id": "dgx-final-teacher-armD",
+  "queued_at": "2026-08-09T07:15:24.836302+00:00",
+  "queued_commit": "8a41029b3e690d718415c63e09d7bfd8a056051c",
+  "schema_version": 2,
+  "status": "pending approval"
+}
