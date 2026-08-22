@@ -106,7 +106,20 @@ reading this paragraph as a recorded H1 result for B/C.
 ## Decisions for the user
 
 The two items the STATUS block listed (B2 pairing regime, `--run_group` naming) are spent —
-Phase B ran. Open as of 2026-08-22:
+Phase B ran. Both items raised on 2026-08-22 were **decided the same day by the user**; they are
+kept below with their resolutions rather than deleted, so the reasoning stays readable.
+
+- **[DECIDED 2026-08-22: program closure — close it]** `program.json` is now
+  `status: "closed"` with a `closed_reason`. Caveat recorded there and worth repeating: omx
+  reads this field only through `header.get("status")` and nothing branches on it, so closing
+  is a label for human readers, not a state-machine transition.
+- **[DECIDED 2026-08-22: Phase C gate — record it retroactively]** Logged as a `note` on the
+  `teacher_obs76` campaign, flagged `reconstructed: true` and carrying an explicit
+  `do_not_cite_as: "evidence that Phase B/C returned H1"`. The ledger gap it documents:
+  `trpo_sdeint_b2_extraobs_s30_260803_215117` and `trpo_sdeint_b2wide_gru256_s30_260803_231320`
+  carry `analyzed` only, and `trpo_sdeint_b2ctl_dim0_s30_260803_220234` carries no entry at all.
+
+Original wording of the two, as raised:
 
 - **[DECISION-REQUIRED: program closure]** — `program.json` still says `status: active`, but
   nothing has moved since 2026-08-04. Close it, or name what is left. Recommend closing: D was
@@ -118,8 +131,8 @@ Phase B ran. Open as of 2026-08-22:
   gate was skipped. Recommend recording it retroactively as a campaign `note` marked
   reconstructed, rather than leaving the gate looking unfired.
 
-Neither is blocking anything today. Both are written here so the next session does not resolve
-them silently.
+Neither was blocking anything; both were written down so the next session would not resolve
+them silently. Both are now resolved above.
 
 ---
 

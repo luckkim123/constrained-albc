@@ -4,6 +4,8 @@
     "teacher_obs76",
     "student_distill_obs76"
   ],
-  "status": "active",
-  "created": "2026-08-04T03:58:08.630006+00:00"
+  "status": "closed",
+  "created": "2026-08-04T03:58:08.630006+00:00",
+  "closed": "2026-08-22T13:10:14+00:00",
+  "closed_reason": "Phase D kept and Phase E analyzed 2026-08-04; idle since. Closed 2026-08-22 by user decision. Note: omx reads this field only via header.get(\"status\") and nothing branches on it, so this is a label for readers, not a state-machine transition."
 }
