@@ -64,6 +64,65 @@ be proposed: the B2 pairing regime (Phase B step 4b) and the `--run_group` / pur
 
 ---
 
+## Objective (user, verbatim — 2026-08-03)
+
+Hoisted 2026-08-22 from this plan's own "Traceability to the user's brief" table so the
+requester's wording sits at the top, where every knob decision has to argue against it. These
+are quotes recorded on 2026-08-03, not a paraphrase written later.
+
+> "E-int에 추가하고 student도 새롭게 학습"
+
+> 구현 → student 검증 → teacher 재학습
+
+> "이 세션에서는 구현하지 않는다, 계획만 세세하게" / "구현은 새로운 세션에서"
+
+> "읽고 분석 및 검토 후 문제가 없으면 진행"
+
+Ratified the same day: C3 (GRU+select) is the adopted deployment student, C++ ONNX is
+deprioritised, and the plant-change batch is NOT waited on.
+
+## Predicted outcome
+
+**Written retroactively 2026-08-22 — this is NOT a prediction.** The `predicted-outcome` lint
+rule postdates this plan and the program last moved on 2026-08-04. What follows is the
+pre-registration the plan *did* carry, quoted from its own phase bodies, set against what the
+ledger records, so the two can be read together.
+
+Pre-registered before the runs:
+
+- **Phase B/C, H1 (channels informative)** — per-dim in-loop R² rises on the negative dims
+  {d2, d3, d4, d6, d8}, and aggregate hard R² exceeds C3's +0.1108. H2 (the null) → drop
+  batch-v2 candidate 5, close the observability angle, teacher retrain never happens.
+- **Phase D, H1 (teacher eligible)** — paired vs E-int on the standard floors: no nominal-level
+  floor regresses AND hard att_norm stays within floors. A teacher-side improvement was
+  explicitly NOT required for GO to Phase E.
+
+What the ledger records: Phase D's `trpo_obs76fault_s30_260804_043926` was `kept` on 2026-08-04
+with the note "controlled one-variable Phase D that passes the pre-registered H1 gate"; Phase E
+ran two students, last `analyzed` 2026-08-04. Phase D proceeding implies a B/C verdict was
+reached, but the C verdict itself is not in the ledger — see the decisions below rather than
+reading this paragraph as a recorded H1 result for B/C.
+
+## Decisions for the user
+
+The two items the STATUS block listed (B2 pairing regime, `--run_group` naming) are spent —
+Phase B ran. Open as of 2026-08-22:
+
+- **[DECISION-REQUIRED: program closure]** — `program.json` still says `status: active`, but
+  nothing has moved since 2026-08-04. Close it, or name what is left. Recommend closing: D was
+  kept and E was analyzed, and a program left "active" while idle for three weeks reads as
+  work-in-flight to every later session.
+- **[DECISION-REQUIRED: Phase C gate record]** — the plan requires "STOP and present to the
+  user" before Phase D. Phase D ran, so a decision was made somewhere, but no C verdict entry
+  exists in the campaign ledger. Either it happened in conversation and needs recording, or the
+  gate was skipped. Recommend recording it retroactively as a campaign `note` marked
+  reconstructed, rather than leaving the gate looking unfired.
+
+Neither is blocking anything today. Both are written here so the next session does not resolve
+them silently.
+
+---
+
 **Goal:** Add 4 deployable sensor channels (IMU specific force 3D + pressure-derived heave rate
 1D), validate them cheaply on the student encoder (~13 min run), and if they carry information,
 retrain the teacher with policy_obs 72→76 and re-distill the student — the user-ratified
