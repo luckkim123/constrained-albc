@@ -18,6 +18,10 @@ docs/reference/*.pdf
 tests/fixtures/*
 !tests/fixtures/encoder/
 
+# obs-oracle dumps: regenerable output of tools/obs_oracle/dump_obs_oracle.py
+# (the script itself IS tracked; only its .npz product is not)
+tools/obs_oracle/*.npz
+
 # omx wiki runtime lock
 .omx/registry/.wiki-lock
 
