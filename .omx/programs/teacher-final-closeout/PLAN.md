@@ -8,6 +8,32 @@
 > Results SSOT remains the experiments tree; this document never restates report numbers
 > without citing the report that owns them.
 
+## Objective
+
+**No verbatim record of the requester's own wording exists in this file (checked 2026-08-22).** Section 0b frames a line as "in the user's words," but it is unquoted, unblockquoted prose — a paraphrase, not a captured quote — so it cannot be certified as the requester's literal wording. What follows is reconstructed from that paraphrase and later recorded decisions, not a quote.
+
+Reconstructed direction (source: section 0b, "PRIORITY PIVOT (user decision 2026-07-23)"): run only one seed for now; defer the paper's ablation experiments; find the optimal setting first. Two later decisions extend it, also reconstructed rather than verbatim: teacher-first sequencing — finalize the teacher, then optimize the student against that baseline (section 12, "Sequencing (REVISED 2026-07-27, user: teacher-first)"); and gates D-a (sourced max_thrust ±15% DR band) and D-b (fault-DR Arm A config family) both decided ADOPT on 2026-07-27 (section 12.1).
+
+This section deliberately leaves `objective-not-verbatim` unresolved — supplying an actual quote requires the requester, not a reconstruction from this document.
+
+## Decisions for the user
+
+No `[DECISION-REQUIRED: ...]` markers exist elsewhere in this file, so there is nothing to cross-check against this list mechanically — the items below are hoisted by hand from section 9's cannot-close list and section 12's open human gates.
+
+**Still open:**
+
+- **D-c** (section 12.1): cuDNN cu12 image fix vs. continuing DGX-hosted distillation on the cuDNN-disabled workaround (~70x slower). Throughput-only; blocks nothing else.
+- **HydroRC recenter-v2 arm choice** (section 12.2): after P1-isaac's Isaac-side replay lands (queued, sections 12.2/12.4), pick between (a) translational+heave-only recenter, (b) rotational recenter plus a raised DR lower-corner floor, (c) log-mean rotational recenter.
+- Hardware/human-external blockers, unchanged from section 9: TAM vertical rewrite (m4 fault), IMU 45 deg offset (robot bring-up), TAM moment-arm DR band (no geometric-tolerance source), thruster T200 curve (bench measurement), Stonefish P1/P2 Isaac-side half (P1-isaac queued, sections 12.2/12.4), DGX plant-fix hand-replication, joint1 Stage-2 / B3 (needs a new checkpoint), `control_decimation` ambiguity (robot bring-up), B0b + B2 (8k+ regime reactivation edge), and the deferred-with-edge set (carry-over reset, actuation-noise experiment, P-B7 candidates 1-3, latency/B1d+Z4, A6/R1+R6).
+
+**Already decided, not open:** D-a (max_thrust ±15% DR band, ADOPT, 2026-07-27) and D-b (fault-DR Arm A family, ADOPT, 2026-07-27) — both closed in section 12.1; E-int (the integration retrain combining them) is the final teacher per its 2026-07-28 verdict.
+
+## Predicted outcome
+
+**Written retroactively (2026-08-22) — NOT a prediction.** This is a closeout plan; sections 9 and 12 record what already happened, not a forecast made in advance of the work. The one thing this document did pre-register is the DONE criterion (section 9): C3 built paired-seed on the final config on one machine, C4 shipping a golden pack for the final teacher with a C4a run, and every remaining open lead either carried with a canonical id, hardware/deployment-blocked, or explicitly user-deprioritized with a recorded reactivation edge — nothing left open silently.
+
+Measured against section 4 (disk-derived status) and section 12: E-int is DONE and stands as the final teacher (2026-07-28 verdict, H1 sub-additive, m4-dead attitude advantage clears the floor at every DR level). C3 is explicitly DEFERRED to a later paper phase (sections 0b and 7), so the DONE criterion's first clause is not met and this closeout is not complete by its own bar. C4 is PARTIAL (section 4: only an s30 buoyfix student exists, under the slow cuDNN-disabled path; the final-teacher golden pack and the C4a rerun against E-int have not happened). The section-9 cannot-close list still stands largely as recorded, with D-a and D-b now resolved ADOPT (section 12.1) and the Stonefish half of P1 done (section 12.4) while its Isaac half (P1-isaac) remains queued.
+
 ## 0. One-minute status (2026-07-23)
 
 - **Done**: Stage 0 decision sprint (7 of 10 items), Stage A mechanism probes A1-A5

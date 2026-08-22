@@ -9,6 +9,48 @@ except the files it points at. Read §0 first.
 
 ---
 
+## Objective (user, verbatim — 2026-08-05)
+
+The program's directive in the user's own words, quoted from the opening banner and §0/§1 below:
+
+> "니가 알아서 내일까지 전부 다 실험 하고 해소해. 나한테 일일이 승인받을 필요없이 니가 알아서 해. …
+> 내일 최종 결과가 나오고 나면 다시는 뭐가 남았습니다 하지 말라."
+
+> "내가 내일이라고 한건 오늘 자정까지 말한거다. 8월 5일 24시까지"
+
+Together: close every open omx lead to a recorded verdict, without per-run approval, by 2026-08-05
+24:00 KST — and never again report leftover items ("남았습니다") once that report ships.
+
+## Decisions for the user
+
+This program is **COMPLETE** (§8, §9) — there is nothing open to escalate. Every decision point
+that arose during execution was already resolved: either by the user's own standing decisions
+(§1 — Stonefish dropped entirely, hardware-measurement items skipped, screening stays single-seed,
+DGX `max_iterations` deferred to Run A), or under the authority grant recorded append-only in §7
+(the buoy added-mass split, the HydroRC bracket-not-re-derive call, the Run B/C composition and
+gate values, and so on). No `[DECISION-REQUIRED: ...]` marker appears anywhere in this document,
+and none is needed — nothing here is waiting on the user.
+
+## Predicted outcome
+
+**This is a retrospective, not a prediction — the program finished 2026-08-05 16:45 KST (§8), so
+this section states as of 2026-08-22 what was pre-registered against what §8/§9 record as
+delivered.**
+
+Pre-registered before execution: §2 fixed the Koopman arm B verdict as ADOPT iff `ss_error`
+improves >0.10 deg on ≥ 2 of 4 DR levels AND `os_env_mean` within 10.0 pp AND `n_gt20` within 15,
+"Otherwise NULL → close the Koopman line"; expectation was stated explicitly as NULL. §0 predicted
+the definition of done as both `omx wiki list --status needs-experiment` and
+`--status needs-apply-before-retrain` returning zero rows by 2026-08-05 24:00 KST, on a schedule of
+three GPU0 runs plus a seven-hour finishing window.
+
+Delivered (§7, §8, §9): Koopman arm B closed NULL exactly as pre-registered (2026-08-05 02:21).
+Both wiki queries reached `{"pages": [], "corrupt_pages": []}` at 16:45 — ahead of the 24:00
+deadline, on three GPU0 runs (A/B/C) rather than a fourth. All 17 leads closed; `REPORT.md` was
+delivered marked FINAL, with the closing queries' zero-row output pasted into its section 6.
+
+---
+
 ## 0. Standing authority and the definition of done (read before acting)
 
 **Authority granted 2026-08-05 by the user, superseding the prior gate.** Training launches no longer

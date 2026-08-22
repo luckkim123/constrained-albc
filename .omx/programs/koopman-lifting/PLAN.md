@@ -45,6 +45,70 @@ the exact point at which the whole line gets closed. It does not attempt the res
 
 ---
 
+## Objective (hoisted from this document's own opening and STATUS banner)
+
+The plan's own launch line states the requester's directive in their own words, and nothing later
+in this file redefines it in quotation marks:
+
+> **Owner directive**: "되면 좋고 안되면 말고", fast, not launching now.
+
+The STATUS banner above records a later shift in weighting, but the banner itself does not put
+that shift in the owner's own words — it is this document's paraphrase, not a quote: "The
+objective changed on 2026-08-05: paper contribution is now primary, control performance secondary
+(owner, deep-interview Round 0/3)." Treat that sentence as this plan's summary of a decision made
+elsewhere, not as verbatim owner speech. The one later owner utterance this document DOES carry
+verbatim is the approval that launched arms 3-5 (§12.9):
+
+> "일단 이 머신에서 koopman 말고 더 할거 없잖아... 한번 실험 돌려보자"
+
+## Decisions for the user
+
+This program's own decisions are already made and executed, not open: step 3 (arms 3-5) was
+approved and run (§12.9 — the verbatim approval quoted above), §12.7's design decision (where the
+linearity is consumed) is SETTLED against its own default (§12.9), and the 5-arm roster of §12.2 is
+COMPLETE with a recorded verdict (§12.10). The earlier exit clause (§8) and sequencing table (§2)
+are both superseded by the 2026-08-05 reopen and the now-completed roster — neither is a live
+decision.
+
+One item this document itself names as unanswered (§0, fact 7) is still unanswered anywhere in
+this file:
+
+- `[DECISION-REQUIRED: target-journal-and-deadline]` **Target journal and deadline for the
+  write-up** — not answered anywhere in this document. It no longer blocks any GPU spend in this
+  line (the arms already ran), but it sets the timeline for drafting the §12.5 methods-subsection
+  write-up the verdict calls for. Nothing else in this file reads as a genuinely open decision.
+
+## Predicted outcome
+
+Two separate pre-registered prediction sets exist in this document, written before their runs;
+this section hoists both and states what the runs actually produced against them. Full records:
+§11 and §12.4 (predictions), §2/STATUS banner and §12.10 (results).
+
+**Phase 0 / Phase 1 — §11, pre-registered before any run:**
+
+| # | Prediction (written before) | Result (written after) |
+|:--|:---|:---|
+| 1 | K0: teacher `z` clears the shuffle floor on mass/damping labels (moderate confidence) | **CONFIRMED** — clears on every GIVEN parameter (body mass R²=0.46, CoG/CoB/payload 0.10-0.49); parameters at the floor are absent from the 28D `p_t`, not an encoder failure (§2 outcome) |
+| 2 | K2: `\|\|K-I\|\|_F` stays inside split-half spread on every replication (high confidence) | **CONFIRMED** — below split-half noise in 4 of 5 run-level pairs (§2 outcome) |
+| 3 | Arm B: NULL on the adoption bar (moderate-to-high confidence) | **CONFIRMED** — failed both pre-registered ADOPT conditions; transient regression, worst at the easiest DR level (STATUS banner 2026-08-04 closure record) |
+| 4 | If arm B is positive, suspect a per-axis trade-off before "Koopman works" | not exercised — arm B was NULL, so the conditional did not trigger |
+
+**Phase 2 (arms 3-5) — §12.4, pre-registered before the 2026-08-06 runs:**
+
+| # | Prediction (written before) | Result (written after) |
+|:--|:---|:---|
+| 1 | Arm C does not clear the control adoption bar (moderate-to-high confidence) | **CONFIRMED** — worse than baseline in 58/72 cells (§12.10) |
+| 2 | Arm C and the nonlinear twin do NOT separate past a decision floor (moderate confidence — "the one worth being wrong about") | **REFUTED** — they separate decisively: arm C worse than the twin in 51/72 cells, 15 floor crossings (§12.10) |
+| 3 | `phi_x` does not encode plant parameters better than `z` | not directly re-addressed in §12.10's verdict text — no result recorded here |
+
+**Bottom line (§12.10, written after all five arms completed):** no arm beats baseline, but arm C
+and the twin separate decisively and the LINEAR arm is the worse one — on this plant the
+linear-evolution constraint reaches control and it costs. §12.5's pre-registered rule assigns this
+outcome (outcome 3) a methods subsection as a controlled negative, not a primary contribution; the
+main paper does not wait on it.
+
+---
+
 ## 0. Resume here after compaction (read first)
 
 **This document exists to survive context compaction.** A session resuming from it needs nothing

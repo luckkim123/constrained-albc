@@ -23,6 +23,29 @@ trace to those sources; nothing is a round-number guess.
 
 ---
 
+## Objective
+
+**No verbatim record of the requester's wording exists in this repository for
+this program** (checked 2026-08-22: this file contains zero `>` blockquote
+lines and zero quoted Korean strings; the sole `>` character present, in §1,
+is a "greater than" comparison inside a numeric range, not a quotation). The
+goal below is **reconstructed from the plan body, not the requester's
+words** — assembled from `## 1. Final-model declaration` and `## 0. REVISION
+2026-08-05`, the two sections that state what this run is FOR, rather than
+quoted from anything the requester said directly.
+
+Reconstructed goal: decide whether training at DGX scale (originally proposed
+at `num_envs` 32768, now decided at 16384 x 10000 reserved per §0d, ~2.0 days
+interpolated) is worth the exclusive DGX occupancy it costs, given that (a) a
+DGX-trained teacher is not currently adoptable as the shipped final model
+under the standing cross-machine rule (§1 condition 3), and (b) Run A
+reframed the run's purpose from "does more envs improve the teacher" to
+"does training on the fully-opened DORAEMON box improve it" (§0b). §8 lists
+the decisions this program cannot make on the requester's behalf before that
+run launches.
+
+---
+
 ## 0. REVISION 2026-08-05 — Run A changes what this run is for (supersedes the `max_iterations` and `num_envs` rows of §3)
 
 Written 2026-08-05 18:00 KST after `teacher_iter_budget` produced the first current-plant
@@ -167,7 +190,7 @@ derivation rather than a row of "unchanged". Three tiers.
 
 | quantity | formula | 4096 envs | 32768 envs |
 |:--|:--|--:|--:|
-| batch per update | `num_envs` x `num_steps_per_env` | 262,144 | 2,097,152 |
+| batch per update `[DECISION-REQUIRED: critic-minibatch-regime]` | `num_envs` x `num_steps_per_env` | 262,144 | 2,097,152 |
 | critic minibatch | batch / `num_mini_batches` | 65,536 | 524,288 |
 | critic Adam steps / iteration | `num_learning_epochs` x `num_mini_batches` | 20 | 20 |
 | episodes finished / iteration | `num_envs` / 23.4 | ~175 | ~1,400 |
@@ -179,7 +202,7 @@ Minibatch construction is `constraint_trpo.py:604-607` — `randperm` over the f
 
 ### Tier 2 — real coupling; a decision is required
 
-**(a) The critic optimizer — "unchanged" is not well defined.** Scaling envs 8x scales the batch 8x,
+**(a) The critic optimizer — "unchanged" is not well defined.** `[DECISION-REQUIRED: critic-minibatch-regime]` Scaling envs 8x scales the batch 8x,
 so you must choose which invariant to preserve: the knob value (`num_mini_batches` = 4, minibatch
 grows to 524,288) or the optimization regime (minibatch stays 65,536, so `num_mini_batches` becomes
 32 and the critic takes 160 steps instead of 20). Total work is the same either way — both process
@@ -198,7 +221,7 @@ unpredictable.
 critic is under-optimized at the 8x minibatch, and `num_mini_batches` -> 32 (regime-preserving, no
 lr change) is the first correction to make. This converts an untestable worry into a checked one.
 
-**(b) `step_interval` <-> `max_iterations`.** This is the one place `max_iterations` genuinely
+**(b) `step_interval` <-> `max_iterations`.** `[DECISION-REQUIRED: step-interval-hold]` This is the one place `max_iterations` genuinely
 couples to another knob: boundaries = `max_iterations` / `step_interval`, and saturation needs ~30
 of them. At si = 250 saturation lands at ~7750 regardless of budget; to make saturation land at the
 *end* of a 20000 run you would need si ~= 645. **Keep 250** — and Run A now gives the positive
@@ -206,7 +229,7 @@ reason, not just the old negative one: the gain comes from training *on* the ful
 you want to reach it early and dwell there, not arrive at the finish line. The one measured test of
 raising si (`stepint400`) was also the worst of three arms at the fair `none` level.
 
-**(c) `buffer_size` / `min_episodes` (2000 / 200) <-> `num_envs`.** The buffer window narrows from
+**(c) `buffer_size` / `min_episodes` (2000 / 200) <-> `num_envs`.** `[DECISION-REQUIRED: buffer-window-hold]` The buffer window narrows from
 ~11.4 to ~1.43 iterations. **Keep 2000, and for a stated mechanism rather than absence of evidence**:
 the estimator's n is capacity-bound at 2000 either way, so 8x envs buys zero variance reduction —
 what changes is *staleness*. DORAEMON estimates the current policy's success rate by importance
@@ -428,6 +451,58 @@ catches a broken launch. Two more are needed because 66% of this run happens aft
   report before continuing. (Keeping lb = 250 is the user's call for comparability; this is the
   watch that makes that choice safe.)
 
+## 6b. Predicted outcome
+
+**CORRECTED 2026-08-22 — the premise of the paragraph this replaces was false.**
+It said the flagship "has not run", reading the Status line at the top of this
+document. The Status line is stale. `.omx/campaigns/teacher_envscale_dgx/ledger.jsonl`
+records `trpo_dgx16k_s30_260805_185713` as `analyzed` on 2026-08-09, and its report
+(`analysis/diagnose-20260809-142000`, 22 findings) evaluates checkpoints out to
+iteration **13400** — past the 10000 this plan reserved — with the run "stopped
+mid-recovery". Two wiki pages already describe that teacher as an existing artifact
+(C3 recipe non-transfer; latent target SNR about half of E-int's).
+
+So what follows is a **pre-registration, read after the fact** — the expectation this
+plan carried before the run, preserved as written. It is not a forecast, and it is not
+a verdict.
+
+**This correction does NOT read the verdict.** Whether the predicted env-axis NULL
+held is not established here: the findings checked were about the shape of the
+evaluation curve (a 9000 regression followed by monotone recovery at the sampled
+points, and the sampling being too sparse to rule out wobble), not about the env axis
+itself. Read the report and the campaign ledger for the outcome, not this section.
+
+Run A (§0a) remains a separate, already-completed workstation run that supplied the
+reference numbers below.
+
+**Primary prediction — this run prices the env axis; it is not expected to
+produce a better teacher.** §0b already reframes what the run is for: the cheap
+iteration lever measured a 73% hard-dispersion cut (Run A, §0a) while envs
+4096→8192 measured NULL (Arm N). §0d states the same expectation once more —
+16384 sits a single doubling above that NULL point and half of the untested
+32768 — so **the predicted outcome is another NULL on the env axis**, with the
+run's value being that it prices the axis, not that it ships a better teacher.
+A real, floor-clearing improvement over Run A's reference would be a genuine
+surprise against the record, not the expected result.
+
+**What "as predicted" looks like at each pre-registered checkpoint (§6):**
+- iteration ~500 — no abort-gate trip (§6's five conditions all hold false).
+- iteration ~7748 (Run A's measured current-plant saturation, §0a-1) —
+  `DORAEMON/kl_step` -> 0 and all dims at Beta(1,1). Materially earlier, or
+  still unsaturated by iteration 10000, falsifies the 21-dim KL dilution
+  assumption and requires a report before continuing (§6), not a silent
+  extension.
+- iteration 10000 (§0c's decision gate, the reserved budget per §0d) — compare
+  against Run A's 4096 x 10000 reference on the same plant, the only variable
+  that differs being `num_envs`. If the env axis is inert as predicted, this
+  checkpoint should read close to Run A's numbers (hard `ss_error` ~0.66,
+  hard `ss_error_std` ~0.65), not a further improvement.
+
+**If the null prediction is wrong** — a real, floor-clearing gain over the Run A
+4096 x 10000 reference at iteration 10000 — that is the actionable surprise
+this run is designed to surface, and it upgrades the env axis from "priced at
+NULL near 8192-16384" to "still worth exploring toward 32768".
+
 ## 7. Backlog disposition (12 needs-experiment + 7 needs-apply-before-retrain, 2026-08-04)
 
 needs-experiment:
@@ -464,7 +539,7 @@ Elevated-stakes warning (Q5): a plant change obsoletes every student distilled f
 teacher. At screening scale that sunk cost was hours; at 48 h it is days. If the B1/TAM bench can
 be scheduled soon, consider sequencing it BEFORE committing the GPU time.
 
-## 8. Open questions for the user (decisions this program cannot make)
+## 8. Decisions for the user (formerly "Open questions for the user (decisions this program cannot make)")
 
 1. **Is a DGX-trained teacher adoptable as THE final model at all?** The +109% cross-machine term
    currently forbids it → the 32768 run is scale exploration. Overturning the rule requires the
@@ -519,6 +594,30 @@ be scheduled soon, consider sequencing it BEFORE committing the GPU time.
    gap yet; a capacity arm (GRU256) is the named runner-up family and must pre-register a CONTROL
    endpoint sized through the measured exchange rate — X1 showed a 6.7% latent-RMSE gain cannot
    clear the control floor, so an arm must project a latent move of roughly 12%+ to be worth running.
+9. `[DECISION-REQUIRED: critic-minibatch-regime]` **Hold `num_mini_batches` (4) and `value_lr`
+   (1e-3) as the batch grows with `num_envs`, or preserve the minibatch size instead
+   (`num_mini_batches` scaled up to match)?** (§3b Tier 2a; added 2026-08-22 during program-lint
+   escalation — this is the row the coupling section already argued but never listed here.)
+   Recommendation: hold both — the batch growth IS this run's experimental treatment (§0b), so
+   compensating it away would test a different question. Falsifiable at the iteration-500 gate
+   (§6): if `Loss/value_function` reads materially higher than the Run A 4096-env reference at the
+   same iteration, escalate to the regime-preserving `num_mini_batches` value as the correction,
+   with no `value_lr` change.
+10. `[DECISION-REQUIRED: step-interval-hold]` **Hold `step_interval` at 250, or raise it so
+   curriculum saturation lands nearer the end of the reserved budget?** (§3b Tier 2b; added
+   2026-08-22.) At si=250 saturation lands around iteration 7750 regardless of budget (Run A
+   measured 7748, §0a); the reserved budget is 10000 iterations (§0d), not the 20000 this row was
+   originally argued against. Recommendation: keep 250 — training ON the fully-opened box is this
+   run's purpose (§0b), so reaching it early and dwelling there is the goal, not a defect; the one
+   measured raised-si arm (stepint400) was the worst of three at the fair `none` level.
+11. `[DECISION-REQUIRED: buffer-window-hold]` **Hold `buffer_size` / `min_episodes` (2000 / 200)
+   as `num_envs` grows, narrowing DORAEMON's buffer time window from ~11.4 iterations (4096) to
+   ~2.9 iterations (16384, §0d)?** (§3b Tier 2c; added 2026-08-22.) Recommendation: keep 2000 —
+   the estimator's n is capacity-bound at 2000 regardless of env count, so more envs buys zero
+   variance reduction; what changes is staleness of the importance-sampling correction against the
+   previous Beta, and a narrower window is strictly better for the constraint's validity here.
+   `DORAEMON/ess_ratio` is expected to RISE, not signal a problem. `min_episodes` 200 is reached in
+   well under 1 iteration at 16384 either way — inert.
 
 ## 9. Cheap follow-ups (not blocking, recorded so they are not lost)
 
