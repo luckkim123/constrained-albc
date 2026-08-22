@@ -37,8 +37,24 @@
 | Reviews | every task reviewed; 1 task-level fix round (A4); whole-branch review + 1 fix wave; re-review APPROVE |
 | Ledger + reports | `constrained-albc/.superpowers/sdd/2026-08-03-obs4-student-then-teacher76-program/` |
 
-**Phases B-E have NOT started. Every one of them gates on a human.** `omx queue-launch` queues;
-it never fires. The tasks below are kept as the record of what was built and why — the sections
+**STALE AS WRITTEN (corrected 2026-08-22).** The line below said "Phases B-E have NOT
+started"; that was true on 2026-08-03 and is no longer. `omx program-status --id
+obs4-deployable-obs` reports both owned campaigns as having run, and the "Campaign membership"
+note at the top of this file already names the Phase B/C runs -- the two statements contradicted
+each other in the same document. Machine state at the 2026-08-22 check:
+
+| campaign | phase | runs | last event |
+|:--|:--|:--|:--|
+| (in `student_distill_eint`) | B, C | `trpo_sdeint_b2_extraobs_s30_260803_215117`, `trpo_sdeint_b2ctl_dim0_s30_260803_220234`, `trpo_sdeint_b2wide_gru256_s30_260803_231320` | -- |
+| `teacher_obs76` | D | `trpo_obs76_s30_260803_233239` (voided), `trpo_obs76fault_s30_260804_043926` | `kept` 2026-08-04 |
+| `student_distill_obs76` | E | `trpo_sdobs76_c3_gruselect_s30_260804_124951`, `trpo_sdobs76_x1_tailsplit_s30_260804_151400` | `analyzed` 2026-08-04 |
+
+NOT verified by this correction: whether the Phase C GO/NO-GO gate was formally recorded, and
+whether the program is finished or merely idle since 2026-08-04. `program.json` still says
+`status: active`. Read the campaign ledgers, not this block, for outcomes.
+
+The human gate itself still holds -- **`omx queue-launch` queues;
+it never fires.** The tasks below are kept as the record of what was built and why — the sections
 that still describe FUTURE work are Phase B onward, plus Task A9's recorded launch command,
 which Phase B copies.
 
