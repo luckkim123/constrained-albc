@@ -7,3 +7,4 @@ legacy full-DOF env (`envs.full_dof`) registers `Isaac-ConstrainedALBC-Full-*`.
 from .envs import full_dof  # noqa: F401  triggers gym.register() for Full-* tasks
 from .envs import main  # noqa: F401  triggers gym.register() for the default task
 from .envs import tdc  # noqa: F401
+from .envs import tdc_main  # noqa: F401  triggers gym.register() for the Main-TDC baseline
