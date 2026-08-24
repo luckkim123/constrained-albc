@@ -18,6 +18,7 @@ Registered tasks (these are the default ALBC tasks; the legacy full-DOF envs liv
     Isaac-ConstrainedALBC-PPO-v0:        Standard PPO + asymmetric critic (ablation baseline 2)
     Isaac-ConstrainedALBC-TRPO-NoIPO-v0: Encoder + TRPO without IPO (ablation 3)
     Isaac-ConstrainedALBC-PPO-Enc-v0:    Encoder + PPO, no IPO (ablation 4)
+    Isaac-ConstrainedALBC-TRPO-NoIPO-NoEncoder-v0: TRPO, no IPO, no encoder (ablation 5, "no-both")
 """
 
 import gymnasium as gym
@@ -83,5 +84,16 @@ gym.register(
     kwargs={
         "env_cfg_entry_point": f"{__name__}.config_noconstraint:ALBCNoConstraintEnvCfg",
         "rsl_rl_cfg_entry_point": f"{__name__}.agents.ablation_cfgs:ALBCPPOEncRunnerCfg",
+    },
+)
+
+# Variant #5: TRPO without IPO, without encoder ("no-both")
+gym.register(
+    id="Isaac-ConstrainedALBC-TRPO-NoIPO-NoEncoder-v0",
+    entry_point="constrained_albc.envs.main:ALBCEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.config_noconstraint:ALBCNoConstraintEnvCfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.agents.ablation_cfgs:ALBCTRPONoIPONoEncoderRunnerCfg",
     },
 )

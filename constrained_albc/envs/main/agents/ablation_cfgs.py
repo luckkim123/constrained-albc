@@ -14,6 +14,7 @@ from isaaclab.utils import configclass
 
 from .rsl_rl_ppo_cfg import (
     ALBCTRPORunnerCfg,
+    _ALBCNoEncoderPolicyCfg,
     _ALBCPolicyCfg,
     _ALBCPPOAlgorithmCfg,
     _BaseALBCRunnerCfg,
@@ -83,3 +84,23 @@ class ALBCPPOEncRunnerCfg(_BaseALBCRunnerCfg):
 
     algorithm = _ALBCPPOAlgorithmCfg()
     policy = _ALBCPPOEncPolicyCfg()
+
+
+# =============================================================================
+# Variant #5: TRPO-NoIPO-NoEncoder ("no-both": encoder AND IPO both removed)
+# =============================================================================
+#
+# Combines Baseline 1's no-encoder policy with Variant #3's no-IPO env
+# (ALBCNoConstraintEnvCfg). ConstraintEncoderRunner auto-sync propagates
+# num_constraints=0 from the env to both cfgs (same mechanism as Variant #3),
+# so RslRlConstraintTRPOAlgorithmCfg no-ops the IPO barrier and cost critic
+# without any algorithm override. Only the policy differs from
+# ALBCTRPONoIPORunnerCfg.
+
+
+@configclass
+class ALBCTRPONoIPONoEncoderRunnerCfg(ALBCTRPORunnerCfg):
+    """Encoder-free TRPO without IPO ("no-both"). Uses ALBCNoConstraintEnvCfg."""
+
+    experiment_name: str = "albc_ablation"
+    policy = _ALBCNoEncoderPolicyCfg()
