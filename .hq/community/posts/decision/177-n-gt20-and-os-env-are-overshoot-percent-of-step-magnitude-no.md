@@ -1,7 +1,7 @@
 # n_gt20 and os_env_* are OVERSHOOT PERCENT of step magnitude, NOT degrees -- several posttam reports mislabel it as 'peak>20deg'
 
 - id: decision/177 · date: 2026-07-20 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: n-gt20-and-os-env-are-overshoot-percent-of-step-magnitude-no · supersedes: none
 - topic: convention
 - confidence: high · status: none

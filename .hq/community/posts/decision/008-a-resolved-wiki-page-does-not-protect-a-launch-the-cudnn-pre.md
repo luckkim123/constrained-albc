@@ -1,7 +1,7 @@
 # A resolved wiki page does not protect a launch: the cuDNN preamble was missing from the TCN launch script and cost 37 min at 18.9 s/iter
 
 - id: decision/008 · date: 2026-08-10 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: a-resolved-wiki-page-does-not-protect-a-launch-the-cudnn-pre · supersedes: none
 - topic: convention
 - confidence: high · status: resolved

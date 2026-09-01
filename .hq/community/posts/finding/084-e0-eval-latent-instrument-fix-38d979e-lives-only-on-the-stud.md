@@ -1,7 +1,7 @@
 # E0 eval latent instrument fix 38d979e lives only on the student branch, not main
 
 - id: finding/084 · date: 2026-07-29 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: e0-eval-latent-instrument-fix-38d979e-lives-only-on-the-stud · supersedes: none
 - topic: reference
 - confidence: high · status: resolved

@@ -1,7 +1,7 @@
 # OOD does not invert the in-distribution ranking, it dissolves it. `model_7500` b
 
 - id: finding/196 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: ood-does-not-invert-the-in-distribution-ranking-it-dissolves · supersedes: none
 - topic: session-log
 - confidence: low · status: none

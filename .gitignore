@@ -22,12 +22,6 @@ tests/fixtures/*
 # (the script itself IS tracked; only its .npz product is not)
 tools/obs_oracle/*.npz
 
-# omx wiki runtime lock
-.omx/registry/.wiki-lock
-
-# omx scratch — intermediate analysis scaffolding, not tracked
-.omx/scratch/
-
 # deploy artifacts tree (weights/golden/runtime packs; on disk for docker cp / Mac pull, out of git)
 # layout: deploy/<group>/<label>_<YYMMDD_HHMMSS>/ (mirrors logs tree, label-before-date)
 # root-anchored: must NOT catch constrained_albc/deploy/ (code) or tests/deploy/
@@ -39,7 +33,6 @@ scratch/
 .claude/
 .ruff_cache/
 .superpowers/
-.omx/state/
 
 # --- Code-graph indexes (regenerated from source; .graphifyignore stays tracked) ---
 .graphify/

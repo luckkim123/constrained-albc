@@ -1,7 +1,7 @@
 # HMM regime count separates dr-harder runs (overfit vs healthy)
 
 - id: finding/148 · date: 2026-06-06 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: hmm-regime-count-separates-dr-harder-runs-overfit-vs-healthy · supersedes: none
 - topic: debugging
 - confidence: high · status: none

@@ -1,7 +1,7 @@
 # bias_ema observability (69->72D) improves absolute attitude tracking + CV but does NOT shrink the hard-DR heavy-tail ratio -- the DC-bias tail is authority-limited (p7_tail e2)
 
 - id: decision/039 · date: 2026-07-13 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: bias-ema-observability-69-72d-improves-absolute-attitude-tra · supersedes: none
 - topic: decision
 - confidence: high · status: none

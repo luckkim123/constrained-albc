@@ -1,7 +1,7 @@
 # eval.py static --ood appends a fifth DR level and unpairs every cross-run comparison at soft/medium/hard
 
 - id: finding/121 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: eval-py-static-ood-appends-a-fifth-dr-level-and-unpairs-ever · supersedes: none
 - topic: debugging
 - confidence: high · status: none

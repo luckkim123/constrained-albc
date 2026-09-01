@@ -1,7 +1,7 @@
 # K0 theta-probe 2026-08-04: the teacher latent z recovers every plant parameter it was GIVEN (mass/geometry, R2 up to 0.49) and none that was withheld -- damping and 5 of 6 added-mass DOF are at the shuffle floor because they are absent from p_t, not because the encoder failed
 
 - id: finding/164 · date: 2026-08-04 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: k0-theta-probe-2026-08-04-the-teacher-latent-z-recovers-ever · supersedes: none
 - topic: reference
 - confidence: high · status: resolved

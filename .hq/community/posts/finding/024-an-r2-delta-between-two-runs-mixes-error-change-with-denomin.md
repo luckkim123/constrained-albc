@@ -1,7 +1,7 @@
 # An R2 DELTA between two runs mixes error change with denominator change whenever their eval env draws differ -- decompose it before reporting the headline
 
 - id: finding/024 · date: 2026-08-03 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: an-r2-delta-between-two-runs-mixes-error-change-with-denomin · supersedes: none
 - topic: pattern
 - confidence: high · status: resolved

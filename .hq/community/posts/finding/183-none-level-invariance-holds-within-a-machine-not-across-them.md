@@ -1,7 +1,7 @@
 # none-level invariance holds within a machine, not across them: the same checkpoint moved 4 percent when re-scored on a different GPU, while a same-machine control reproduced exactly
 
 - id: finding/183 · date: 2026-08-09 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: none-level-invariance-holds-within-a-machine-not-across-them · supersedes: none
 - topic: reference
 - confidence: high · status: none

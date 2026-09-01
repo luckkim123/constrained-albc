@@ -1,7 +1,7 @@
 # performance_lb recon needs ZERO new rollouts: doraemon_state.pt already carries buffer_returns (the 260608 p25 method)
 
 - id: finding/207 · date: 2026-07-16 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: performance-lb-recon-needs-zero-new-rollouts-doraemon-state- · supersedes: none
 - topic: debugging
 - confidence: high · status: resolved

@@ -1,7 +1,7 @@
 # INCIDENT post-mortem: teacher_baseline_opt + e1-e4 trained on a TAM the wiki knew was wrong; measured TAM/IMU/TAM-DR dropped at P4 batch, other batch items applied
 
 - id: decision/155 · date: 2026-07-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: incident-post-mortem-teacher-baseline-opt-e1-e4-trained-on-a · supersedes: none
 - topic: decision
 - confidence: high · status: none

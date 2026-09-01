@@ -1,7 +1,7 @@
 # Stonefish base-hull effective hydro MEASURED (2026-07-27): damping is the gap axis (yaw ~45-100x, pitch-linear ~10x, translational 3-8x under nominal); effective added inertia already matches; nominals recentered on marinelab exp/hydro-recenter
 
 - id: finding/245 · date: 2026-07-27 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: stonefish-base-hull-effective-hydro-measured-2026-07-27-damp · supersedes: none
 - topic: reference
 - confidence: high · status: resolved

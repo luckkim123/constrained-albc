@@ -1,7 +1,7 @@
 # Buoy added mass is wrong in BOTH sims and in opposite directions: Isaac 3.8-8.2x below the geometric value, Stonefish 3.5-5.7x above it via an isotropic average of a dimensionally broken axial term; recentering Isaac onto Stonefish moves it further from reality
 
 - id: finding/042 · date: 2026-07-29 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: buoy-added-mass-is-wrong-in-both-sims-and-in-opposite-direct · supersedes: none
 - topic: reference
 - confidence: high · status: resolved

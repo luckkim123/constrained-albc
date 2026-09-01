@@ -1,7 +1,7 @@
 # Proving a run on a divergent branch is still on the reference plant
 
 - id: decision/216 · date: 2026-08-09 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: proving-a-run-on-a-divergent-branch-is-still-on-the-referenc · supersedes: none
 - topic: convention
 - confidence: high · status: none

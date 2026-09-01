@@ -1,7 +1,7 @@
 # train.py --max_iterations under --resume is iters-FROM-resume, not an absolute target (e3 got +10000 not +5000)
 
 - id: finding/287 · date: 2026-07-13 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: train-py-max-iterations-under-resume-is-iters-from-resume-no · supersedes: none
 - topic: debugging
 - confidence: high · status: none

@@ -1,7 +1,7 @@
 # extend8k (8000-iter) confirms e3: extending past 5000 iters is net-negative on the FIXED-DR exam, an axis trade, and confounded by DR-width expansion
 
 - id: decision/132 · date: 2026-07-20 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: extend8k-8000-iter-confirms-e3-extending-past-5000-iters-is- · supersedes: none
 - topic: decision
 - confidence: high · status: none

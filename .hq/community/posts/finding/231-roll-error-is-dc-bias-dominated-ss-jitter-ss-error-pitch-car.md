@@ -1,7 +1,7 @@
 # Roll error is DC-bias dominated (ss_jitter << ss_error); pitch carries a larger
 
 - id: finding/231 · date: 2026-07-20 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: roll-error-is-dc-bias-dominated-ss-jitter-ss-error-pitch-car · supersedes: none
 - topic: pattern
 - confidence: high · status: none

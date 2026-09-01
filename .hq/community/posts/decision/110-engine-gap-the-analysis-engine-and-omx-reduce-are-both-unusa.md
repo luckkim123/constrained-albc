@@ -1,7 +1,7 @@
 # engine-gap: the analysis engine and omx reduce are both unusable on student distillation runs
 
 - id: decision/110 · date: 2026-07-29 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: engine-gap-the-analysis-engine-and-omx-reduce-are-both-unusa · supersedes: none
 - topic: decision
 - confidence: high · status: none

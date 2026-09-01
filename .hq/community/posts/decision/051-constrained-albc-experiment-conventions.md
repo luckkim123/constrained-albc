@@ -1,7 +1,7 @@
 # constrained-albc experiment conventions
 
 - id: decision/051 · date: 2026-06-02 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: constrained-albc-experiment-conventions · supersedes: none
 - topic: convention
 - confidence: high · status: none

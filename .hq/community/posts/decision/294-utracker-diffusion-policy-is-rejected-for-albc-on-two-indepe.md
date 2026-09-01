@@ -1,7 +1,7 @@
 # UTracker diffusion policy is rejected for ALBC on two independent grounds, and its repo disagrees with its own paper on all six axes (do not use it as a comparison axis)
 
 - id: decision/294 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: utracker-diffusion-policy-is-rejected-for-albc-on-two-indepe · supersedes: none
 - topic: decision
 - confidence: high · status: none

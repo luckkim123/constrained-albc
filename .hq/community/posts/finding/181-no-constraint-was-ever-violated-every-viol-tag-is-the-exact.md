@@ -1,7 +1,7 @@
 # No constraint was ever violated. Every `viol` tag is the exact negation of its m
 
 - id: finding/181 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: no-constraint-was-ever-violated-every-viol-tag-is-the-exact- · supersedes: none
 - topic: session-log
 - confidence: low · status: none

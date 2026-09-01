@@ -1,7 +1,7 @@
 # The DORAEMON success_rate PEAK is set by performance_lb, not policy quality: lb=250 peaks 0.63-0.67 and ends CONTRACTED; lb=200 peaks 0.97 and reaches the config ceiling
 
 - id: decision/267 · date: 2026-07-16 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: the-doraemon-success-rate-peak-is-set-by-performance-lb-not- · supersedes: none
 - topic: decision
 - confidence: high · status: resolved

@@ -1,7 +1,7 @@
 # constraint health index
 
 - id: finding/053 · date: 2026-07-12 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: constraint-health-index · supersedes: none
 - topic: reference
 - confidence: high · status: none

@@ -1,7 +1,7 @@
 # DIAGNOSIS.md 2026-05-25 retirement: open-item ledger
 
 - id: finding/067 · date: 2026-07-12 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: diagnosis-md-2026-05-25-retirement-open-item-ledger · supersedes: none
 - topic: reference
 - confidence: high · status: none

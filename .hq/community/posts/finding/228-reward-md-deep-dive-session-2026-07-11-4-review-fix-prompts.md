@@ -1,7 +1,7 @@
 # reward.md deep-dive session 2026-07-11: 4 review/fix prompts queued in .sp/plans/ (§6 dt-scaling, §7 sigma-gate, §9 gotchas-triage pending; bias-reward DONE)
 
 - id: finding/228 · date: 2026-07-11 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: reward-md-deep-dive-session-2026-07-11-4-review-fix-prompts- · supersedes: none
 - topic: reference
 - confidence: high · status: none

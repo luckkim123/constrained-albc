@@ -1,7 +1,7 @@
 # step_interval 250->400 probe: separate DR-WIDTH from OPTIMISATION-STEPS as the cause of extend8k's nominal roll transient regression (pending approval, not launched)
 
 - id: decision/243 · date: 2026-07-20 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: step-interval-250-400-probe-separate-dr-width-from-optimisat · supersedes: none
 - topic: decision
 - confidence: high · status: resolved

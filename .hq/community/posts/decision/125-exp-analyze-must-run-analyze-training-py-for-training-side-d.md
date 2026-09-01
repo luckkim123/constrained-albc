@@ -1,7 +1,7 @@
 # exp-analyze MUST run analyze_training.py for training-side diagnosis
 
 - id: decision/125 · date: 2026-06-06 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: exp-analyze-must-run-analyze-training-py-for-training-side-d · supersedes: none
 - topic: decision
 - confidence: high · status: none

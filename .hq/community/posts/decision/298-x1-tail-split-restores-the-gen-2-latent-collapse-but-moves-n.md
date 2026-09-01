@@ -1,7 +1,7 @@
 # X1 tail-split restores the gen-2 latent collapse but moves NO control metric: latent reconstruction and closed-loop dispersion are decoupled
 
 - id: decision/298 · date: 2026-08-04 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: x1-tail-split-restores-the-gen-2-latent-collapse-but-moves-n · supersedes: none
 - topic: decision
 - confidence: high · status: resolved

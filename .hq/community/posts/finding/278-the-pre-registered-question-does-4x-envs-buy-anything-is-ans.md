@@ -1,7 +1,7 @@
 # The pre-registered question — does 4x envs buy anything — is answered negatively
 
 - id: finding/278 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: the-pre-registered-question-does-4x-envs-buy-anything-is-ans · supersedes: none
 - topic: session-log
 - confidence: low · status: none

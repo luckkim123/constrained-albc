@@ -1,7 +1,7 @@
 # engine-gap: omx CLI gaps found re-analyzing teacher (2026-06-06 round 2)
 
 - id: decision/105 · date: 2026-06-06 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: engine-gap-omx-cli-gaps-found-re-analyzing-teacher-2026-06-0 · supersedes: none
 - topic: decision
 - confidence: high · status: none

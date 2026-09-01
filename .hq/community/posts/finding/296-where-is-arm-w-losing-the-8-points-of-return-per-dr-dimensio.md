@@ -1,7 +1,7 @@
 # Where is Arm W losing the 8 points of return: per-DR-dimension quintile decomposition (M3)
 
 - id: finding/296 · date: 2026-08-10 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: where-is-arm-w-losing-the-8-points-of-return-per-dr-dimensio · supersedes: none
 - topic: debugging
 - confidence: high · status: needs-experiment

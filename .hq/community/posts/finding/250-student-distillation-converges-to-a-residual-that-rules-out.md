@@ -1,7 +1,7 @@
 # Student distillation converges to a residual that rules out latent multimodality (teacher-visited distribution only)
 
 - id: finding/250 · date: 2026-07-21 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: student-distillation-converges-to-a-residual-that-rules-out- · supersedes: none
 - topic: pattern
 - confidence: high · status: none

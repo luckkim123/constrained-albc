@@ -1,7 +1,7 @@
 # Stonefish role narrowed to integration smoke bench (ratified 2026-08-03): no more absolute-performance or coefficient verdicts; real-robot anchors take priority; retrain principle = widen DR by measured uncertainty, never move coefficients to a simulator's value
 
 - id: decision/246 · date: 2026-08-03 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: stonefish-role-narrowed-to-integration-smoke-bench-ratified- · supersedes: none
 - topic: decision
 - confidence: high · status: resolved

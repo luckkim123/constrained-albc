@@ -1,7 +1,7 @@
 # eval analysis: core does stats, adapter does heavy-tail
 
 - id: decision/114 · date: 2026-06-05 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: eval-analysis-core-does-stats-adapter-does-heavy-tail · supersedes: none
 - topic: decision
 - confidence: high · status: none

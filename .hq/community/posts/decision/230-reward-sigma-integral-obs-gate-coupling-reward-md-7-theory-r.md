@@ -1,7 +1,7 @@
 # reward-sigma / integral-obs-gate coupling (reward.md 7) theory review: conditionally sound; shared-sigma ALIASING is the defect (decouple gate threshold), gate is a settling-band accumulator not anti-windup, clamp is dead code in gated mode, Hwangbo-2017 citation is wrong (use Yu&Lee 2023)
 
 - id: decision/230 · date: 2026-07-11 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: reward-sigma-integral-obs-gate-coupling-reward-md-7-theory-r · supersedes: none
 - topic: decision
 - confidence: high · status: resolved

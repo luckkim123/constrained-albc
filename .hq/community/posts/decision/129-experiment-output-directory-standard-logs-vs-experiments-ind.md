@@ -1,7 +1,7 @@
 # experiment output directory standard (logs vs experiments index tree)
 
 - id: decision/129 · date: 2026-06-07 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: experiment-output-directory-standard-logs-vs-experiments-ind · supersedes: none
 - topic: convention
 - confidence: high · status: none

@@ -1,7 +1,7 @@
 # engine-gap: analyze_training.py only runs under /isaac-sim/python.sh (system numpy 2.5.1 breaks scipy); --deep backends silently absent
 
 - id: decision/096 · date: 2026-07-27 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: engine-gap-analyze-training-py-only-runs-under-isaac-sim-pyt · supersedes: none
 - topic: decision
 - confidence: high · status: none

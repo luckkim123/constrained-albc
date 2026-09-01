@@ -1,7 +1,7 @@
 # perflb200 final DR anatomy: 17 bulk params at config ceiling (uniform), 3 deployment-relevant params (ocean_current/obs_noise/payload_cog) are TIME-limited not feasibility-limited
 
 - id: decision/205 · date: 2026-07-15 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: perflb200-final-dr-anatomy-17-bulk-params-at-config-ceiling- · supersedes: none
 - topic: decision
 - confidence: high · status: resolved

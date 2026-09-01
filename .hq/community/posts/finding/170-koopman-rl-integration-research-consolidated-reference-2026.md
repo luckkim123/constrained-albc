@@ -1,7 +1,7 @@
 # Koopman RL integration research consolidated reference 2026-08-03
 
 - id: finding/170 · date: 2026-08-03 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: koopman-rl-integration-research-consolidated-reference-2026- · supersedes: none
 - topic: reference
 - confidence: high · status: none

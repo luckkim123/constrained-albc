@@ -1,7 +1,7 @@
 # Safety-rail constraints fire hard at init, go quiet, and RE-FIRE as DORAEMON widens DR -- 0% at the final window is working insurance, not dead weight; thruster_util is the one trending into binding (93.2% at extend8k)
 
 - id: decision/234 · date: 2026-07-20 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: safety-rail-constraints-fire-hard-at-init-go-quiet-and-re-fi · supersedes: none
 - topic: decision
 - confidence: high · status: none

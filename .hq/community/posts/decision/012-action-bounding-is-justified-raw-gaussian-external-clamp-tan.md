@@ -1,7 +1,7 @@
 # Action bounding is justified (raw Gaussian + external clamp) -- tanh ruled out, 3 experiment leads remain
 
 - id: decision/012 · date: 2026-07-02 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: action-bounding-is-justified-raw-gaussian-external-clamp-tan · supersedes: none
 - topic: convention
 - confidence: high · status: resolved

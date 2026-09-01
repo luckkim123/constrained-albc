@@ -1,7 +1,7 @@
 # engine-gap: flat-target eval records joint1 trajectory but renders no drift plot
 
 - id: decision/102 · date: 2026-06-30 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: engine-gap-flat-target-eval-records-joint1-trajectory-but-re · supersedes: none
 - topic: decision
 - confidence: medium · status: none

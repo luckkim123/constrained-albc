@@ -1,7 +1,7 @@
 # The interim report's entropy section leaned on "5/8 dims pinned at their floor"
 
 - id: finding/271 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: the-interim-report-s-entropy-section-leaned-on-5-8-dims-pinn · supersedes: none
 - topic: session-log
 - confidence: low · status: none

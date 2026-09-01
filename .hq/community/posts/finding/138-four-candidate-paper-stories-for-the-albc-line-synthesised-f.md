@@ -1,7 +1,7 @@
 # Four candidate paper stories for the ALBC line, synthesised from 55 substantive wiki decisions 2026-08-05
 
 - id: finding/138 · date: 2026-08-05 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: four-candidate-paper-stories-for-the-albc-line-synthesised-f · supersedes: none
 - topic: reference
 - confidence: medium · status: none

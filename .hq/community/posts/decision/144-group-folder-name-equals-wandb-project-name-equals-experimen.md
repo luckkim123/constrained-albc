@@ -1,7 +1,7 @@
 # Group folder name equals wandb project name equals experiment purpose (unified naming, 2026-07-14 revision)
 
 - id: decision/144 · date: 2026-07-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: group-folder-name-equals-wandb-project-name-equals-experimen · supersedes: none
 - topic: convention
 - confidence: high · status: none

@@ -1,7 +1,7 @@
 # A distillation run is invisible to every teacher-run instrument: wrong tree, no Learning-iteration line, buffered stdout
 
 - id: finding/005 · date: 2026-08-09 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: a-distillation-run-is-invisible-to-every-teacher-run-instrum · supersedes: none
 - topic: debugging
 - confidence: high · status: none

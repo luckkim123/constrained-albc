@@ -1,7 +1,7 @@
 # bias_ema observability (P-B1) confirmed at the fair 'none' point (-68% roll, -29% pitch) AND unexpectedly cleared the DORAEMON feasibility stall on unchanged lb=250
 
 - id: decision/040 · date: 2026-07-15 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: bias-ema-observability-p-b1-confirmed-at-the-fair-none-point · supersedes: none
 - topic: decision
 - confidence: high · status: resolved

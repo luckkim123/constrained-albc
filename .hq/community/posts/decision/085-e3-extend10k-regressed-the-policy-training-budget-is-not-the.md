@@ -1,7 +1,7 @@
 # e3 extend10k REGRESSED the policy — training budget is NOT the p7_tail tail lever; keep 5000 iters
 
 - id: decision/085 · date: 2026-07-13 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: e3-extend10k-regressed-the-policy-training-budget-is-not-the · supersedes: none
 - topic: decision
 - confidence: high · status: none

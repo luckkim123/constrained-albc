@@ -1,7 +1,7 @@
 # Seed-noise floor on none-level attitude is HUGE (~75% peak-to-peak on roll ss_error): the +/-5% adoption band is undecidable at n=1
 
 - id: decision/236 · date: 2026-07-22 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: seed-noise-floor-on-none-level-attitude-is-huge-75-peak-to-p · supersedes: none
 - topic: convention
 - confidence: high · status: none

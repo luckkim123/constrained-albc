@@ -1,7 +1,7 @@
 # Arm B is a dictionary-only control, not a Koopman result: it fitted no operator, so citing its NULL as evidence against Koopman is an indefensible overclaim
 
 - id: decision/029 · date: 2026-08-05 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: arm-b-is-a-dictionary-only-control-not-a-koopman-result-it-f · supersedes: none
 - topic: decision
 - confidence: high · status: none

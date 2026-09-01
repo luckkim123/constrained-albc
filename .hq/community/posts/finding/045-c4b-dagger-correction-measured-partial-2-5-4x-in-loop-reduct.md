@@ -1,7 +1,7 @@
 # C4b DAgger correction measured: partial (2.5-4x in-loop reduction at low-mod DR, under-dispersion floor persists at hard)
 
 - id: finding/045 · date: 2026-07-30 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: c4b-dagger-correction-measured-partial-2-5-4x-in-loop-reduct · supersedes: none
 - topic: debugging
 - confidence: high · status: resolved

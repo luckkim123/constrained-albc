@@ -1,7 +1,7 @@
 # E5 alpha075 OOD per-axis generalization gap (universal failure = roll DC-bias doubles OOD)
 
 - id: finding/087 · date: 2026-07-06 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: e5-alpha075-ood-per-axis-generalization-gap-universal-failur · supersedes: none
 - topic: reference
 - confidence: high · status: none

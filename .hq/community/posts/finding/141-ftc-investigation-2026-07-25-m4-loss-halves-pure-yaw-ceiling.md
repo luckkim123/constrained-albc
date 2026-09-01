@@ -1,7 +1,7 @@
 # FTC investigation 2026-07-25: m4 loss halves pure-yaw ceiling (util x2) while roll/pitch stay buoyancy-dominated; literature + composition risks; verdict MEASURE-FIRST (deterministic m4-kill eval before any FTC training)
 
 - id: finding/141 · date: 2026-07-25 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: ftc-investigation-2026-07-25-m4-loss-halves-pure-yaw-ceiling · supersedes: none
 - topic: reference
 - confidence: high · status: resolved

@@ -1,7 +1,7 @@
 # Halving kl_ub cost 1.42x iterations to saturation, not the 2x the trust-region model predicts -- and trajectory retention blocks closing the confound
 
 - id: finding/146 · date: 2026-08-09 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: halving-kl-ub-cost-1-42x-iterations-to-saturation-not-the-2x · supersedes: none
 - topic: debugging
 - confidence: medium · status: resolved

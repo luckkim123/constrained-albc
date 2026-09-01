@@ -1,7 +1,7 @@
 # Plan consolidation 2026-07-23: canonical ids Z/A/B/C + one-campaign-per-group; master doc docs/reference/teacher-campaign-plan.md
 
 - id: decision/208 · date: 2026-07-23 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: plan-consolidation-2026-07-23-canonical-ids-z-a-b-c-one-camp · supersedes: none
 - topic: decision
 - confidence: high · status: none

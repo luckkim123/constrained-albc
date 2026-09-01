@@ -1,7 +1,7 @@
 # A5 budgetslack (rp_vel_settling + manipulability budgets x100): learner is anchor's twin, verdict CONTINGENT on seed floor
 
 - id: decision/002 · date: 2026-07-22 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: a5-budgetslack-rp-vel-settling-manipulability-budgets-x100-l · supersedes: none
 - topic: decision
 - confidence: high · status: none

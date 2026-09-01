@@ -1,7 +1,7 @@
 # DORAEMON/kl_step final value 0.0000 is a sparse-logging artifact, NOT a frozen curriculum
 
 - id: finding/075 · date: 2026-07-16 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: doraemon-kl-step-final-value-0-0000-is-a-sparse-logging-arti · supersedes: none
 - topic: debugging
 - confidence: high · status: none

@@ -1,7 +1,7 @@
 # Track/cmd_att/*_deg logs the env-mean of |command|, not the command range (13.5 deg = uniform +-30 x 0.9)
 
 - id: finding/285 · date: 2026-07-13 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: track-cmd-att-deg-logs-the-env-mean-of-command-not-the-comma · supersedes: none
 - topic: reference
 - confidence: high · status: none

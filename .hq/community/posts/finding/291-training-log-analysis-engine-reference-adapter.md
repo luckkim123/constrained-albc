@@ -1,7 +1,7 @@
 # training-log analysis engine (reference adapter)
 
 - id: finding/291 · date: 2026-06-02 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: training-log-analysis-engine-reference-adapter · supersedes: none
 - topic: reference
 - confidence: high · status: none

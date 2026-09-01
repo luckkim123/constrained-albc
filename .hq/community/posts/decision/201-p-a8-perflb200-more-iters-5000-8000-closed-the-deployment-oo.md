@@ -1,7 +1,7 @@
 # P-A8 (perflb200 more-iters 5000->8000) closed the deployment-OOD DR gap exactly as predicted, at a quantified nominal-tracking cost offset by heavy-tail reduction
 
 - id: decision/201 · date: 2026-07-15 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: p-a8-perflb200-more-iters-5000-8000-closed-the-deployment-oo · supersedes: none
 - topic: decision
 - confidence: high · status: resolved

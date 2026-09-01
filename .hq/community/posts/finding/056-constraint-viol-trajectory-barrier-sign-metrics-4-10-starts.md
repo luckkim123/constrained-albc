@@ -1,7 +1,7 @@
 # Constraint/viol trajectory + barrier sign + metrics 4->10: starts at -d_k rising=healthy, barrier mostly-negative=healthy, early-satisfy tail=over-loose candidate
 
 - id: finding/056 · date: 2026-06-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: constraint-viol-trajectory-barrier-sign-metrics-4-10-starts- · supersedes: none
 - topic: reference
 - confidence: high · status: none

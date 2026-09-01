@@ -1,7 +1,7 @@
 # albc open-loop arm attitude DC gain recovered from bag j2_gain_0825 in body frame: 148 deg per m of EE radius, 32 deg/rad of theta2 (n=6, 3 pct spread), matching the closed-loop static map (+145 deg/m, R^2 0.998); the retracted 1.2 deg / 25x-short-of-sim claim is off by 65x and retraining is not justified by arm authority
 
 - id: finding/020 · date: 2026-08-24 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: albc-open-loop-arm-attitude-dc-gain-recovered-from-bag-j2-ga · supersedes: none
 - topic: reference
 - confidence: high · status: none

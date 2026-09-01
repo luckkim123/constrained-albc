@@ -1,7 +1,7 @@
 # eval static cross-run pairing requires per-level reseed
 
 - id: decision/123 · date: 2026-08-04 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: eval-static-cross-run-pairing-requires-per-level-reseed · supersedes: none
 - topic: convention
 - confidence: high · status: none

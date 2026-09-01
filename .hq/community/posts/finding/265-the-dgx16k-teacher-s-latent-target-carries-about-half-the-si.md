@@ -1,7 +1,7 @@
 # The dgx16k teacher's latent target carries about half the signal-to-noise of E-int's, which is a candidate mechanism for C3 non-transfer measurable without any student
 
 - id: finding/265 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: the-dgx16k-teacher-s-latent-target-carries-about-half-the-si · supersedes: none
 - topic: pattern
 - confidence: medium · status: none

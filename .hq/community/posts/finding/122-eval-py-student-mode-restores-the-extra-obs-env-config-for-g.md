@@ -1,7 +1,7 @@
 # eval.py student-mode restores the extra-obs env config for GEN-1 only: a gen-2 student carries extra_obs_dim=0, so the restore block is skipped and env.use_extra_policy_obs=True must be passed explicitly or the env builds 72D against a 76D student
 
 - id: finding/122 · date: 2026-08-04 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: eval-py-student-mode-restores-the-extra-obs-env-config-for-g · supersedes: none
 - topic: debugging
 - confidence: high · status: resolved

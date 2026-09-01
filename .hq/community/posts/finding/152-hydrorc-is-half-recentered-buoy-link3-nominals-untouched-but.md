@@ -1,7 +1,7 @@
 # HydroRC IS half-recentered (buoy/link3 nominals untouched) -- but the '10x under added mass' framing dies to the effective-vs-effective correction (~2.4x); the lead survives on a different mechanism: HydroRC drops hull yaw damping 45x, so unmeasured analytical buoy damping becomes 1.8x hull's and DOMINATES the retrained plant
 
 - id: finding/152 · date: 2026-07-27 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: hydrorc-is-half-recentered-buoy-link3-nominals-untouched-but · supersedes: none
 - topic: reference
 - confidence: high · status: resolved

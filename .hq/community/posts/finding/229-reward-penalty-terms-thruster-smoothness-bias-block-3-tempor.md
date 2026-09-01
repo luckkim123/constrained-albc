@@ -1,7 +1,7 @@
 # Reward penalty terms thruster/smoothness/bias block 3 temporal bands (magnitude/jerk/DC-offset); bias EMA makes a Markov reward see non-Markov drift
 
 - id: finding/229 · date: 2026-06-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: reward-penalty-terms-thruster-smoothness-bias-block-3-tempor · supersedes: none
 - topic: reference
 - confidence: high · status: none

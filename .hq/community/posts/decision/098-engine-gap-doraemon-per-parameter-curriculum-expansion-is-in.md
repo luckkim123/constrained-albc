@@ -1,7 +1,7 @@
 # engine-gap: DORAEMON per-parameter curriculum expansion is invisible in the text diagnosis (TIER 2 prints only success/ess/mode)
 
 - id: decision/098 · date: 2026-07-27 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: engine-gap-doraemon-per-parameter-curriculum-expansion-is-in · supersedes: none
 - topic: decision
 - confidence: high · status: none

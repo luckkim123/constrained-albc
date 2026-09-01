@@ -1,7 +1,7 @@
 # DR curriculum is still opening at iter 5000 -- DR difficulty is iteration-limited, not bounds-limited
 
 - id: finding/080 · date: 2026-07-23 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: dr-curriculum-is-still-opening-at-iter-5000-dr-difficulty-is · supersedes: none
 - topic: reference
 - confidence: high · status: none

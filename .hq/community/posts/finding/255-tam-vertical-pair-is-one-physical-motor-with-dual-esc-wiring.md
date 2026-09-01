@@ -1,7 +1,7 @@
 # TAM vertical pair is one physical motor with dual-ESC wiring (measured 2026-07-05)
 
 - id: finding/255 · date: 2026-07-05 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: tam-vertical-single-motor-dual-esc-measured-2026-07-05 · supersedes: none
 - topic: reference
 - confidence: high · status: resolved

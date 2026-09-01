@@ -1,7 +1,7 @@
 # engine-gap: analyze_training.py emits no reward 8-term decomposition scalars
 
 - id: decision/094 · date: 2026-06-06 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: engine-gap-analyze-training-py-emits-no-reward-8-term-decomp · supersedes: none
 - topic: decision
 - confidence: high · status: resolved

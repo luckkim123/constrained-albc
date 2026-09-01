@@ -1,7 +1,7 @@
 # stepint400 does not forbid a slow curriculum ramp: its expansion budget was 2.40 KL against the 3.12 needed to saturate, so it tested under-saturation rather than the knob
 
 - id: finding/244 · date: 2026-08-09 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: stepint400-does-not-forbid-a-slow-curriculum-ramp-its-expans · supersedes: none
 - topic: reference
 - confidence: high · status: none

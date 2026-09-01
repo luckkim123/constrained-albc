@@ -1,7 +1,7 @@
 # The frozen actor's sensitivity to latent error is strongly level-dependent: hard crosses the control floor at a 4x smaller perturbation than none/soft/medium
 
 - id: finding/270 · date: 2026-07-29 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: the-frozen-actor-s-sensitivity-to-latent-error-is-strongly-l · supersedes: none
 - topic: pattern
 - confidence: high · status: none

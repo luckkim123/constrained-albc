@@ -9,5 +9,6 @@
 # harmless because the file is read per-entry.
 .hq/config/migrated.jsonl merge=union
 
-# The omx registry log is append-only for the same reason.
-.hq/config/experiments/registry/log.md merge=union
+# The omx registry log needs no rule here: omx_paths.py wiki_log() resolves it to
+# .hq/runtime/experiments/registry/log.md, which .gitignore excludes. A merge=union
+# line on the config/ path never matches and reads as if the file were tracked.

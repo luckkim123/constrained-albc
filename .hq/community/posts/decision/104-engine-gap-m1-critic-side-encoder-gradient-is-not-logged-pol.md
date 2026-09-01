@@ -1,7 +1,7 @@
 # engine-gap: M1 critic-side encoder gradient is not logged (Policy/encoder_grad_norm is actor-path only)
 
 - id: decision/104 · date: 2026-07-12 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: engine-gap-m1-critic-side-encoder-gradient-is-not-logged-pol · supersedes: none
 - topic: decision
 - confidence: high · status: none

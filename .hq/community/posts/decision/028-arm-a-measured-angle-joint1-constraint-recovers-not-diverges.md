@@ -1,7 +1,7 @@
 # Arm A (measured-angle joint1 constraint) RECOVERS, not diverges — the earlier divergence verdict was an early-stop artifact
 
 - id: decision/028 · date: 2026-06-28 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: arm-a-measured-angle-joint1-constraint-recovers-not-diverges · supersedes: none
 - topic: decision
 - confidence: high · status: none

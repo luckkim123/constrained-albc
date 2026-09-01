@@ -1,7 +1,7 @@
 # baseline-repro reproduces teacher deterministically (E4 control)
 
 - id: finding/036 · date: 2026-06-05 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: baseline-repro-reproduces-teacher-deterministically-e4-contr · supersedes: none
 - topic: reference
 - confidence: high · status: none

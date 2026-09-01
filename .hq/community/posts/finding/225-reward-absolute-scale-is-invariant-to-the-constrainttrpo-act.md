@@ -1,7 +1,7 @@
 # Reward absolute scale is invariant to the ConstraintTRPO actor; only term ratios matter (3 un-normalized leak paths)
 
 - id: finding/225 · date: 2026-06-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: reward-absolute-scale-is-invariant-to-the-constrainttrpo-act · supersedes: none
 - topic: reference
 - confidence: high · status: none

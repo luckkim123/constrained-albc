@@ -1,7 +1,7 @@
 # DIAGNOSIS — the eval regression at 9000 has no counterpart in the reward signal.
 
 - id: finding/068 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: diagnosis-the-eval-regression-at-9000-has-no-counterpart-in- · supersedes: none
 - topic: session-log
 - confidence: low · status: none

@@ -1,7 +1,7 @@
 # On the ALBC plant the binding prediction error is transfer to held-out plants, not model class, so lifting does not touch the dominant term
 
 - id: finding/193 · date: 2026-08-05 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: on-the-albc-plant-the-binding-prediction-error-is-transfer-t · supersedes: none
 - topic: reference
 - confidence: high · status: none

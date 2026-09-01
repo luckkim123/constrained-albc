@@ -1,7 +1,7 @@
 # ConstraintTRPO slack tail: 9 of 10 constraints deep-slack is plausibly healthy complementary slackness (UNVERIFIED) -- confirm via training-time trajectory + loosening ablation before tuning budgets
 
 - id: finding/058 · date: 2026-07-12 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: constrainttrpo-slack-tail-9-of-10-constraints-deep-slack-is- · supersedes: none
 - topic: pattern
 - confidence: high · status: resolved

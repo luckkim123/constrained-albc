@@ -1,7 +1,7 @@
 # Attitude-only ablation arms registered; policy_obs_dim sync must cover every encoder-capable runner
 
 - id: decision/032 · date: 2026-07-23 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: attitude-only-ablation-arms-registered-policy-obs-dim-sync-m · supersedes: none
 - topic: convention
 - confidence: high · status: none

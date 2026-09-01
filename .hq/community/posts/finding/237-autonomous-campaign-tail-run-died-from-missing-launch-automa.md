@@ -1,7 +1,7 @@
 # Autonomous campaign tail-run died from MISSING launch automation, not wall-clock
 
 - id: finding/237 · date: 2026-06-06 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: sequential-overnight-campaign-wall-clock-budget-not-crashes- · supersedes: none
 - topic: pattern
 - confidence: high · status: none

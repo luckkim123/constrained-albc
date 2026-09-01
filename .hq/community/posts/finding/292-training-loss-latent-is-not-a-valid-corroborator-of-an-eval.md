@@ -1,7 +1,7 @@
 # Training loss_latent is NOT a valid corroborator of an eval-side latent result: the widened-encoder arm moved them in opposite directions
 
 - id: finding/292 · date: 2026-08-03 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: training-loss-latent-is-not-a-valid-corroborator-of-an-eval- · supersedes: none
 - topic: debugging
 - confidence: high · status: resolved

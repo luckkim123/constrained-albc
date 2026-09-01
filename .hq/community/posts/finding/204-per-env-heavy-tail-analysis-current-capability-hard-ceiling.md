@@ -1,7 +1,7 @@
 # per-env heavy-tail analysis: current capability, hard ceiling, and what fault-tolerant-control research needs added
 
 - id: finding/204 · date: 2026-06-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: per-env-heavy-tail-analysis-current-capability-hard-ceiling- · supersedes: none
 - topic: reference
 - confidence: high · status: none

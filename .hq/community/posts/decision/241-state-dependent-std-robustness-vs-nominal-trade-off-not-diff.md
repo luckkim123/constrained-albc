@@ -1,7 +1,7 @@
 # state_dependent_std: robustness-vs-nominal trade-off, NOT difficulty-adaptive (Phase-2 falsification)
 
 - id: decision/241 · date: 2026-06-08 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: state-dependent-std-robustness-vs-nominal-trade-off-not-diff · supersedes: none
 - topic: decision
 - confidence: high · status: none

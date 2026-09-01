@@ -1,7 +1,7 @@
 # Encoder latent z_dim ablation: coupling points + constraints for a future sweep (from-scratch, student sync, verify via z_sweep)
 
 - id: finding/091 · date: 2026-07-01 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: encoder-latent-z-dim-ablation-coupling-points-constraints-fo · supersedes: none
 - topic: reference
 - confidence: high · status: none

@@ -1,7 +1,7 @@
 # teacher segmented: post-switch roll transient jumps under hard DR
 
 - id: finding/262 · date: 2026-06-05 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: teacher-segmented-post-switch-roll-transient-jumps-under-har · supersedes: none
 - topic: pattern
 - confidence: medium · status: none

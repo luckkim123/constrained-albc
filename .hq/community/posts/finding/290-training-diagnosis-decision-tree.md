@@ -1,7 +1,7 @@
 # training diagnosis decision tree
 
 - id: finding/290 · date: 2026-06-02 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: training-diagnosis-decision-tree · supersedes: none
 - topic: debugging
 - confidence: high · status: none

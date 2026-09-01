@@ -1,7 +1,7 @@
 # experiment result recording location (experiments tree is SSOT, not docs/results)
 
 - id: decision/130 · date: 2026-06-07 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: experiment-result-recording-location-experiments-tree-is-sso · supersedes: none
 - topic: convention
 - confidence: high · status: none

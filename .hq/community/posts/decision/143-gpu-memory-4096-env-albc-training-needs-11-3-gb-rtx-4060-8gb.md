@@ -1,7 +1,7 @@
 # GPU memory: 4096-env ALBC training needs ~11.3 GB — RTX 4060 8GB cannot co-run a second experiment
 
 - id: decision/143 · date: 2026-07-13 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: gpu-memory-4096-env-albc-training-needs-11-3-gb-rtx-4060-8gb · supersedes: none
 - topic: convention
 - confidence: high · status: none

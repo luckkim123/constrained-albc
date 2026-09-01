@@ -1,7 +1,7 @@
 # added_mass_scale upper half is ATTENUATED, not inert: the 0.95*I clamp ceiling is co-sampled with inertia_scale DR; still do not widen hydro DR up
 
 - id: finding/015 · date: 2026-07-23 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: added-mass-scale-upper-half-is-attenuated-not-inert-the-0-95 · supersedes: none
 - topic: reference
 - confidence: high · status: none

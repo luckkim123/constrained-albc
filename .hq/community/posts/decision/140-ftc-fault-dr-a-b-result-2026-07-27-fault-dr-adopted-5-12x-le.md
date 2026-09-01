@@ -1,7 +1,7 @@
 # FTC fault-DR A/B result 2026-07-27: fault-DR adopted (5-12x less m4-dead degradation, zero terminations, tail removal); privileged fault obs NOT adopted (H2); fault_severity curriculum ended under-expanded at 8-10% of range
 
 - id: decision/140 · date: 2026-07-27 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: ftc-fault-dr-a-b-result-2026-07-27-fault-dr-adopted-5-12x-le · supersedes: none
 - topic: decision
 - confidence: high · status: none

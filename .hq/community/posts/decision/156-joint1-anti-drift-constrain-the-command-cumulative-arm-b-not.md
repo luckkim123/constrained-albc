@@ -1,7 +1,7 @@
 # joint1 anti-drift: constrain the COMMAND (cumulative, Arm B) not the MEASUREMENT (wrap, Arm A) to preserve attitude
 
 - id: decision/156 · date: 2026-06-27 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: joint1-anti-drift-constrain-the-command-cumulative-arm-b-not · supersedes: none
 - topic: decision
 - confidence: high · status: none

@@ -1,7 +1,7 @@
 # engine-gap: eval npz saves no raw obs/std/privileged — blocks exact per-env std reconstruction
 
 - id: decision/101 · date: 2026-06-09 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: engine-gap-eval-npz-saves-no-raw-obs-std-privileged-blocks-e · supersedes: none
 - topic: decision
 - confidence: high · status: resolved

@@ -1,7 +1,7 @@
 # obs76 gen-2 student reproduces its teacher's mean tracking at every DR level but triples roll dispersion at hard; in-loop latent R2 stays negative, so the observability intervention did not close covariate shift
 
 - id: decision/186 · date: 2026-08-04 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: obs76-gen-2-student-reproduces-its-teacher-s-mean-tracking-a · supersedes: none
 - topic: decision
 - confidence: high · status: resolved

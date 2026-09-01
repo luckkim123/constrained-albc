@@ -1,7 +1,7 @@
 # Koopman Phase 1 arm B NULL: marine-feature lifting buys no control quality and costs transient overshoot
 
 - id: decision/169 · date: 2026-08-04 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: koopman-phase-1-arm-b-null-marine-feature-lifting-buys-no-co · supersedes: none
 - topic: decision
 - confidence: high · status: resolved

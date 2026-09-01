@@ -1,7 +1,7 @@
 # HydroRC 016d1b1 recentered nine hull hydro numbers onto a broken engine approximation, and the damage concentrates on yaw -- the axis where the 2026-07-28 paired gate failed; retire the commit rather than rebuild it minus one line
 
 - id: decision/151 · date: 2026-07-30 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: hydrorc-016d1b1-recentered-nine-hull-hydro-numbers-onto-a-br · supersedes: none
 - topic: decision
 - confidence: high · status: resolved

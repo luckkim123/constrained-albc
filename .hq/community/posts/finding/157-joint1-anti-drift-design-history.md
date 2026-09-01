@@ -1,7 +1,7 @@
 # joint1 anti-drift design history
 
 - id: finding/157 · date: 2026-07-12 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: joint1-anti-drift-design-history · supersedes: none
 - topic: reference
 - confidence: high · status: none

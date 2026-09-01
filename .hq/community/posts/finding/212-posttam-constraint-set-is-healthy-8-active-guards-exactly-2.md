@@ -1,7 +1,7 @@
 # Posttam constraint set is healthy: 8 active guards + exactly 2 dormant (rp_vel_settling, manipulability)
 
 - id: finding/212 · date: 2026-07-15 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: posttam-constraint-set-is-healthy-8-active-guards-exactly-2- · supersedes: none
 - topic: reference
 - confidence: high · status: none

@@ -1,7 +1,7 @@
 # Frontier-seeking DR curriculum literature survey (ADR/CURROT/ACCEL) and why naive success-oscillation is unsound
 
 - id: finding/139 · date: 2026-07-06 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: frontier-seeking-dr-curriculum-literature-survey-adr-currot- · supersedes: none
 - topic: reference
 - confidence: high · status: none

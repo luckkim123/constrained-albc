@@ -1,7 +1,7 @@
 # teacher dr_harder: DORAEMON curriculum froze before run end (unused headroom)
 
 - id: finding/258 · date: 2026-06-06 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: teacher-dr-harder-doraemon-curriculum-froze-before-run-end-u · supersedes: none
 - topic: pattern
 - confidence: high · status: none

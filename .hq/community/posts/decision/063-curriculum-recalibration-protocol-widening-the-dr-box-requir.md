@@ -1,7 +1,7 @@
 # Curriculum recalibration protocol: widening the DR box requires re-tuning budget (kl_ub x n_updates) AND performance_lb together -- not a single-variable probe
 
 - id: decision/063 · date: 2026-07-20 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: curriculum-recalibration-protocol-widening-the-dr-box-requir · supersedes: none
 - topic: convention
 - confidence: high · status: resolved

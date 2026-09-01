@@ -1,7 +1,7 @@
 # 32768 envs FIT on the DGX GB10 (83.2/121.7 GB peak, no fallback) at 34.73 s/iter, but per-doubling cost is degrading (1.78x -> 1.90x) and a 200-iter probe cannot see DORAEMON at all (step_interval 250)
 
 - id: finding/001 · date: 2026-07-30 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: 32768-envs-fit-on-the-dgx-gb10-83-2-121-7-gb-peak-no-fallbac · supersedes: none
 - topic: reference
 - confidence: high · status: none

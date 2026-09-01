@@ -1,7 +1,7 @@
 # Arm velocity_limit_sim 6.28->3.1 ripple: dead-constraint trap + delta_scale runaway (retrain item, not one-line)
 
 - id: decision/030 · date: 2026-07-06 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: arm-velocity-limit-sim-6-28-3-1-ripple-dead-constraint-trap- · supersedes: none
 - topic: convention
 - confidence: high · status: none

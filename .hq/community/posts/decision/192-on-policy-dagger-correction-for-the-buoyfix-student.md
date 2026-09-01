@@ -1,7 +1,7 @@
 # On-policy DAgger correction for the buoyfix student
 
 - id: decision/192 · date: 2026-07-24 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: on-policy-dagger-correction-for-the-buoyfix-student · supersedes: none
 - topic: decision
 - confidence: high · status: resolved

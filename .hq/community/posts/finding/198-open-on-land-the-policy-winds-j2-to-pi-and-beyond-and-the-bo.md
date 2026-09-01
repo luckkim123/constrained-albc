@@ -1,7 +1,7 @@
 # OPEN: on land the policy winds J2 to pi and beyond, and the board feeds it IMU at 20 Hz / joints at 10 Hz against a 50 Hz control loop
 
 - id: finding/198 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: open-on-land-the-policy-winds-j2-to-pi-and-beyond-and-the-bo · supersedes: none
 - topic: reference
 - confidence: high · status: needs-experiment

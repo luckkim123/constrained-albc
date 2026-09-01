@@ -1,7 +1,7 @@
 # omx wiki query is not read-only: it appends to registry/log.md, so a pure lookup leaves the tree dirty
 
 - id: decision/191 · date: 2026-08-22 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: omx-wiki-query-is-not-read-only-it-appends-to-registry-log-m · supersedes: none
 - topic: convention
 - confidence: high · status: none

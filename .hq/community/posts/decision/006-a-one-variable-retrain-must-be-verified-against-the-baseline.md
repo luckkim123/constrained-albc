@@ -1,7 +1,7 @@
 # A one-variable retrain must be verified against the BASELINE RUN's recorded config/env.yaml, not against the committed git diff -- a baseline launched dirty hides plant flags from every source-level check
 
 - id: decision/006 · date: 2026-08-03 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: a-one-variable-retrain-must-be-verified-against-the-baseline · supersedes: none
 - topic: convention
 - confidence: high · status: resolved

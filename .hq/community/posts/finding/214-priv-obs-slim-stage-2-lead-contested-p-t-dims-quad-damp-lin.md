@@ -1,7 +1,7 @@
 # priv-obs slim Stage-2 lead: contested p_t dims (quad_damp, lin_vel) need WITH-vs-WITHOUT A/B; union kept them
 
 - id: finding/214 · date: 2026-07-12 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: priv-obs-slim-stage-2-lead-contested-p-t-dims-quad-damp-lin- · supersedes: none
 - topic: reference
 - confidence: high · status: resolved

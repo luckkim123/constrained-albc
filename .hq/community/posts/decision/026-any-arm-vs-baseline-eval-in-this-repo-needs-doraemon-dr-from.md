@@ -1,7 +1,7 @@
 # Any arm-vs-baseline eval in this repo needs --doraemon-dr-from or the arms are judged on different test distributions
 
 - id: decision/026 · date: 2026-08-06 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: any-arm-vs-baseline-eval-in-this-repo-needs-doraemon-dr-from · supersedes: none
 - topic: convention
 - confidence: high · status: none

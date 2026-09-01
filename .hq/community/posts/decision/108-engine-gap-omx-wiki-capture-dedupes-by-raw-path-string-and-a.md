@@ -1,7 +1,7 @@
 # engine-gap: omx wiki capture dedupes by raw path string and appends without an equality check, so one report can be captured twice byte-identically
 
 - id: decision/108 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: engine-gap-omx-wiki-capture-dedupes-by-raw-path-string-and-a · supersedes: none
 - topic: decision
 - confidence: high · status: resolved

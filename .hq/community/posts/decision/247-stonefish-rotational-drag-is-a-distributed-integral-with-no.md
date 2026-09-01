@@ -1,7 +1,7 @@
 # Stonefish rotational drag is a distributed integral with no separate rotational term, so hull yaw pressure drag is exactly zero by construction -- the 45.5x yaw damping gap is an artifact and roll/pitch is corrupted by a force-derived torque correction
 
 - id: decision/247 · date: 2026-07-30 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: stonefish-rotational-drag-is-a-distributed-integral-with-no- · supersedes: none
 - topic: decision
 - confidence: high · status: resolved

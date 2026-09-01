@@ -1,7 +1,7 @@
 # obs4 Phase D result 2026-08-04: folding the 4 deployable channels into policy_obs (72 -> 76) PASSES H1 with margin; it buys hard-DR tail and spread with a REAL pitch steady-state regression at soft/medium
 
 - id: decision/184 · date: 2026-08-04 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: obs4-phase-d-result-2026-08-04-folding-the-4-deployable-chan · supersedes: none
 - topic: decision
 - confidence: high · status: resolved

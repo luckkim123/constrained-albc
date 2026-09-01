@@ -1,7 +1,7 @@
 # Sigma decay under an expanding DR curriculum: literature verdict and the projection-not-clamp correction
 
 - id: finding/239 · date: 2026-08-10 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: sigma-decay-under-an-expanding-dr-curriculum-literature-verd · supersedes: none
 - topic: pattern
 - confidence: high · status: resolved

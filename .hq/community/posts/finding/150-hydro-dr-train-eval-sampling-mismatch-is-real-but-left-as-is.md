@@ -1,7 +1,7 @@
 # hydro DR train/eval sampling mismatch is REAL but left as-is (option C): train scalar->6-axis broadcast, eval 6-axis independent
 
 - id: finding/150 · date: 2026-07-07 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: hydro-dr-train-eval-sampling-mismatch-is-real-but-left-as-is · supersedes: none
 - topic: reference
 - confidence: high · status: resolved

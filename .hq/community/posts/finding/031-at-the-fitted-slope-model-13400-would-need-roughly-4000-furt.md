@@ -1,7 +1,7 @@
 # At the fitted slope, `model_13400` would need roughly 4000 further iterations to
 
 - id: finding/031 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: at-the-fitted-slope-model-13400-would-need-roughly-4000-furt · supersedes: none
 - topic: session-log
 - confidence: low · status: none

@@ -1,7 +1,7 @@
 # bias_ema obs is deployment-safe: computed from command minus measured attitude, no privileged state
 
 - id: finding/038 · date: 2026-07-20 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: bias-ema-obs-is-deployment-safe-computed-from-command-minus- · supersedes: none
 - topic: reference
 - confidence: high · status: none

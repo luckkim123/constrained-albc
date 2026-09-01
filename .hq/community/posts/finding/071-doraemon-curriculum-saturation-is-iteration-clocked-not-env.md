@@ -1,7 +1,7 @@
 # DORAEMON curriculum saturation is iteration-clocked, not env-clocked: 4x num_envs (4096->16384) moved Gate A by only 250 of ~7000 iterations
 
 - id: finding/071 · date: 2026-08-09 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: doraemon-curriculum-saturation-is-iteration-clocked-not-env- · supersedes: none
 - topic: pattern
 - confidence: high · status: none

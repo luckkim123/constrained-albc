@@ -1,7 +1,7 @@
 # Fitting a Koopman-with-control operator on deterministic on-policy rollouts cannot identify B, and a richer dictionary makes it worse
 
 - id: finding/137 · date: 2026-08-05 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: fitting-a-koopman-with-control-operator-on-deterministic-on- · supersedes: none
 - topic: pattern
 - confidence: high · status: none

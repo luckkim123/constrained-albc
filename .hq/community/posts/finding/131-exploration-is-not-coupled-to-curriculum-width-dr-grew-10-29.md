@@ -1,7 +1,7 @@
 # Exploration is not coupled to curriculum width: DR grew 10-29x while sigma shrank 9 percent, and the three obvious fixes are already refuted here
 
 - id: finding/131 · date: 2026-08-10 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: exploration-is-not-coupled-to-curriculum-width-dr-grew-10-29 · supersedes: none
 - topic: pattern
 - confidence: high · status: resolved

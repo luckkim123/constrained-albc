@@ -1,7 +1,7 @@
 # albc jitter is a closed-loop limit cycle at 0.36-0.74 Hz (Hankel-DMD |lambda| 0.997-1.001 complex pairs in every closed-loop window, none in open-loop), open-loop arm-step ripple is 0.04-0.20 deg; delay-dominated vs rate-saturation-dominated is undecided
 
 - id: finding/019 · date: 2026-08-24 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: albc-jitter-is-a-closed-loop-limit-cycle-at-0-36-0-74-hz-han · supersedes: none
 - topic: reference
 - confidence: high · status: none

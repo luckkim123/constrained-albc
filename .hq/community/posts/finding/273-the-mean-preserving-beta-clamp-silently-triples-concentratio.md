@@ -1,7 +1,7 @@
 # The mean-preserving Beta clamp silently triples concentration for nominal-0 DR dims (30 -> 100), and those 4 dims are exactly the ones that end under-expanded
 
 - id: finding/273 · date: 2026-07-28 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: the-mean-preserving-beta-clamp-silently-triples-concentratio · supersedes: none
 - topic: pattern
 - confidence: high · status: none

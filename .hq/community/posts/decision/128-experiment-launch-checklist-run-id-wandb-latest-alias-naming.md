@@ -1,7 +1,7 @@
 # experiment launch checklist: run_id / wandb / latest-alias naming
 
 - id: decision/128 · date: 2026-06-07 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: experiment-launch-checklist-run-id-wandb-latest-alias-naming · supersedes: none
 - topic: convention
 - confidence: high · status: none

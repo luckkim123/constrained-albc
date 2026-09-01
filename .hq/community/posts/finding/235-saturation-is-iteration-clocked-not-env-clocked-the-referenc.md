@@ -1,7 +1,7 @@
 # Saturation is iteration-clocked, not env-clocked. The reference lineage saturate
 
 - id: finding/235 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: saturation-is-iteration-clocked-not-env-clocked-the-referenc · supersedes: none
 - topic: session-log
 - confidence: low · status: none

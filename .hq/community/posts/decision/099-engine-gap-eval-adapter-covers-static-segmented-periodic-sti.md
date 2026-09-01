@@ -1,7 +1,7 @@
 # engine-gap: eval adapter covers static + segmented; periodic still unsupported
 
 - id: decision/099 · date: 2026-06-05 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: engine-gap-eval-adapter-covers-static-segmented-periodic-sti · supersedes: none
 - topic: decision
 - confidence: high · status: none

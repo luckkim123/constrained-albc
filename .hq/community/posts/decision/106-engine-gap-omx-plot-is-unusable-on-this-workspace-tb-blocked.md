@@ -1,7 +1,7 @@
 # engine-gap: omx plot is unusable on this workspace -- TB blocked by system-python tensorboard, eval npz blocked by 1-D-only series
 
 - id: decision/106 · date: 2026-07-29 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: engine-gap-omx-plot-is-unusable-on-this-workspace-tb-blocked · supersedes: none
 - topic: decision
 - confidence: high · status: none

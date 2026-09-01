@@ -1,7 +1,7 @@
 # Actuator hardware identification: arm=XW540-T260 (board-measured), prior 'no PID-gain code' claim corrected, thrust-curve keep-off, step-response prereqs
 
 - id: finding/014 · date: 2026-07-02 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: actuator-hardware-identification-arm-xw540-t260-board-measur · supersedes: none
 - topic: reference
 - confidence: high · status: none

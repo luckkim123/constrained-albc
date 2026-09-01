@@ -1,7 +1,7 @@
 # engine-gap: analyze_training.py needs the logs/ run dir, not the experiments/ run dir (events under train symlink)
 
 - id: decision/095 · date: 2026-06-08 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: engine-gap-analyze-training-py-needs-the-logs-run-dir-not-th · supersedes: none
 - topic: decision
 - confidence: high · status: none

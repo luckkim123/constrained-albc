@@ -1,7 +1,7 @@
 # Teacher and student checkpoints live at DIFFERENT depths under the run tree: teacher writes train/model_N.pt, train_student.py writes train/models/student_N.pt -- a completion watcher copied from the teacher polls a path that will never exist
 
 - id: finding/256 · date: 2026-08-04 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: teacher-and-student-checkpoints-live-at-different-depths-und · supersedes: none
 - topic: debugging
 - confidence: high · status: resolved

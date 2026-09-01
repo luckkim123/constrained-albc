@@ -1,7 +1,7 @@
 # engine-gap: heavy_tail.json pct_peak_gt_thresh exceeds 100% at ood level (denominator bug)
 
 - id: decision/103 · date: 2026-06-08 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: engine-gap-heavy-tail-json-pct-peak-gt-thresh-exceeds-100-at · supersedes: none
 - topic: decision
 - confidence: high · status: resolved

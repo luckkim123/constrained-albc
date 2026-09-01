@@ -1,7 +1,7 @@
 # DORAEMON difficulty has 3 separable levers: kl_ub (step size), step_interval (dwell-time), max_iterations (number of expansions)
 
 - id: finding/072 · date: 2026-06-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: doraemon-difficulty-has-3-separable-levers-kl-ub-step-size-s · supersedes: none
 - topic: reference
 - confidence: high · status: none

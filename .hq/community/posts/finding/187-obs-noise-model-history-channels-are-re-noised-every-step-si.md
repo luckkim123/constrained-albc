@@ -1,7 +1,7 @@
 # Obs-noise model: history channels are re-noised every step (sim past is not frozen like hardware)
 
 - id: finding/187 · date: 2026-07-20 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: obs-noise-model-history-channels-are-re-noised-every-step-si · supersedes: none
 - topic: reference
 - confidence: high · status: none

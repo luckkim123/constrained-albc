@@ -1,7 +1,7 @@
 # command is NOT domain randomization; command range scale is inert residue (unwired 2026-04-06, stale comment)
 
 - id: finding/050 · date: 2026-07-07 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: command-is-not-domain-randomization-command-range-scale-is-i · supersedes: none
 - topic: reference
 - confidence: high · status: none

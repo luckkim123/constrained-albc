@@ -1,7 +1,7 @@
 # Thruster nonlinear curve (T200 sim-to-real): off-by-default deadband + signed-square toggle (d34debc)
 
 - id: finding/282 · date: 2026-07-01 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: thruster-nonlinear-curve-t200-sim-to-real-off-by-default-dea · supersedes: none
 - topic: reference
 - confidence: high · status: resolved

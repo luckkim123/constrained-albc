@@ -1,7 +1,7 @@
 # an off-DORAEMON channel that costs return stalls the curriculum below the alpha floor (mode -2 entire run)
 
 - id: finding/023 · date: 2026-07-13 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: an-off-doraemon-channel-that-costs-return-stalls-the-curricu · supersedes: none
 - topic: pattern
 - confidence: high · status: none

@@ -1,7 +1,7 @@
 # barrier_alpha runtime=0.05 (agent cfg injects over ctor default 0.02)
 
 - id: finding/034 · date: 2026-06-07 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: barrier-alpha-runtime-0-05-agent-cfg-injects-over-ctor-defau · supersedes: none
 - topic: reference
 - confidence: high · status: none

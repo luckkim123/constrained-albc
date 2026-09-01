@@ -1,7 +1,7 @@
 # buoyancy/gravity/restoring apply SEPARATELY to main body vs buoy(link3); gravity HAS DR (body_mass_scale+payload_mass); DR is body-shared not independent
 
 - id: finding/043 · date: 2026-07-07 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: buoyancy-gravity-restoring-apply-separately-to-main-body-vs- · supersedes: none
 - topic: reference
 - confidence: high · status: none

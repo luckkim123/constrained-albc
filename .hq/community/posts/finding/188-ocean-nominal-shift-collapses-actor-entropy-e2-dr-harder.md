@@ -1,7 +1,7 @@
 # ocean nominal shift collapses actor entropy (E2 dr-harder)
 
 - id: finding/188 · date: 2026-06-06 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: ocean-nominal-shift-collapses-actor-entropy-e2-dr-harder · supersedes: none
 - topic: debugging
 - confidence: high · status: none

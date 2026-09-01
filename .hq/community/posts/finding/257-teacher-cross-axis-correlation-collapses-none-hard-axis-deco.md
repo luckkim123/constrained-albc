@@ -1,7 +1,7 @@
 # teacher: cross-axis correlation collapses none->hard (axis decorrelation)
 
 - id: finding/257 · date: 2026-06-05 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: teacher-cross-axis-correlation-collapses-none-hard-axis-deco · supersedes: none
 - topic: pattern
 - confidence: high · status: none

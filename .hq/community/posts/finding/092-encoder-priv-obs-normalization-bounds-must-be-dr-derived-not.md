@@ -1,7 +1,7 @@
 # encoder priv-obs normalization bounds must be DR-derived, not hardcoded (silent drift bug)
 
 - id: finding/092 · date: 2026-06-30 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: encoder-priv-obs-normalization-bounds-must-be-dr-derived-not · supersedes: none
 - topic: reference
 - confidence: high · status: none

@@ -1,7 +1,7 @@
 # engine-gap: decision floors are field-keyed while units are axis-keyed, so steady-state error is unadjudicated on 4 of 7 axes
 
 - id: decision/097 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: engine-gap-decision-floors-are-field-keyed-while-units-are-a · supersedes: none
 - topic: decision
 - confidence: high · status: none

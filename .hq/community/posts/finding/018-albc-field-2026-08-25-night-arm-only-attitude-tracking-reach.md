@@ -1,7 +1,7 @@
 # albc field 2026-08-25 night: arm-only attitude tracking reaches the command (cmd 30 deg gives body roll +28.7 deg); the fold singularity does not amplify jitter (+12 pct) but kills the signal (attainable/ripple 3.4 vs 10.7; cmd (30,30) held 58 s at theta2 = fold-13 deg gave +2.8 deg)
 
 - id: finding/018 · date: 2026-08-24 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: albc-field-2026-08-25-night-arm-only-attitude-tracking-reach · supersedes: none
 - topic: reference
 - confidence: high · status: none

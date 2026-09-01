@@ -1,7 +1,7 @@
 # albc control_hz re-verdict from three undocumented 2026-08-25 runs recovered from bags: 10 Hz was the quietest of the night (yaw span 4.0 deg, roll std 2.9, pitch std 0.36 over 40 s, joint rate unsaturated), 100 Hz diverged in 4 s (policy pushed the arm first, then body), and observation rate and control_hz are not separable in this data
 
 - id: finding/017 · date: 2026-08-24 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: albc-control-hz-re-verdict-from-three-undocumented-2026-08-2 · supersedes: none
 - topic: reference
 - confidence: medium · status: none

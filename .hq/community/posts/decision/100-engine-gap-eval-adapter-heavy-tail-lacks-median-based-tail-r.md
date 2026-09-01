@@ -1,7 +1,7 @@
 # engine-gap: eval_adapter heavy-tail lacks median-based tail ratio + top-k concentration
 
 - id: decision/100 · date: 2026-07-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: engine-gap-eval-adapter-heavy-tail-lacks-median-based-tail-r · supersedes: none
 - topic: decision
 - confidence: medium · status: none

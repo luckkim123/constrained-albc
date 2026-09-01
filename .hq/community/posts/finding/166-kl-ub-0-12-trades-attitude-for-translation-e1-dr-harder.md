@@ -1,7 +1,7 @@
 # kl_ub 0.12 trades attitude for translation (E1 dr-harder)
 
 - id: finding/166 · date: 2026-06-05 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: kl-ub-0-12-trades-attitude-for-translation-e1-dr-harder · supersedes: none
 - topic: debugging
 - confidence: high · status: none

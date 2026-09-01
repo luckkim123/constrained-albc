@@ -1,7 +1,7 @@
 # ENGINE-GAP: analyze_training deep-plot has 2 blank panels + inconsistent legends; no DORAEMON curriculum plot
 
 - id: finding/093 · date: 2026-06-06 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: engine-gap-analyze-training-deep-plot-has-2-blank-panels-inc · supersedes: none
 - topic: debugging
 - confidence: high · status: resolved

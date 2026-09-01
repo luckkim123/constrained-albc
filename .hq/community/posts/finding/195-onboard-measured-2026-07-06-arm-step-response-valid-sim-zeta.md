@@ -1,7 +1,7 @@
 # Onboard measured 2026-07-06: arm step-response (VALID, sim zeta~0.7 matches) + net buoyancy (NEUTRAL confirmed, sign unresolvable at 1cm depth quantization)
 
 - id: finding/195 · date: 2026-07-06 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: onboard-measured-2026-07-06-arm-step-response-valid-sim-zeta · supersedes: none
 - topic: reference
 - confidence: high · status: none

@@ -1,7 +1,7 @@
 # `model_13400` is the only checkpoint with zero OOD failures (0/64 vs 1/64 at 750
 
 - id: finding/176 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: model-13400-is-the-only-checkpoint-with-zero-ood-failures-0- · supersedes: none
 - topic: session-log
 - confidence: low · status: none

@@ -1,7 +1,7 @@
 # Joint DR params (Kp/Kd/effort/friction) need NO dedicated measurement: PD-gain center already measured, effort/friction are DR-bypass by design
 
 - id: finding/162 · date: 2026-07-06 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: joint-dr-params-kp-kd-effort-friction-need-no-dedicated-meas · supersedes: none
 - topic: reference
 - confidence: high · status: resolved

@@ -1,7 +1,7 @@
 # Repeat-eval instrument noise on in-loop latent R2: 0.027 at hard, 0.22 at none
 
 - id: finding/222 · date: 2026-08-04 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: repeat-eval-instrument-noise-on-in-loop-latent-r2-0-027-at-h · supersedes: none
 - topic: reference
 - confidence: high · status: none

@@ -1,7 +1,7 @@
 # constraint budget x0.5 binds only thruster_util -> authority starvation
 
 - id: finding/052 · date: 2026-06-07 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: constraint-budget-x0-5-binds-only-thruster-util-authority-st · supersedes: none
 - topic: pattern
 - confidence: high · status: none

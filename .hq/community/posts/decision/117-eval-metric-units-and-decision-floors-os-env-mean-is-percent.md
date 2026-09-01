@@ -1,7 +1,7 @@
 # Eval metric units and decision floors: os_env_mean is percent-of-step (roll steps 30 deg), ss_error is degrees; paired screening floors and the machine-isolation rule
 
 - id: decision/117 · date: 2026-07-23 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: eval-metric-units-and-decision-floors-os-env-mean-is-percent · supersedes: none
 - topic: convention
 - confidence: high · status: none

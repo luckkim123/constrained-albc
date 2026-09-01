@@ -1,7 +1,7 @@
 # joint1 cumulative-rotation constraint never binds: policy parks at ~0.36 rev, +-4pi is a dead-zone rail
 
 - id: finding/160 · date: 2026-06-30 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: joint1-cumulative-rotation-constraint-never-binds-policy-par · supersedes: none
 - topic: pattern
 - confidence: high · status: none

@@ -1,7 +1,7 @@
 # Deploy export was TCN-only so it shipped the non-adopted student arm; StudentGRUSpec closes GRU parity (latent 1.2e-07, hidden 1.6e-07 over 9 steps) and rejects shallow-head / multi-layer geometries
 
 - id: finding/065 · date: 2026-07-30 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: deploy-export-was-tcn-only-so-it-shipped-the-non-adopted-stu · supersedes: none
 - topic: reference
 - confidence: high · status: resolved

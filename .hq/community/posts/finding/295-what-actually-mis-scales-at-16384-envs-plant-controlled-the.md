@@ -1,7 +1,7 @@
 # What actually mis-scales at 16384 envs, plant-controlled: the trust region does not, exploration does (sigma -11 to -29 percent) and the cost critic does (+29 percent)
 
 - id: finding/295 · date: 2026-08-09 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: what-actually-mis-scales-at-16384-envs-plant-controlled-the- · supersedes: none
 - topic: pattern
 - confidence: high · status: none

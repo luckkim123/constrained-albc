@@ -1,7 +1,7 @@
 # Plant-change batch v2: four Isaac plant corrections are now pending and each alone forces a teacher retrain, so they are batched behind one sizing gate instead of decided individually
 
 - id: decision/209 · date: 2026-07-29 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: plant-change-batch-v2-four-isaac-plant-corrections-are-now-p · supersedes: none
 - topic: decision
 - confidence: high · status: none

@@ -1,7 +1,7 @@
 # omx wiki has no delete subcommand by design: removal is gc-apply, duplicates come from add-with-new-title
 
 - id: decision/189 · date: 2026-06-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: omx-wiki-has-no-delete-subcommand-by-design-removal-is-gc-ap · supersedes: none
 - topic: convention
 - confidence: high · status: none

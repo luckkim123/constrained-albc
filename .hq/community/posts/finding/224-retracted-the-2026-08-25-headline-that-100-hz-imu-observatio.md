@@ -1,7 +1,7 @@
 # RETRACTED: the 2026-08-25 headline that 100 Hz IMU observations closed the yaw divergence (240 -> 1.26 deg) was a radians-labelled-as-degrees error (57.3x) on top of a raw-IMU-frame read; true numbers are 240 -> 71.9 deg yaw and roll std 5.2 deg, so only accelerating divergence -> bounded drift (19 -> 1.15 deg/s) survives
 
 - id: finding/224 · date: 2026-08-24 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: retracted-the-2026-08-25-headline-that-100-hz-imu-observatio · supersedes: none
 - topic: debugging
 - confidence: high · status: none

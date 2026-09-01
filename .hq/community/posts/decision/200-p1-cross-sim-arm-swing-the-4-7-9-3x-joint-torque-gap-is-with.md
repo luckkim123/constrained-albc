@@ -1,7 +1,7 @@
 # P1 cross-sim arm swing: the 4.7-9.3x joint-torque gap is WITHDRAWN as a servo discretisation artifact (corrected to 0.67x), and the arm-reaction channel is eliminated as a yaw-failure candidate in both sims
 
 - id: decision/200 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: p1-cross-sim-arm-swing-the-4-7-9-3x-joint-torque-gap-is-with · supersedes: none
 - topic: decision
 - confidence: high · status: none

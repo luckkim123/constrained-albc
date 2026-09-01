@@ -1,7 +1,7 @@
 # coverage lint ok is a floor not a quality gate; re-analysis uses OLD report as base, never shrinks
 
 - id: decision/060 · date: 2026-06-08 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: coverage-lint-ok-is-a-floor-not-a-quality-gate-re-analysis-u · supersedes: none
 - topic: convention
 - confidence: high · status: none

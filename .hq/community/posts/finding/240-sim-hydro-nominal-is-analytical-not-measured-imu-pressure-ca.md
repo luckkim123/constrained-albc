@@ -1,7 +1,7 @@
 # sim hydro nominal is analytical (not measured); IMU+pressure can anchor rotation/heave but not surge/sway/TAM
 
 - id: finding/240 · date: 2026-06-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: sim-hydro-nominal-is-analytical-not-measured-imu-pressure-ca · supersedes: none
 - topic: reference
 - confidence: high · status: resolved

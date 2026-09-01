@@ -1,7 +1,7 @@
 # DORAEMON Entropy opt rejected is a WARNING: price it from curriculum_trajectory.json, not the log (successful expansions are never logged)
 
 - id: finding/073 · date: 2026-08-09 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: doraemon-entropy-opt-rejected-is-a-warning-price-it-from-cur · supersedes: none
 - topic: debugging
 - confidence: high · status: none

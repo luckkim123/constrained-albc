@@ -1,7 +1,7 @@
 # Gate A closed at iteration 7250. All 29 expansions were accepted at the KL cap 0
 
 - id: finding/142 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: gate-a-closed-at-iteration-7250-all-29-expansions-were-accep · supersedes: none
 - topic: session-log
 - confidence: low · status: none

@@ -1,7 +1,7 @@
 # Removing fault-DR from the teacher recipe has a measurable signature on the HEALTHY eval too: better nominal steady state, much worse hard-DR tail, and a wider thruster_util margin
 
 - id: finding/221 · date: 2026-08-03 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: removing-fault-dr-from-the-teacher-recipe-has-a-measurable-s · supersedes: none
 - topic: reference
 - confidence: medium · status: resolved

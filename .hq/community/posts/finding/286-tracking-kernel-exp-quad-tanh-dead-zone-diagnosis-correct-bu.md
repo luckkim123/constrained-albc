@@ -1,7 +1,7 @@
 # Tracking kernel exp-quad-tanh: dead-zone diagnosis correct but fix is on wrong axis (yaw not att_rp); the exp+L1+tanh stack has no literature precedent
 
 - id: finding/286 · date: 2026-07-08 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: tracking-kernel-exp-quad-tanh-dead-zone-diagnosis-correct-bu · supersedes: none
 - topic: reference
 - confidence: high · status: resolved

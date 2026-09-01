@@ -1,7 +1,7 @@
 # joint1 Stage-1 gate GO: drift is real on unlimited physics, not the +-360deg wall artifact
 
 - id: decision/161 · date: 2026-07-12 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: joint1-stage-1-gate-go-drift-is-real-on-unlimited-physics-no · supersedes: none
 - topic: decision
 - confidence: high · status: resolved

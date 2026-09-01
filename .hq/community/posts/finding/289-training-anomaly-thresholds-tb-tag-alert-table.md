@@ -1,7 +1,7 @@
 # training anomaly thresholds (TB tag alert table)
 
 - id: finding/289 · date: 2026-06-02 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: training-anomaly-thresholds-tb-tag-alert-table · supersedes: none
 - topic: reference
 - confidence: high · status: none

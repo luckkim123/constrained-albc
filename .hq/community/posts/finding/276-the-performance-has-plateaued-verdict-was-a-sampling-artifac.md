@@ -1,7 +1,7 @@
 # The "performance has plateaued" verdict was a sampling artifact of a 4-point eva
 
 - id: finding/276 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: the-performance-has-plateaued-verdict-was-a-sampling-artifac · supersedes: none
 - topic: session-log
 - confidence: low · status: none

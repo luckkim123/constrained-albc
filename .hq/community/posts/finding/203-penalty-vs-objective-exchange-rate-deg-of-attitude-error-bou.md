@@ -1,7 +1,7 @@
 # Penalty-vs-objective exchange rate (deg of attitude error bought per penalty term) is the rescaling evidence, not the 1% reward share; all four penalties together buy only 0.125 deg
 
 - id: finding/203 · date: 2026-07-20 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: penalty-vs-objective-exchange-rate-deg-of-attitude-error-bou · supersedes: none
 - topic: reference
 - confidence: high · status: resolved

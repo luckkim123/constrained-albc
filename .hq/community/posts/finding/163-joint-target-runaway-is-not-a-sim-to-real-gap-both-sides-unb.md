@@ -1,7 +1,7 @@
 # Joint target runaway is NOT a sim-to-real gap (both sides unbounded); the real asymmetry is the accumulator reset
 
 - id: finding/163 · date: 2026-08-09 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: joint-target-runaway-is-not-a-sim-to-real-gap-both-sides-unb · supersedes: none
 - topic: reference
 - confidence: high · status: needs-experiment

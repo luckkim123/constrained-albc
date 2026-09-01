@@ -1,7 +1,7 @@
 # Student distillation roll heavy-tail is a teacher-policy property (TCN==GRU), not a distillation artifact
 
 - id: finding/251 · date: 2026-07-06 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: student-distillation-roll-heavy-tail-is-a-teacher-policy-pro · supersedes: none
 - topic: pattern
 - confidence: high · status: none

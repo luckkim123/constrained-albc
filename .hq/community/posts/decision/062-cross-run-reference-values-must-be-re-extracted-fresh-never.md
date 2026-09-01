@@ -1,7 +1,7 @@
 # cross-run reference values must be RE-EXTRACTED fresh, never carried forward (E4 stale-teacher-column gate)
 
 - id: decision/062 · date: 2026-06-08 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: cross-run-reference-values-must-be-re-extracted-fresh-never- · supersedes: none
 - topic: convention
 - confidence: high · status: none

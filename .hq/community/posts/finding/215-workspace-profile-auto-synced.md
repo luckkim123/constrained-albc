@@ -1,7 +1,7 @@
 # Workspace profile (auto-synced)
 
 - id: finding/215 · date: 2026-08-04 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: profile · supersedes: none
 - topic: environment
 - confidence: high · status: none

@@ -1,7 +1,7 @@
 # engine-gap: omx reduce tb-final unusable here (CLI on system python without tensorboard) + no paired-condition comparison in the analysis package
 
 - id: decision/107 · date: 2026-07-27 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: engine-gap-omx-reduce-tb-final-unusable-here-cli-on-system-p · supersedes: none
 - topic: decision
 - confidence: high · status: none

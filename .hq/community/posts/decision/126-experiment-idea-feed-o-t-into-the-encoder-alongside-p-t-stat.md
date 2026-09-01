@@ -1,7 +1,7 @@
 # experiment idea: feed o_t into the encoder alongside p_t (state-conditioned z, RMA-style) instead of p_t-only encoder input
 
 - id: decision/126 · date: 2026-07-08 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: experiment-idea-feed-o-t-into-the-encoder-alongside-p-t-stat · supersedes: none
 - topic: convention
 - confidence: medium · status: none

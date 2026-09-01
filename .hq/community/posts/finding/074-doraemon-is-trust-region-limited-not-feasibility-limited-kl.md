@@ -1,7 +1,7 @@
 # DORAEMON is trust-region-limited not feasibility-limited: kl_step is pinned AT kl_ub every update, so kl_ub x n_updates is one expansion budget
 
 - id: finding/074 · date: 2026-07-16 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: doraemon-is-trust-region-limited-not-feasibility-limited-kl- · supersedes: none
 - topic: pattern
 - confidence: high · status: resolved

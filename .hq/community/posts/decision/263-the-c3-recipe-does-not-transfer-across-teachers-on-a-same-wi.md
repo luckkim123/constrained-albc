@@ -1,7 +1,7 @@
 # The C3 recipe does not transfer across teachers: on a same-width dgx16k teacher it loses at every DR level and reverses its hard win
 
 - id: decision/263 · date: 2026-08-10 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: the-c3-recipe-does-not-transfer-across-teachers-on-a-same-wi · supersedes: none
 - topic: decision
 - confidence: high · status: needs-experiment

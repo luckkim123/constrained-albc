@@ -1,7 +1,7 @@
 # engine-gap: the latent fidelity ratio has no owning module, and it must be reported against per-dim R2 because their divergence is the diagnostic
 
 - id: decision/111 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: engine-gap-the-latent-fidelity-ratio-has-no-owning-module-an · supersedes: none
 - topic: decision
 - confidence: high · status: none

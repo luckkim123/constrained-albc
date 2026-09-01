@@ -1,7 +1,7 @@
 # HydroRC recenter gate result 2026-07-28: Isaac paired gate FAIL (roll n_gt20 0->18.7 envs, yaw ss +18.8%) -- transient-tail regression at all DR levels, hard-corner collapse, 7-17x fault-robustness loss; recenter not adopted, Stonefish readout not entered
 
 - id: decision/153 · date: 2026-07-27 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: hydrorc-recenter-gate-result-2026-07-28-isaac-paired-gate-fa · supersedes: none
 - topic: decision
 - confidence: high · status: resolved

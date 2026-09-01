@@ -1,7 +1,7 @@
 # reward.md §6 (error buffers / reward call site / dt-scaling) theory review: conditionally sound; the one real exposure is B4 (reward*dt with FIXED gamma = Tallec's dt-invariance pathology, horizon dt/(1-gamma)=2.0s) but LATENT since no run changes step_dt; B5 'contradiction' refuted (actor scale-invariant vs DORAEMON performance_lb raw-return gate = consumer distinction)
 
 - id: decision/227 · date: 2026-07-11 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: reward-md-6-error-buffers-reward-call-site-dt-scaling-theory · supersedes: none
 - topic: decision
 - confidence: medium · status: none

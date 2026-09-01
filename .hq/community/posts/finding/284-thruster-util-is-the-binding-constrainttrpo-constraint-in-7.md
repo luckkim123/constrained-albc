@@ -1,7 +1,7 @@
 # thruster_util is the binding ConstraintTRPO constraint in 7 of 7 runs -- A5 loosened non-binding ones
 
 - id: finding/284 · date: 2026-07-23 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: thruster-util-is-the-binding-constrainttrpo-constraint-in-7- · supersedes: none
 - topic: pattern
 - confidence: high · status: none

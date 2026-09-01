@@ -1,7 +1,7 @@
 # No divergence signature at any point. `Loss/kl` attains its maximum at its first
 
 - id: finding/182 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: no-divergence-signature-at-any-point-loss-kl-attains-its-max · supersedes: none
 - topic: session-log
 - confidence: low · status: none

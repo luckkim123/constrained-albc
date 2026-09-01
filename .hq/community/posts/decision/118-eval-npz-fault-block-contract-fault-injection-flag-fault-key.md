@@ -1,7 +1,7 @@
 # eval npz fault block contract: fault_injection flag, fault_ keys absent-by-design on healthy evals
 
 - id: decision/118 · date: 2026-07-27 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: eval-npz-fault-block-contract-fault-injection-flag-fault-key · supersedes: none
 - topic: convention
 - confidence: high · status: none

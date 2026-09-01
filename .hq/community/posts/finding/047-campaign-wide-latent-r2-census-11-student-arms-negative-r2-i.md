@@ -1,7 +1,7 @@
 # Campaign-wide latent R2 census (11 student arms): negative R2 is NOT the campaign norm, the gen-1 extra-obs arm is the best tracker, and the obs76 gen-2 student sits at the bottom while being the only arm that kills envs
 
 - id: finding/047 · date: 2026-08-04 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: campaign-wide-latent-r2-census-11-student-arms-negative-r2-i · supersedes: none
 - topic: pattern
 - confidence: high · status: resolved

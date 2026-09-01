@@ -1,7 +1,7 @@
 # Next experiment workflow: pick a baseline, train once, then re-tune reward weights and retrain (two-phase)
 
 - id: decision/179 · date: 2026-07-11 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: next-experiment-workflow-pick-a-baseline-train-once-then-re- · supersedes: none
 - topic: convention
 - confidence: high · status: none

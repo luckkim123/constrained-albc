@@ -1,7 +1,7 @@
 # Literature map: how RL control actually handles steady-state error (cross-domain) -- nobody has eliminated it; our r_bias reward penalty is a single-paper idea, our encoder is the field's top-ranked mechanism with no UUV precedent
 
 - id: finding/174 · date: 2026-07-16 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: literature-map-how-rl-control-actually-handles-steady-state- · supersedes: none
 - topic: reference
 - confidence: high · status: resolved

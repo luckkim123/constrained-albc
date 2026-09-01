@@ -1,7 +1,7 @@
 # Adding a DR axis is half a change: dr_config's _DR_TUPLE_FIELDS / _TRUE_NOMINAL_PHYSICS must both register it or the none level silently keeps the training band
 
 - id: decision/016 · date: 2026-07-23 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: adding-a-dr-axis-is-half-a-change-dr-config-s-dr-tuple-field · supersedes: none
 - topic: convention
 - confidence: high · status: none

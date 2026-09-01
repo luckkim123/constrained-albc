@@ -1,7 +1,7 @@
 # TAM columns must match robot firmware ESC channel order (reorder + retrain, not a mixer permutation)
 
 - id: decision/253 · date: 2026-07-03 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: tam-columns-must-match-robot-firmware-esc-channel-order-reor · supersedes: none
 - topic: convention
 - confidence: high · status: resolved

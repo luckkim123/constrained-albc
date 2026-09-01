@@ -1,7 +1,7 @@
 # experiment idea: latency/transport-delay DR (sensor-obs + control-action lag) -- infra exists (isaaclab DelayBuffer) but unused; DelayedPD failed before
 
 - id: decision/127 · date: 2026-07-08 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: experiment-idea-latency-transport-delay-dr-sensor-obs-contro · supersedes: none
 - topic: convention
 - confidence: high · status: resolved

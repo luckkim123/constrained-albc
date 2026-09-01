@@ -1,7 +1,7 @@
 # DORAEMON/mean and DORAEMON/std TB tags are RAW PHYSICAL UNITS, not normalized xi -- Beta(a,b) inversion from them is valid for only 3 of the 20 params
 
 - id: decision/076 · date: 2026-07-20 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: doraemon-mean-and-doraemon-std-tb-tags-are-raw-physical-unit · supersedes: none
 - topic: convention
 - confidence: high · status: none

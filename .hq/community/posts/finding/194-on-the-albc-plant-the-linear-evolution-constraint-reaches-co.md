@@ -1,7 +1,7 @@
 # On the ALBC plant the linear-evolution constraint reaches control and costs it: arm C is beaten by its own nonlinear twin in 51 of 72 cells
 
 - id: finding/194 · date: 2026-08-06 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: on-the-albc-plant-the-linear-evolution-constraint-reaches-co · supersedes: none
 - topic: reference
 - confidence: high · status: none

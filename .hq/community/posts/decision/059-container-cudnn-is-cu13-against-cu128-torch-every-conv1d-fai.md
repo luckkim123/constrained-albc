@@ -1,7 +1,7 @@
 # Container cuDNN is cu13 against cu128 torch: every conv1d fails, student distillation is 70x slower with the workaround
 
 - id: decision/059 · date: 2026-07-22 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: container-cudnn-is-cu13-against-cu128-torch-every-conv1d-fai · supersedes: none
 - topic: convention
 - confidence: high · status: resolved

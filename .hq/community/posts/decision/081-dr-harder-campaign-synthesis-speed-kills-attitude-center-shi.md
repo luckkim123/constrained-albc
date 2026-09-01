@@ -1,7 +1,7 @@
 # DR-harder campaign synthesis: speed kills attitude, center-shift overfits
 
 - id: decision/081 · date: 2026-06-06 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: dr-harder-campaign-synthesis-speed-kills-attitude-center-shi · supersedes: none
 - topic: decision
 - confidence: high · status: none

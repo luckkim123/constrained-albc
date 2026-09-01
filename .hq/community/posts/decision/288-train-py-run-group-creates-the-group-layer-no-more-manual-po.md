@@ -1,7 +1,7 @@
 # train.py --run_group creates the <group> layer (no more manual post-move)
 
 - id: decision/288 · date: 2026-06-08 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: train-py-run-group-creates-the-group-layer-no-more-manual-po · supersedes: none
 - topic: convention
 - confidence: high · status: none

@@ -1,7 +1,7 @@
 # `rp_vel_settling` and `rp_rate` margins decline slowly in the final third (9.154
 
 - id: finding/233 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: rp-vel-settling-and-rp-rate-margins-decline-slowly-in-the-fi · supersedes: none
 - topic: session-log
 - confidence: low · status: none

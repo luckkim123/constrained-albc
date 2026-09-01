@@ -1,7 +1,7 @@
 # DECISION: do NOT adopt performance_lb=200 on the adopted bias_ema-ON config -- success 0.989 makes the feasibility constraint inert (the lb=68 failure class)
 
 - id: decision/064 · date: 2026-07-16 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: decision-do-not-adopt-performance-lb-200-on-the-adopted-bias · supersedes: none
 - topic: decision
 - confidence: high · status: resolved

@@ -1,7 +1,7 @@
 # extra_obs_dim>0 shifts the eval RNG stream so an obs4 arm never shares env draws with a pre-obs4 run, but a dim=0 control on the same commit is byte-identical to one
 
 - id: finding/134 · date: 2026-08-03 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: extra-obs-dim-0-shifts-the-eval-rng-stream-so-an-obs4-arm-ne · supersedes: none
 - topic: reference
 - confidence: high · status: none

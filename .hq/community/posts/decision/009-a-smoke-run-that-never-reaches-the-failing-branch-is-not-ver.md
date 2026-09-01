@@ -1,7 +1,7 @@
 # A smoke run that never reaches the failing branch is not verification: size it to the branch, or prove the fix by removing it
 
 - id: decision/009 · date: 2026-08-03 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: a-smoke-run-that-never-reaches-the-failing-branch-is-not-ver · supersedes: none
 - topic: convention
 - confidence: high · status: resolved

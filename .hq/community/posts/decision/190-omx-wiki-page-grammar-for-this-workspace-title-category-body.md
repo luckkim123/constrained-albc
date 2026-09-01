@@ -1,7 +1,7 @@
 # omx wiki page grammar for this workspace: title, category, body sections, and what a merge can never change
 
 - id: decision/190 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: omx-wiki-page-grammar-for-this-workspace-title-category-body · supersedes: none
 - topic: convention
 - confidence: high · status: none

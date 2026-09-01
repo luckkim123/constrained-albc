@@ -1,7 +1,7 @@
 # A stateful observation component cannot assume _get_observations runs once per step: the teacher runner calls it an extra time per iteration
 
 - id: finding/010 · date: 2026-08-03 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: a-stateful-observation-component-cannot-assume-get-observati · supersedes: none
 - topic: debugging
 - confidence: high · status: resolved

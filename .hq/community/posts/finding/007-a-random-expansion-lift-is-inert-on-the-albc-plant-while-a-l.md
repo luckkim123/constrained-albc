@@ -1,7 +1,7 @@
 # A random expansion lift is inert on the ALBC plant while a learned dictionary is not, and the learned one saturates at about 12 effective dimensions
 
 - id: finding/007 · date: 2026-08-05 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: a-random-expansion-lift-is-inert-on-the-albc-plant-while-a-l · supersedes: none
 - topic: reference
 - confidence: high · status: none

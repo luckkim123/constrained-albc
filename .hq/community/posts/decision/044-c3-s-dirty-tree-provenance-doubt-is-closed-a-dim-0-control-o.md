@@ -1,7 +1,7 @@
 # C3's dirty-tree provenance doubt is CLOSED: a dim=0 control on commit d81e2fd reproduces C3's iteration 0 bit-identically, so every student_distill_eint comparison against C3 stands
 
 - id: decision/044 · date: 2026-08-03 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: c3-s-dirty-tree-provenance-doubt-is-closed-a-dim-0-control-o · supersedes: none
 - topic: decision
 - confidence: high · status: none

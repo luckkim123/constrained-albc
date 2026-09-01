@@ -1,7 +1,7 @@
 # Next from-scratch retrain manifest: what rides on the post-TAM baseline retrain (sim fixes + learning-dynamics experiments)
 
 - id: decision/180 · date: 2026-07-05 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: next-from-scratch-retrain-manifest-what-rides-on-the-post-ta · supersedes: none
 - topic: convention
 - confidence: high · status: none

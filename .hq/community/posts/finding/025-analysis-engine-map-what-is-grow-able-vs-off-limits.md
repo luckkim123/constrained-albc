@@ -1,7 +1,7 @@
 # analysis engine map — what is grow-able vs off-limits
 
 - id: finding/025 · date: 2026-06-02 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: analysis-engine-map-what-is-grow-able-vs-off-limits · supersedes: none
 - topic: reference
 - confidence: high · status: none

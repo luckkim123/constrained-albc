@@ -1,7 +1,7 @@
 # xy-offset DR is load-bearing for pitch, not free NDIMS dilution (e4 xyprune)
 
 - id: decision/299 · date: 2026-07-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: xy-offset-dr-is-load-bearing-for-pitch-not-free-ndims-diluti · supersedes: none
 - topic: decision
 - confidence: high · status: resolved

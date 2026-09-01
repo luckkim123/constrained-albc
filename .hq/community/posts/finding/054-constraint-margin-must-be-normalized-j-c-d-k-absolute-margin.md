@@ -1,7 +1,7 @@
 # constraint margin must be normalized (J_C/d_k) -- absolute margin flips binding/slack
 
 - id: finding/054 · date: 2026-06-07 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: constraint-margin-must-be-normalized-j-c-d-k-absolute-margin · supersedes: none
 - topic: reference
 - confidence: high · status: none

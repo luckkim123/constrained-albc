@@ -1,7 +1,7 @@
 # P-B1 shared-exam on reference DR: hard-roll floor was exam artifact, transient peak trade survives (H2/e2)
 
 - id: decision/202 · date: 2026-07-16 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: p-b1-shared-exam-on-reference-dr-hard-roll-floor-was-exam-ar · supersedes: none
 - topic: decision
 - confidence: high · status: none

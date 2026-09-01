@@ -1,7 +1,7 @@
 # Within one run the training log is blind to eval regressions: a 34 percent none-level degradation moved every TB metric under 1 percent (bounds the cross-treatment reward-decomposition rule)
 
 - id: finding/297 · date: 2026-08-09 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: within-one-run-the-training-log-is-blind-to-eval-regressions · supersedes: none
 - topic: pattern
 - confidence: high · status: none

@@ -1,7 +1,7 @@
 # An eval schedule too sparse to resolve the curve manufactures a false plateau and fires the stop rule on an artifact
 
 - id: decision/022 · date: 2026-08-09 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: an-eval-schedule-too-sparse-to-resolve-the-curve-manufacture · supersedes: none
 - topic: convention
 - confidence: high · status: none

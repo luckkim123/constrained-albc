@@ -1,7 +1,7 @@
 # yaw command is rate not angle: inherited design, defensible only if heading is a free DOF (yaw-angle A/B idea)
 
 - id: decision/300 · date: 2026-07-08 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: yaw-command-is-rate-not-angle-inherited-design-defensible-on · supersedes: none
 - topic: decision
 - confidence: high · status: none

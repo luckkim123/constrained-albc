@@ -1,7 +1,7 @@
 # dr-harder: reward decomposition confirms eval trades on the training side
 
 - id: finding/083 · date: 2026-06-06 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: dr-harder-reward-decomposition-confirms-eval-trades-on-the-t · supersedes: none
 - topic: pattern
 - confidence: high · status: none

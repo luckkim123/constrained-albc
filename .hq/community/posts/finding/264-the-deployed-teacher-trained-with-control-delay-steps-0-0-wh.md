@@ -1,7 +1,7 @@
 # The deployed teacher trained with control_delay_steps (0,0) while the robot serves observations 1.2 to 4.7 control steps stale, and DORAEMON has no dim to cover it
 
 - id: finding/264 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: the-deployed-teacher-trained-with-control-delay-steps-0-0-wh · supersedes: none
 - topic: reference
 - confidence: high · status: needs-apply-before-retrain

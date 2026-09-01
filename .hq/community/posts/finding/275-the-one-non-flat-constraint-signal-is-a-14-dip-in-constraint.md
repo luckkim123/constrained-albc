@@ -1,7 +1,7 @@
 # The one non-flat constraint signal is a -14% dip in `Constraint/margin/thruster_
 
 - id: finding/275 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: the-one-non-flat-constraint-signal-is-a-14-dip-in-constraint · supersedes: none
 - topic: session-log
 - confidence: low · status: none

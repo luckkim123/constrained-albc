@@ -1,7 +1,7 @@
 # Closed-loop latent collapse suspicion: legacy student measured 11-17x worse in-loop, deployed student unverified
 
 - id: decision/049 · date: 2026-07-21 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: closed-loop-latent-collapse-suspicion-legacy-student-measure · supersedes: none
 - topic: decision
 - confidence: high · status: resolved

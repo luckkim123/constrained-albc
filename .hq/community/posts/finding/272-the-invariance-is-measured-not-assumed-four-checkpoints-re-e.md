@@ -1,7 +1,7 @@
 # The invariance is measured, not assumed. Four checkpoints re-evaluated two days
 
 - id: finding/272 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: the-invariance-is-measured-not-assumed-four-checkpoints-re-e · supersedes: none
 - topic: session-log
 - confidence: low · status: none

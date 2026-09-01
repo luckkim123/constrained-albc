@@ -1,7 +1,7 @@
 # roll transient is WORST at none DR and improves monotonically as DR hardens (inverted, both runs)
 
 - id: finding/232 · date: 2026-07-21 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: roll-transient-is-worst-at-none-dr-and-improves-monotonicall · supersedes: none
 - topic: pattern
 - confidence: high · status: resolved

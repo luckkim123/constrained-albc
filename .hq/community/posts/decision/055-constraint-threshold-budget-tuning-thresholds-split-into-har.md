@@ -1,7 +1,7 @@
 # Constraint threshold/budget tuning: thresholds split into hard physical rails (soft-inside-hard vs PhysX cap) vs soft shaping thresholds; budgets mostly no-op (9/10 slack); co-tune one at a time
 
 - id: decision/055 · date: 2026-07-12 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: constraint-threshold-budget-tuning-thresholds-split-into-har · supersedes: none
 - topic: convention
 - confidence: high · status: none

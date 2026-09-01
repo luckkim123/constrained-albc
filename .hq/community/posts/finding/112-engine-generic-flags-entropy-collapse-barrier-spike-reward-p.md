@@ -1,7 +1,7 @@
 # engine generic flags (entropy-collapse / barrier-spike / reward-plateau) are benign for a converged teacher
 
 - id: finding/112 · date: 2026-07-12 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: engine-generic-flags-entropy-collapse-barrier-spike-reward-p · supersedes: none
 - topic: pattern
 - confidence: high · status: none

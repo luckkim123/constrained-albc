@@ -1,7 +1,7 @@
 # Real ALBC deployment state-estimation rates measured from code: attitude+gyro at most ~25 Hz (loop_speed/4, self-telemetered in the sensors DEPTH field), joints 10 Hz, control 50 Hz -- the real policy runs on zero-order-held stale observations, so 50 Hz Stonefish odom is already faster than reality
 
 - id: finding/217 · date: 2026-08-03 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: real-albc-deployment-state-estimation-rates-measured-from-co · supersedes: none
 - topic: reference
 - confidence: high · status: none

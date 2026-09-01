@@ -1,7 +1,7 @@
 # ESC deadband is 1450..1545 us on this UUV: the vertical channels parked inside it, and thruster_order was wrong for three horizontals
 
 - id: finding/113 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: esc-deadband-is-1450-1545-us-on-this-uuv-the-vertical-channe · supersedes: none
 - topic: reference
 - confidence: high · status: none

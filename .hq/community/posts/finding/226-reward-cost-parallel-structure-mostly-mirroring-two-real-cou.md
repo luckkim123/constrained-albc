@@ -1,7 +1,7 @@
 # reward/cost parallel structure: mostly mirroring, two real couplings (value grad-clip over the union throttles reward critic; feasibility J_C uses GAE-return so constraint level inherits lambda_c + cost-critic bias)
 
 - id: finding/226 · date: 2026-07-12 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: reward-cost-parallel-structure-mostly-mirroring-two-real-cou · supersedes: none
 - topic: reference
 - confidence: high · status: none

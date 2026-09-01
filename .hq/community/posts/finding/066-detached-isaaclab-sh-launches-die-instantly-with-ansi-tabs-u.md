@@ -1,7 +1,7 @@
 # Detached isaaclab.sh launches die instantly with ansi+tabs unknown terminal type unless TERM is set -- and every health probe reads it as a clean finish
 
 - id: finding/066 · date: 2026-08-09 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: detached-isaaclab-sh-launches-die-instantly-with-ansi-tabs-u · supersedes: none
 - topic: debugging
 - confidence: high · status: none

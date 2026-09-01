@@ -1,7 +1,7 @@
 # Relaxing the linear-evolution constraint improves multi-step prediction in 10 of 10 offline configurations on the ALBC plant
 
 - id: finding/220 · date: 2026-08-05 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: relaxing-the-linear-evolution-constraint-improves-multi-step · supersedes: none
 - topic: reference
 - confidence: high · status: none

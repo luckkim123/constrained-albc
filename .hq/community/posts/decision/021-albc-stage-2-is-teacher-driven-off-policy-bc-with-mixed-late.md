@@ -1,7 +1,7 @@
 # ALBC stage 2 is teacher-driven off-policy BC with mixed latent+action labels (differs from RMA/HORA on both axes)
 
 - id: decision/021 · date: 2026-07-21 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: albc-stage-2-is-teacher-driven-off-policy-bc-with-mixed-late · supersedes: none
 - topic: convention
 - confidence: high · status: none

@@ -1,7 +1,7 @@
 # bias reward (bias_ema_penalty) theory review: conditionally sound; hidden-state-dependent non-Markov reward is the key flaw (expose _bias_ema as obs), squared form does not fill dead-zone, penalty is 175x smaller than tracking loss
 
 - id: decision/041 · date: 2026-07-11 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: bias-reward-bias-ema-penalty-theory-review-conditionally-sou · supersedes: none
 - topic: decision
 - confidence: medium · status: none

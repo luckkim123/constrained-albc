@@ -1,7 +1,7 @@
 # The obs76 teacher is a REAL-better controller than E-int at hard DR, but none of its advantage survives distillation to any student
 
 - id: finding/274 · date: 2026-08-04 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: the-obs76-teacher-is-a-real-better-controller-than-e-int-at- · supersedes: none
 - topic: pattern
 - confidence: high · status: resolved

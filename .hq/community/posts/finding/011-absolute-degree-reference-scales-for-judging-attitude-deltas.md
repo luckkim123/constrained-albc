@@ -1,7 +1,7 @@
 # Absolute-degree reference scales for judging attitude deltas (stop reading percentages on a small base)
 
 - id: finding/011 · date: 2026-07-23 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: absolute-degree-reference-scales-for-judging-attitude-deltas · supersedes: none
 - topic: reference
 - confidence: high · status: none

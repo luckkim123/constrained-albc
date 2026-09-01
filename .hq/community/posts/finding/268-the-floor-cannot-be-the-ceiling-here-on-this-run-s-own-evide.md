@@ -1,7 +1,7 @@
 # The floor cannot be the ceiling here, on this run's own evidence: 5/8 dims were
 
 - id: finding/268 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: the-floor-cannot-be-the-ceiling-here-on-this-run-s-own-evide · supersedes: none
 - topic: session-log
 - confidence: low · status: none

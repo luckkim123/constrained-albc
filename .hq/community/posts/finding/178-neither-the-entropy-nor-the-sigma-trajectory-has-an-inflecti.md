@@ -1,7 +1,7 @@
 # Neither the entropy nor the sigma trajectory has an inflection at the regression
 
 - id: finding/178 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: neither-the-entropy-nor-the-sigma-trajectory-has-an-inflecti · supersedes: none
 - topic: session-log
 - confidence: low · status: none

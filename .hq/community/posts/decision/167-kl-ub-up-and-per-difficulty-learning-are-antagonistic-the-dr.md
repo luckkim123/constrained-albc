@@ -1,7 +1,7 @@
 # kl_ub up and per-difficulty learning are antagonistic; the dr_harder verdict is budget-conditional
 
 - id: decision/167 · date: 2026-06-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: kl-ub-up-and-per-difficulty-learning-are-antagonistic-the-dr · supersedes: none
 - topic: decision
 - confidence: high · status: none

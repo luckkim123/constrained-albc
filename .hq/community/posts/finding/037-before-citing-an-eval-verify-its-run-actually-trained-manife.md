@@ -1,7 +1,7 @@
 # Before citing an eval, verify its run actually trained: manifest status, log directory, wandb, checkpoint count
 
 - id: finding/037 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: before-citing-an-eval-verify-its-run-actually-trained-manife · supersedes: none
 - topic: debugging
 - confidence: high · status: none

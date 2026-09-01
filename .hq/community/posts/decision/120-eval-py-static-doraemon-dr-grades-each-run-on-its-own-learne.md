@@ -1,7 +1,7 @@
 # eval.py static --doraemon-dr grades each run on its OWN learned DR — cross-run hard/ood is non-comparable, only none is fair
 
 - id: decision/120 · date: 2026-07-13 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: eval-py-static-doraemon-dr-grades-each-run-on-its-own-learne · supersedes: none
 - topic: convention
 - confidence: high · status: none

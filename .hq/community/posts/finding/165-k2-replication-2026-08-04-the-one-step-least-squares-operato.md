@@ -1,7 +1,7 @@
 # K2 replication 2026-08-04: the one-step least-squares operator on the teacher latent is the identity to within refit noise across 5 run-level pairs, and the reason is structural -- z encodes per-episode CONSTANT parameters
 
 - id: finding/165 · date: 2026-08-04 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: k2-replication-2026-08-04-the-one-step-least-squares-operato · supersedes: none
 - topic: reference
 - confidence: high · status: resolved

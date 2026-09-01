@@ -1,7 +1,7 @@
 # Latent dim d4 collapses at none-DR in every student arm and the blanket none-exclusion hides it
 
 - id: finding/172 · date: 2026-07-29 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: latent-dim-d4-collapses-at-none-dr-in-every-student-arm-and- · supersedes: none
 - topic: pattern
 - confidence: high · status: none

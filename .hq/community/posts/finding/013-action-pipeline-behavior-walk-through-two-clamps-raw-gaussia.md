@@ -1,7 +1,7 @@
 # action pipeline behavior walk-through (two clamps / raw gaussian vs tanh / delta integrator reset / single-vector two-dynamics / arm PD gain DR)
 
 - id: finding/013 · date: 2026-07-02 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: action-pipeline-behavior-walk-through-two-clamps-raw-gaussia · supersedes: none
 - topic: reference
 - confidence: high · status: none

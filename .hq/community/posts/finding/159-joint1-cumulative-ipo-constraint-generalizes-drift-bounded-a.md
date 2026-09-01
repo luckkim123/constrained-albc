@@ -1,7 +1,7 @@
 # joint1_cumulative IPO constraint generalizes (drift bounded at OOD) while the attitude tracker does not (roll OOD heavy-tail)
 
 - id: finding/159 · date: 2026-06-27 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: joint1-cumulative-ipo-constraint-generalizes-drift-bounded-a · supersedes: none
 - topic: pattern
 - confidence: high · status: none

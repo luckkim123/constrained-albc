@@ -1,7 +1,7 @@
 # Our DORAEMON == original (both entropy-max); center CAN move, kl_ub is the speed bottleneck
 
 - id: finding/199 · date: 2026-06-07 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: our-doraemon-original-both-entropy-max-center-can-move-kl-ub · supersedes: none
 - topic: reference
 - confidence: high · status: none

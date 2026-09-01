@@ -1,7 +1,7 @@
 # Eval decision floors are the binding standard for student-arm comparisons (0.1 deg / 15 envs)
 
 - id: finding/116 · date: 2026-07-29 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: eval-decision-floors-are-the-binding-standard-for-student-ar · supersedes: none
 - topic: reference
 - confidence: high · status: none

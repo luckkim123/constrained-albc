@@ -1,7 +1,7 @@
 # engine-gap: qualityScore is computed on the incoming append only, so a one-line housekeeping update permanently downgrades a rich page
 
 - id: decision/109 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: engine-gap-qualityscore-is-computed-on-the-incoming-append-o · supersedes: none
 - topic: decision
 - confidence: high · status: resolved

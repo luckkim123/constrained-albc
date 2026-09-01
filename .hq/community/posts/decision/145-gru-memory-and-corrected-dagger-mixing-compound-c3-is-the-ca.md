@@ -1,7 +1,7 @@
 # GRU memory and corrected DAgger mixing COMPOUND: C3 is the campaign's best latent tracker at every level and the first student to beat the teacher by a decision-grade margin
 
 - id: decision/145 · date: 2026-07-29 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: gru-memory-and-corrected-dagger-mixing-compound-c3-is-the-ca · supersedes: none
 - topic: decision
 - confidence: high · status: none

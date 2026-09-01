@@ -1,7 +1,7 @@
 # OPEN-ACTIONABLE LEDGER: read before any sim-plant code change or baseline launch (TAM/IMU HARD-gate + experiment backlog)
 
 - id: decision/197 · date: 2026-07-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: open-actionable-ledger-read-before-any-sim-plant-code-change · supersedes: none
 - topic: convention
 - confidence: high · status: none

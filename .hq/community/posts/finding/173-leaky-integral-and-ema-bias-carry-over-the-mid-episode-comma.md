@@ -1,7 +1,7 @@
 # Leaky-integral and EMA-bias carry over the mid-episode command resample (unexamined side-effect, harm unproven, A/B design ready)
 
 - id: finding/173 · date: 2026-07-05 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: leaky-integral-and-ema-bias-carry-over-the-mid-episode-comma · supersedes: none
 - topic: reference
 - confidence: medium · status: none

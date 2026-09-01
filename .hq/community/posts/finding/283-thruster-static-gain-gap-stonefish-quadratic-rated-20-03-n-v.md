@@ -1,7 +1,7 @@
 # Thruster static gain gap: Stonefish quadratic rated 20.03 N vs Isaac linear 40 N per unit command; 2.0x at full command and 4.65x in the policy operating band, with zero DR coverage; rotor time constant IS aligned
 
 - id: finding/283 · date: 2026-07-29 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: thruster-static-gain-gap-stonefish-quadratic-rated-20-03-n-v · supersedes: none
 - topic: reference
 - confidence: high · status: resolved

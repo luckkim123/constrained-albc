@@ -1,7 +1,7 @@
 # A cross-run verdict read only at none says nothing about hard: anchor asymmetry makes the hard exams incomparable, and re-scoring under one saturated anchor is 30 minutes with no retraining
 
 - id: decision/004 · date: 2026-08-09 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: a-cross-run-verdict-read-only-at-none-says-nothing-about-har · supersedes: none
 - topic: convention
 - confidence: high · status: none

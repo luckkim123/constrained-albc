@@ -1,7 +1,7 @@
 # IMU 45deg mounting offset + pitch negation is sim-uncompensated (2026-07-05)
 
 - id: finding/154 · date: 2026-07-05 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: imu-45deg-offset-pitch-negation-sim-uncompensated-2026-07-05 · supersedes: none
 - topic: reference
 - confidence: high · status: resolved

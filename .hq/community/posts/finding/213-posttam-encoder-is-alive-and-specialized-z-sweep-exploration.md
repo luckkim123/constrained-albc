@@ -1,7 +1,7 @@
 # Posttam encoder is alive and specialized (z-sweep) — exploration collapse is a converged optimum, not a dead encoder
 
 - id: finding/213 · date: 2026-07-15 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: posttam-encoder-is-alive-and-specialized-z-sweep-exploration · supersedes: none
 - topic: pattern
 - confidence: high · status: none

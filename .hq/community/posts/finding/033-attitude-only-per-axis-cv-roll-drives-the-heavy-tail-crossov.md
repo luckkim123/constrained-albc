@@ -1,7 +1,7 @@
 # attitude_only per-axis CV: roll DRIVES the heavy-tail crossover, yaw is the EXTREME tail
 
 - id: finding/033 · date: 2026-06-09 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: attitude-only-per-axis-cv-roll-drives-the-heavy-tail-crossov · supersedes: none
 - topic: pattern
 - confidence: high · status: none

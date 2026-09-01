@@ -1,7 +1,7 @@
 # Cross-run DR comparability: eval.py --doraemon-dr-from already provides a common test distribution; p7_tail knew and declined, judging a robustness campaign on nominal-only
 
 - id: decision/061 · date: 2026-07-16 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: cross-run-dr-comparability-eval-py-doraemon-dr-from-already- · supersedes: none
 - topic: convention
 - confidence: high · status: resolved

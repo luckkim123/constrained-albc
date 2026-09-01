@@ -1,7 +1,7 @@
 # Baseline open experiment-leads backlog (beyond heavy-tail): triage by value x launchability with blockers
 
 - id: finding/035 · date: 2026-07-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: baseline-open-experiment-leads-backlog-beyond-heavy-tail-tri · supersedes: none
 - topic: reference
 - confidence: high · status: resolved

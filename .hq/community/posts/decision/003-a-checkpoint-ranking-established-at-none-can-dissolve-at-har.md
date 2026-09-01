@@ -1,7 +1,7 @@
 # A checkpoint ranking established at none can dissolve at hard and ood: re-test finalists out of distribution before picking a deployment checkpoint
 
 - id: decision/003 · date: 2026-08-09 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: a-checkpoint-ranking-established-at-none-can-dissolve-at-har · supersedes: none
 - topic: convention
 - confidence: high · status: none

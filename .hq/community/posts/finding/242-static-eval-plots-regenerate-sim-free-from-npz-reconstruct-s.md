@@ -1,7 +1,7 @@
 # static-eval plots regenerate sim-free from npz (reconstruct segment metadata)
 
 - id: finding/242 · date: 2026-06-08 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: static-eval-plots-regenerate-sim-free-from-npz-reconstruct-s · supersedes: none
 - topic: debugging
 - confidence: high · status: none

@@ -1,7 +1,7 @@
 # CANONICAL final teacher baseline = buoyfix anchor trpo_buoyanchor (biasema 72D-obs config on post-TAM + neutral-buoyancy plant, workstation seed 30); remaining work is small tweak-tests against it; B0c is the one open lever that can still change it
 
 - id: decision/048 · date: 2026-07-24 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: canonical-final-teacher-baseline-buoyfix-anchor-trpo-buoyanc · supersedes: none
 - topic: decision
 - confidence: high · status: none

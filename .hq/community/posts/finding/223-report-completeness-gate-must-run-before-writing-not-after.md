@@ -1,7 +1,7 @@
 # report completeness gate must run BEFORE writing, not after
 
 - id: finding/223 · date: 2026-06-06 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: report-completeness-gate-must-run-before-writing-not-after · supersedes: none
 - topic: debugging
 - confidence: high · status: none

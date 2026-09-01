@@ -1,7 +1,7 @@
 # The recovery is real and monotone AT THE SAMPLED POINTS: every consecutive step
 
 - id: finding/279 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: the-recovery-is-real-and-monotone-at-the-sampled-points-ever · supersedes: none
 - topic: session-log
 - confidence: low · status: none

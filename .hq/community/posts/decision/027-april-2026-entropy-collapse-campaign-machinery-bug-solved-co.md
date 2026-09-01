@@ -1,7 +1,7 @@
 # April 2026 entropy-collapse campaign: machinery bug SOLVED, converged-sigma collapse NOT -- and min_std is the wrong lever
 
 - id: decision/027 · date: 2026-07-20 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: april-2026-entropy-collapse-campaign-machinery-bug-solved-co · supersedes: none
 - topic: decision
 - confidence: high · status: resolved

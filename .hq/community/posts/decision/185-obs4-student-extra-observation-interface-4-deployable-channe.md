@@ -1,7 +1,7 @@
 # obs4 student extra-observation interface: 4 deployable channels ride the observation dict through ONE shared student_input, zero-order held at the real 25 Hz bus rate; implemented and pushed 2026-08-03, not yet run
 
 - id: decision/185 · date: 2026-08-03 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: obs4-student-extra-observation-interface-4-deployable-channe · supersedes: none
 - topic: decision
 - confidence: high · status: resolved

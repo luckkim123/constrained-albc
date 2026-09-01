@@ -1,7 +1,7 @@
 # DR-harder OOD verdict: E2-best survives OOD; the harder curriculum (E1) generalizes WORST
 
 - id: decision/082 · date: 2026-06-06 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: dr-harder-ood-verdict-e2-best-survives-ood-the-harder-curric · supersedes: none
 - topic: decision
 - confidence: high · status: none

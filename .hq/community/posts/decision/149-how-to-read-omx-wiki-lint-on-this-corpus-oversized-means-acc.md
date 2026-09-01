@@ -1,7 +1,7 @@
 # How to read omx wiki lint on this corpus: oversized means accumulated updates, and contradiction-candidate is a tag-collision heuristic that never reads a claim
 
 - id: decision/149 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: how-to-read-omx-wiki-lint-on-this-corpus-oversized-means-acc · supersedes: none
 - topic: convention
 - confidence: high · status: none

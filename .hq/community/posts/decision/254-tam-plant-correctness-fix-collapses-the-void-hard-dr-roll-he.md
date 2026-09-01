@@ -1,7 +1,7 @@
 # TAM plant-correctness fix collapses the void hard-DR roll heavy-tail (into a raised floor)
 
 - id: decision/254 · date: 2026-07-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: tam-plant-correctness-fix-collapses-the-void-hard-dr-roll-he · supersedes: none
 - topic: decision
 - confidence: high · status: resolved

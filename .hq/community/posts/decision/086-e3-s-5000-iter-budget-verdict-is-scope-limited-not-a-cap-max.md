@@ -1,7 +1,7 @@
 # e3's '5000-iter budget' verdict is scope-limited, NOT a cap: max_iterations is a DR-EXPANSION knob (step_interval clock) and the real ceiling is the Beta a=b=1 config bound, not compute
 
 - id: decision/086 · date: 2026-07-16 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: e3-s-5000-iter-budget-verdict-is-scope-limited-not-a-cap-max · supersedes: none
 - topic: decision
 - confidence: high · status: resolved

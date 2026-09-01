@@ -1,7 +1,7 @@
 # `DORAEMON/success_rate` is the only training-side metric that tracks the eval ex
 
 - id: finding/079 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: doraemon-success-rate-is-the-only-training-side-metric-that- · supersedes: none
 - topic: session-log
 - confidence: low · status: none

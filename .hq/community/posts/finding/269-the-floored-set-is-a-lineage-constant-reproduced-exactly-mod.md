@@ -1,7 +1,7 @@
 # The floored set is a lineage constant, reproduced exactly. `model_13400` sigma i
 
 - id: finding/269 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: the-floored-set-is-a-lineage-constant-reproduced-exactly-mod · supersedes: none
 - topic: session-log
 - confidence: low · status: none

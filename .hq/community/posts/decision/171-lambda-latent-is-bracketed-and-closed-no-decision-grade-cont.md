@@ -1,7 +1,7 @@
 # Lambda_latent is bracketed and CLOSED: no decision-grade control effect in [0,4] and lambda=1 is a measured local optimum
 
 - id: decision/171 · date: 2026-07-29 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: lambda-latent-is-bracketed-and-closed-no-decision-grade-cont · supersedes: none
 - topic: decision
 - confidence: high · status: resolved

@@ -1,7 +1,7 @@
 # DORAEMON over-widens then oscillates when a converged teacher is given extra budget (chases alpha floor, overshoots, contracts)
 
 - id: finding/077 · date: 2026-07-13 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: doraemon-over-widens-then-oscillates-when-a-converged-teache · supersedes: none
 - topic: pattern
 - confidence: high · status: none

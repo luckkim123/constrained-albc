@@ -1,7 +1,7 @@
 # Eval command box was HALF the trained envelope from 2026-04-06 to 2026-07-15 -- every pre-posttam attitude number is optimistic
 
 - id: decision/115 · date: 2026-07-20 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: eval-command-box-was-half-the-trained-envelope-from-2026-04- · supersedes: none
 - topic: convention
 - confidence: high · status: none

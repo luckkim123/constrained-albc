@@ -1,7 +1,7 @@
 # Every 5000-iteration teacher on the buoyfix plant stops at ~65 percent of its DR curriculum, so the declared DR box is NOT the box it trained against
 
 - id: finding/124 · date: 2026-08-04 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: every-5000-iteration-teacher-on-the-buoyfix-plant-stops-at-6 · supersedes: none
 - topic: pattern
 - confidence: high · status: none

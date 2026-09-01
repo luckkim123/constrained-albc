@@ -1,7 +1,7 @@
 # uniform-only DR full roster (9 params, DORAEMON-bypassing) + payload XY-radius vs Z curriculum split
 
 - id: finding/293 · date: 2026-07-07 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: uniform-only-dr-full-roster-9-params-doraemon-bypassing-payl · supersedes: none
 - topic: reference
 - confidence: high · status: none

@@ -1,7 +1,7 @@
 # Stonefish Servo position mode bang-bangs at the deployed 1.0/1.0 per-step gains, and the 50 Hz odom aliased the chatter away while biasing base yaw rate +41 percent (fixed at 0.1/0.1, interim)
 
 - id: finding/248 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: stonefish-servo-position-mode-bang-bangs-at-the-deployed-1-0 · supersedes: none
 - topic: debugging
 - confidence: high · status: none

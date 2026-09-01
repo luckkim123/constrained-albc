@@ -1,7 +1,7 @@
 # Real robot has 2 faulted thrusters; user judges buoyancy restoring dominates so baseline proceeds without FTC; thruster is in the actor output partly for gradient-vanishing avoidance (FTC under separate investigation)
 
 - id: decision/219 · date: 2026-07-24 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: real-robot-has-2-faulted-thrusters-user-judges-buoyancy-rest · supersedes: none
 - topic: decision
 - confidence: high · status: none

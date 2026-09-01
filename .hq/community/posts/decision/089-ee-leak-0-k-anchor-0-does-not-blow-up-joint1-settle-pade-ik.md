@@ -1,7 +1,7 @@
 # ee_leak=0 + k_anchor=0 does NOT blow up joint1 settle (Pade/IK clamp bounds it); settle still bimodal
 
 - id: decision/089 · date: 2026-06-30 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: ee-leak-0-k-anchor-0-does-not-blow-up-joint1-settle-pade-ik- · supersedes: none
 - topic: decision
 - confidence: high · status: none

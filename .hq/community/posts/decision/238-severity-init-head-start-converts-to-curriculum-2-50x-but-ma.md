@@ -1,7 +1,7 @@
 # Severity-init head start converts to curriculum (2.50x) but makes m4-dead fault rejection 2.9-5.5x WORSE -- raising trained fault severity is not a route to fault tolerance on this plant
 
 - id: decision/238 · date: 2026-07-29 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: severity-init-head-start-converts-to-curriculum-2-50x-but-ma · supersedes: none
 - topic: decision
 - confidence: high · status: none

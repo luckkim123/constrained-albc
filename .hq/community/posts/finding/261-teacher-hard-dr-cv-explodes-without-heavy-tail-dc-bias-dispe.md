@@ -1,7 +1,7 @@
 # teacher hard-DR: CV explodes without heavy-tail (DC-bias dispersion)
 
 - id: finding/261 · date: 2026-06-05 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: teacher-hard-dr-cv-explodes-without-heavy-tail-dc-bias-dispe · supersedes: none
 - topic: pattern
 - confidence: high · status: none

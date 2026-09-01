@@ -1,7 +1,7 @@
 # Stonefish yaw-gap claim review: main-body hydro yaw torque structurally zero (symmetric added mass kills Munk); PhysX DOES model arm reaction; real gaps = buoy added-mass ~10x under, no arm-link hydro, no yaw-torque DR axis
 
 - id: finding/249 · date: 2026-07-16 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: stonefish-yaw-gap-claim-review-main-body-hydro-yaw-torque-st · supersedes: none
 - topic: reference
 - confidence: high · status: resolved

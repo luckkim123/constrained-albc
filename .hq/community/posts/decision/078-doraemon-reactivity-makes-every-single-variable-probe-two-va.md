@@ -1,7 +1,7 @@
 # DORAEMON reactivity makes every single-variable probe two-variable: the curriculum is the uncontrolled second variable (p7_tail e1/e3/e4)
 
 - id: decision/078 · date: 2026-07-20 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: doraemon-reactivity-makes-every-single-variable-probe-two-va · supersedes: none
 - topic: convention
 - confidence: high · status: none

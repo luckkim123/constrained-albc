@@ -1,7 +1,7 @@
 # Final quality past saturation remains open in one narrow sense only: the run was
 
 - id: finding/136 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: final-quality-past-saturation-remains-open-in-one-narrow-sen · supersedes: none
 - topic: session-log
 - confidence: low · status: none

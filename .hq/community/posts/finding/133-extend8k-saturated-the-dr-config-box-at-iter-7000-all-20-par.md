@@ -1,7 +1,7 @@
 # extend8k SATURATED the DR config box at iter 7000 (all 20 params Beta(1,1) = uniform): performance_lb/kl_ub were never the limit, so its `hard` exam IS absolute -- but the 5000-run's is not
 
 - id: finding/133 · date: 2026-07-20 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: extend8k-saturated-the-dr-config-box-at-iter-7000-all-20-par · supersedes: none
 - topic: reference
 - confidence: high · status: resolved

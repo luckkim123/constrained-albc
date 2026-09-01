@@ -1,7 +1,7 @@
 # Encoder health is clean and is not the regression's origin: `z_std` 0.389-0.394
 
 - id: finding/090 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: encoder-health-is-clean-and-is-not-the-regression-s-origin-z · supersedes: none
 - topic: session-log
 - confidence: low · status: none

@@ -1,7 +1,7 @@
 # heavy-tail vs sample-mean divergence are independent
 
 - id: finding/147 · date: 2026-06-02 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: heavy-tail-vs-sample-mean-divergence-are-independent · supersedes: none
 - topic: debugging
 - confidence: high · status: none

@@ -1,7 +1,7 @@
 # Koopman line REOPENED 2026-08-05: the 2026-08-04 closure was a budget decision under a control-performance goal, and no training arm ever fitted a Koopman operator
 
 - id: decision/168 · date: 2026-08-05 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: koopman-line-reopened-2026-08-05-the-2026-08-04-closure-was- · supersedes: none
 - topic: decision
 - confidence: high · status: none

@@ -1,7 +1,7 @@
 # DORAEMON alpha is a feasibility FLOOR, not a DR-expansion lever (E5 dr-harder)
 
 - id: decision/069 · date: 2026-06-07 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: doraemon-alpha-is-a-feasibility-floor-not-a-dr-expansion-lev · supersedes: none
 - topic: decision
 - confidence: high · status: none

@@ -1,7 +1,7 @@
 # teacher encoder: 0 dead latent dims, keys on lateral CoG/CoB offsets
 
 - id: finding/260 · date: 2026-06-06 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: teacher-encoder-0-dead-latent-dims-keys-on-lateral-cog-cob-o · supersedes: none
 - topic: pattern
 - confidence: high · status: none

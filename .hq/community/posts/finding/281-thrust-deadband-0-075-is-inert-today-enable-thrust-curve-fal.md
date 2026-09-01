@@ -1,7 +1,7 @@
 # thrust_deadband 0.075 is inert today (enable_thrust_curve false) and wrong for the day it is not: the board measures 0.16 half-span, asymmetric
 
 - id: finding/281 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: thrust-deadband-0-075-is-inert-today-enable-thrust-curve-fal · supersedes: none
 - topic: reference
 - confidence: high · status: resolved

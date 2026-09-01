@@ -1,7 +1,7 @@
 # ConstraintTRPO = faithful NORBC Modified-IPO (Kim 2024, arXiv:2308.12517); standardized-vs-raw barrier + soft feasibility are NORBC design not bugs; only the 1e-8 barrier clamp is code-level (no functional fix)
 
 - id: finding/057 · date: 2026-07-12 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: constrainttrpo-faithful-norbc-modified-ipo-kim-2024-arxiv-23 · supersedes: none
 - topic: reference
 - confidence: high · status: none

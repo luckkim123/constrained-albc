@@ -1,7 +1,7 @@
 # The pre-registered per-env paired comparison cannot be executed: _per_env_ss_stats hides its vector and a docstring-faithful reimplementation misses the published scalar by up to 3.6x the floor
 
 - id: finding/277 · date: 2026-08-15 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: the-pre-registered-per-env-paired-comparison-cannot-be-execu · supersedes: none
 - topic: debugging
 - confidence: high · status: resolved

@@ -1,7 +1,7 @@
 # joint1_centering reward is REMOVED on main (6-term) but ALIVE on exp/latency-dr (7-term); reward.md doc is main-stale
 
 - id: finding/158 · date: 2026-07-11 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: joint1-centering-reward-is-removed-on-main-6-term-but-alive- · supersedes: none
 - topic: reference
 - confidence: high · status: none

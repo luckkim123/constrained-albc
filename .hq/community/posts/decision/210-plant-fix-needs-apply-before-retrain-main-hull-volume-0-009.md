@@ -1,7 +1,7 @@
 # PLANT FIX (needs-apply-before-retrain): main hull volume 0.009 -> 0.00790 recenters sim net buoyancy +10.25 N -> neutral, matching 2026-07-06 onboard measurement
 
 - id: decision/210 · date: 2026-07-16 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: plant-fix-needs-apply-before-retrain-main-hull-volume-0-009- · supersedes: none
 - topic: decision
 - confidence: high · status: resolved

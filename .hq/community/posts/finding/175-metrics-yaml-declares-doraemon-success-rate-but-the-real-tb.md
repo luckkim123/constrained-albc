@@ -1,7 +1,7 @@
 # metrics.yaml declares doraemon_success_rate but the real TB tag is DORAEMON/success_rate -- a coverage check that trusts the declared token reports the group as unlogged
 
 - id: finding/175 · date: 2026-08-03 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: metrics-yaml-declares-doraemon-success-rate-but-the-real-tb- · supersedes: none
 - topic: debugging
 - confidence: high · status: resolved

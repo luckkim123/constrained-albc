@@ -1,7 +1,7 @@
 # E-int's stitched resume offset the DORAEMON update grid: its fault_severity reads 0.0770 iteration-matched (iter 4749) but 0.0901 at actual run end (iter 4999)
 
 - id: finding/088 · date: 2026-07-28 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: e-int-s-stitched-resume-offset-the-doraemon-update-grid-its- · supersedes: none
 - topic: reference
 - confidence: high · status: none

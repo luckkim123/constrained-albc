@@ -1,7 +1,7 @@
 # The DORAEMON feasibility floor sits inside this config's seed distribution: two replicate seeds ended on opposite sides of alpha with nothing but the seed changed
 
 - id: finding/266 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: the-doraemon-feasibility-floor-sits-inside-this-config-s-see · supersedes: none
 - topic: pattern
 - confidence: high · status: none

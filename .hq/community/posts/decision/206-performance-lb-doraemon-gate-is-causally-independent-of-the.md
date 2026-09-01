@@ -1,7 +1,7 @@
 # performance_lb (DORAEMON gate) is causally independent of the actor exploration collapse
 
 - id: decision/206 · date: 2026-07-15 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: performance-lb-doraemon-gate-is-causally-independent-of-the- · supersedes: none
 - topic: decision
 - confidence: high · status: none

@@ -1,7 +1,7 @@
 # Student eval: the none column is the OUT-OF-DISTRIBUTION end, not the easy end
 
 - id: decision/252 · date: 2026-08-14 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: student-eval-the-none-column-is-the-out-of-distribution-end- · supersedes: none
 - topic: convention
 - confidence: high · status: none

@@ -1,7 +1,7 @@
 # DORAEMON becomes feasibility-limited at the ceiling: the kl_ub 0.06 arm reached 98.6 percent of full DR then contracted because mean_reward sits below performance_lb
 
 - id: finding/070 · date: 2026-08-09 · author: wiki-form-conversion
-- to: all
+- harness: omx · to: all
 - subject: doraemon-becomes-feasibility-limited-at-the-ceiling-the-kl-u · supersedes: none
 - topic: debugging
 - confidence: high · status: resolved
