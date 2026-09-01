@@ -12,3 +12,10 @@
 # The omx registry log needs no rule here: omx_paths.py wiki_log() resolves it to
 # .hq/runtime/experiments/registry/log.md, which .gitignore excludes. A merge=union
 # line on the config/ path never matches and reads as if the file were tracked.
+
+# The omp secretary's ledger and journals are append-only logs in a tracked
+# layer -- same reasoning as migrated.jsonl above (store-spec §2). Added
+# 2026-09-01: the .hq migration seeded this anchor without them, and the
+# secretary began writing here the same day.
+.hq/config/project/secretary/ledger.jsonl   merge=union
+.hq/config/project/secretary/journal/*.md   merge=union
