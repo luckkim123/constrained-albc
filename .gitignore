@@ -46,3 +46,9 @@ scratch/
 graphify-out/
 .code-review-graph/
 .tokensave/
+
+# .hq unified store (store-spec §5) — machine-local layers only
+**/.hq/work/
+**/.hq/runtime/
+**/.harness.lock/
+**/.hq/**/.hq-lock

@@ -1,0 +1,41 @@
+# Plan consolidation 2026-07-23: canonical ids Z/A/B/C + one-campaign-per-group; master doc docs/reference/teacher-campaign-plan.md
+
+- id: decision/208 · date: 2026-07-23 · author: wiki-form-conversion
+- to: all
+- subject: plan-consolidation-2026-07-23-canonical-ids-z-a-b-c-one-camp · supersedes: none
+- topic: decision
+- confidence: high · status: none
+- verified: 2026-07-30 · keywords: consolidation, campaign, naming, plan, ssot
+- summary: Plan consolidation 2026-07-23: canonical ids Z/A/B/C + one-campaign-per-group; master doc docs/reference/teacher-campaign-plan.md
+
+The scattered plan corpus (60 .sp/plans docs, 2 handoff dirs, abandoned campaign ledgers, 16-lead backlog) was consolidated 2026-07-23 into ONE authoritative document: constrained-albc/docs/reference/teacher-campaign-plan.md (git-versioned; .sp and experiments/ are both gitignored so neither can hold a durable plan). Canonical id scheme = the 2026-07-20 campaign grammar (Z1-Z10 / A1-A7 / B0a-B3 / D-gates) + C0/C3/C4 from the 2026-07-22 roster; C1/C2 retired as aliases; full legacy mapping table (P-A*/P-B*, e1-e4, Arm N/I, Exp A/B, ITEM 1/2, Phase 0-3, two R-sets) lives in the doc, section 3. Campaign stores: one campaign per run group (campaign-status derives runs from group-keyed ledgers; an umbrella id would show zero runs forever) with program=teacher-final-closeout + predecessor links; teacher_baseline_buoyfix / seed_floor_dgx / e3_dgxscale_buoyfix registered and posttam ledger back-filled (0->32 events) on 2026-07-23. Status: Stage A 5/5 zero adoptions; B0a/B1a/B0a-eval done, anchor SOUND; remaining critical path = W0 -> B0c (~15h) -> C3 comparison set (~60h, workstation serial) -> C4. Five leads closed (april entropy, backlog index, slack tail, e3 budget, penalty exchange); live backlog now 7 needs-experiment + 4 needs-apply-before-retrain. Storage convention going forward: durable plan = that doc only; .sp/plans = disposable scaffolding (trash on landing); ledger events appended at launch/eval/verdict time, never batch-reconstructed again. Superseded .sp documents moved to /workspace/.trash/sp-plans-cleanup-260723/.
+
+---
+
+## Update (2026-07-23T08:41:30.977876)
+
+UPDATE 2026-07-23 (later same day): the master doc MOVED into the omx program layer — now at constrained-albc/.omx/programs/teacher-final-closeout/PLAN.md (omx v0.9.0; program.json lists the 4 member campaigns; the authoritative contract is now that PLAN.md + omx program-status). A redirect stub remains at docs/reference/teacher-campaign-plan.md, so historical references in this page's title and body still resolve.
+
+---
+
+## Update (2026-07-30T04:01:17.467011)
+
+[DEAD POINTER 2026-07-30] This page's closing sentence says the superseded .sp documents
+were moved to /workspace/.trash/sp-plans-cleanup-260723/. That batch was PERMANENTLY
+DELETED on 2026-07-30 with explicit user approval, so the pointer no longer resolves. It
+was verified unreferenced by any live doc or open lead before deletion; the page's own
+knowledge (the canonical id scheme, the one-campaign-per-group decision, the storage
+convention) is unaffected.
+
+Also note for anyone following this page's master-doc reference: the plan moved again on
+2026-07-23 to .omx/programs/teacher-final-closeout/PLAN.md, with a redirect stub left at
+docs/reference/teacher-campaign-plan.md.
+
+A second .sp purge happened the same day (20 stale scaffolding files) and IS still
+recoverable at /workspace/.trash/sp-plans-cleanup-260730/.
+
+## Provenance (carried from the omx wiki frontmatter)
+
+- qualityScore: 70
+- qualityReasons: ["no-source-marker", "generic-only-tags"]
+## Comments
