@@ -1,0 +1,11 @@
+=== [2026-08-24T02:43:32Z] START full_method (task=Isaac-ConstrainedALBC-TRPO-v0 run_name=paper_abl_full) ===
+=== [2026-08-24T07:32:55Z] END full_method rc=0 ===
+=== [2026-08-24T07:32:55Z] START no_encoder (task=Isaac-ConstrainedALBC-NoEncoder-v0 run_name=paper_abl_noenc) ===
+=== [2026-08-24T10:57:44Z] END no_encoder rc=0 ===
+=== [2026-08-24T10:57:44Z] START no_constraint (task=Isaac-ConstrainedALBC-TRPO-NoIPO-v0 run_name=paper_abl_noconstr) ===
+=== [2026-08-24T15:22:57Z] END no_constraint rc=0 ===
+=== [2026-08-24T15:22:57Z] START ppo (task=Isaac-ConstrainedALBC-PPO-v0 run_name=paper_abl_ppo) ===
+=== [2026-08-24T17:47:12Z] END ppo rc=0 ===
+=== [2026-08-24T17:47:12Z] START no_both (task=Isaac-ConstrainedALBC-TRPO-NoIPO-NoEncoder-v0 run_name=paper_abl_nobo) ===
+=== [2026-08-24T20:56:47Z] END no_both rc=0 ===
+=== [2026-08-24T20:56:47Z] CHAIN COMPLETE ===
