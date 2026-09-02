@@ -1,3 +1,3 @@
 # Moved
 
-Moved to `.omx/programs/teacher-final-closeout/PLAN.md` (2026-07-23, omx v0.9.0 program layer).
+Moved to `.hq/community/programs/teacher-final-closeout/PLAN.md` (2026-07-23 into the omx program layer; 2026-09-01 the store moved .omx -> .hq).
