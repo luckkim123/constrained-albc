@@ -1,6 +1,6 @@
 # INDEX — albc
 
-> 300 posts · regenerated 2026-09-01 by `hq index`
+> 301 posts · regenerated 2026-09-02 by `hq index`
 
 ## decision
 - `decision/002` [subject: a5-budgetslack-rp-vel-settling-manipulability-budgets-x100-l] A5 budgetslack (rp_vel_settling + manipulability budgets x100): learner is anchor's twin, verdict CONTINGENT on seed floor — A5 budgetslack (rp_vel_settling + manipulability budgets x100): learner is anchor's twin, verdict CONTINGENT on seed floor
@@ -129,6 +129,7 @@
 - `decision/298` [subject: x1-tail-split-restores-the-gen-2-latent-collapse-but-moves-n] X1 tail-split restores the gen-2 latent collapse but moves NO control metric: latent reconstruction and closed-loop dispersion are decoupled — X1 tail-split restores the gen-2 latent collapse but moves NO control metric: latent reconstruction and closed-loop dispersion are decoupled
 - `decision/299` [subject: xy-offset-dr-is-load-bearing-for-pitch-not-free-ndims-diluti] xy-offset DR is load-bearing for pitch, not free NDIMS dilution (e4 xyprune) — xy-offset DR is load-bearing for pitch, not free NDIMS dilution (e4 xyprune)
 - `decision/300` [subject: yaw-command-is-rate-not-angle-inherited-design-defensible-on] yaw command is rate not angle: inherited design, defensible only if heading is a free DOF (yaw-angle A/B idea) — yaw command is rate not angle: inherited design, defensible only if heading is a free DOF (yaw-angle A/B idea)
+- `decision/301` [subject: retrain-simtoreal-2026-09] Program retrain-simtoreal-2026-09 opened: teacher retrain on the real actuator set (m3 dead, m4 excluded) + control_delay (0,1) — pending user approval, 10 decisions listed — 2026-09-02: after vault finding/137 showed the incumbent learned pitch from the vertical thrusters (14.5 Nm) and never saw the real m3+m4-dead plant (2-dead exposure 1/30,000 per episode), a retrain program was opened at .hq/community/programs/retrain-simtoreal-2026-09/PLAN.md. Config delta vs incumbent is exactly two knobs (fault.thruster_fixed_health=[1,1,1,0,0,1]; control_delay_steps=(0,1)), 10000 iter, >=2 seeds, 4096 envs, everything else byte-identical; no new constraint or shaping. Phase 0 desk gates (G0-A fixed-health eval of the incumbent, G0-C paired 500-iter feasibility probe) precede any launch. Ten [DECISION-REQUIRED] items await the user, incl. whether a DGX-trained teacher may be deployed (the +109% machine-isolation caveat rests on one same-seed pair inside the 56% seed floor).
 
 ## finding
 - `finding/001` [subject: 32768-envs-fit-on-the-dgx-gb10-83-2-121-7-gb-peak-no-fallbac] 32768 envs FIT on the DGX GB10 (83.2/121.7 GB peak, no fallback) at 34.73 s/iter, but per-doubling cost is degrading (1.78x -> 1.90x) and a 200-iter probe cannot see DORAEMON at all (step_interval 250) — 32768 envs FIT on the DGX GB10 (83.2/121.7 GB peak, no fallback) at 34.73 s/iter, but per-doubling cost is degrading (1.78x -> 1.90x) and a 200-iter probe cannot see DORAEMON at all (step_interval 250)
