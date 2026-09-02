@@ -130,10 +130,11 @@ Each gate has a pre-registered readout. None launches training.
 |:--|:--|:--|:--|:--|
 | G0-A | Does the incumbent have an arm-pitch fallback? (`finding/137` item A) | `eval.py static --checkpoint <model_9998> --fault_fixed_health 1,1,1,0,0,1 --doraemon-dr-from <incumbent run>` with the attitude STEP trajectory (`build_step_trajectory`, `--att-amp-deg 15`), 64 envs, seed 42; compare to the same eval with health `1,1,1,1,1,1` | pitch step tracking at `none`: if ≥ 80 % of the healthy run → fallback exists and the retrain's pitch argument (D-1) drops to "robustness"; if < 50 % → D-1 confirmed | decides how §Predicted outcome is phrased, not whether the program runs |
 | G0-B | Rate/latency sensitivity of the incumbent in sim | `--control-delay 1` and `2` at all levels (Z4 repeat on the incumbent; the recorded sweep is on `trpo_buoyanchor`) | reproduce the superlinear degradation (≈2×/5× at d=1/2) | sizes the delay-DR benefit; feeds `[DECISION-REQUIRED: control-rate]` |
-| G0-C | Is a fixed-health training config feasible under DORAEMON? | 2-seed × 500-iteration probe with `fault.thruster_fixed_health=[1,1,1,0,0,1]`, `control_delay_steps=[0,1]`, all else incumbent; PAIRED against the same seeds without the two changes | `Train/mean_reward` and `DORAEMON/success_rate` trajectories: proceed if the paired deficit is < the R30↔R31 seed gap (13.4 return points) at iteration 500; otherwise apply the changes one at a time and find the culprit | gate for Phase 3 launch (this is the `finding/264` revised gate, option b) |
+| G0-C | Is a fixed-health training config feasible under DORAEMON? | 2-seed × 500-iteration probe with `fault.thruster_fixed_health=[1,1,1,0,0,1]`, `control_delay_steps=[0,1]`, all else incumbent; PAIRED against the same seeds without the two changes | `Train/mean_reward` and `DORAEMON/success_rate` trajectories: proceed if the paired deficit is < the R30↔R31 seed gap (13.4 return points) at iteration 500; otherwise apply the changes one at a time and find the culprit. Also read the `thruster_util` constraint margin (J_C/d_k): it was 0.82–0.93 of budget with 6 thrusters (`posts/decision/234`) and four live channels may push it to binding | gate for Phase 3 launch (this is the `finding/264` revised gate, option b) |
 | G0-D | DGX parallel-seed throughput | On ksm-nas: one 4096-env run for 100 iterations alone, then two concurrently; record s/iter and `free -m` peak | choose 2 parallel seeds if slowdown ≤ 1.5×, else serial | sizes Phase 3 wall-clock |
 | G0-E | Constraint activation check | read the incumbent `launch.log` / TB tags for the 10 constraint margins; confirm `num_constraints` is synced at runtime (the deployed `agent.yaml` serializes `num_constraints: 0`) | 10 `Constraint/*` tags present | pre-launch sanity for Phase 3 (a config that silently dropped constraints would be a different algorithm) |
 | G0-F | Board-side one-liners (no robot) | add `/rl/command` to `albc_rl_fieldtest.launch` record list (`finding/137` item F); confirm `thruster_sign` default is NOT identity in the fieldtest launch or document the mandatory arg | bag contains setpoints in the next tank run | vault-side, registered by pointer |
+| G0-G | **m0/m3 motor identity** (dry, robot out of water, 5 min, operator) — the record conflicts: `posts/finding/255` (2026-07-05) measured "vertical pair = ONE motor, dual ESC", `deployed_tam.json` (2026-08-11) records m0 ok / m3 DEAD as separate channels, `finding/137` §7 flagged it and left it open | trace the two vertical ESC leads to the motor(s); if one motor, note which ESC actually drives it | two motors → fixed health `[1,1,1,0,0,1]` is the right model (m0 alone, My = +0.145·u0). ONE motor → the sim's differential My row is unphysical and `[1,1,1,0,0,1]` would teach a pitch moment that does not exist; the honest model is m0 with `My = 0` (TAM row edit) — see `[DECISION-REQUIRED: vertical-motor-identity]` | blocks Phase 1's fixed-health vector until answered; both branches are one config line |
 
 ## Phase 1 — the retrain configuration (delta vs incumbent, one row per knob, with grounds)
 
@@ -181,6 +182,8 @@ reallocation would move the plant AWAY from the training distribution — see
 | Control rate change would re-time 8 constants | codex §1 | `[DECISION-REQUIRED: control-rate]` |
 | DGX vs workstation as the training machine of the DEPLOYED teacher | standing caveat vs its n=1 evidence | `[DECISION-REQUIRED: dgx-trained-deployable]` |
 | Parallel seeds on one GB10 share compute | s/iter unknown until G0-D | `[DECISION-REQUIRED: seeds-and-budget]` |
+| Whether m0's `My = 0.145` row is physical depends on the m0/m3 motor identity (G0-G); with a single motor the fixed-health model must also zero that row | a spurious pitch moment in sim is a sim-to-real gap the retrain would CREATE | `[DECISION-REQUIRED: vertical-motor-identity]` |
+| Four live thrusters carry the whole wrench → `thruster_util` (budget 0.40, already 0.82–0.93 of budget on the healthy plant) may bind and the policy may under-use thrust | binding is measured, not assumed; tightening/loosening budgets to compensate is out (halving budgets cost −54 % reward, `posts/finding/052`) | read in G0-C; escalates only if it binds (`[DECISION-REQUIRED: fault-config]` covers the fallback) |
 
 ### Tier 3 — no coupling to the variables under test; leave byte-identical
 
@@ -219,7 +222,9 @@ starts directly — the screening exists to de-risk, not to delay.
 - Monitoring (verified tag names): `Train/mean_reward`, `DORAEMON/success_rate`, `DORAEMON/mode`,
   `Policy/mean_noise_std`, all 10 `Constraint/*` margins; the iteration-500 abort gate uses the
   paired G0-C trajectory as its reference, never a saturation-time band (vault
-  `feedback_handoff_healthy_band_timepoint`).
+  `feedback_handoff_healthy_band_timepoint`). Fixed-schedule EVALS at iterations 2500 / 5000 / 7500 /
+  10000 on the fixed-health exam (TB is blind to intra-run eval regressions: a 34 % none-level
+  degradation moved every TB metric < 1 %, `posts/finding/297`); best-checkpoint tracking follows.
 - Launch is queued with `omx queue-launch`, fired by the user. Nothing here auto-fires.
 
 ## Phase 4 — selection, distillation, export
@@ -277,10 +282,23 @@ starts directly — the screening exists to de-risk, not to delay.
 | vault `finding/137` items A–F | A → G0-A; B → answered (`fault.enable: true`); C (vertical row measurement) → real-side, DEFER; D (m0/m3 same motor?) → real-side visual check before Phase 5; E (R4 bag) → agy digest task; F → G0-F |
 | `dgx-final-scaleup` §8 Q1 machine isolation | → `[DECISION-REQUIRED: dgx-trained-deployable]` |
 | E-lat, E-obs, E-t200 (closeout roster) | E-lat subsumed by Phase 1 `(0,1)`; E-obs superseded (obs72 decided); E-t200 DEFER (bench) |
+| `posts/finding/255` (07-05, "vertical pair = one motor, dual ESC") vs `deployed_tam.json` (08-11, m0 ok / m3 DEAD) — unresolved conflict | → G0-G + `[DECISION-REQUIRED: vertical-motor-identity]`; the fixed-health vector is not final until this is answered |
+| `posts/decision/030` velocity_limit_sim 3.1 vs `delta_scale 0.10` (5 rad/s demand → target runaway) — recorded as a retrain item | HELD: both sides (sim `_joint_pos_targets`, board `np_policy.py`) integrate identically and unbounded (`posts/finding/163`: not a sim-to-real gap); changing `delta_scale` would be a board change too and a new variable. Arm-pitch training raises arm demand, so runaway frequency is READ in the fixed-health eval (`applied action` channel), not clamped |
+| `posts/decision/127` (08-05) control-delay as a "gen-2 requirement" incl. per-sensor staleness modeling | SUPERSEDED in range by `finding/264` (08-14, `(0,1)`); the per-sensor split is now moot for the board (joints 50 Hz) and stays out of scope |
+| `posts/decision/155` / `197` / `253` needs-apply-before-retrain (horizontal TAM rewrite; vertical Fz/My redesign; IMU 45°/pitch-negation; TAM moment-arm / max_thrust DR band) | horizontal rewrite APPLIED (`3bb042b`, incumbent trained on it); max_thrust band ADOPTED (`(0.85,1.15)`); IMU offset closed on the ROBOT side (+102°, consumer-side rotation) — sim frame unchanged by design; vertical row → G0-G / item C |
+| `posts/decision/219` / `234` / `finding/141` — real robot has 2 faulted thrusters while `thruster_util` trends into binding (93.2 % at extend8k); m4 loss halves the pure-yaw ceiling (11.5 N·m) | READ in G0-C (`thruster_util` margin); budgets are NOT retuned to compensate (`finding/052`: halving budgets → −54 % reward); yaw-rate tracking on the fixed-health exam is a pre-registered secondary readout |
+| `posts/decision/299` XY body-offset DR (arm-tip buoy pose disturbance) must not be pruned | HELD — all DR ranges byte-identical |
+| `posts/decision/179` reward retune only after a post-fix baseline; `performance_lb` recalibration if returns change | HONORED — no reward change; `lb` recalibration is a listed fallback under `[DECISION-REQUIRED: fault-config]`, never silent |
+| `posts/decision/140` (07-27) fault-DR ADOPT + privileged fault obs REJECTED | HONORED — fault DR stays on the live channels under option A; privileged obs stays false |
 
 ## Risks
 
 - Fixed-health training may make `performance_lb 250` infeasible → G0-C catches it before any long run.
+- Four live thrusters may drive `thruster_util` to binding (0.82–0.93 of budget already on six) → the
+  policy may under-use thrust for yaw; read the margin in G0-C and the yaw-rate exam in Phase 4; do NOT
+  loosen the budget to compensate (`finding/052`).
+- If m0/m3 are one motor (G0-G), the `[1,1,1,0,0,1]` model keeps a pitch moment (`My = 0.145·u0`) the
+  robot cannot make → the retrain would CREATE a gap; G0-G is therefore a hard prerequisite of Phase 1.
 - Training pitch through the arm may teach the policy to also use m0 (Fz/My coupling 0.145) → heave
   drift in the tank; the `thruster_util` constraint and `k_thr` penalty discourage it but do not
   forbid it; read `Fz` usage in the fixed-health eval (`applied action` channel) before Phase 5.
@@ -337,6 +355,11 @@ in BOTH seeds with the paired control above it.
    noise) to screening.
 10. `[DECISION-REQUIRED: paper-comparability]` — Acknowledge the new teacher is a deployment line
     outside the RA-L 7-arm suite (different plant configuration); no paper table is re-run here.
+11. `[DECISION-REQUIRED: vertical-motor-identity]` — Operator answers G0-G (are m0 and m3 one motor with
+    two ESCs, as `finding/255` measured on 2026-07-05, or two motors, as `deployed_tam.json` implies?).
+    Two motors → fixed health `[1,1,1,0,0,1]` as planned. One motor → also zero m0's `My` entry in
+    `_BASE_ALLOCATION_MATRIX` (a factual correction of one number, not a rule) so sim cannot pitch with
+    a motor the robot does not have. Recommend: answer before G0-C runs; both branches cost one line.
 
 ## Traceability — external sources consulted (2026-09-02)
 
