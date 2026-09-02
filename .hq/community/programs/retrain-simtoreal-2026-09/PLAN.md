@@ -2,6 +2,44 @@
 
 **Status: PENDING USER APPROVAL — this document authorizes NO launch.**
 
+> ## REVISION PENDING — two user corrections, 2026-09-02 ~23:10 KST (read before anything below)
+>
+> The user rejected the design axis of this draft in two places. Phase 1's `fault.thruster_fixed_health=[1,1,1,0,0,1]`
+> row, the parts of `[DECISION-REQUIRED: fault-config]` that treat a fixed dead set as the training plant, and the
+> "REAL actuator set" framing in the title are **superseded**; the rest of the document (gates, held knobs, latency,
+> budget, evaluation rules) stands. The corrections, verbatim:
+>
+> > 근데 내가 학습 내내 죽이는 방식 말고 FTC를 좀 강화하라는 식으로 하라고 누차례 말하지 않았나? 논문 쓸때 그럼 로봇
+> > 고장났다고 말할꺼야? 리뷰어가 고장난거 왜 안고치냐고 말하면? 구구절절 못고치는 이유 말하게?
+>
+> > 그리고 실제 실험 해보니깐 TAM에서 수직 스러스터가 pitch 에 영향을 미치는게 좀 과대평가되어있었다고 말한건?
+>
+> **Correction 1 — the training axis is FAULT-TOLERANT CONTROL, not a plant with the thrusters glued off.** Faults stay a
+> DISTRIBUTION the policy must absorb: strengthen the fault DR so single AND double actuator loss (including complete
+> death and the vertical channels) is sampled at a rate the policy can learn from, keep the policy fault-agnostic or give
+> only the critic/encoder the privileged health (student infers it from history), and treat the real robot's m3-dead /
+> m4-excluded state as ONE test case of that distribution. Fixed-health vectors remain EVAL instruments (the fault
+> exam matrix: healthy, each single loss, the real pair, other pairs) — never a training plant. Paper framing follows:
+> "fault-tolerant attitude control under actuator loss, validated on hardware with real failures", not "the robot is
+> broken". The record already held this direction (`finding/137` §7 (3): 운영자 제안 = 적응하는 정책) and the draft
+> ignored it. Grounds to carry into the redesign: today's exposure is 1/30,000 per episode for two dead channels
+> (`fault_fail_prob 0.1 × severity`, `health U(0,0.5)`); E-ftc1 showed a faster severity SCHEDULE made fault rejection
+> worse (2.9–5.5×), so the lever is the sampler SHAPE (k∈{0,1,2} failures over channel pairs, explicit dead mass),
+> not the schedule; FaultDR-AB rejected privileged fault obs on n=1 (seed floor 56 %), so that rejection is weak.
+>
+> **Correction 2 — the vertical thrusters' pitch authority in the TAM is OVER-estimated, per the tank.** The live TAM
+> gives m0/m3 `My = ±0.145` (14.5 N·m at 50 N), which is why the incumbent learned pitch from thrust. The operator's
+> observation (finding/137 §7 (2)) plus the artifact's own OPEN note (`deployed_tam.json.open.sim_tam_is_rotated`,
+> `config.py` "vertical Fz/My row OPEN") say that number is an unmeasured assumption and too large. A retrain that keeps
+> 0.145 re-teaches the wrong actuator. Options to argue in the redesign: (a) DR band on the vertical moment arm
+> (a sim-fidelity axis, like the adopted `max_thrust_scale` band — `decision/197`'s "TAM moment-arm band" item),
+> (b) nominal correction from a measurement (item C; m0/m3 motor identity G0-G decides whether the row exists at all),
+> (c) both. Any of them is a plant-fidelity change, not a rule, and it must be listed in the launch ack.
+>
+> Next session: rewrite Phase 1, Tier 2, Phase 2 arms (S1 = strengthened fault DR; S1b = + privileged fault obs;
+> S1c = + vertical moment-arm band), Phase 4 exam matrix, Predicted outcome, and decisions 2 / 10 / 11 accordingly.
+> Nothing below has been launched.
+
 Opened 2026-09-02 (evening) after `finding/137` (vault) located the T4 pitch failure in the policy's
 learned actuator assignment, not in the robot. Supersedes nothing: `teacher-final-replicate` (closed
 2026-08-11, incumbent kept) and `simtoreal-thrusters-live` (vault, robot side) remain the record this
