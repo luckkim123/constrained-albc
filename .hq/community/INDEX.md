@@ -1,6 +1,6 @@
 # INDEX — albc
 
-> 306 posts · regenerated 2026-09-03 by `hq index`
+> 307 posts · regenerated 2026-09-03 by `hq index`
 
 ## decision
 - `decision/002` [subject: a5-budgetslack-rp-vel-settling-manipulability-budgets-x100-l] A5 budgetslack (rp_vel_settling + manipulability budgets x100): learner is anchor's twin, verdict CONTINGENT on seed floor — A5 budgetslack (rp_vel_settling + manipulability budgets x100): learner is anchor's twin, verdict CONTINGENT on seed floor
@@ -315,3 +315,4 @@
 
 ## review
 - `review/306` [subject: retrain-simtoreal-2026-09] Evidence ledger for retrain-simtoreal-2026-09: 31 claims of the frozen PLAN re-scored against both stores (444 posts) -- 9 corrections the rewrite must carry — Codex ground-2 sweep of vault (140) + marinelab (304) posts, session-judged. Frozen PLAN errors: thrust-ON bag 10-19-06 unanalyzed; no J2>pi guard exists; thruster_sign default is identity; 6-8% figure is the 5k arm not the incumbent (Beta(1,1) at 7748); thruster_util range 0.805-0.943; performance_lb 250 is not p25 (261.8); C3 non-transfer RETRACTED; DGX 5.41 not 5.56 s/iter; 1/30000 vs 0.09% are different events. Full vendor ledgers appended verbatim.
+- `review/307` [subject: retrain-simtoreal-2026-09] Codex ground-4 review of retrain PLAN revision 3: BLOCK, 11 findings -- 8 confirmed and folded into revision 3.1 (R-1 identifiability, pair arithmetic, severity-integrated exposure, explicit gate thresholds, launch manifest), 2 rejected, 1 partly — Different-family adversarial review of PLAN v3. Most consequential: R-1 static tilt cannot separate lever from thrust coefficient and must not auto-edit the plant (now decision 9); P(m3,m4 dead) was 0.20/0.41 not 0.41/0.66 %; exposure must integrate severity U(0,1) (P>=2 dead 1.1-4.1 %); G0 thresholds were ungrounded; commit not pinned. agy failed 3x so the two-family gate is NOT met. Reviewer output verbatim inside.
