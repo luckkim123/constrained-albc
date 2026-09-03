@@ -1,4 +1,4 @@
-# Vertical TAM: the lever and the frame stay; the 2026-08-12 m0 probe says the vertical moment at u=0.25 is ~3x below the linear training plant, which matches the sim signed-square curve, not a wrong lever -- R-1 two-level ratio decides, K cancels
+# Vertical TAM: the lever and the frame stay; the "3x gap" is RETRACTED (unit error -- the m0 probe was RAW, effective u=0.1176, ratio 0.67x at the DR floor), and R-1 (2026-09-03) found neither pre-registered law but a shifted origin -- the absolute coefficient now hinges on net buoyancy B, which is the next probe
 
 - id: finding/309 · date: 2026-09-03 · author: session-mac
 - harness: omo · to: all
@@ -6,9 +6,104 @@
 - topic: decision
 - confidence: medium · status: needs-experiment
 - verified: partial · keywords: vertical-tam, thrust-curve, thrust_coefficient, m0, R-1, retrain-simtoreal-2026-09, frame
-- summary: Answer to the user question whether the vertical TAM needs lowering and whether the frame is fine. Training plant is thrust = command x 40 N linear (config.py:140-141, verified at HEAD 81c2ec0), coefficient DR (0.7,1.3), clamp 50 N; PLAN v3.1 used 50 N as the coefficient (D-1 14.5 N.m should be 11.6). The m0 sign probe (+0.25 -> pitch -3.36 deg, K 7.76 N.m/rad) gives 0.455 N.m vs linear nominal 1.45 N.m (0.31x, below the DR floor) and vs signed-square 0.363 N.m (1.25x, inside its DR band). Lowering the My row is the wrong knob if the deviation is shape; the sim curve exists as enable_thrust_curve true with thrust_deadband 0 (mixer already inverts the ESC deadband). R-1 at two levels: ratio dtheta(0.5)/dtheta(0.25) ~2 linear vs ~4 quadratic, K cancels. r1-before-final recommendation moves to yes. Frame closed by +102 deg consumer-side rotation; nothing to redo.
+- summary: CORRECTED 2026-09-03 (twice). (a) The 3x/0.31x vertical-moment gap is RETRACTED as a unit error: the 08-12 m0 probe used b1_channel_probe.py, which publishes RAW commands with the mixer bypassed, so raw 0.25 is effective u=0.1176 (undeadband D=0.15) -- the measured 0.455 N.m is 0.67x the linear nominal 0.682 N.m, at the coefficient-DR floor (0.7,1.3), and 5.7x the signed-square curve, not the other way round. (b) R-1 ran 2026-09-03 (vault finding/144): the PLAN section 7 settled-tilt protocol is UNEXECUTABLE on this robot -- m3 dead means m0 is the only vertical channel, reallocate() turns every command into net heave, and both + steps clamped at 0.205 m and both - steps at 0.890 m with doubling the thrust changing neither. Replacement readout (terminal descent rate, 9/9 steps, R2 0.988-0.996, free rise 0.0230 m/s pins B=c*v_rise^2 so drag cancels): the law fits NEITHER pre-registered option -- not curvature but a shifted origin, T ~ (u-delta) with delta ~ 0.11-0.14 linear above it (T=15.5*u^1.0 N). That residual deadband undercuts option (d) premise (finding/281 assumed the mixer fully inverts the ESC deadband). Absolute coefficient is undecided and thruster levels are no longer the lever: B=0.53 (free-rise fit) gives 0.39x, vault finding/136 B=1.07 gives 0.78-0.86x INSIDE the DR band -- a net-buoyancy remeasurement is now the deciding probe. Also identified: (m+m_a)=52.0 kg (added mass 41.7 on 10.3 dry), c=1000 N.s2/m2. Also retracted: rev1 +20.2 deg/s yaw was wall reaction. Frame, lever 0.145 m, 40 N constant, D-1 conclusion all stand.
+Answer to the user's 2026-09-03 question "does the vertical TAM need lowering, and is the frame fine as-is?". Frame: nothing to change. Lever: nothing to change. The magnitude claim this post originally made has been **corrected twice on 2026-09-03** — once for a unit error found at the desk, once by R-1 actually running. Both corrections are in §0; the rest of the post is the surviving record.
 
-Answer to the user's 2026-09-03 question "does the vertical TAM need lowering, and is the frame fine as-is?", from the record plus one piece of arithmetic nobody had done: the tank probe that fixed m0's SIGN (2026-08-12) also carries m0's MAGNITUDE, and that magnitude is about 3x below the training plant at the command level probed. Frame: nothing to change. Lever: nothing to change. What deviates is the thrust-vs-command SHAPE, and that is a different knob from the TAM row.
+## 0. Two corrections to this post (2026-09-03, tank session)
+
+### 0a. RETRACTED — the "0.31× / ~3× gap" was a unit error, not a measurement
+
+The 2026-08-12 m0 probe ran through `b1_channel_probe.py`, which publishes **raw ESC
+commands with the mixer bypassed** (`deployed_tam.json._what`; vault PLAN §2b-0). A raw
+command is not a policy command. The mixer's `undeadband` maps a policy command `u` to
+`raw = sign(u)·(D + (1−D)|u|)` with `D = 0.15` (vault `finding/077`), so:
+
+    raw 0.25  <=>  u_eff = (0.25 − 0.15) / 0.85 = 0.1176
+
+This post compared a raw-0.25 measurement against the sim's nominal **at u = 0.25**. That
+is a factor of 2.1 in the command axis, and it is the whole of the "3× gap".
+
+| | old (wrong) | corrected |
+|:--|--:|--:|
+| command the probe actually applied | u = 0.25 | **u = 0.1176** |
+| sim linear nominal there | 1.45 N·m | **0.682 N·m** |
+| measured 0.455 N·m → ratio | 0.31× | **0.67×** |
+| secant over ±raw 0.25 (Δu_eff = 0.235) | 0.21× | **0.45×** (2.60 N·m/unit) |
+
+0.67× sits **at the coefficient-DR floor** (`thrust_coefficient_scale (0.7, 1.3)`), not 3×
+below it. Every downstream sentence that read "outside the DR band, so Phase 3 would train
+on a channel the record says is wrong" loses its arithmetic. The R-1 *recommendation*
+survives — see §0b, which is a stronger reason than the one it replaces.
+
+### 0b. R-1 ran (2026-09-03). The §7 protocol was unexecutable; the readout was replaced
+
+Full record: vault `finding/144` (+ its comment carrying the identification).
+
+**The settled-tilt protocol cannot run on this robot.** With m3 dead, m0 is the only
+vertical channel, so `reallocate()` turns every vertical command into net **heave** — the
+robot leaves the depth band before tilt settles. Measured: both `+` steps clamped at depth
+0.205 m and both `−` steps at ~0.890 m, and **doubling the thrust changed neither**. The
+first run's `r(+) = 0.98` was a boundary reaction, not a plant property. This is structural,
+not a dwell-tuning problem: §7's "discard a level if depth changes > 0.3 m" discards every
+level.
+
+**Replacement readout: terminal descent rate, down-only.** 3 levels × 3 repeats, 9/9 steps
+accepted, per-step linear fit R² 0.988–0.996:
+
+| u | v_descent (m/s) |
+|--:|--:|
+| 0.251 | 0.0495 |
+| 0.375 | 0.0766 |
+| 0.500 | 0.0877 |
+| free rise (no thrust) | 0.0230 ± 0.0040 |
+
+Measuring the free rise is what makes this decisive: it pins `B = c·v_rise²`, so the drag
+coefficient **cancels in every ratio** and the shape verdict does not inherit a drag
+estimate.
+
+**Shape: neither pre-registered option.** Adjacent ratios 2.147 / 2.756 / 1.283 against
+linear 1.494 / 1.992 / 1.333 and quadratic 2.232 / 3.968 / 1.778 — no single power law fits.
+The joint identification says the deviation is not curvature but a **shifted origin**:
+`T ∝ (u − δ)` with **δ ≈ 0.11–0.14**, above which the law is linear (`T = 15.5·u^1.0` N,
+rms depth residual 0.0134 m against ~0.010 m quantisation). Only the lowest level misses
+(+17 %); the upper two are within 3–5 %.
+
+> **This weakens option (d)'s premise.** (d) sets the sim's `thrust_deadband` to 0 *because*
+> the deployment mixer already inverts the ESC deadband (`finding/281`). A residual
+> δ ≈ 0.12 on top of the mixer's `D = 0.15` says that inversion is incomplete. (d) should
+> not be selected until δ is either explained or compensated.
+
+**Absolute coefficient: undecided, and thruster levels are no longer the lever.**
+`T = 15.5 N/unit` → My/unit = 0.145 × 15.5 = **2.25 N·m** = **0.39×** the sim's 5.8, outside
+the DR band. But that rests entirely on `B`: the fit pins `B = 0.53 N` from the free rise,
+while vault `finding/136` measured net buoyancy **1.07 N** — exactly 2×. With B = 1.07 the
+scale becomes **0.78–0.86×** (joint transient fit vs terminal balance), **inside** the
+(0.7, 1.3) band, and no coefficient change is warranted at all.
+
+    B = 0.53  ->  0.39x        (outside DR)
+    B = 1.07  ->  0.78-0.86x   (inside DR)
+
+So `[DECISION-REQUIRED: vertical-moment]` **cannot be read from R-1**. The deciding probe is
+a **net-buoyancy remeasurement**, not more thruster levels. Note the 08-12 probe's corrected
+0.45–0.67× (§0a) brackets both candidates and separates neither.
+
+**By-product identification** (9 dives, 1071 depth samples): `(m + m_a) = 52.0 kg` → added
+mass **41.7 kg** on a 10.3 kg dry body (plausible for a wide open frame in heave); drag
+`c = 1000 N·s²/m²` at B = 0.53.
+
+**Also retracted:** the first run reported "the vertical thruster produces large yaw
+(+20.2 °/s)". The rev2 runs show −0.4 to −4.9 °/s. The rev1 yaw was most likely wall
+reaction — the run was stopped because the robot was contacting a wall.
+
+### 0c. What did NOT change
+
+The frame (§5), the lever 0.145 m, the `40 N` sim constant, D-1's conclusion, and the
+11.6 N·m pair figure all stand. §1 below is verified source reading and is untouched.
+
+---
+
+*(Original body follows, with the §2 ratio column superseded by §0a and the §4 readout
+superseded by §0b.)*
 
 ## 1. What the training plant assumes (verified at HEAD 81c2ec0, 2026-09-03)
 
@@ -18,30 +113,49 @@ Answer to the user's 2026-09-03 question "does the vertical TAM need lowering, a
 
 ## 2. What the tank already measured
 
-`deployed_tam.json.measured_thruster_sign.m0` / vault `finding/077` (tank 2026-08-12): m0 `+0.25 -> pitch -3.36 deg`, `-0.25 -> pitch +1.15 deg`, roll unchanged. Restoring stiffness K = 7.76 N.m/rad (vault `finding/136`, static map n = 8). Steady-state dwell and arm pose of that probe are NOT recorded -- treat the numbers as +/-30 % until R-1 repeats them.
+`deployed_tam.json.measured_thruster_sign.m0` / vault `finding/077` (tank 2026-08-12): m0 `+0.25 -> pitch -3.36 deg`, `-0.25 -> pitch +1.15 deg`, roll unchanged. Restoring stiffness K = 7.76 N.m/rad (vault `finding/136`, static map n = 8). Steady-state dwell and arm pose of that probe are NOT recorded -- treat the numbers as +/-30 % until repeated.
+
+⚠️ **The command column below is RAW, not effective — see §0a.**
 
 | Quantity | Value |
 |:--|:--|
-| M at u = +0.25, K x 3.36 deg | 0.0586 rad x 7.76 = **0.455 N.m** |
-| M at u = -0.25, K x 1.15 deg | 0.156 N.m |
-| Secant over +/-0.25 (offset cancels) | 4.51 deg / 0.5 -> 1.22 N.m per unit |
-| Sim linear at u = 0.25, nominal | 0.145 x 40 x 0.25 = **1.45 N.m** (DR band 1.02-1.89) |
-| Sim signed-square at u = 0.25, nominal | 0.145 x 40 x 0.0625 = **0.363 N.m** (DR band 0.25-0.47) |
+| M at raw = +0.25, K x 3.36 deg | 0.0586 rad x 7.76 = **0.455 N.m** |
+| M at raw = -0.25, K x 1.15 deg | 0.156 N.m |
+| Secant over +/-raw 0.25 (offset cancels), per **effective** unit | 4.51 deg over du_eff 0.235 -> **2.60 N.m/unit** |
+| Sim linear at u_eff = 0.1176, nominal | **0.682 N.m** (DR band 0.48-0.89) |
+| Sim signed-square at u_eff = 0.1176, nominal | **0.080 N.m** |
 
-Reading: at |u| = 0.25 the measured vertical moment is 0.31x the linear plant's nominal and 0.45x its DR FLOOR -- outside what the policy ever saw. It is 1.25x the sim's own signed-square curve, INSIDE that curve's DR band. The -0.25 point is lower still (T200 reverse thrust is weaker, and an unrecorded trim/dwell can explain the asymmetry; the secant removes a constant offset and gives 0.21x linear). One command level cannot separate "coefficient 3x too high" from "curve is quadratic" -- both fit u = 0.25 -- which is exactly the ambiguity R-1 at two levels resolves.
+Reading (corrected): at the command the probe actually applied, the measured vertical moment
+is **0.67x the linear plant's nominal** -- at the DR floor -- and **5.7x the sim's
+signed-square curve**, far outside that curve's band. The original reading had these the
+other way round, which is what made "the law is quadratic" look like the leading hypothesis.
+R-1 (§0b) then found the law is linear above a residual deadband, consistent with this
+corrected direction.
 
 ## 3. Why "lower the TAM row" is the wrong knob even if the number is right
 
-The My row is the lever arm (0.145 m, xacro-verified to 4 decimals, finding/305). A constant scale on it fixes u = 0.25 and breaks u = 1.0, where a quadratic law equals the linear one. If the deviation is shape, the correct sim-side change already exists as a config flip: `enable_thrust_curve: true` -- with `thrust_deadband` set to 0 on the sim side, because the deployment mixer already inverts the measured ESC deadband (finding/281: the linear-through-zero plant is what makes the mixer's `undeadband` correct rather than double-counting). This is a training-plant change beyond v3.1's two knobs, and it touches all six channels, not only the vertical pair -- so it is a user decision, not an automatic edit: added as option (d) of `[DECISION-REQUIRED: vertical-moment]`.
+The My row is the lever arm (0.145 m, xacro-verified to 4 decimals, finding/305). A constant scale on it fixes one command level and breaks another. If the deviation is shape, the correct sim-side change already exists as a config flip: `enable_thrust_curve: true` -- with `thrust_deadband` set to 0 on the sim side, because the deployment mixer already inverts the measured ESC deadband (finding/281). This is a training-plant change beyond v3.1's two knobs, and it touches all six channels, not only the vertical pair -- so it is a user decision, not an automatic edit: added as option (d) of `[DECISION-REQUIRED: vertical-moment]`. **See §0b: R-1 found a residual deadband delta ~ 0.12 that undercuts this option's premise.**
 
-## 4. R-1 becomes decisive, and K drops out of the decisive readout
+## 4. R-1: what it was for, and what it actually delivered
 
-R-1's protocol (PLAN §7) already commands u in {0, +0.25, +0.5, 0, -0.25, -0.5, 0}. Pre-registered readout:
+⚠️ **The protocol below did not survive contact with the robot -- see §0b.** Kept for the
+record because the *identifiability* reasoning (K cancels in a ratio) is what made the
+replacement readout correct too: the free-rise measurement makes the drag coefficient cancel
+the same way.
 
-- **ratio r = dtheta(0.5) / dtheta(0.25)** per sign, from adjacent-level differences. r ~ 2 -> linear plant, coefficient too high -> option (b) scale `thrust_coefficient` (or accept, if within the +/-30 % band). r ~ 4 -> quadratic law -> option (d) `enable_thrust_curve true` + deadband 0. r between -> report both, no automatic pick. K cancels in r, so the shape verdict does not inherit K's n = 8 uncertainty; K enters only the absolute coefficient.
-- Absolute: M(u)/u at u = 0.5 vs 5.8 N.m nominal, with K's +/-? bound stated from finding/136.
+R-1's protocol (PLAN §7) commanded u in {0, +0.25, +0.5, 0, -0.25, -0.5, 0}. Pre-registered readout:
 
-Because a 3x gain gap in the pitch actuator is not something the +/-30 % coefficient DR can absorb, the recommendation for `[DECISION-REQUIRED: r1-before-final]` moves from "if the tank is available" to **yes, before Phase 3** (about 30 min of tank time, robot free-floating, thrusters otherwise 0, attitude controllers off).
+- **ratio r = dtheta(0.5) / dtheta(0.25)** per sign. r ~ 2 -> linear plant, coefficient too high -> option (b). r ~ 4 -> quadratic law -> option (d). K cancels in r.
+- Absolute: M(u)/u at u = 0.5 vs 5.8 N.m nominal.
+
+**Outcome: neither branch fired.** The tilt never settles (heave boundary), and when the
+readout was moved to descent rate the ratios matched no single power law. The decision moved
+to a different probe entirely (net buoyancy).
+
+The recommendation for `[DECISION-REQUIRED: r1-before-final]` **stays yes**, but on the
+corrected ground: not "a 3x gap outside the DR band" (retracted, §0a) but "the vertical
+channel's absolute coefficient is unresolved between 0.39x and 0.86x and the deciding
+measurement has not been made."
 
 ## 5. Frame: closed, nothing to redo
 
@@ -49,5 +163,7 @@ Because a 3x gain gap in the pitch actuator is not something the +/-30 % coeffic
 
 ## 6. Does this change D-1?
 
-Not its conclusion (pitch is the arm's job with m3 dead; reallocation drops My). It changes a number in D-1 (11.6 N.m, not 14.5) and adds a second reason the incumbent's pitch behaviour transferred badly: even with m3 alive, the policy's belief about vertical pitch authority at small commands was ~3x too high. Whether thrust ON restores usable pitch through m0 alone is still G0-H's question, on the `10-19-06` bag.
+Not its conclusion (pitch is the arm's job with m3 dead; reallocation drops My). It changes a number in D-1 (11.6 N.m, not 14.5). The second reason it once added -- "the policy's belief about vertical pitch authority at small commands was ~3x too high" -- is **retracted** (§0a); the honest version is that the belief is off by somewhere between 1.0x and 2.6x, and B decides which. Whether thrust ON restores usable pitch through m0 alone was G0-H's question, and G0-H closed on 2026-09-03 (vault `finding/143`): realized My is pinned at `-0.145 x Fz` in all 7 segments, so m0 cannot serve pitch independently of heave at all -- which is also why R-1's settled-tilt protocol was unexecutable.
+
 ## Comments
+- (2026-09-03, session-mac) 정정: two corrections on 2026-09-03: (a) the 0.31x/3x gap was a unit error -- the 08-12 m0 probe published RAW 0.25 with the mixer bypassed, which is effective u=0.1176, so the ratio is 0.67x at the DR floor, not 0.31x; (b) R-1 ran and its settled-tilt protocol proved unexecutable (m3 dead -> every vertical command is net heave -> depth boundary before settling), so the readout was replaced by descent rate: law is linear above a residual deadband delta~0.12, and the absolute coefficient is 0.39x or 0.78-0.86x depending on net buoyancy B, which is now the deciding probe
