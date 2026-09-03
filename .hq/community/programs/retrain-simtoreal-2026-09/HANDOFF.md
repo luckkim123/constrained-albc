@@ -56,3 +56,8 @@ directly, or one known weight plus two free-rise rates separates B from drag wit
 - Phase 3 `trpo_p3_ftc_s30_260904_0506xx` running, ETA ≈ 17:15. Not killed (night directive). Morning decision for the user: keep or kill.
 - G0-A/B/E: agent finished its evals 04:38 (`.hq/work/g0abe/{g0a_fault_m3m4,g0a_healthy,g0b_delay1,g0b_delay2}/data_*.npz`), report.md pending from the agent.
 - After Phase 3 `DONE`: Phase 4 paired eval vs incumbent (health 111111 / 111001, DR none/hard), then exp-analyze report.
+
+## Resume block — 3.9c (2026-09-04 05:3x) — G0-A/B/E closed
+
+- `finding/314`: no arm-pitch fallback (retention 0.26/0.25), delay 1 step = 4–5× attitude error, 2 steps = 12–16×; constraint margins all positive. §13 row 4 DONE. Row 7's FAIL re-read as the delay-regime price.
+- Still running: Phase 3 `p3_ftc_s30` (ETA ≈ 17:15). Nothing else in flight.
