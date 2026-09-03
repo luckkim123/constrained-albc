@@ -1,36 +1,13 @@
-# HANDOFF — retrain-simtoreal-2026-09
+# HANDOFF — retrain-simtoreal-2026-09 (revision 3, 2026-09-03)
 
-Opened 2026-09-02 22:40 KST from the Mac session (vault `ksm_Obsidian`, session 96be433c).
+**State:** PLAN.md is REVISION 3, rebuilt from the evidence ledger. Not approved, not launched, nothing queued.
+The previous (frozen) text is `PLAN.md.bak-round2-frozen`.
 
-## State
+**Resume order (do not skip):**
+1. `review/306` — the 31-claim ledger and the 9 corrections; then `finding/305` — the axis lead refuted + HARD-GATE re-scored.
+2. `PLAN.md` §10 — the user's open decisions. Nothing in Phase 0 that launches training (G0-C) runs before `fault-config` and `seeds` are decided.
+3. Vault side: `vault:finding/141` (thrust-ON bag `10-19-06` unanalyzed; no J2>π guard; `thruster_sign` default identity; R-1 static-tilt measurement). Board (`agent-jetson`) was unreachable on 2026-09-03 — G0-H waits for it.
 
-- PLAN.md written and `omx program-lint` clean; **no gate has run, nothing is launched, nothing is approved.**
-- Ten `[DECISION-REQUIRED: …]` items are listed in PLAN.md `## Decisions for the user`; the user was
-  sent the plan by e-mail (luckkim123@postech.ac.kr) and in the Mac session on 2026-09-02.
-- Phase 0 gates G0-A..G0-F are the first work; all run on this container via Orca `worker-start --on marinelab`.
+**Cross-vendor status:** codex (gpt-5.6-terra) carried the ground-2 sweeps and the ground-4 axis check. agy failed 3× on 2026-09-03 (297 s ceiling at `pro-high/high`; `pro-high/medium` is a flag conflict; `pro-low/low` see the session log). The two-family review of this PLAN is still owed: run it with a ≤ 5-file prompt.
 
-## Where the inputs are
-
-- Code inventory (codex, 493 lines) and the vault-side digest used to write the plan live in the Mac
-  session scratchpad only; every fact they carried that the plan relies on is cited inline in PLAN.md
-  to a post, program section, or `path:symbol`, so the plan stands without them.
-- Incumbent as-run config: `logs/rsl_rl/albc_trpo_teacher/teacher_iter_budget/trpo_iterbudget_s30_260805_012813/params/{env,agent}.yaml`.
-
-## Resume order
-
-1. Read PLAN.md `## Decisions for the user`; do not run Phase 3 before every marker has an answer.
-2. G0-A first (10 min, eval only), then G0-C (2 seeds × 500 iter paired, ~1 h on GPU0).
-3. Post each gate readout as a `finding` on this board (`hq post … --subject retrain-simtoreal-2026-09`).
-
-## Correction 2026-09-02 ~23:10 KST — the draft's design axis was rejected by the user; PLAN.md banner is the truth
-
-Two corrections, verbatim in the PLAN.md `REVISION PENDING` banner: (1) FTC strengthening (faults as a distribution
-incl. double loss; fixed health = eval instrument only; paper framing = fault-tolerant control validated on a robot with
-real failures), (2) the vertical thrusters' pitch authority (`My ±0.145`) is over-estimated per the tank and must not be
-re-taught as-is (moment-arm DR band and/or measured nominal; G0-G decides whether the row exists).
-
-**Resume order (replaces the one above):** 1) read the banner, 2) rewrite Phase 1 / Tier 2 / Phase 2 arms / Phase 4
-exam matrix / Predicted outcome / decisions 2, 10, 11 to the FTC axis, 3) re-lint, 4) then G0-A (still valid: it asks
-whether the incumbent has ANY arm-pitch fallback) and G0-G. The Mac session compacted right after this note; its
-scratchpad digests (codex code inventory, 10 corpus slices, 5 literature notes) are not on this machine — every fact the
-plan relies on is cited inline.
+**What the next session must NOT redo:** the axis question (closed, `finding/305`), the IMU item (closed robot-side), the m0/m3 motor identity (two motors), the search for a J2 software guard (none exists).

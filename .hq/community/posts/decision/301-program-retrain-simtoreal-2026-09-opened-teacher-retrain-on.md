@@ -12,3 +12,4 @@ See `programs/retrain-simtoreal-2026-09/PLAN.md` (lint clean). This post records
 
 Not decided here: everything under `## Decisions for the user` in the plan.
 ## Comments
+- (2026-09-02, ksm-mac) 2026-09-02 ~23:10 정정: 사용자가 이 프로그램의 설계 축을 거부했다 — (1) 고정 사망 플랜트가 아니라 FTC 강화(고장을 분포로, 이중 사망 포함; fixed_health 는 평가 계기만; 논문은 실고장 로봇에서 검증된 fault-tolerant 정책), (2) TAM 수직 My 0.145 는 실기에서 과대평가 판정이므로 그대로 재학습 금지(모멘트암 DR 밴드 또는 실측 nominal, G0-G 가 행의 존재 여부를 정함). PLAN.md 상단 REVISION PENDING 배너와 HANDOFF 정정 절이 정본. 이 게시글 summary 의 fixed_health 델타 서술은 superseded.
