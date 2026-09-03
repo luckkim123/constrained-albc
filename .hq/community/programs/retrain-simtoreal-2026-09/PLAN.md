@@ -148,6 +148,14 @@ Skip rule: if G0-C clears with margin, S1/S2 are redundant and Phase 3 starts di
 
 **Phase 5 — robot, pre-registered, in the vault PLAN by pointer.** New pack, joint-only: T4 protocol with roll AND pitch ±15°; pre-registered pitch: θ2 span ≥ 15° and tracking ≥ 50 % (incumbent: 5–7° / 0.9 %). Then thrusters: `thruster_sign:=[1,1,1,0,0,1]` **passed explicitly every run** and `rosparam get` logged (default is identity, `vault:finding/060`), `fault_reallocate` per `[DECISION-REQUIRED: reallocate]`, `thruster_scale` 0.05 → 0.1 → 0.3. Guards deployment-side only; θ2 crossing π = operator stop.
 
+## Predicted outcome (stated before approval, so a null is cheap to recognize)
+
+Most likely: G0-A shows the incumbent has no arm-pitch fallback (sim θ2 span on a pitch step mirrors the 5–7° seen in the tank); G0-I's test reproduces the closed-form exposure; G0-C's paired probe clears with a return deficit inside the 13.4-point seed gap and `thruster_util` does not bind; the retrained teacher tracks pitch through the arm on the real-pair exam at `hard` with ss_error within 2× of roll while roll stays inside the paired floor, and single/double losses the distribution covered do not collapse. Delay DR (0,1) costs < 5 % return (Z4: d = 1 is the cheap step). On the robot, the new pack produces the first RL pitch tracking this vehicle has shown (θ2 span ≥ 15°, ≥ 50 %).
+
+Plausible null: pitch through a 2.2 N·m arm against 7.76 N·m/rad restoring stiffness is authority-limited to ≈ ±14.5° at θ2 = 150° (T1), so a 15° step settles at the envelope edge — a physics ceiling, not a training defect; the paper story becomes "attitude within the arm envelope". A second null: G0-H shows thrust ON DOES restore pitch through m0 alone (with heave drift), which would weaken D-1's "arm must do pitch" and move the value of the retrain from pitch recovery to fault robustness only.
+
+Failure mode to watch: the heavier fault distribution drops attainable return below `performance_lb 250` → DORAEMON mode −2 from the start (the E1-latdr signature). Tell: `DORAEMON/success_rate` < 0.5 at iteration 250 in the WITH arm of G0-C while the WITHOUT arm sits above it.
+
 ## 10. Decisions for the user (each with the record behind it and a recommendation)
 
 1. `[DECISION-REQUIRED: scope]` — attitude-only (this program) vs widening to depth. Record: the 72D policy observes absolute yaw but **no depth and no linear velocity** (`observations.py` layout; `finding/240`, `decision/185`); depth needs the obs4 +4 interface (pressure-derived heave rate, IMU specific force — deployable, `decision/185`); XY needs a DVL that does not exist. Recommend: attitude-only now; open a separate `depth-obs4` program after this teacher ships. Yaw stays a rate command (`decision/300`).
