@@ -12,7 +12,7 @@ Ground-4 adversarial review of PLAN revision 3 by codex (gpt-5.6-terra, effort h
 
 | # | Finding | Disposition |
 |:--|:--|:--|
-| 1 | R-1 static-tilt protocol does not control heave, contact, other actuators, drift; cannot separate lever from thrust coefficient; auto-editing the plant from it is unsafe | CONFIRMED — R-1 rewritten as a differential identification (free-floating, controllers off, arm fixed, dwell + steady-state + depth-abort criteria) whose output feeds a NEW user decision ; no automatic plant change |
+| 1 | R-1 static-tilt protocol does not control heave, contact, other actuators, drift; cannot separate lever from thrust coefficient; auto-editing the plant from it is unsafe | CONFIRMED — R-1 rewritten as a differential identification (free-floating, controllers off, arm fixed, dwell + steady-state + depth-abort criteria) whose output feeds a NEW user decision `vertical-moment` (PLAN §10 item 9); no automatic plant change |
 | 2 | P(exactly m3,m4 dead) wrong for q = 0.05 / 0.075 (0.20 % / 0.41 %, not 0.41 / 0.66) | CONFIRMED — corrected |
 | 3 | Severity at saturation is U(0,1), so exposure must be severity-integrated (P(>=2 dead) 1.13 / 2.42 / 4.09 %, ~2 / 4 / 7 per iteration) | CONFIRMED — corrected; exposure target restated on the integrated numbers |
 | 4 | D-1 "thrusters cannot restore pitch" is untested while G0-H is pending | CONFIRMED — softened to "untested; pitch is the arm's job in the deployed configuration" |
