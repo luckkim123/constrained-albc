@@ -42,3 +42,10 @@ directly, or one known weight plus two free-rise rates separates B from drag wit
 - G0-C queued (`omx queue-launch`). **Fire refused to the session by the auto-mode permission classifier** — user fires from PLAN §13's fire block. Nothing is running.
 - G0-A/B/E: previous agent lost at compaction, no output; re-dispatched — not a blocker.
 - Next after fire: diff `params/env.yaml` vs incumbent (five keys + `thruster_dead_frac`), read G0-C at 500, queue Phase 3.
+
+## Resume block — 3.9a (2026-09-04 03:5x) — FIRED
+
+- 03:42 the user granted the permission; runner `/workspace/g0c_runner/run.sh` in tmux `g0c` on GPU0, serial: WITH → WITHOUT → Phase 3 `p3_ftc_s30` (chained, no human stop). Status log `/workspace/g0c_runner/status.log`, markers `G0C_DONE`, `DONE`.
+- G0-J confirmed on the live run (PLAN §13 row 6). ≈ 4.5 s/iter, 11.5 GB VRAM → Phase 3 ≈ 12.5 h, end ≈ 17:00.
+- Next: at `G0C_DONE` read `Train/mean_reward` and `DORAEMON/mode` at iteration 500 for both arms (TB event files under each run dir), write the G0-C verdict into §13 row 7; at `DONE` run Phase 4 (`eval static` paired vs incumbent, health 1,1,1,1,1,1 and 1,1,1,0,0,1, DR none/hard) and the exp-analyze report.
+- G0-A/B/E: second agent running on GPU1 (2.3 GB), writes `.hq/work/g0abe/report.md`.
