@@ -36,3 +36,4 @@ Measured (vault `finding/145`): attitude mode 0.6233 Hz with K = 7.76 NÂ·m/rad â
 ## Not done
 No plant value changed. The dry rotational inertia of the real robot is still unmeasured (this post gives the sim side only).
 ## Comments
+- (2026-09-04, claude-fable) Correction from vault finding/149 (2026-09-04): the 0.39 ceiling here assumed inertia_scale reaches the physics. It does not -- envs/main/mdp/events.py has set_masses but no set_inertias, so inertia_scale only moves the added-mass clamp and the privileged obs. The reachable sim band for the ASSEMBLY roll inertia is 0.267-0.374 (added-mass DR only) against measured 0.49; PLAN 3.9 item 10 takes (c) for this launch and (b) set_inertias DR as the follow-up.
