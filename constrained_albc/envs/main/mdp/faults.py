@@ -35,8 +35,11 @@ def sample_thruster_health(
     """Sample per-env per-thruster health [N, num_thrusters].
 
     Each thruster independently fails with probability ``cfg.thruster_fail_prob``; a
-    failed thruster keeps a residual health drawn uniformly from
-    ``cfg.thruster_health_range`` (0 = dead). Healthy thrusters stay at exactly 1.0.
+    failed thruster is fully dead (health exactly 0.0) with probability
+    ``cfg.thruster_dead_frac`` (default 0.0), else it keeps a residual health drawn
+    uniformly from ``cfg.thruster_health_range``. Healthy thrusters stay at exactly 1.0.
+    With ``thruster_dead_frac == 0`` no extra random draw happens, so the output is
+    bit-identical to the pre-dead-atom sampler for the same generator state.
 
     Deterministic override: when ``cfg.thruster_fixed_health`` is set (a length-
     ``num_thrusters`` sequence in [0, 1]), that vector is returned for EVERY env and
@@ -67,6 +70,10 @@ def sample_thruster_health(
     fail = torch.rand(shape, device=device, generator=generator) < fail_prob
     lo, hi = cfg.thruster_health_range
     residual = torch.rand(shape, device=device, generator=generator) * (hi - lo) + lo
+    dead_frac = getattr(cfg, "thruster_dead_frac", 0.0)
+    if dead_frac > 0.0:
+        dead = torch.rand(shape, device=device, generator=generator) < dead_frac
+        residual = torch.where(dead, torch.zeros_like(residual), residual)
     return torch.where(fail, residual, torch.ones(shape, device=device))
 
 

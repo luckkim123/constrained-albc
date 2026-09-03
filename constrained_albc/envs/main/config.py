@@ -375,6 +375,10 @@ class FaultInjectionCfg:
     # a failed thruster keeps a residual health sampled from `thruster_health_range`
     # (0 = fully dead, 0.5 = half degradation). Healthy thrusters stay at 1.0.
     thruster_fail_prob: float = 0.10
+    # Dead atom (retrain-simtoreal-2026-09 PLAN §5 (2), G0-I): a FAILED channel is fully
+    # dead (health exactly 0.0) with this probability, else its residual health is
+    # U(thruster_health_range). 0.0 (default) = no extra RNG draw, byte-identical to before.
+    thruster_dead_frac: float = 0.0
     thruster_health_range: tuple[float, float] = (0.0, 0.5)
 
     # -- Deterministic per-thruster health override (eval instrument) --
