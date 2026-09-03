@@ -49,3 +49,10 @@ directly, or one known weight plus two free-rise rates separates B from drag wit
 - G0-J confirmed on the live run (PLAN §13 row 6). ≈ 4.5 s/iter, 11.5 GB VRAM → Phase 3 ≈ 12.5 h, end ≈ 17:00.
 - Next: at `G0C_DONE` read `Train/mean_reward` and `DORAEMON/mode` at iteration 500 for both arms (TB event files under each run dir), write the G0-C verdict into §13 row 7; at `DONE` run Phase 4 (`eval static` paired vs incumbent, health 1,1,1,1,1,1 and 1,1,1,0,0,1, DR none/hard) and the exp-analyze report.
 - G0-A/B/E: second agent running on GPU1 (2.3 GB), writes `.hq/work/g0abe/report.md`.
+
+## Resume block — 3.9b (2026-09-04 05:1x) — G0-C read, Phase 3 running
+
+- G0-C: WITH/WITHOUT reward at 500 = 0.82× (last), 0.77× (last-50), 0.70× (400–499) → FAIL on the 5 % threshold; mode −3 both (curriculum not started, reward < lb 250); fault_severity 0.01 both → faults inactive → gap = delay/thrust, not p₀. `finding/313`.
+- Phase 3 `trpo_p3_ftc_s30_260904_0506xx` running, ETA ≈ 17:15. Not killed (night directive). Morning decision for the user: keep or kill.
+- G0-A/B/E: agent finished its evals 04:38 (`.hq/work/g0abe/{g0a_fault_m3m4,g0a_healthy,g0b_delay1,g0b_delay2}/data_*.npz`), report.md pending from the agent.
+- After Phase 3 `DONE`: Phase 4 paired eval vs incumbent (health 111111 / 111001, DR none/hard), then exp-analyze report.
