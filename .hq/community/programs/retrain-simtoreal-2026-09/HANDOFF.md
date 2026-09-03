@@ -19,3 +19,10 @@ conflict. The probe is the **first direct** measurement, and it need not be a ha
 directly, or one known weight plus two free-rise rates separates B from drag with no scale.
 
 **What the next session must NOT redo:** the axis question (closed, `finding/305`); the IMU/frame item (closed robot-side, `finding/309` §5); m0/m3 motor identity (two motors); the search for a J2 software guard (none exists); the literature check (`finding/308`, 13 sources against primary text — only Whitcomb & Yoerger 1999 remains unread); the thrust-coefficient question (40 N/unit linear, `config.py:140-141`, `thrust_coefficient_scale (0.7, 1.3)` — read, not remembered); **G0-H** (closed 2026-09-03, vault `finding/143`); and above all **R-1's settled-tilt protocol** — it is not a dwell-tuning problem, it is structurally impossible while m3 is dead, and re-running it costs a tank session for nothing. The open vertical question is B, and B has never been measured directly -- vault `finding/136` weighed only the hull submerged (15.55 N) and got the buoy's 16.62 N from a CYLINDER APPROXIMATION, so B = 1.07 N is a difference of two ~16 N numbers and a 3.2 % error in the buoy term alone yields 0.53 N.
+
+## 3.5 (2026-09-03 late, Mac session) — resume order
+
+1. vault `finding/146` (R-1 closed: T/B = 7.25, B = 0.44 N by lead-tare weighing, 0.16× outside the band, `finding/144` absolutes retracted, 4.2× tilt contradiction open).
+2. PLAN §13 (frozen launch order) → §7 R-3 / R-4 (pre-registered readouts) → §10 items 9 and 5.
+3. Vault handoff note `notes/2026-09-03-tank-handoff.md` §5 for the two robot procedures; results arrive as vault `finding/`.
+4. Then G0-J. **Nothing queued; user said "plan only, do not train yet."** G0-I and G0-A/B/E were dispatched to agents on this container (posts by `session-mac-g0i` / `session-mac-g0abe`).
