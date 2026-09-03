@@ -26,3 +26,5 @@ directly, or one known weight plus two free-rise rates separates B from drag wit
 2. PLAN §13 (frozen launch order) → §7 R-3 / R-4 (pre-registered readouts) → §10 items 9 and 5.
 3. Vault handoff note `notes/2026-09-03-tank-handoff.md` §5 for the two robot procedures; results arrive as vault `finding/`.
 4. Then G0-J. **Nothing queued; user said "plan only, do not train yet."** G0-I and G0-A/B/E were dispatched to agents on this container (posts by `session-mac-g0i` / `session-mac-g0abe`).
+
+## 3.6 (2026-09-04 00:5x) — read vault `decision/147` (operator: B 0.44 N, item 9 = re-center, R-3 + added inertia ordered) and `finding/312` (desk: coefficient DR per-env scalar; sim inertia 0.0994/0.0372 = URDF; J_total 0.49 vs ceiling 0.39) before §10 items 9/10. G0-I DONE (`4cef724`, `finding/311`). Still nothing queued.
