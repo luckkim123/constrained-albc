@@ -6,7 +6,7 @@
 - topic: decision
 - confidence: medium · status: needs-experiment
 - verified: partial · keywords: vertical-tam, thrust-curve, thrust_coefficient, m0, R-1, retrain-simtoreal-2026-09, frame
-- summary: CORRECTED 2026-09-03 (twice). (a) The 3x/0.31x vertical-moment gap is RETRACTED as a unit error: the 08-12 m0 probe used b1_channel_probe.py, which publishes RAW commands with the mixer bypassed, so raw 0.25 is effective u=0.1176 (undeadband D=0.15) -- the measured 0.455 N.m is 0.67x the linear nominal 0.682 N.m, at the coefficient-DR floor (0.7,1.3), and 5.7x the signed-square curve, not the other way round. (b) R-1 ran 2026-09-03 (vault finding/144): the PLAN section 7 settled-tilt protocol is UNEXECUTABLE on this robot -- m3 dead means m0 is the only vertical channel, reallocate() turns every command into net heave, and both + steps clamped at 0.205 m and both - steps at 0.890 m with doubling the thrust changing neither. Replacement readout (terminal descent rate, 9/9 steps, R2 0.988-0.996, free rise 0.0230 m/s pins B=c*v_rise^2 so drag cancels): the law fits NEITHER pre-registered option -- not curvature but a shifted origin, T ~ (u-delta) with delta ~ 0.11-0.14 linear above it (T=15.5*u^1.0 N). That residual deadband undercuts option (d) premise (finding/281 assumed the mixer fully inverts the ESC deadband). Absolute coefficient is undecided and thruster levels are no longer the lever: B=0.53 (free-rise fit) gives 0.39x, vault finding/136 B=1.07 gives 0.78-0.86x INSIDE the DR band -- a net-buoyancy remeasurement is now the deciding probe. Also identified: (m+m_a)=52.0 kg (added mass 41.7 on 10.3 dry), c=1000 N.s2/m2. Also retracted: rev1 +20.2 deg/s yaw was wall reaction. Frame, lever 0.145 m, 40 N constant, D-1 conclusion all stand.
+- summary: CORRECTED 2026-09-03 (twice). (a) The 3x/0.31x vertical-moment gap is RETRACTED as a unit error: the 08-12 m0 probe used b1_channel_probe.py, which publishes RAW commands with the mixer bypassed, so raw 0.25 is effective u=0.1176 (undeadband D=0.15) -- the measured 0.455 N.m is 0.67x the linear nominal 0.682 N.m, at the coefficient-DR floor (0.7,1.3), and 5.7x the signed-square curve, not the other way round. (b) R-1 ran 2026-09-03 (vault finding/144): the PLAN section 7 settled-tilt protocol is UNEXECUTABLE on this robot -- m3 dead means m0 is the only vertical channel, reallocate() turns every command into net heave, and both + steps clamped at 0.205 m and both - steps at 0.890 m with doubling the thrust changing neither. Replacement readout (terminal descent rate, 9/9 steps, R2 0.988-0.996, free rise 0.0230 m/s pins B=c*v_rise^2 so drag cancels): the law fits NEITHER pre-registered option -- not curvature but a shifted origin, T ~ (u-delta) with delta ~ 0.11-0.14 linear above it (T=15.5*u^1.0 N). That residual deadband undercuts option (d) premise (finding/281 assumed the mixer fully inverts the ESC deadband). Absolute coefficient is undecided and thruster levels are no longer the lever: B=0.53 (free-rise fit) gives 0.39x, vault finding/136 B=1.07 gives 0.78-0.86x INSIDE the DR band -- a FIRST DIRECT measurement of net buoyancy B (it has never been weighed as an assembly) is now the deciding probe. Also identified: (m+m_a)=52.0 kg (added mass 41.7 on 10.3 dry), c=1000 N.s2/m2. Also retracted: rev1 +20.2 deg/s yaw was wall reaction. Frame, lever 0.145 m, 40 N constant, D-1 conclusion all stand.
 Answer to the user's 2026-09-03 question "does the vertical TAM need lowering, and is the frame fine as-is?". Frame: nothing to change. Lever: nothing to change. The magnitude claim this post originally made has been **corrected twice on 2026-09-03** — once for a unit error found at the desk, once by R-1 actually running. Both corrections are in §0; the rest of the post is the surviving record.
 
 ## 0. Two corrections to this post (2026-09-03, tank session)
@@ -84,7 +84,7 @@ scale becomes **0.78–0.86×** (joint transient fit vs terminal balance), **ins
     B = 1.07  ->  0.78-0.86x   (inside DR)
 
 So `[DECISION-REQUIRED: vertical-moment]` **cannot be read from R-1**. The deciding probe is
-a **net-buoyancy remeasurement**, not more thruster levels. Note the 08-12 probe's corrected
+a **FIRST DIRECT measurement of net buoyancy B (it has never been weighed as an assembly)**, not more thruster levels. Note the 08-12 probe's corrected
 0.45–0.67× (§0a) brackets both candidates and separates neither.
 
 **By-product identification** (9 dives, 1071 depth samples): `(m + m_a) = 52.0 kg` → added
@@ -99,6 +99,35 @@ reaction — the run was stopped because the robot was contacting a wall.
 
 The frame (§5), the lever 0.145 m, the `40 N` sim constant, D-1's conclusion, and the
 11.6 N·m pair figure all stand. §1 below is verified source reading and is untouched.
+
+### 0d. Correction (2026-09-03 21:40): B was never measured directly
+
+The operator pointed out that a submerged weighing *was* done. It was -- but only of half
+the assembly, and that changes what the open probe is.
+
+| quantity | value | how |
+|:--|--:|:--|
+| hull (buoy excluded), in air | 101.37 N | weighed |
+| hull, submerged | **15.55 N** | **weighed submerged -- a direct measurement** |
+| buoy net buoyancy | 16.62 N | **NOT weighed** -- cylinder approximation (65x20 + 200x65 mm) minus 0.410 kg |
+| assembly B | **+1.07 N** | the **difference** of the two above |
+
+So B is a difference of two ~16 N numbers. A **3.2 % (0.54 N) error in the buoy term alone
+turns 1.07 into 0.53** -- which means R-1's free-rise fit of 0.53 N is **not a refutation of
+1.07, it is inside the error bar**. Vault `finding/136` flags the weakness itself: "the volume
+is a cylinder approximation ... remeasure by displacement if precision is needed."
+
+Therefore the open item is not a *re*-measurement, it is the **first direct one**. And it does
+not have to be a hanging weigh: the robot is slightly positively buoyant, so hanging it
+requires adding lead (operator, 2026-09-03). Two cheaper routes:
+
+- **(A) bottom-tethered scale** -- anchor a line from the tank floor to the robot through a
+  0-500 gf scale; it reads the upward force, i.e. **B directly**. No lifting, no lead.
+- **(B) known weight + two rise rates** -- attach one weight of known mass and repeat the
+  free rise. `B / (B - dW) = (v1/v2)^2` separates B from drag with **no scale at all**, and
+  reuses R-1 rev2's exact procedure and tooling.
+
+Either way the decision-9 fork (0.39x outside DR vs 0.86x inside) closes on one measurement.
 
 ---
 
