@@ -32,3 +32,13 @@ directly, or one known weight plus two free-rise rates separates B from drag wit
 ## 3.7 (2026-09-04 01:2x) — item 9 CLOSED by the user (rough mode): thrust nominal 13 N/unit, band (0.5, 2.0); R-4 dropped, R-3 optional, item 10 held. §5 delta is now five values (see §13 row 6). Next desk step: G0-J manifest once G0-A/B/E report. Nothing queued.
 
 ## 3.8 (2026-09-04 01:4x) — R-3 done from bags (vault `finding/148`, 152 ms); item 5 re-set to (0,3) under rough mode. §5 delta = {thruster_fail_prob 0.15, thruster_dead_frac 0.5, control_delay_steps (0,3), thrust_coefficient 13, thrust_coefficient_scale (0.5,2.0)}. No robot work remains before launch. Nothing queued.
+
+
+## Resume block — 3.9 (2026-09-04 03:3x)
+
+- User directive 02:5x: pull, review, finalize, **start training**, no questions (user asleep).
+- Decided in-session: p₀ **0.30** (d 0.5) on the user's own upward lean; item 10 → (c) now + (b) `set_inertias` follow-up (vault `finding/149`).
+- G0-J: HEAD `e618e86`, incumbent config `logs/rsl_rl/albc_trpo_teacher/teacher_iter_budget/trpo_iterbudget_s30_260805_012813/params/env.yaml` sha256[:16] `830be5ddcc0005aa`, code delta dormant (3 commits), dirty = untracked only.
+- G0-C queued (`omx queue-launch`). **Fire refused to the session by the auto-mode permission classifier** — user fires from PLAN §13's fire block. Nothing is running.
+- G0-A/B/E: previous agent lost at compaction, no output; re-dispatched — not a blocker.
+- Next after fire: diff `params/env.yaml` vs incumbent (five keys + `thruster_dead_frac`), read G0-C at 500, queue Phase 3.
