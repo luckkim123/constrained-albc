@@ -94,3 +94,10 @@ directly, or one known weight plus two free-rise rates separates B from drag wit
 - **Resume recipe** (both traps are silent): `--resume` must be a CLI flag, and `load_run` must name a directory one level under `logs/rsl_rl/albc_trpo_teacher/` — use the `RESUME_p3b_2050` symlink. Script: `/workspace/g0c_runner/p3b_resume.sh`.
 - **Watch out**: the wrapper's `touch P3B_DONE` runs on any exit, including a failed launch, and the Phase 4 runner polls that marker — it began scoring `model_2050.pt` as the final checkpoint. Marker and `p3b_final/` were removed and the runner restarted. Make the marker conditional on a zero exit before the next long unattended stretch.
 - Phase 4 runner back on GPU1 from `inc/m0m1`; incumbent single/pair losses 7/20 done.
+
+## Resume block — 3.9i (2026-09-04 17:4x) — Phase 4 exam confound found and fixed
+
+- **`finding/318`**: the exam runner scored each arm on its own training plant, so the DR band differed and per-env pairing broke at soft/medium/hard (`pairDR` 0.5/1.0/2.0). Only `none` rows were ever valid. Fixed by adding arm `inc13w` (incumbent on the full section-5 plant); runner restarted 17:4x with it scheduled first among the incumbent arms.
+- **Rule for reading the scorer**: `pairDR` first, `delta` second. Every confounded row carried a large favourable delta, which is why it read as a result rather than a defect.
+- p3b resumed run healthy through 2539 (reward 244.9, success 0.935, severity 0.0306, mode 0 at 2249 and 2499); severity tracks the pre-registered x1.312/500it line (2500 predicted 0.0302, measured 0.0306).
+- Scorer: `/workspace/g0c_runner/p4_score.py`, run from the repo root with `/isaac-sim/python.sh`.
