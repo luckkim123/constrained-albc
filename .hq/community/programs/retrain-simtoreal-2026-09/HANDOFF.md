@@ -61,3 +61,9 @@ directly, or one known weight plus two free-rise rates separates B from drag wit
 
 - `finding/314`: no arm-pitch fallback (retention 0.26/0.25), delay 1 step = 4–5× attitude error, 2 steps = 12–16×; constraint margins all positive. §13 row 4 DONE. Row 7's FAIL re-read as the delay-regime price.
 - Still running: Phase 3 `p3_ftc_s30` (ETA ≈ 17:15). Nothing else in flight.
+
+## Resume block — 3.9d (2026-09-04 13:5x) — Phase 3 killed, Phase 3b fired
+
+- `finding/315`: Phase 3 curriculum never opened (mode −2, fault_severity 0.0045, all DR dims initial). Cause: performance_lb 250 > delta plateau ≈ 237. User decided lb 200; Phase 3 killed at 8010 (checkpoint kept, `model_8000.pt`), Phase 3b `trpo_p3b_lb200_s30_260904_1345xx` fired 13:45 in tmux `p3b`, log `/workspace/g0c_runner/p3b.log`, marker `P3B_DONE`.
+- Early readout (pre-registered): mode 0/1 and fault_severity > 0.05 by it 1 000 (≈ 15:00). Monitor armed in the Mac session.
+- After `P3B_DONE` (≈ 02:15 09-05): Phase 4 paired eval (incumbent vs p3b vs the p3 no-DR reference), health 111111 / 111001, delay 0/1/2, DR none/hard; exp-analyze report.
