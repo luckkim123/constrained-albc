@@ -74,3 +74,8 @@ directly, or one known weight plus two free-rise rates separates B from drag wit
 - Health monitor: `/workspace/g0c_runner/p3b_health.py` (run from the repo root), read every 500 it; stall signature = it ≥ 1500 and last 3 modes ≤ −2 and severity < 0.05.
 - Phase 4 exam runner started 14:34 on GPU1 (§13 row 12): `.hq/work/p4/runner.log`, `pgrep -af p4_runner`. Kill/restart is safe (re-entrant).
 - Next: 1000-it verdict → PLAN row 11; after `P3B_DONE` (≈ 02:15 09-05) the runner scores p3b final; then exp-analyze report (per-env pairing at `hard`, floors 0.10° / 15 envs / 1.6 pp), finding post, vault brief §0, memory.
+
+## Resume block — 3.9f (2026-09-04 15:0x) — Phase 3b 1000-it verdict PROCEED
+
+- it 1056: reward 217.5 > lb 200, success 0.786, mode 0 at 750 and 1000 (opened), severity 0.0132 rising. No kill. Stall signature armed from it 1500 (mode ≤ −2 ×3 and severity < 0.05).
+- Phase 4 runner: inc13/healthy done 14:43 (rc 0); override verified — none-level roll ss_error 0.230° (own plant) vs 0.336° (13 N), hard 0.329° vs 1.345°.
