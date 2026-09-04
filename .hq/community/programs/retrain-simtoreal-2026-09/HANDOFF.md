@@ -67,3 +67,10 @@ directly, or one known weight plus two free-rise rates separates B from drag wit
 - `finding/315`: Phase 3 curriculum never opened (mode −2, fault_severity 0.0045, all DR dims initial). Cause: performance_lb 250 > delta plateau ≈ 237. User decided lb 200; Phase 3 killed at 8010 (checkpoint kept, `model_8000.pt`), Phase 3b `trpo_p3b_lb200_s30_260904_1345xx` fired 13:45 in tmux `p3b`, log `/workspace/g0c_runner/p3b.log`, marker `P3B_DONE`.
 - Early readout (pre-registered): mode 0/1 and fault_severity > 0.05 by it 1 000 (≈ 15:00). Monitor armed in the Mac session.
 - After `P3B_DONE` (≈ 02:15 09-05): Phase 4 paired eval (incumbent vs p3b vs the p3 no-DR reference), health 111111 / 111001, delay 0/1/2, DR none/hard; exp-analyze report.
+
+## Resume block — 3.9e (2026-09-04 14:3x) — Phase 3b at 596 it, Phase 4 runner started
+
+- p3b health at it 596: reward 190.5 (r50 182.7), success 0.40, `fault_severity` 0.010, modes −3/−3/−2 at 0/250/500 — pre-gate, expected (lb 200 not yet crossed). Verdict at it 1000 (≈ 15:00): mode 0/1 and severity > 0.05, else kill (`tmux kill-session -t p3b`) and re-open §10 item 11.
+- Health monitor: `/workspace/g0c_runner/p3b_health.py` (run from the repo root), read every 500 it; stall signature = it ≥ 1500 and last 3 modes ≤ −2 and severity < 0.05.
+- Phase 4 exam runner started 14:34 on GPU1 (§13 row 12): `.hq/work/p4/runner.log`, `pgrep -af p4_runner`. Kill/restart is safe (re-entrant).
+- Next: 1000-it verdict → PLAN row 11; after `P3B_DONE` (≈ 02:15 09-05) the runner scores p3b final; then exp-analyze report (per-env pairing at `hard`, floors 0.10° / 15 envs / 1.6 pp), finding post, vault brief §0, memory.
