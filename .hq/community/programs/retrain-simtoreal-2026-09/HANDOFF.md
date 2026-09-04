@@ -79,3 +79,10 @@ directly, or one known weight plus two free-rise rates separates B from drag wit
 
 - it 1056: reward 217.5 > lb 200, success 0.786, mode 0 at 750 and 1000 (opened), severity 0.0132 rising. No kill. Stall signature armed from it 1500 (mode ≤ −2 ×3 and severity < 0.05).
 - Phase 4 runner: inc13/healthy done 14:43 (rc 0); override verified — none-level roll ss_error 0.230° (own plant) vs 0.336° (13 N), hard 0.329° vs 1.345°.
+
+## Resume block — 3.9g (2026-09-04 16:1x) — Phase 3b 2000 it, exposure track pre-registered
+
+- it 2003: reward 234.2 (r50 232.5), success 0.880, `fault_severity` 0.0230, mode 0 at 1250/1500/1750/2000. Healthy, no stall signature.
+- Exposure track (PLAN row 11): severity grows x1.312 per 500 it since the curriculum opened; reaches 0.45 at it ~7 600 on that rate. Check at it 5 000, expect ~0.12; below ~0.07 is a Phase 4 caveat, not a kill.
+- Phase 4 scorer installed: `/workspace/g0c_runner/p4_score.py`, run from the repo root with `/isaac-sim/python.sh`. Prints per-env paired deltas against `inc13` with the section 9 floors, and switches to candidate-vs-incumbent automatically once a p3b arm is scored. The incumbent-only run reproduced finding/316 and surfaced two survival deltas: pair34 hard +4.7 pp (the 13 N plant survives more) and healthy hard -3.1 pp.
+- Runner progress: inc13 core 4/4 done; incumbent single/pair losses 3/20 (m0, m1, m2) as of 15:42.
