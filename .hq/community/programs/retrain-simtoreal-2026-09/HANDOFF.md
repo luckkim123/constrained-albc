@@ -86,3 +86,11 @@ directly, or one known weight plus two free-rise rates separates B from drag wit
 - Exposure track (PLAN row 11): severity grows x1.312 per 500 it since the curriculum opened; reaches 0.45 at it ~7 600 on that rate. Check at it 5 000, expect ~0.12; below ~0.07 is a Phase 4 caveat, not a kill.
 - Phase 4 scorer installed: `/workspace/g0c_runner/p4_score.py`, run from the repo root with `/isaac-sim/python.sh`. Prints per-env paired deltas against `inc13` with the section 9 floors, and switches to candidate-vs-incumbent automatically once a p3b arm is scored. The incumbent-only run reproduced finding/316 and surfaced two survival deltas: pair34 hard +4.7 pp (the 13 N plant survives more) and healthy hard -3.1 pp.
 - Runner progress: inc13 core 4/4 done; incumbent single/pair losses 3/20 (m0, m1, m2) as of 15:42.
+
+## Resume block — 3.9h (2026-09-04 16:5x) — container restart, p3b resumed and verified
+
+- **Incident**: host docker daemon restarted 15:56:09 KST, killing p3b (~2 100 it) and the Phase 4 runner. Container `sshd` died too; the bootstrap is now at `.hq/config/project/env/sshd-up.sh` (the old `.omp/env/` path in the operator memory is stale). Recovery: `ssh ksm-ubuntu 'docker exec -d marinelab-isaaclab bash /workspace/.hq/config/project/env/sshd-up.sh'`.
+- **p3b resumed** 16:35 from `model_2050.pt` into `trpo_p3b_lb200_s30_r2050_260904_163518`, iterations 2050 to 10 000, ETA 09-05 02:2x. Verified restore (`finding/317`): curriculum `fault_severity` opens at 0.0230, env config identical but `log_dir`, reward 238.3 at it 2114 against 234.2 pre-crash.
+- **Resume recipe** (both traps are silent): `--resume` must be a CLI flag, and `load_run` must name a directory one level under `logs/rsl_rl/albc_trpo_teacher/` — use the `RESUME_p3b_2050` symlink. Script: `/workspace/g0c_runner/p3b_resume.sh`.
+- **Watch out**: the wrapper's `touch P3B_DONE` runs on any exit, including a failed launch, and the Phase 4 runner polls that marker — it began scoring `model_2050.pt` as the final checkpoint. Marker and `p3b_final/` were removed and the runner restarted. Make the marker conditional on a zero exit before the next long unattended stretch.
+- Phase 4 runner back on GPU1 from `inc/m0m1`; incumbent single/pair losses 7/20 done.
