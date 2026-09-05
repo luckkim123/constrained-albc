@@ -558,3 +558,21 @@ Each script chains its own exam (`sd_exam_generic.sh` → `.hq/work/p4/sd_r1`, `
 **Open leads (`omx wiki list` at queue time):** blocking finding/264, finding/352 unchanged. needs-experiment 26 = 3.9s list + finding/387. Nothing dropped; R5 (beta anneal + 155 s) stays recorded in finding/386, low priority.
 
 **Next reads, in order:** R3b 5/5 -> finding (expected FAIL, vs `sd_r1` and `sd_r3a`); R4a 5/5 -> finding (budget alone; decides how much R4c is worth); then user decisions on R4c / R4b. Ledger + commit after each.
+
+---
+
+## 3.9u (2026-09-06 03:1x) -- R3b (TCN) FAILED 20/20 (finding/388, resolved); R4a at it ~4k on GPU0; GPU1 idle; R4c still pending approval
+
+**Resume here.** Read finding/387 (R3a, the live recipe) and finding/388 (R3b, closed). Pending user decisions unchanged from 3.9t: approve/drop R4c; whether R4b gets code time.
+
+**R3b `sd_p3b7500_tcn_dr5_s30` -- finding/388, status resolved.** vs teacher 20/20 worse (+0.42..+2.82; 0/64 envs better at `none` on the healthy configs), vs R1 18 worse / 2 tie, vs R3a 20/20 worse, vs deployed 16 worse (the 4 "wins" are pair34-type medium/hard where the deployed student's own constant latent fails, finding/385). Estimator regime is different from the GRU arms: in-episode variance 5-8x R1, shared bias^2 at `none` 4-6x, and the error grows 2.8x across the episode (0.07 -> 0.21 at healthy/none) -- a 0.54 s window re-derives the latent from half a second of history and wanders with the state. Closes the windowed-estimator (HORA-style) arm of finding/383 on this plant at this budget. Leads recorded, not queued: longer TCN window (5-10 s), TCN under beta 1->0.
+
+**R4a `sd_p3b7500_c3_dr5_it10k_s30` -- RUNNING, GPU0.** it 3903 at 03:04 (47 min, 83 it/min; slower than the first 2 min's 93 as the student data buffer grows), `student/loss_latent` 0.0163 at it ~3.9k (R1 at it 1000: 0.020; still falling -- but remember finding/386's caveat, this is beta 0.5 so it IS comparable to R1, not to R3a). 10k at ~04:17, exam `.hq/work/p4/sd_r4a` on GPU0 ~04:17-04:50.
+
+**GPU1 is idle from 03:02** (R3b exam done, marker `SD_R3B_EXAM_DONE`). R4c's wrapper would take it the moment it is fired; until the user approves, nothing runs there. tmux: `sdr4a` only.
+
+**Scoreboard of the student-distillation round so far (att vs teacher, 20 rows each):** R1 0 tie / 1 better / 19 worse (384); R2 0 / 0 / 20 (386); R3a 11 / 2 / 7 (387); R3b 0 / 0 / 20 (388); R4a pending; R4c queued. The only lever that moved the score is the rollout distribution (beta 1->0); horizon and window did not. Residual after R3a: pair34 none/soft +0.115/+0.150, pair34_d2 none-medium +0.15..+0.17, hard+delay +1.2..+1.8.
+
+**Open leads (`omx wiki list`, 03:1x):** blocking finding/264, finding/352 unchanged. needs-experiment: 3.9t list minus nothing (finding/388 posted as resolved, so the count stays 26). Nothing dropped.
+
+**Next reads:** R4a 5/5 (~04:50) -> finding (budget alone vs R1; vs R3a; `student_999.pt` vs R1 for reproducibility) -> ledger + commit. Then the user's R4c / R4b call.
