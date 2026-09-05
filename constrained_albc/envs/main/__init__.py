@@ -97,3 +97,17 @@ gym.register(
         "rsl_rl_cfg_entry_point": f"{__name__}.agents.ablation_cfgs:ALBCTRPONoIPONoEncoderRunnerCfg",
     },
 )
+
+# Variant #6: production TRPO on the retrain-simtoreal-2026-09 section-5 plant.
+# Same runner cfg as Isaac-ConstrainedALBC-TRPO-v0; only the env cfg differs, and it
+# carries the seven overrides Phase 3b was fired with (finding/352). Launch a retrain
+# with this task id instead of repeating the override block.
+gym.register(
+    id="Isaac-ConstrainedALBC-TRPO-SimToReal-v0",
+    entry_point="constrained_albc.envs.main:ALBCEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.config_simtoreal:ALBCSimToRealEnvCfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:ALBCTRPORunnerCfg",
+    },
+)
