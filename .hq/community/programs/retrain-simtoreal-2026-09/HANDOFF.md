@@ -101,3 +101,383 @@ directly, or one known weight plus two free-rise rates separates B from drag wit
 - **Rule for reading the scorer**: `pairDR` first, `delta` second. Every confounded row carried a large favourable delta, which is why it read as a result rather than a defect.
 - p3b resumed run healthy through 2539 (reward 244.9, success 0.935, severity 0.0306, mode 0 at 2249 and 2499); severity tracks the pre-registered x1.312/500it line (2500 predicted 0.0302, measured 0.0306).
 - Scorer: `/workspace/g0c_runner/p4_score.py`, run from the repo root with `/isaac-sim/python.sh`.
+
+## Resume block — 3.9j (2026-09-04 22:3x, Mac session handoff) — the exam confound is a FLAG, not an arm
+
+- **`finding/318`'s fix was a no-op** (`debugging/319`). Arm `inc13w` is **byte-identical**
+  to `inc13`: same md5 on `data_none.npz` for both `healthy` (`d238a30b...`) and `pair34`
+  (`fca2b3e9...`), same `dr_*` ranges to four decimals at `hard`, and `p4_score.py` prints
+  numerically identical tables for `p3b_2500 vs inc13w` and `vs inc13` — every row.
+  `env.randomization.thrust_coefficient_scale` is **inert in `eval.py static`**.
+- **Mechanism** (`eval.py:1382-1404`): `--doraemon-dr` defaults **True** and auto-loads the
+  *evaluated checkpoint's own* DORAEMON-learned distribution into
+  `_dr_config_module._DORAEMON_FULL_DR` — the hard anchor that soft/medium interpolate
+  toward. The band is a property of the scored checkpoint, so the Hydra override lands on
+  the static cfg that the DORAEMON load then replaces. **No arm can fix this** (the operator
+  said so and was right); `--doraemon-dr-from <run_dir>` or `--no-doraemon-dr` can.
+- **Operator decision 22:4x — option C**: re-score the CORE matrix with **`--no-doraemon-dr`**
+  so both arms sit on the static hard `DomainRandomizationCfg` and the section-5 band
+  (0.5, 2.0) finally applies. The exam becomes *the designed plant* rather than either
+  policy's own curriculum. Flag verified present (`eval.py static --help`).
+  WARNING: a common *band* is not a common *draw*. `--deterministic-dr`'s own help text says
+  seed alone does not fix DR draws across different networks (RNG consumption order). If
+  `pairDR` is still non-zero under C, the follow-up is C + `--deterministic-dr`, which
+  buys per-env pairing at the cost of collapsing each level to its midpoint plant.
+- **Operator decision 22:4x — `p3b_final` EXTRA 20**: report as **candidate-only** fault map,
+  no delta column. Their only possible reference (`inc`, incumbent on its own 40 N plant,
+  no overrides) is a worse confound than the one `finding/318` chased.
+- **New runner**: `/workspace/g0c_runner/p4c_runner.sh` (PID 19246, launched 22:32, alive,
+  log `.hq/work/p4c/runner.log`). It **blocks on `.hq/work/p4/ALL_DONE`** and uses zero GPU
+  until then, so it does not compete with training. Config-major on purpose (cand then ref
+  per config) so the first pair is scorable ~20 min in and `pairDR` can be read early.
+  Output `.hq/work/p4c/{p3b_finalC,inc13w}/<config>`. Re-entrant; kill/restart safe.
+- **Scorer**: `p4_score.py` line 11 now reads `BASE = os.environ.get("P4_BASE", ".hq/work/p4")`
+  (backup `p4_score.py.bak_pre_p4base`). Score the C matrix with
+  `P4_BASE=.hq/work/p4c /isaac-sim/python.sh /workspace/g0c_runner/p4_score.py` from the
+  repo root. The arm names inside `p4c` were chosen so the existing cand/ref filters work
+  unchanged.
+- **Measured timeline** (rate taken clean over 90 s: it 6696 to 6720 = **3.75 s/iter**;
+  the earlier 4.9 s/iter reading was polluted by this session's own health-script runs):
+
+  | when | what |
+  |:--|:--|
+  | ~23:25 | `model_7500.pt` → runner preempts, `p3b_7500` CORE |
+  | **02:01** | training ends (10 000 it) → `P3B_DONE` |
+  | 02:01~ | `p3b_final` CORE+EXTRA 24; faster than the 10 min/config measured while sharing GPU |
+  | ~05:00-05:40 | `.hq/work/p4/ALL_DONE` → `p4c_runner` wakes |
+  | ~06:00-06:40 | `.hq/work/p4c/ALL_DONE` → score, then exp-analyze report |
+
+- **Training health at 22:3x**: it 6720, reward 194.6 (r50 191.9), success 0.595,
+  `fault_severity` 0.3045, `obs_noise` 0.3332, `DORAEMON/mode` 0 at 5499/5749/5999/6249/6499.
+  Stall signature (it >= 1500 AND last 3 modes <= -2 AND severity < 0.05) fails on both
+  clauses. The reward/success dip against 2500 is the difficulty rising in the same window,
+  not degradation.
+- **Monitors re-armed in this session** (they are session-bound and did not survive the
+  handoff): 30-min training+runner health, `p4/runner.log` milestones, `p4c/runner.log`
+  progress.
+- **Still open, unchanged**: the GitHub PAT (`luckkim123/hero_agent.git`) revocation is the
+  operator's own action. Wiki backlog at handoff: 11 `needs-experiment`
+  (163, 198, 263, 296, 301, 305, 309, 312, 313, 315, 318) plus the new `debugging/319`, and 1
+  `needs-apply-before-retrain` (**`finding/264`** `control_delay_steps` — this run applies
+  (0,3), so it is closable once the report lands).
+
+## Resume block — 3.9k (2026-09-05 02:1x) — training done clean, p3b_final running
+
+- **Phase 3b finished cleanly at ~02:04.** The evidence is the marker itself: `p3b_resume.sh`
+  writes `P3B_DONE` only under `[ $RC -eq 0 ]`, so its existence *is* the zero-exit check. The
+  runner picked it up at 02:04:31.
+- **Final checkpoint = `model_9999.pt`** (saves are every 50 it, and this is the
+  end-of-training save after `model_9950.pt`). 2050 + 7950 = 10 000 iterations completed.
+  `p4c_runner.sh` selects with the same `ls model_*.pt | sort -V | tail -1` expression, so
+  **both matrices score the same checkpoint** — the precondition for option C's re-scoring to
+  be a DR-distribution comparison rather than a different-policy comparison.
+- **Per-config cost did NOT drop when the GPU freed up.** Measured on the first `p3b_final`
+  config: 02:04:31 to 02:14:12 = **9 min 41 s**, against ~10 min while sharing GPU1 with
+  training. The earlier "~7 min once training ends" estimate in 3.9j was a guess and is wrong
+  — a 64-env `eval.py static` is dominated by Isaac Sim startup, not by GPU contention. Do
+  not plan around a speedup that does not exist.
+- **Revised schedule**: `p3b_final` 24 configs about 3.9 h → `.hq/work/p4/ALL_DONE` **~06:00**;
+  `p4c` 8 configs about 1.3 h → `.hq/work/p4c/ALL_DONE` **~07:20**; score + exp-analyze report
+  **~07:50**.
+- Last training health (it 9902, 01:52): reward 170.4, r50 177.5, success 0.465,
+  `fault_severity` 0.4782, `obs_noise_scale` 0.4811, `DORAEMON/mode` 1 at
+  8999/9249/9499/9749. The curriculum sat at its [0, 1] bound from it 7249 onward and
+  regulated around it; no stall signature at any point after the gate opened.
+
+## Resume block — 3.9l (2026-09-05 02:5x) — CORE verdict is IN; option C is now corroboration
+
+- **Read `finding/321` before anything else.** It carries the full table. Headline: the
+  candidate (`model_9999`) halves `pair34` pitch error with a **64/64** per-env sign and
+  improves both delay configs by about half, while being **worse on fault-free `healthy`
+  att and roll at every level** (per-env 10-15/64 against, all above the 0.10 deg floor).
+  That is the intended sim-to-real trade, and the cost is real -- report both halves.
+- **`pairDR = 0e+00` on all 16 rows, and the reason is physical.** Both arms load their own
+  DORAEMON distribution (no fallback), and at saturation both `mean +- 2 sigma` exceed the
+  static box on every dim, so both clip to the **same** bounds: payload_mass [0, 3],
+  added_mass_scale [0.5, 1.5], linear/quadratic damping [0.4, 1.7]. `p3b_5000` was still
+  inside the box ([0.0844, 2.9021] etc.), which is why the milestones did not pair.
+  **All four levels are readable at the final checkpoint without option C.** Do not
+  generalize this -- it is a property of where the curricula ended.
+- **Option C's rationale changed, and the run was deliberately left going.** `p4c`
+  (PID 19246) is no longer the repair of a broken comparison; it is an independent exam on
+  the *designed* section-5 plant (thrust scale 0.5-2.0) rather than the learned box the two
+  curricula converged to. Score it the same way (`P4_BASE=.hq/work/p4c`) and present it as
+  corroboration in the report, not as the fix.
+- **`model_9999` is not the best checkpoint on every axis.** `healthy` att went 0.442
+  (it 5000) -> 0.426 (7500) -> **0.511 (9999)** while the `pair34` rows kept improving.
+  `p4_runner.sh` selects last, not best. If nominal accuracy is weighted in the deployment
+  decision, `model_7500` is the checkpoint to re-score -- that is an operator call, not a
+  session call.
+- **Timeline holds**: CORE 4 finished 02:43, EXTRA under way (`m0` from 02:43, 10 of 24
+  configs on disk). `.hq/work/p4/ALL_DONE` ~06:00, `p4c/ALL_DONE` ~07:20, report ~07:50.
+- **Report still owes**: `omx exp-analyze` into the experiments tree (results SSOT), parsed
+  via `omx report-parse`, plus the wiki-backlog cross-check -- 11 `needs-experiment`
+  (163, 198, 263, 296, 301, 305, 309, 312, 313, 315, 318) plus `debugging/319` and now
+  `finding/321`, and `finding/264` (`control_delay_steps`, `needs-apply-before-retrain`)
+  which this run applies (0,3) and can therefore close with the report.
+
+## Resume block — 3.9m (2026-09-05 06:2x) — report landed, gates green, and the config is override-only
+
+- **The Phase 4 report is written and passing every gate.** Path:
+  `experiments/rsl_rl/albc_trpo_teacher/retrain_simtoreal_p3/trpo_p3b_lb200_s30_r2050_260904_163518/analysis/diagnose-20260905-060354/`
+  with `report.md`, `report.ko.md`, `manifest.json`, `review.json`. 4,162 words, 26 findings,
+  128 table rows. `omx report-coverage --min-coverage 0.5` → `ok: true`, all seven groups at
+  full coverage (tracking 4/4, reward_decomp 6/6, trpo 7/7, critic 2/2, encoder 5/5,
+  constraint 21/21, doraemon 4/4), no missing sections, engine cited. `omx report-review` →
+  `approve`. Independent `report-reviewer` agent → **approve**, zero major findings, having
+  re-run `p4_score.py`, `extra_read.py` and `tb-final` itself and matched every spot-checked
+  figure.
+- **THE FINDING THAT MATTERS MOST — every section-5 setting is launch-override-only.** Checked
+  while trying to close `finding/264`, and it is why that page must stay open:
+  `control_delay_steps` default `(0,0)` at `constrained_albc/envs/main/config.py:263`,
+  `performance_lb` `250.0` at `:612`, `thrust_coefficient` `40.0` at `:141`,
+  `thrust_coefficient_scale` `(0.7,1.3)` at `:231` — as-run values were `(0,3)`, `200.0`,
+  `13.0`, `(0.5,2.0)`. **A retrain launched without the override block silently reverts to the
+  exact configuration `finding/315` measured stalling for a whole run.** Filed as
+  `finding/352`, status `needs-apply-before-retrain`. The blocking roster is now
+  `finding/264` + `finding/352` — it used to be one item and read as empty.
+- **Wiki curated (6 pages) + 26 auto-captured stubs** (`finding/323`-`348`):
+  `349` saturation → `pairDR = 0` mechanism · `350` fault ranking (m0 dominates) ·
+  `351` "a monotone reward decline under a widening curriculum is the difficulty tax, not
+  divergence" (the engine's DIAGNOSIS false positive) · `352` override-only (blocking) ·
+  `353` engine-gap spec (nine TB tags the engine never scans) · `354` inertia gap
+  (measured pitch 0.49 vs effective 0.12).
+- **Findings posted this session**: `finding/321` (CORE verdict + the `pairDR = 0`
+  explanation), `finding/322` (EXTRA fault map).
+- **STILL TO APPLY — one re-analysis pass, through the skill's re-analysis path (old report as
+  BASE, `atomic_path` writer, never hand-Edit).** Four reviewer minors plus two additions:
+  1. **The deployment framing gap (the reviewer's substantive catch).** The report calls the
+     real robot's condition "m3 dead, m4 excluded, ~152 ms delay" but **no scored config
+     combines fault AND delay** — `pair34` has no delay, `healthy_d1`/`d2` have no fault.
+     The two axes were only ever tested in isolation and the report must say so.
+  2. Carry the MED caveat on the `performance_lb`-vs-plant attribution into the TL;DR bullet
+     and the verdict, where it currently reads as flat fact.
+  3. `fault_severity 0.0132 (it 1056)` has no citation that leads to a TB-scalar-at-step
+     source; either cite it properly or soften.
+  4. `finding/149` does not resolve in this store (dead link) — cite `PLAN.md` item 10 instead.
+  5. Add the override-only finding (`finding/352`) to the report body.
+  6. Add the `p4c` option-C corroboration once it lands.
+- **`p4c` (PID 19246) is still running**, ~08 min per eval under `--no-doraemon-dr` (faster
+  than p4's 9m41s because it skips the DORAEMON load). `healthy` pair done 06:08, `pair34`
+  under way; ETA `.hq/work/p4c/ALL_DONE` **~06:56**. Score with
+  `P4_BASE=.hq/work/p4c /isaac-sim/python.sh /workspace/g0c_runner/p4_score.py`.
+- **Engine invocation gotcha, for the next session**: `analyze_training.py` must run under
+  `/isaac-sim/python.sh` (the system python3 fails preflight on a scipy/numpy mismatch and
+  says so), but `omx_core` / `omx_paths` is only importable from the **system** `python3`.
+  Two different interpreters for the two halves of this workflow.
+- **`omx report-review` grammar is strict**, and getting there cost five round trips:
+  `[FINDING]` → `[EVIDENCE: …]` → `[CONFIDENCE: HIGH|MED|LOW]` must be **adjacent lines**,
+  each tag must **open and close on one line**, the confidence tag must be the **bare grade**
+  with no trailing rationale, and every `[EVIDENCE]` needs an opening `[FINDING]`.
+- **`omx tree-audit` is `ok: false`** (4 errors, 3 warnings). One is ours: a dangling
+  `data_pointer` symlink at
+  `experiments/.../retrain_simtoreal_p3/trpo_p3b_lb200_s30_r2050_260904_162821/train`, left by
+  the failed from-zero resume that `finding/317` isolated. Report-only by rule; not fixed.
+- **Wiki backlog at this handoff**: 13 `needs-experiment` (163, 198, 263, 296, 301, 305, 309,
+  312, 313, 315, 318, 319, 321) and 2 `needs-apply-before-retrain` (264, 352). Neither 264 nor
+  315 was closed, and the reason is the override-only finding above — the corrections were
+  applied to the run, not to the code.
+
+## Resume block — 3.9n (2026-09-05 07:0x) — PHASE 4 COMPLETE. Everything below is done, not pending.
+
+- **The program's Phase 4 is finished.** Final deliverable:
+  `experiments/rsl_rl/albc_trpo_teacher/retrain_simtoreal_p3/trpo_p3b_lb200_s30_r2050_260904_163518/analysis/`
+  **`diagnose-20260905-070135/`** (`report.md`, `report.ko.md`, `manifest.json`, `review.json`).
+  It supersedes `diagnose-20260905-060354`, which stays on disk as the baseline the regression
+  gate compared against. 5,019 words, 32 findings, 134 table rows.
+- **Every gate is green, including the regression gate.** `omx report-coverage
+  --min-coverage 0.5 --baseline auto` → `ok: true`, `is_regression: false`
+  (words 4163→5019, findings 26→32, tables 128→134), no missing groups or sections, engine
+  cited. `omx report-review --baseline auto` → `approve`. The independent `report-reviewer`
+  agent approved the 060354 base with zero major findings after re-running the scorers itself;
+  all four of its minors were applied in 070135.
+- **Option C came back byte-identical and that is the good outcome** (`finding/355`). The
+  `p4c` matrix (`--no-doraemon-dr`, finished 06:56) reproduced the default scoring digit for
+  digit — three md5 matches on `data_hard.npz`, all 24 rows — while the eval logs show the two
+  runs genuinely taking different branches (`Attempting to load DORAEMON-learned DR from: …`
+  versus `DORAEMON-DR disabled. Hard DR = static DomainRandomizationCfg.`). **That proves the
+  DORAEMON-clipped box IS the static hard box**, which `finding/321` had only inferred from
+  printed ranges agreeing to four decimals.
+- **What option C also proved, which nobody wanted**: the section-5 thrust band (0.5, 2.0)
+  **has never been exercised by any Phase 4 exam, on either branch.** `data_hard.npz` records
+  23 `dr_*` dims and not one contains `thrust`; neither eval log prints a thrust line;
+  `debugging/319` showed the same from the other side. `--deterministic-dr` will not fix it —
+  the band does not reach the eval at all rather than being drawn differently. Testing the
+  designed plant needs a different mechanism, not a different flag.
+- **Two caveats now carried in the report, both from that check.** `pairDR` covers only the 23
+  recorded dims, so `pairDR = 0` means the arms agree on what the eval writes down, not on
+  every aspect of the plant; and the shared thrust band rests on `p4_runner.sh` passing the
+  identical `DELTA` to both arms — construction, not measurement.
+- **The reviewer's substantive catch, now in the report**: **fault and delay were never scored
+  together.** `pair34` is the fault at zero delay, `healthy_d1`/`d2` are the delay with six
+  healthy thrusters, and no `pair34_d*` exists in either matrix — while the deployed robot has
+  both. Every claim about "the real robot's condition" joins two separately measured axes.
+- **Posts this session**: `finding/321` (CORE verdict + saturation), `finding/322` (EXTRA fault
+  map), `finding/355` (option C). Curated wiki: `349` saturation mechanism · `350` fault
+  ranking · `351` reward-decline-is-not-divergence · `352` **override-only (blocking)** ·
+  `353` engine-gap spec · `354` inertia gap. Breadcrumbs `323`-`348` plus 32 more from 070135.
+- **The operator decisions that remain, and they are the only open items**:
+  1. **`model_7500` vs `model_9999`.** Fault-free attitude regressed 0.426 → 0.511 over the
+     final 2500 iterations while `pair34` kept improving, and the runner takes the last
+     checkpoint. If the deployment weights nominal accuracy, `model_7500` should be re-scored.
+  2. **Whether to change the four code defaults** (`finding/352`) or to require the override
+     block in every launch ack. The blocking roster is `finding/264` + `finding/352`.
+  3. **Whether a `pair34_d2`-style config is worth scoring** before deployment, given that the
+     two axes have only been measured apart.
+- **Not done, deliberately**: `omx tree-audit` is still `ok: false` (4 errors, 3 warnings),
+  including our dangling `data_pointer` at `…/trpo_p3b_lb200_s30_r2050_260904_162821/train`
+  from the failed from-zero resume. Report-only by rule.
+- **Still the operator's own action**: revoke the GitHub PAT for `luckkim123/hero_agent.git`.
+
+## Resume block — 3.9o (2026-09-05 13:3x) — the three operator decisions executed
+
+The user answered all three items 3.9n left open. What follows is what was measured, not
+what was planned.
+
+**1. Checkpoint (`model_7500` re-score) — answered, and it reverses 3.9n's framing.**
+`p3b_7500` CORE was already on disk from the runner's milestone loop, so this cost no GPU.
+Scored head to head against `model_9999` (`g0c_runner/ckpt_read.py`): `pairDR = 0e+00` on all
+16 CORE rows — same run, both curricula past the clamp box, so all four DR levels read with no
+saturation caveat. **15 of 16 deltas favour `model_7500`, 12 clear the 0.10 deg floor, 3 tie,
+and `model_9999` wins exactly one row** (`pair34` at `none`, by 0.129 deg). Both delay configs
+shed **3.1 pp of survival** at `hard`. The last 2500 iterations were a net regression, not the
+accuracy-for-robustness trade `finding/321` and the 070135 report described. `finding/362`.
+**The deployment checkpoint should be `model_7500`, not the runner's last-checkpoint pick.**
+
+**2. Config group — built as an Isaac Lab task variant, because this repo has no Hydra YAML
+tree.** `@hydra_task_config` builds from registered dataclasses, so the repo's own idiom for a
+config variant is a cfg subclass behind a new task id (precedent: `config_noconstraint.py` /
+`Isaac-ConstrainedALBC-TRPO-NoIPO-v0`). Added `constrained_albc/envs/main/config_simtoreal.py`
+(`ALBCSimToRealEnvCfg`) registered as **`Isaac-ConstrainedALBC-TRPO-SimToReal-v0`**. No base
+default moved, so no other task or experiment is affected.
+
+`finding/352` **undercounted: the override block is seven settings, not four.** The four it
+listed differ from the code defaults, and so do `fault.enable` (False), `fault.thruster_fail_prob`
+(0.10) and `fault.thruster_dead_frac` (0.0). All seven are in the variant. Equivalence is
+checked, not asserted — `test_simtoreal_cfg.py` resolves both configs and requires the
+difference set to be exactly those seven fields with exactly the launched values.
+Verified through the real launch path: `eval.py static` on the new task id with **no
+overrides at all** produced `data_*.npz` **byte-identical** to the already-scored
+`p3b_final/pair34` at all four DR levels (`none` bef6fdbaae43, `soft` b4ac09a90825, `medium`
+c5e7ce058b6a, `hard` 80065dc14412). `thrust_coefficient` alone (40 N vs 13 N) would change
+every trajectory, so the identity is the proof. **Scope**: that eval sets health with
+`--fault_fixed_health`, which overrides all three `fault.*` settings, and `performance_lb` is
+training-only — so execution covers **one field of seven, not three**. The eval baseline is
+`p4_runner.sh`'s `DELTA`, which is only TWO overrides (`thrust_coefficient`,
+`thrust_coefficient_scale`); the seven belong to the TRAINING launch. Only
+`thrust_coefficient` is exercised: the band never reaches a Phase 4 exam, and
+`control_delay_steps` cuts against the naive reading — the variant sets `(0,3)`, the base task
+default is `(0,0)`, `DELTA` never overrode it, so the two runs genuinely DIFFERED there and
+still produced identical bytes. That is positive proof the eval cannot see the field. The other
+six rest on
+`test_simtoreal_cfg.py`, which is written but **could not be run on this container**: a
+standalone `AppLauncher` boot exits 0 during Kit startup with no traceback (reproduced with a
+seven-line script) while `eval.py`'s own boot works. Run it where standalone Kit starts.
+
+Future retrain launch, replacing the seven-override block:
+
+```bash
+/workspace/isaaclab/isaaclab.sh -p scripts/train.py \
+  --task Isaac-ConstrainedALBC-TRPO-SimToReal-v0 --num_envs 4096 --headless --seed 30 \
+  --max_iterations <N> --run_group <group> agent.run_name=<name>
+```
+
+`finding/352` and `finding/264` stay `needs-apply-before-retrain`: the variant removes the way
+to forget the block, it does not bind a launch that does not use it. They close when a retrain
+ack names this task id.
+
+**3. `pair34_d2` — scored, and it is the strongest deployment evidence in the program.**
+Three configs, 8m25s each, GPU1, `g0c_runner/p4d_runner.sh` + `p4d2_runner.sh`.
+Three arms, and **the `pairDR` rule removed most of the table before it was read.** Arm vs arm
+on `pair34_d2` the `hard` rows are `1e-01` (every CORE row of the same pair is `0e+00`), so they
+are excluded. And the additivity test is valid at `none` only: within one arm `pair34` and
+`pair34_d2` draw different plants at soft/medium/hard (`pairDR` 2, 4, 6 — the delay flag changes
+RNG consumption). Reading the confounded rows would have produced a plausible, wrong interaction
+number (+1.9 deg for the candidate at `hard`).
+
+At the one level that tests it, against the additive prediction `pair34 + healthy_d2 - healthy`:
+
+| arm | predicted | actual | excess |
+|:--|--:|--:|--:|
+| inc13w | 2.128 | 9.360 | **+7.232** |
+| p3b_7500 | 1.062 | 1.080 | +0.018 |
+| p3b_final | 0.963 | 0.963 | +0.000 |
+
+**The incumbent's combined error is 4.4x what its own single-axis results predict; both
+retrained checkpoints match theirs.** On the deployment condition itself the candidate beats the
+incumbent by -8.397 / -9.303 / -12.592 deg at none/soft/medium with a 64/64 per-env sign. So the
+retrain's real product is removing the fault-delay interaction, and the single-axis numbers do
+not bound the deployment case — `finding/321` could not have been read off them. `finding/363`.
+Head to head the two checkpoints agree with the CORE verdict here too (`pairDR` 0 on all four:
+9999 ahead at `none` by 0.117, behind at soft/medium/hard, -1.6 pp survival at `hard`).
+
+**Two record corrections.**
+- `HANDOFF.md:34` and `PLAN.md:208` say `thruster_fail_prob 0.15`. The live value is **0.30**
+  — PLAN.md:91 carries the 3.9 decision (p₀ = 0.30), the fire blocks at :223/:234 use 0.30,
+  and the as-run confirmation on :208 itself says `0.1 → 0.3`. Both stale strings sit inside
+  historical rows whose own DONE columns already contradict them, so they were left rather
+  than rewritten. Read the launch script, not the prose.
+- The `pairDR` rule earned its keep twice more in this round. On `pair34_d2` the `hard` rows
+  are `1e-01` (every CORE row of the same arm pair is `0e+00`), so they are excluded; and the
+  additivity test is valid only at `none`, because within one arm `pair34` and `pair34_d2`
+  draw different plants at soft/medium/hard (`pairDR` 2, 4, 6 — the delay flag changes RNG
+  consumption). Reading the confounded rows would have produced a large, plausible, wrong
+  interaction number for the candidate.
+
+**Report**: `analysis/diagnose-20260905-140134` is current. It supersedes `-134031`, which
+superseded `-070135`: 5019 → 6923 → **7813** words, 32 → 42 → **44** findings, 134 → 176 →
+**191** table rows, both revisions `omx report-coverage` `ok: true` (7/7 groups, no regression)
+and `omx report-review` `approve`.
+
+**An independent `report-reviewer` pass on `-134031` returned `revise` with six major findings,
+and all six were real.** They are worth carrying forward as a pattern, because five of them are
+the same failure: an ADDITION that should have been a SUBSTITUTION. (1) The stale
+"fault and delay were never tested together" finding survived alongside the new section that
+refutes it, and its own cited `ls` now returns `pair34_d2`. (2) The report recommended
+`model_7500` while every incumbent table in it graded `model_9999` — the recommended
+checkpoint's actual bill (three ties, one win, two `hard` rows) was absent. (3) "does not trade
+anything away on the deployment condition" is false at the report's own floor (`model_9999` is
+0.117 deg better at `pair34_d2 none`). (4) The 15-of-16 count hid a clean perturbed-exam versus
+nominal-plant split: at `none` every above-floor fault row favours `model_9999`. (5) The
+task-variant scope was over-claimed at 3 of 7 (see above). (6) `DORAEMON/mode` was **0 at it
+8499**, not 1 throughout from 7249, and the cited `curriculum_trajectory.json` has no mode
+field. Minors: EXTRA survival is 18 of 20 not 17; the candidate's `+0.000` additivity match is
+mean-level cancellation (per-env std 0.702), not per-env additivity; "4.4x" is
+additive-null-dependent (a multiplicative null gives 2.41x); the `pairDR` blind spot covers at
+least seven dims, not just thrust — though an independent diff of all 19 clipped DR boxes found
+them identical across arms, which STRENGTHENS the same-clamp-box claim; `ocean_current_strength`
+also never reaches the exam; the confounded `hard` rows blanked only `delta` while keeping
+`better` and `survD`; and one md5 evidence path named the wrong directory. All are applied in
+`-140134`, and `finding/352`, `362` and `363` were edited to match.
+
+**Nothing is queued and nothing is running.** Repo changes are uncommitted on branch
+`exp/koopman-marine-obs` (no commit was asked for): `config_simtoreal.py`,
+`test_simtoreal_cfg.py`, the registration in `envs/main/__init__.py`, plus the new posts and
+this file. `omx tree-audit` is still `ok: false` (4 errors, 3 warnings) including the dangling
+`data_pointer` symlink from the failed from-zero resume — report-only by rule. The GitHub PAT
+for `luckkim123/hero_agent.git` is still the user's to revoke.
+
+## Resume block — 3.9p (2026-09-05 20:3x) — option B decided, student distillation QUEUED, no retrain
+
+**Operator decisions (2026-09-05 evening, Mac session).**
+1. The deploy path proceeds on `model_7500`. **No teacher retrain.** Phase 4 selected the checkpoint; distillation and export were never started — the newest student run on disk is the incumbent's (`student_final_round`, 2026-08-10), no student run exists after p3b, and `deploy/` has no p3b pack. The board runs a GRU student (teacher actor input 81 = obs 72 + latent 9), so the teacher checkpoint alone is not deployable.
+2. Distillation plant = **option B**: `--task Isaac-ConstrainedALBC-TRPO-SimToReal-v0`. The incumbent recipe's default task (`Isaac-ConstrainedALBC-TRPO-v0`) is the 40 N zero-delay fault-off plant; `finding/352`'s override-only trap applies to the student launch exactly as to a teacher launch, and with `dagger_mix select` β 0.5 half the rollout actions are the student's own, so the rollout plant matters.
+3. The report's entropy-collapse and constraint findings are **not retrain grounds** (below).
+
+**Queued, not fired.** `omx queue-launch` run-id `sd_p3b7500_c3_gruselect_s30` → `.hq/work/experiments/runs/sd_p3b7500_c3_gruselect_s30/pending-launch.json` (queued 2026-09-05T11:28:45Z UTC, `queued_commit` 4b257ec, acked gates `finding/264` + `finding/352` — per-launch acks, both pages stay `needs-apply-before-retrain`). Script `/workspace/g0c_runner/student_p3b.sh` (md5 `3c1bc89026954d2ae2732ca606a60883`), `bash -n` clean, both preflights pass (teacher ckpt present, task id registered). Fire from the user's shell, e.g. `tmux new -s sdp3b 'bash /workspace/g0c_runner/student_p3b.sh'`; GPU1; the incumbent's identical recipe took 11 min 38 s. Liveness within 2 min: bytes in `/workspace/g0c_runner/student_p3b.log` and GPU1 memory in `nvidia-smi` — zero bytes is not "still thinking".
+
+**Provenance hole — fix before firing.** `queued_commit` 4b257ec predates `constrained_albc/envs/main/config_simtoreal.py` and the `SimToReal-v0` registration in `envs/main/__init__.py`; both are uncommitted on `exp/koopman-marine-obs`. A launch recorded against a commit that cannot rebuild it is the provenance defect this program was opened to end. Commit them (plus `test_simtoreal_cfg.py`) first.
+
+**What this launch does NOT verify, stated now so nobody reads the marker as proof.**
+- `train_student.py` writes no `params/env.yaml` (the 2026-08-10 student run dir holds only events/launch.log/launch.sh/models/wandb, and its launch.log prints no cfg field). So this launch does not close `finding/352`'s six execution-unverified fields. A three-line `dump_yaml` of the env cfg in `train_student.py` would; not added unasked.
+- `train_student.py` has no DORAEMON/curriculum handling (grep: 0 hits), so the distillation env starts the curriculum from its initial state. Fault exposure during distillation is therefore ≈ severity 0.01 × p₀ 0.30 — the same limit the incumbent's distillation had. Read the student run's `DORAEMON/mean/fault_severity` at the first readout rather than assuming faults were seen.
+
+**Why entropy collapse and constraints are not retrain grounds.**
+- trpo group: p3b final-window `Policy/entropy` −8.41, `mean_noise_std` 0.10 (2× the 0.05 `min_std` floor), `sigma_step` 1/36 of `actor_step`; the collapse signature was already present at it 2092, before the curriculum opened. At the deployed checkpoint (it 7400–7600) entropy −8.46, noise std 0.095. **The incumbent that flew is MORE collapsed**: final window `Policy/entropy` −9.26, `mean_noise_std` 0.083 (`omx reduce tb-final --window 200` on `teacher_iter_budget/trpo_iterbudget_s30_260805_012813`). The deployed numpy policy executes the mean action, so the std never reaches the board. The cost is late-training exploration — consistent with the flat return across the 7500→9999 regression window — which is a note for the next hyperparameter set (`entropy_coef` 0.003 / `min_std` 0.05), not a reason to launch one now.
+- constraint group: 10/10 margins positive and 0 violations in the final window; the binding constraint is `thruster_util` (JC/dk 0.821), consistent with the fault curriculum pushing the surviving thrusters toward budget; `barrier_penalty` spikes 3 (max 0.147), MED. Nothing here is a misconfiguration.
+
+**Open leads.** The 17 `needs-experiment` pages the queue verb listed (163, 198, 263, 296, 301, 305, 309, 312, 313, 315, 318, 319, 321, 354, 355, 362, 363) are all teacher-side — exam validity, inertia, thrust band, checkpoint selection. **DEFERRED for this launch**: distilling an already-judged teacher changes none of them. They carry into the next teacher retrain, if one is ever opened; the pre-registered triggers for that are Phase 5 pitch span < 15° or tracking < 50 %, a mission-level rejection of ~6° `hard` attitude error, or measured attitude sluggishness pointing at `set_inertias` (item 10(b)).
+
+**Also on the record.** `test_deploy_constants.py`, named in PLAN Phase 4, does not exist in this repo (`find` returned nothing) — locate or replace before export. The Mac session could not read the user's referenced transcript (`9d19b3a6…` lives on `kim-macbookair`, key not registered); the three restated questions were answered from the report, the wiki, and this tree.
+
+**3.9p addendum (2026-09-05 21:0x) — `joint1_pos` question answered with a new measurement.** The user's 19:56 question in `08_notes/2026-09-05-p3b-phase4-verdict/conversation.ko.md` (that file IS the transcript the user pointed at; the claudian session saved it there at 20:13) asked whether the inert joint1 constraint will hold on the robot. Answer, recorded as wiki `finding/378`: the shipped `joint1_pos` indicator cannot fire because the measured angle wraps at +-2*pi under a 4*pi limit; on the Phase 4 npz the incumbent winds `joint1_target` to 41+ rev in 7/64 envs at `pair34`/`hard` and `pair34_d2`/`hard` (none terminated — cable-wrap signature), while `p3b_7500` and `p3b_final` never exceed 0.49 rev in any of the six configs read. Not a retrain ground; a watchdog on the deploy-side integrator and a fireable (command-side) constraint for the next teacher retrain. The report's constraint group still reads "no issue" — RE-analysis pending, offered to the user.
