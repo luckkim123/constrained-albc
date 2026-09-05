@@ -576,3 +576,23 @@ Each script chains its own exam (`sd_exam_generic.sh` → `.hq/work/p4/sd_r1`, `
 **Open leads (`omx wiki list`, 03:1x):** blocking finding/264, finding/352 unchanged. needs-experiment: 3.9t list minus nothing (finding/388 posted as resolved, so the count stays 26). Nothing dropped.
 
 **Next reads:** R4a 5/5 (~04:50) -> finding (budget alone vs R1; vs R3a; `student_999.pt` vs R1 for reproducibility) -> ledger + commit. Then the user's R4c / R4b call.
+
+---
+
+## 3.9v (2026-09-06 05:0x) -- R4a FAILED 20/20 (finding/389); a same-seed second realization of R1 measured the exam noise floor; the hard-level mean is tail-made; both GPUs idle; R4c still pending approval
+
+**Resume here.** Read finding/387 (R3a, the candidate recipe) and finding/389 (R4a + reproducibility + tail). Pending user decisions: (1) approve or drop R4c (`pending-launch.json` unchanged); (2) whether R4b gets code time; (3) NEW: whether the next GPU-hours go to a second realization of R3a instead of R4c -- finding/389 measured the single-realization noise at ~0.1 (none/soft) and 0.2-0.7 (medium/hard), a verdict class wide, and R3a's 11 teacher-ties are single-realization. Nothing fires without them.
+
+**R4a `sd_p3b7500_c3_dr5_it10k_s30` -- finding/389, needs-experiment.** att vs teacher 0 tie / 0 better / 20 worse (+0.10..+2.61); vs R3a 4 tie / 0 / 16; vs R1 8 better (all none/soft, -0.10..-0.36) / 3 tie / 9 worse (all medium/hard, +0.18..+1.05); vs deployed 5 / 7 / 8. `loss_latent` floors at it ~2k at R1's value (last-50 mean 0.0186 vs 0.0188) and 8k more iterations move nothing. Budget axis on beta 0.5 closed; finding/384's under-training lead closed. Latent: best of the three at `none` (healthy 0.021), between R1 and R3a at `hard`, within-episode variance 0.001-0.007, no drift -- and still worse att than R1 at hard, see tail.
+
+**Reproducibility `sd_r4a999` = R4a's `student_999.pt` (R1 recipe, same code, same seed s30).** Encoder weights relL2 0.88 vs R1's `student_999.pt` (max |dw| 0.70). Exam vs R1: 11 tie / 2 better / 7 worse -- none/soft within 0.10 on 9 of 10 rows, medium/hard |delta| 0.19-0.72 on 8 of 10. vs teacher 1 tie / 19 worse (R1 was 0/1/19): the verdict class reproduces, the cells do not. Its latent mse is 2-7x R1 at the same score (pair34/none 0.268 vs 0.038, bias on dims whose true variance is ~0), so latent mse is not a sufficient statistic for the score. Consequence: between single realizations a cell delta below ~0.3 (medium) / ~0.7 (hard) is noise; R4c - R3a is readable at the 0.10 floor on none/soft rows only.
+
+**Tail (finding/389 section 4).** Per-env att mean / median / P90: teacher healthy/hard 3.33 / 0.66 / 5.47 -- the mean is the top decile. R3a ties the teacher MEDIAN at hard on all four core configs (0.67 vs 0.66, 1.08 vs 1.07, 0.81 vs 0.82, 1.00 vs 0.85); its hard+delay losses are P90 (9.0 vs 5.0, 10.0 vs 4.5). R4a is worse than R3a in both median and P90 at hard; per-env corr(att, latent mse) is +0.4 for R3a/R4a at hard (bimodal) and ~0 for R1 (uniformly mediocre). Scoring lead recorded: report median and P90 per cell next to the mean. The mean-based pre-registered floor is not re-declared.
+
+**Scoreboard (att vs teacher, tie / better / worse, 20 rows):** R1 0/1/19 (384), R2 0/0/20 (386), R3a 11/2/7 (387), R3b 0/0/20 (388), R4a 0/0/20 (389), R1-second-realization 1/0/19 (389). R4c queued, not fired.
+
+**Chain state 05:0x.** Both GPUs idle from 04:55 (the stonefish job ended 02:12; the user allowed GPU0 after it). tmux empty. Markers present: SD_INC/R1/R2/R3A/R3B/R4A/R4A999_EXAM_DONE, /workspace/GPU0_FREE. If R4c is approved: `tmux new-session -d -s sdr4c "bash /workspace/g0c_runner/student_p3b_r4c.sh"` -- the wrapper checks WAIT_MARKER (`SD_R3B_EXAM_DONE`, present) before the ALT marker, so it starts at once on GPU1; confirm `student_r4c.log` shows `start=` and a python process on GPU1. Monitors of this session end with it; re-arm on `student_r4c.log` / `sd_r4c_exam.log` if it fires. Scratch symlink dir `/workspace/g0c_runner/r4a999_ckpt/` and `.hq/work/p4/r4a_*.py` are re-usable for any later realization exam (point the symlink at another ckpt, change the arm/tag).
+
+**Open leads (`omx wiki list`, 05:0x):** blocking finding/264, finding/352 unchanged. needs-experiment 27 = 3.9u list + finding/389. Nothing dropped.
+
+**Next reads:** none pending on the machine. The three user decisions above come first.
