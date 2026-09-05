@@ -42,35 +42,42 @@ except ImportError:
 
 
 def configure_env_for_student(env) -> None:
-    """Disable DORAEMON and force static hard DR on the env before learning starts.
+    """Drop the DORAEMON scheduler and roll the student out on the TASK's DR ranges, uniformly.
 
-    Student training uses the r13_A-era DomainRandomizationCfg (hard training
-    ranges) uniformly and disables DORAEMON's Beta curriculum so the teacher is
-    never queried outside the DR region it was trained on.
+    Two defects lived here until 2026-09-06 (finding/381):
+    1. ``cfg.doraemon.enable = False`` after ``gym.make`` disabled nothing -- ALBCEnv reads
+       the flag once in ``_init_doraemon()`` and every later check is
+       ``self._doraemon is not None``. Every student distilled through this runner rolled
+       out on the scheduler's INITIAL Beta (concentration 30 around each dim's nominal:
+       payload 1.5 kg, inertia 1.2, water 1010, fault severity 0.01 -> fault-free) while
+       its teacher was graded on the full box.
+    2. Substituting a fresh ``DomainRandomizationCfg()`` reverted a SimToReal task's
+       thrust_coefficient_scale (0.5, 2.0) / control_delay_steps (0, 3) to the base
+       (0.7, 1.3) / (0, 0).
+    Now the scheduler object is dropped -- the env then draws every DR dim uniformly from
+    ``cfg.randomization`` and faults at the cfg fail probability -- and the task's own
+    ranges stay. For the base task those ranges ARE DomainRandomizationCfg(), so nothing
+    moves there.
     """
-    env_cfg = env.unwrapped.cfg
+    raw = env.unwrapped
+    env_cfg = raw.cfg
     doraemon_cfg = getattr(env_cfg, "doraemon", None)
-    if doraemon_cfg is not None and getattr(doraemon_cfg, "enable", False):
+    if doraemon_cfg is not None:
         doraemon_cfg.enable = False
-        logger.info("[Student] DORAEMON disabled for supervised training.")
-
-    # Replace randomization cfg with a fresh hard DomainRandomizationCfg from
-    # the env's OWN variant package -- the cfg being replaced must match the env.
-    import importlib
-
-    variant_pkg = type(env.unwrapped).__module__.rsplit(".", 1)[0]
-    DomainRandomizationCfg = importlib.import_module(f"{variant_pkg}.config").DomainRandomizationCfg
-    hard = DomainRandomizationCfg()
-    env_cfg.randomization = hard
-    logger.info("[Student] Randomization forced to static hard DomainRandomizationCfg.")
-
-    # Re-initialize env internals that cache randomization ranges.
-    if hasattr(env.unwrapped, "_reload_randomization"):
-        env.unwrapped._reload_randomization()
-    else:
-        # Fallback: full env re-init happens on next reset. The existing DR sampler
-        # reads env_cfg.randomization at reset time, so a reset is sufficient.
-        pass
+    if getattr(raw, "_doraemon", None) is not None:
+        raw._doraemon = None
+    env_cfg.randomization.enable = True
+    dr = env_cfg.randomization
+    fault = getattr(env_cfg, "fault", None)
+    print(
+        "[Student] DORAEMON scheduler dropped; DR = task cfg, uniform: "
+        f"thrust_coefficient_scale={dr.thrust_coefficient_scale} "
+        f"control_delay_steps={dr.control_delay_steps} "
+        f"payload_mass_range={dr.payload_mass_range} inertia_scale={dr.inertia_scale} "
+        f"fault.enable={getattr(fault, 'enable', None)} "
+        f"fail_prob={getattr(fault, 'thruster_fail_prob', None)}",
+        flush=True,
+    )
 
 
 class StudentRunner:

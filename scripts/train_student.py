@@ -104,6 +104,7 @@ import torch
 from isaaclab.envs import DirectRLEnvCfg
 
 from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper
+from isaaclab.utils.io import dump_yaml
 
 import isaaclab_tasks  # noqa: F401
 from isaaclab_tasks.utils.hydra import hydra_task_config
@@ -295,6 +296,9 @@ def main(env_cfg: DirectRLEnvCfg, _agent_cfg) -> None:
 
     device = torch.device(cfg.device)
     runner = StudentRunner(env=env, cfg=cfg, log_dir=log_dir, device=device)
+    # Effective env cfg AFTER configure_env_for_student (DORAEMON dropped, task DR kept):
+    # the plant the student actually rolls out on, where train.py writes the teacher's.
+    dump_yaml(os.path.join(log_dir, "params", "env.yaml"), env.unwrapped.cfg)
 
     # --- overlay: run_id single-tree manifest for the student (minimal-touch) ---
     # Student is a child of the teacher: emit experiments/<student_run_id>/ with kind="student"
