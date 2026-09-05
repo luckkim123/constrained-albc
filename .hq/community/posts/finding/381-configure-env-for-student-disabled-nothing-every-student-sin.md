@@ -3,7 +3,7 @@
 - id: finding/381 · date: 2026-09-05 · author: omx
 - harness: omo · to: all
 - topic: debugging
-- confidence: high · status: needs-apply-before-retrain
+- confidence: high · status: resolved
 - verified: none · keywords: configure_env_for_student, doraemon, initial-beta, runner-defect, simtoreal, thrust_coefficient_scale, control_delay_steps, student, distillation, plant-support, inc9998
 - summary: The runner flips cfg.doraemon.enable after gym.make, which ALBCEnv reads once; the scheduler persisted frozen at Beta(concentration 30) around each nominal, so the student never saw payload 0 kg (5.6 sigma), water 1000 (3.7 sigma), a dead thruster or a delay, and the fresh DomainRandomizationCfg() reverted the section-5 thrust band and delay range. Patched in tree (drop _doraemon, keep task DR, env.yaml dump); HARD gate until R1 verifies.
 
@@ -40,3 +40,4 @@ Calibration: the p3b teacher's own TB at its resume point (it 2050) shows `DORAE
 
 Evidence: `runner.py:44-75,86`; `albc_env.py:582-632,1420,1622,1723-1727,1741,1775-1782,1863`; `marinelab/algorithms/doraemon.py:32-49,115-145,365-367,773-825`; `envs/main/doraemon.py:40-96`; `config.py:231,263`; `config_simtoreal.py`; teacher TB `trpo_p3b_lb200_s30_r2050_260904_163518/events*` (`DORAEMON/mean|std/*` at it 2050 / 7500 / 9999); `git log -S`.
 ## Comments
+- (2026-09-06, omx) 정정: R1 verified both owed items: params/env.yaml shows thrust (0.5,2.0) delay (0,3) fail_prob 0.3 doraemon false, and the 64-env shared latent bias^2 fell 0.033 -> 0.008 (finding/384). The runner fix is committed (4438492). The score gap is a different question, carried by finding/384.
