@@ -534,7 +534,7 @@ nine need no robot.
 | gate | what | blocks | record |
 |:---|:---|:---|:---|
 | **G1** | **Fix the Phase 4 exam.** `analysis/dr_config.py` builds DR from the CLASS DEFAULT at three sites and `eval.py:apply_dr_config` replaces `env_cfg.randomization` wholesale, discarding every `env.randomization.*` override. **Measured scope (Update 2026-09-07): on R3a re-graded with the fix, `none` is bit-identical, `soft`/`medium` all 10 cells stay inside the 0.10 deg floor, and only `hard` moves (-0.203 to -1.025). G1 keeps top priority because the verdict-driving deltas are all hard rows, but the re-grade is cheaper than 'everything'.** | everything scored | `finding/391`, `382`, `debugging/319` |
-| **G2** | **Make `test_simtoreal_cfg.py` actually assert.** It exits 0 during Kit startup with no PASS line, so the seven-field freeze is unverified. | the config freeze | `finding/402` (reproduced twice 2026-09-07), `379`, `377` |
+| ~~**G2**~~ **CLOSED 2026-09-07** | `PASS  339 fields compared; exactly 7 moved, all seven as launched`, exit code 0. The seven-field freeze of `ALBCSimToRealEnvCfg` is verified at the resolved output. **The stated cause was wrong and that is why it survived three revisions**: the test never died at Kit startup — a bisecting probe reached `AppLauncher`, built both configs (85 top-level keys each) and then **blocked in `app.close()`**, so the asserts had already run and PASS had already been written into a block-buffered stdout that never flushed. Kit's banner fills the first 4 KB blocks, which is why the log ends mid-banner and reads like a startup death. Fix: `flush=True` on the output and `os._exit(0)` instead of returning through the blocking `close()` | ~~the config freeze~~ nothing | `finding/406` (supersedes `402`), `379`, `377` |
 | **G8** | **Re-implement the action delay at physics-substep granularity.** Operator precondition on item 8. | item 8 | §10 B-2, `finding/148` |
 | G3 | Measure the sim's attitude mode directly (free-decay rollout) and compare against the real 0.6233 Hz. | sizing item 12 | `finding/158` |
 | G4 | Re-score `p3b_7500` and R3a on the FIXED exam, with `decimation` as a second axis AND the item-8 wall-clock sized. Confirm `env.decimation` actually reaches `eval.py` — `finding/382` shows Hydra overrides silently failing to. | items 8, 15 | `finding/391`, `362` |
@@ -593,8 +593,13 @@ them rather than re-losing them.
 queued with `omx queue-launch` only and fired by the operator's own shell, per the rule frozen
 at 3.5 and reaffirmed at 3.9.
 
-Order: **G1, G2, G10 (blocking; G8 only if G10 says rate) -> G3, G5, G7, G9 (desk) -> G4 (re-score + size item 8's
-wall-clock, settles item 15) -> queue the teacher run -> operator fires -> G6 on the result.**
+Order (**updated 2026-09-07**): the blocking set is now **{G1, G10}** — G1 is implemented and
+committed (`--env-dr-anchor`, `ea42375`) and **G2 is closed** (`finding/406`). G10 is the only
+robot-gated one and it is the operator's to schedule.
+
+**G1 (done), G10 (robot, operator) -> G3, G5, G7, G9 (desk; G8 only if G10 says rate) -> G4
+(re-score; item 15's sizing is moot, see `finding/405`) -> queue the teacher run -> operator fires
+-> G6 (resonance regimes only, `finding/404`) on the result.**
 
 ### 8. Cost stated plainly
 
