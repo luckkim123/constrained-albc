@@ -5,8 +5,12 @@
 `Isaac-ConstrainedALBC-Main-{TDC,PID,ATDC}-v0` (`envs/tdc_main`). The legacy full-DOF
 family (`envs/full_dof`, `envs/tdc`, `Isaac-ConstrainedALBC-Full-*`, `-TDC-v0`) was
 removed in the 2026-09 cleanup — do NOT launch those ids; they are at tag
-`legacy-full-dof-final`. Real algorithm code lives in `envs/_core/`; `envs/main` keeps
-import shims (both are due to move in the same cleanup's WP4).
+`legacy-full-dof-final`. The training machinery (ConstraintTRPO, encoder, runners,
+student distillation) lives in `constrained_albc/algorithms/` -- promoted out of
+`envs/_core/` in the same cleanup, and the four `envs/main/` import shims
+(`algorithms`, `encoder`, `runners`, `student`) deleted. Every `__init__` there is
+docstring-only, so import the module directly:
+`from constrained_albc.algorithms.constraint_trpo import ConstraintTRPO`.
 
 ## Execution
 

@@ -1,4 +1,4 @@
-# constrained_albc/envs/_core/student/teacher.py
+# constrained_albc/algorithms/student/teacher.py
 """FrozenTeacher: loads r13_A checkpoint, exposes frozen encoder + actor + normalizer.
 
 Uses ALBCActorCriticEncoder from the teacher's training registry so the

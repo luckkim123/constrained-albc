@@ -3,8 +3,9 @@
 Results of analyzing the theoretical consistency of the ALBC codebase against the Constrained RL theory of the NORBC paper. Analysis date: 2026-03-05.
 
 > File paths in this doc predate the repo split — current code lives in
-> `constrained_albc/envs/_core/algorithms/constraint_trpo.py` (shared by both env
-> packages via import shims) and `constrained_albc/envs/main/mdp/constraints.py`
+> `constrained_albc/algorithms/constraint_trpo.py` (promoted out of `envs/_core/` in
+> the 2026-09 cleanup, and the `envs/main/algorithms/` import shim deleted with it)
+> and `constrained_albc/envs/main/mdp/constraints.py`
 > (`main` is the default attitude-only task; the full-DOF variant, which carried its own
 > separately-tuned copy, was retired 2026-09 — tag `legacy-full-dof-final`). The theory analysis
 > itself (ConstraintTRPO, IPO, cost-GAE, barrier) remains valid for the current

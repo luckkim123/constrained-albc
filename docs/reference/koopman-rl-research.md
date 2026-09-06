@@ -1,5 +1,12 @@
 # Koopman x RL Integration Research — Consolidated Reference
 
+> **Pre-cleanup record.** Every code anchor below was taken against the 2026-08-03 tree.
+> The 2026-09 cleanup removed the Koopman observation path (`envs/main/mdp/koopman.py`,
+> `use_marine_feature_obs`, `koopman_module_path`) and promoted `envs/_core/` to
+> `constrained_albc/algorithms/`, so those paths and line numbers no longer resolve.
+> They are deliberately left as written -- this is a record of what was measured, not a
+> current reference. Re-anchor before acting on any line number here.
+
 **Date**: 2026-08-03. **Status**: research phase CLOSED (3 adversarial critique-research rounds,
 early-stopped at round 3 of a 4-round budget). **Scope**: what is known, with what evidence, about
 integrating Koopman-operator ideas into the constrained-albc teacher-student RL stack — at a level

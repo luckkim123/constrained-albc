@@ -169,20 +169,19 @@ def test_materializer_raises_on_double_apply():
 
 def _load_runner_standalone(module_name: str = "constraint_encoder_runner"):
     pytest.importorskip("rsl_rl", reason="the ALBC runners need rsl_rl (not installed here)")
-    core_dir = Path(__file__).resolve().parent.parent / "constrained_albc" / "envs" / "_core"
+    core_dir = Path(__file__).resolve().parent.parent / "constrained_albc" / "algorithms"
 
     for pkg_name in [
         "constrained_albc",
-        "constrained_albc.envs",
-        "constrained_albc.envs._core",
-        "constrained_albc.envs._core.utils",
+        "constrained_albc.algorithms",
+        "constrained_albc.algorithms.utils",
     ]:
         if pkg_name not in sys.modules:
             sys.modules[pkg_name] = types.ModuleType(pkg_name)
 
     # The runners package __init__ is loaded for real (not stubbed): it holds
     # sync_policy_obs_dim, which both runners import, and is import-light by design.
-    runners_pkg = "constrained_albc.envs._core.runners"
+    runners_pkg = "constrained_albc.algorithms.runners"
     if not hasattr(sys.modules.get(runners_pkg), "sync_policy_obs_dim"):
         pkg_spec = importlib.util.spec_from_file_location(runners_pkg, core_dir / "runners" / "__init__.py")
         pkg_mod = importlib.util.module_from_spec(pkg_spec)
@@ -190,18 +189,18 @@ def _load_runner_standalone(module_name: str = "constraint_encoder_runner"):
         pkg_spec.loader.exec_module(pkg_mod)
 
     logging_spec = importlib.util.spec_from_file_location(
-        "constrained_albc.envs._core.utils.logging", core_dir / "utils" / "logging.py"
+        "constrained_albc.algorithms.utils.logging", core_dir / "utils" / "logging.py"
     )
     logging_mod = importlib.util.module_from_spec(logging_spec)
     sys.modules[logging_spec.name] = logging_mod
     logging_spec.loader.exec_module(logging_mod)
 
     runner_spec = importlib.util.spec_from_file_location(
-        f"constrained_albc.envs._core.runners.{module_name}",
+        f"constrained_albc.algorithms.runners.{module_name}",
         core_dir / "runners" / f"{module_name}.py",
     )
     runner_mod = importlib.util.module_from_spec(runner_spec)
-    runner_mod.__package__ = "constrained_albc.envs._core.runners"
+    runner_mod.__package__ = "constrained_albc.algorithms.runners"
     sys.modules[runner_spec.name] = runner_mod
     runner_spec.loader.exec_module(runner_mod)
     return runner_mod

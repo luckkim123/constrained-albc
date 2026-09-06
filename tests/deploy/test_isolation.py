@@ -13,18 +13,23 @@ each asserts on a clean interpreter exactly as the export host experiences it.
 """
 from __future__ import annotations
 
+import pathlib
 import subprocess
 import sys
 import textwrap
 
-REPO = "/workspace/constrained-albc"
+# Derived, never hardcoded: a literal path makes every subprocess test the repo at
+# that path instead of the checkout the test file lives in, so the whole module
+# passes unchanged against a tree it never read (a worktree or clone sees the
+# canonical repo's sources and reports a green gate for changes it does not have).
+REPO = str(pathlib.Path(__file__).resolve().parents[2])
 
 # Bootstrap prelude: every subprocess loads _isolation.py by path (never via the
 # package, which would fire the __init__ we are bypassing) and injects stubs.
-_PRELUDE = """
+_PRELUDE = f"""
 import importlib.util, pathlib, sys
-sys.path.insert(0, "/workspace/constrained-albc")
-_iso_py = pathlib.Path("/workspace/constrained-albc/constrained_albc/deploy/_isolation.py")
+sys.path.insert(0, {REPO!r})
+_iso_py = pathlib.Path({REPO!r}) / "constrained_albc" / "deploy" / "_isolation.py"
 _spec = importlib.util.spec_from_file_location("_deploy_isolation", _iso_py)
 _iso = importlib.util.module_from_spec(_spec); _spec.loader.exec_module(_iso)
 _iso._isolate_training_imports()
@@ -43,7 +48,7 @@ def test_isolate_lets_student_module_import_without_pxr():
     """After the shim, the student model module imports though pxr is absent."""
     r = _run(
         """
-        import constrained_albc.envs.main.student.models as m
+        import constrained_albc.algorithms.student.models as m
         assert hasattr(m, "StudentEncoderTCN"), "student model class missing"
         print("STUDENT_IMPORT_OK")
         """
@@ -56,7 +61,7 @@ def test_isolate_lets_encoder_import_without_pxr():
     """The teacher build needs ActorCriticEncoder; it must import pxr-free."""
     r = _run(
         """
-        from constrained_albc.envs.main.encoder import ActorCriticEncoder
+        from constrained_albc.algorithms.encoder.actor_critic_encoder import ActorCriticEncoder
         assert ActorCriticEncoder is not None
         print("ENCODER_IMPORT_OK")
         """
@@ -71,7 +76,9 @@ def test_teacher_build_path_does_not_import_sim_stack():
     alone, after the shim, leaves the sim stack out of sys.modules."""
     r = _run(
         """
-        from constrained_albc.envs.main.encoder import ActorCriticEncoder  # noqa: F401
+        from constrained_albc.algorithms.encoder.actor_critic_encoder import (  # noqa: F401
+            ActorCriticEncoder,
+        )
         assert "isaaclab_rl.rsl_rl" not in sys.modules, "sim stack leaked in"
         print("TEACHER_PATH_CLEAN")
         """

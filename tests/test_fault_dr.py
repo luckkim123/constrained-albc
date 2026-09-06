@@ -214,9 +214,9 @@ def test_arm_b_on_bumps_state_space_28_to_34():
 
 
 def _load_runners_init_standalone():
-    core_dir = Path(__file__).resolve().parent.parent / "constrained_albc" / "envs" / "_core"
-    runners_pkg = "constrained_albc.envs._core.runners"
-    for pkg_name in ["constrained_albc", "constrained_albc.envs", "constrained_albc.envs._core"]:
+    core_dir = Path(__file__).resolve().parent.parent / "constrained_albc" / "algorithms"
+    runners_pkg = "constrained_albc.algorithms.runners"
+    for pkg_name in ["constrained_albc", "constrained_albc.algorithms"]:
         if pkg_name not in sys.modules:
             sys.modules[pkg_name] = types.ModuleType(pkg_name)
     if not hasattr(sys.modules.get(runners_pkg), "sync_privileged_dim"):

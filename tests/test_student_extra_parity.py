@@ -8,7 +8,7 @@
 38d979e class incident: an eval-side copy of the training forward silently dropped
 observation normalization, and every in-loop verdict for two months measured
 out-of-distribution encoder inputs. Nothing caught it. The fix (A5) made
-`student_input` in `constrained_albc/envs/_core/student/models.py` the ONE place every
+`student_input` in `constrained_albc/algorithms/student/models.py` the ONE place every
 encoder forward builds its input -- DAgger collection, training loss, end-of-rollout
 hidden recompute, and eval in-loop inference all call it instead of inlining the concat.
 
@@ -39,22 +39,21 @@ from pathlib import Path
 import torch
 
 REPO = Path(__file__).resolve().parents[1]
-STUDENT_DIR = REPO / "constrained_albc" / "envs" / "_core" / "student"
+STUDENT_DIR = REPO / "constrained_albc" / "algorithms" / "student"
 
 
 def _load_student(*module_names: str):
     """Load student modules standalone, by file path, without importing constrained_albc.
 
     Registers empty parent packages then execs each requested module from
-    `_core/student/<name>.py` with `__package__` set so `from .config import ...`
+    `algorithms/student/<name>.py` with `__package__` set so `from .config import ...`
     resolves. Copied per repo convention (see test_student_eval_obs_width.py:38-66,
     test_dagger_schedule.py) rather than shared via conftest.
     """
     for pkg in (
         "constrained_albc",
-        "constrained_albc.envs",
-        "constrained_albc.envs._core",
-        "constrained_albc.envs._core.student",
+        "constrained_albc.algorithms",
+        "constrained_albc.algorithms.student",
     ):
         if pkg not in sys.modules:
             m = types.ModuleType(pkg)
@@ -64,13 +63,13 @@ def _load_student(*module_names: str):
     def _exec(name: str, path: Path):
         spec = importlib.util.spec_from_file_location(name, path)
         mod = importlib.util.module_from_spec(spec)
-        mod.__package__ = "constrained_albc.envs._core.student"
+        mod.__package__ = "constrained_albc.algorithms.student"
         sys.modules[name] = mod
         spec.loader.exec_module(mod)
         return mod
 
     return tuple(
-        _exec(f"constrained_albc.envs._core.student.{name}", STUDENT_DIR / f"{name}.py")
+        _exec(f"constrained_albc.algorithms.student.{name}", STUDENT_DIR / f"{name}.py")
         for name in module_names
     )
 
@@ -85,7 +84,7 @@ def _load_student(*module_names: str):
 # have failed on correct code -- a gate that cries wolf gets deleted, which is worse than
 # no gate. Verified against the code: runner.py has exactly 5 `self.student(` calls.
 _SITES = {
-    REPO / "constrained_albc" / "envs" / "_core" / "student" / "runner.py": (
+    REPO / "constrained_albc" / "algorithms" / "student" / "runner.py": (
         {"_dagger_action", "_compute_loss_gru", "learn"},   # sites (a) (b) (c)
         {"_compute_loss_tcn"},                              # TCN path, no extra by design
     ),

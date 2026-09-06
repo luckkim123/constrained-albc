@@ -4,7 +4,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
-# Repo root = constrained-albc/ (this file is constrained_albc/envs/_core/student/config.py,
+# Repo root = constrained-albc/ (this file is constrained_albc/algorithms/student/config.py,
 # so five levels up). Used to anchor log_dir_root to an ABSOLUTE path: train_student.py runs
 # via isaaclab.sh from /workspace/isaaclab, so a relative root would leak student output into
 # the isaaclab repo. Anchoring here keeps teacher and student output in one source-of-truth tree.

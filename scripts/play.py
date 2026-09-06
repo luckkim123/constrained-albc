@@ -90,7 +90,7 @@ from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
 # Overlay-owned runner dispatch (same divergence from upstream as train.py).
-from constrained_albc.envs.main.runners import ConstraintEncoderRunner
+from constrained_albc.algorithms.runners.constraint_encoder_runner import ConstraintEncoderRunner
 
 # rsl-rl resolves the runner by class name from agent_cfg; register the overlay
 # runner on the module it looks in (mirrors eval.py:249).

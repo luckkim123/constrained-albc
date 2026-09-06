@@ -116,25 +116,25 @@ def test_zero_order_hold_serves_stale_sample_and_uses_sensor_dt():
 
 
 _STUDENT_DIR = (
-    Path(__file__).resolve().parent.parent / "constrained_albc" / "envs" / "_core" / "student"
+    Path(__file__).resolve().parent.parent / "constrained_albc" / "algorithms" / "student"
 )
 
 
 def _load_student(*module_names):
-    """Exec _core/student modules by path without importing constrained_albc.
+    """Exec algorithms/student modules by path without importing constrained_albc.
     Verbatim shape of tests/test_student_eval_obs_width.py::_load_student_models."""
-    for pkg in ("constrained_albc", "constrained_albc.envs",
-                "constrained_albc.envs._core", "constrained_albc.envs._core.student"):
+    for pkg in ("constrained_albc",
+                "constrained_albc.algorithms", "constrained_albc.algorithms.student"):
         if pkg not in sys.modules:
             m = types.ModuleType(pkg)
             m.__path__ = []
             sys.modules[pkg] = m
     out = []
     for name in module_names:
-        full = f"constrained_albc.envs._core.student.{name}"
+        full = f"constrained_albc.algorithms.student.{name}"
         spec = importlib.util.spec_from_file_location(full, _STUDENT_DIR / f"{name}.py")
         mod = importlib.util.module_from_spec(spec)
-        mod.__package__ = "constrained_albc.envs._core.student"
+        mod.__package__ = "constrained_albc.algorithms.student"
         sys.modules[full] = mod
         spec.loader.exec_module(mod)
         out.append(mod)
@@ -465,7 +465,7 @@ def test_student_extra_obs_key_is_a_shared_constant():
 
     repo = Path(__file__).resolve().parent.parent
     albc_env = (repo / "constrained_albc" / "envs" / "main" / "albc_env.py").read_text()
-    runner_src = (repo / "constrained_albc" / "envs" / "_core" / "student" / "runner.py").read_text()
+    runner_src = (repo / "constrained_albc" / "algorithms" / "student" / "runner.py").read_text()
     student_policy_src = (repo / "constrained_albc" / "analysis" / "student_policy.py").read_text()
 
     assert "STUDENT_EXTRA_OBS_KEY" in albc_env

@@ -15,10 +15,21 @@ three import roots that drag in the sim stack are:
 3. ``isaaclab.utils``              -- ``from .mesh import *`` -> ``pxr``
 
 ``_isolate_training_imports`` pre-injects lightweight package stubs for these
-three so Python skips the real ``__init__`` files and the deep submodules
-(``...student.models``, ``...encoder``) load against the unmodified source on
-disk. Training code is never edited; this only changes *import resolution* at
-export time.
+three so Python skips the real ``__init__`` files and the modules under them load
+against the unmodified source on disk. Training code is never edited; this only
+changes *import resolution* at export time.
+
+Root 1 is the one the current deploy path needs: the sim-free machinery moved to
+``constrained_albc.algorithms`` in the 2026-09 cleanup, and that package plus its
+subpackages keep docstring-only ``__init__`` files, so ``...algorithms.student``
+and ``...algorithms.encoder`` now import with root 1 alone (measured 2026-09-07 --
+``constrained_albc.envs`` does not enter ``sys.modules`` at all).
+
+Root 2 stays because it is still *reachable*, just no longer on the import path:
+``FrozenTeacher._build`` imports ``f"{cfg.variant_module}.agents.rsl_rl_ppo_cfg"``
+lazily, and ``StudentCfg.variant_module`` defaults to ``constrained_albc.envs.main``.
+Nothing in ``deploy/`` calls ``FrozenTeacher`` today, so removing the stub would
+break nothing now and would crash an export host the moment something did.
 
 Bootstrapping note: the very first stub (``constrained_albc``) must be injected
 *before* ``import constrained_albc`` ever runs, otherwise the real ``__init__``

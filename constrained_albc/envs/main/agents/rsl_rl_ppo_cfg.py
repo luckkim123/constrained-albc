@@ -15,9 +15,10 @@ from isaaclab.utils import configclass
 from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, RslRlPpoAlgorithmCfg
 
 # Register custom classes in RSL-RL runner module namespace.
-from ..algorithms import ConstraintTRPO
-from ..encoder import ActorCriticAsymConstrained, ActorCriticEncoder
-from ..runners import ConstraintEncoderRunner
+from constrained_albc.algorithms.constraint_trpo import ConstraintTRPO
+from constrained_albc.algorithms.encoder.actor_critic_asym_constrained import ActorCriticAsymConstrained
+from constrained_albc.algorithms.encoder.actor_critic_encoder import ActorCriticEncoder
+from constrained_albc.algorithms.runners.constraint_encoder_runner import ConstraintEncoderRunner
 
 _runner_module.ALBCActorCriticEncoder = ActorCriticEncoder
 _runner_module.ALBCActorCriticAsymConstrained = ActorCriticAsymConstrained

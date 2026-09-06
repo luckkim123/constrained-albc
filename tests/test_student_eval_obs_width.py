@@ -16,7 +16,7 @@ already reads its width off the checkpoint; the eval student path must do the sa
 Two no-Isaac-Sim checks:
 (1) Runtime: `StudentEncoderTCN` width tracks `policy_obs_dim`, and a 72D checkpoint
     only loads into a 72D-built encoder -- loaded standalone via importlib so no
-    Isaac Sim import chain is triggered (`_core/student/{config,models}.py` are pure
+    Isaac Sim import chain is triggered (`algorithms/student/{config,models}.py` are pure
     torch + dataclass).
 (2) Source: `StudentInLoopPolicy.__init__` restores `policy_obs_dim` from the saved
     cfg and guards student/teacher obs-width agreement (the shipped fix, checked on
@@ -33,7 +33,7 @@ import pytest
 import torch
 
 REPO = Path(__file__).resolve().parents[1]
-STUDENT_DIR = REPO / "constrained_albc" / "envs" / "_core" / "student"
+STUDENT_DIR = REPO / "constrained_albc" / "algorithms" / "student"
 
 
 def _load_student_models():
@@ -45,9 +45,8 @@ def _load_student_models():
     """
     for pkg in (
         "constrained_albc",
-        "constrained_albc.envs",
-        "constrained_albc.envs._core",
-        "constrained_albc.envs._core.student",
+        "constrained_albc.algorithms",
+        "constrained_albc.algorithms.student",
     ):
         if pkg not in sys.modules:
             m = types.ModuleType(pkg)
@@ -57,13 +56,13 @@ def _load_student_models():
     def _exec(name: str, path: Path):
         spec = importlib.util.spec_from_file_location(name, path)
         mod = importlib.util.module_from_spec(spec)
-        mod.__package__ = "constrained_albc.envs._core.student"
+        mod.__package__ = "constrained_albc.algorithms.student"
         sys.modules[name] = mod
         spec.loader.exec_module(mod)
         return mod
 
-    cfg_mod = _exec("constrained_albc.envs._core.student.config", STUDENT_DIR / "config.py")
-    models_mod = _exec("constrained_albc.envs._core.student.models", STUDENT_DIR / "models.py")
+    cfg_mod = _exec("constrained_albc.algorithms.student.config", STUDENT_DIR / "config.py")
+    models_mod = _exec("constrained_albc.algorithms.student.models", STUDENT_DIR / "models.py")
     return cfg_mod.StudentCfg, models_mod.StudentEncoderTCN
 
 

@@ -3,4 +3,4 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Shared encoder modules. Import-light by design (see _core/__init__.py)."""
+"""Shared encoder modules. Import-light by design (see the package __init__)."""

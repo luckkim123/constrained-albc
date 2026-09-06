@@ -3,4 +3,4 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Shared student-distillation modules. Import-light by design (see _core/__init__.py)."""
+"""Shared student-distillation modules. Import-light by design (see the package __init__)."""

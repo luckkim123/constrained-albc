@@ -436,11 +436,14 @@ import isaaclab_tasks  # noqa: F401
 from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
-from constrained_albc.envs.main.algorithms import ConstraintTRPO
+from constrained_albc.algorithms.constraint_trpo import ConstraintTRPO
+from constrained_albc.algorithms.encoder.actor_critic_encoder import ActorCriticEncoder
+from constrained_albc.algorithms.runners import sync_policy_obs_dim
+from constrained_albc.algorithms.runners.constraint_encoder_runner import ConstraintEncoderRunner
+from constrained_albc.algorithms.utils.run_links import update_latest_symlink
 from constrained_albc.envs.main.config import (
     DomainRandomizationCfg,
 )
-from constrained_albc.envs.main.encoder import ActorCriticEncoder
 from constrained_albc.envs.main.mdp import (
     DRSampler,
     randomize_body_mass,
@@ -448,8 +451,6 @@ from constrained_albc.envs.main.mdp import (
     randomize_ocean_current,
     randomize_payload,
 )
-from constrained_albc.envs.main.runners import ConstraintEncoderRunner, sync_policy_obs_dim
-from constrained_albc.envs.main.utils import update_latest_symlink
 
 # Runtime-mutable copies (overridden by --ood-scale in static mode)
 DR_LEVELS: list[str] = list(_DEFAULT_DR_LEVELS)
@@ -1082,7 +1083,7 @@ class _InstrumentedStudentPolicy:
         # OBSERVATION -- it advances no state, draws no RNG, and copies to host immediately, so
         # the instrument is unperturbed. Local import because constrained_albc.envs triggers env
         # registration (and Isaac) at import time; same pattern as build_student_policy_fn.
-        from constrained_albc.envs._core.student.models import STUDENT_EXTRA_OBS_KEY
+        from constrained_albc.algorithms.student.models import STUDENT_EXTRA_OBS_KEY
 
         self._extra_key = STUDENT_EXTRA_OBS_KEY
         # X1 tail mode: the channels ride inside policy_obs (last _tail_n dims, raw),

@@ -79,7 +79,7 @@ class ConstraintEncoderRunner(OnPolicyRunner):
         # Guards: PPO/NoEncoder variants may not carry encoder bound keys, and the
         # derivation encodes main's 28D p_t layout -- so it only applies to main
         # envs. The retired full-DOF/TDC family kept static cfg bounds; before the
-        # _core extraction they would have hit this block through train.py's
+        # extraction to a shared package they would have hit this block through train.py's
         # main-runner dispatch and received wrong-layout bounds (latent hazard).
         policy_cfg = train_cfg["policy"]
         env_cfg = env.unwrapped.cfg
@@ -90,7 +90,7 @@ class ConstraintEncoderRunner(OnPolicyRunner):
             and env_cfg.thrusters is not None
         ):
             # Lazy, deliberately variant-specific import: the deriver lives with
-            # main's p_t layout definition, not in _core.
+            # main's p_t layout definition, not in the shared algorithm package.
             from constrained_albc.envs.main.utils.priv_obs_bounds import (
                 derive_priv_obs_bounds_from_dr,
             )

@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Shared runner modules. Import-light by design (see _core/__init__.py)."""
+"""Shared runner modules. Import-light by design (see the package __init__)."""
 
 import logging
 

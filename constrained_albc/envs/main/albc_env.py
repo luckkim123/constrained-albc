@@ -25,6 +25,9 @@ from isaaclab.utils.math import euler_xyz_from_quat, quat_apply, quat_apply_inve
 
 from marinelab.core import HydrodynamicsModel
 
+from constrained_albc.algorithms.student.models import STUDENT_EXTRA_OBS_KEY
+from constrained_albc.algorithms.utils.logging import log_dr_metrics
+
 from .config import (
     ALBCEnvCfg,
     apply_bias_ema_obs,
@@ -53,8 +56,6 @@ from .mdp.observations import (
     compute_student_extra_obs,
 )
 from .mdp.rewards import RewardManager
-from .student.models import STUDENT_EXTRA_OBS_KEY
-from .utils import log_dr_metrics
 
 logger = logging.getLogger(__name__)
 

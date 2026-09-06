@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-STUDENT = REPO / "constrained_albc" / "envs" / "_core" / "student"
+STUDENT = REPO / "constrained_albc" / "algorithms" / "student"
 
 
 def _load_config():

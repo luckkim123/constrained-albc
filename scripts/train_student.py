@@ -109,8 +109,8 @@ from isaaclab.utils.io import dump_yaml
 import isaaclab_tasks  # noqa: F401
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
-from constrained_albc.envs.main.student.config import StudentCfg
-from constrained_albc.envs.main.student.runner import StudentRunner
+from constrained_albc.algorithms.student.config import StudentCfg
+from constrained_albc.algorithms.student.runner import StudentRunner
 
 logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger("train_student")

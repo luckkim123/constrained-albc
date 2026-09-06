@@ -1,4 +1,4 @@
-# constrained_albc/envs/_core/student/runner.py
+# constrained_albc/algorithms/student/runner.py
 """Supervised training loop for the student encoder.
 
 Each iteration:
