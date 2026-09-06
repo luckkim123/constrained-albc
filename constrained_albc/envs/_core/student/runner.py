@@ -368,7 +368,7 @@ class StudentRunner:
         # non-default train-time value (e.g. hold_steps=4) would eval against a different
         # sensor model with no error. self.env already holds the trained env_cfg (see
         # configure_env_for_student above), so read them off it here -- no new constructor
-        # parameter needed. getattr with the ALBCEnvCfg defaults: full_dof/TDC variants
+        # parameter needed. getattr with the ALBCEnvCfg defaults: the classical-baseline variants
         # (see IMPORTANT-2) have no such fields at all -- harmless there since those
         # variants never enable extra_obs_dim in the first place.
         env_cfg = self.env.unwrapped.cfg

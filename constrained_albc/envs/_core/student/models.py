@@ -91,7 +91,7 @@ def extra_scale_tensor(cfg, device) -> torch.Tensor | None:
 class StudentEncoderTCN(nn.Module):
     """Window-based temporal conv encoder.
 
-    Input:  (B, H, D) where H=tcn_history (9), D=policy_obs_dim (69 main / 87 full_dof)
+    Input:  (B, H, D) where H=tcn_history (9), D=policy_obs_dim (69 main; 87 in the retired full-DOF variant)
     Output: (B, latent_dim) in (-1, 1)
     """
 

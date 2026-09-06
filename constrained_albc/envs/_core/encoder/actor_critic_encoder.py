@@ -22,7 +22,7 @@ Architecture (HORA-style normalization):
     o_t/p_t dims are variant-specific and ALWAYS passed in by the runner cfg /
     teacher / deploy engine (constructor defaults below are main's, fallback only):
     main (attitude-only) o_t = 20D proprio + 46D history + 3D integral = 69D, p_t = 28D;
-    full_dof (legacy) o_t = 87D, p_t = 24D.
+    Retired full-DOF variant: o_t = 87D, p_t = 24D.
 
     Encoder input normalization modes:
       - Static min-max (HORA-style): (2*x - upper - lower) / (upper - lower) -> [-1, 1]

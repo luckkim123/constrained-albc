@@ -51,7 +51,7 @@ from .mdp.rewards import ALBCRewardCfg, TrackingTermCfg
 # 10 constraint terms: 5 Probabilistic + 5 Average.
 # thruster_rate removed: structurally incompatible with entropy_coef>0 (noise alone violates 5x).
 # thruster_sat reverted to thruster_util (Average, budget=0.40): original form.
-_FULL_DOF_CONSTRAINT_TERMS: list[ConstraintTermCfg] = [
+_MAIN_CONSTRAINT_TERMS: list[ConstraintTermCfg] = [
     # --- Probabilistic (5): binary indicator, budget = violation probability ---
     ConstraintTermCfg(func=attitude_limit_cost, params={"limit": 1.396}, budget=0.01, name="attitude"),
     ConstraintTermCfg(func=torque_limit_cost, params={"limit_nm": 9.5}, budget=0.08, name="arm_torque"),
@@ -630,7 +630,7 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # ==========================================================================
     # Constraints (10 terms: 5 probabilistic + 5 average)
     # ==========================================================================
-    constraints: ALBCConstraintCfg = ALBCConstraintCfg(terms=_FULL_DOF_CONSTRAINT_TERMS)
+    constraints: ALBCConstraintCfg = ALBCConstraintCfg(terms=_MAIN_CONSTRAINT_TERMS)
 
     # --- joint1-constraint-redesign experiment (off by default = byte-identical) ---
     # Toggles the continuous joint1 anti-drift constraint. The reward-side centering

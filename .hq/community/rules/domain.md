@@ -1,9 +1,12 @@
 # Domain Rules — constrained-albc (UUV RL, experiment project)
 
 6-DOF underwater vehicle-manipulator RL on Isaac Lab. Default task is attitude-only
-`Isaac-ConstrainedALBC-TRPO-v0` (`envs/main`); the legacy full-DOF variant is
-`Isaac-ConstrainedALBC-Full-TRPO-v0` (`envs/full_dof`). Real algorithm code lives in
-`envs/_core/`; the variants keep import shims.
+`Isaac-ConstrainedALBC-TRPO-v0` (`envs/main`); the classical-control baselines are
+`Isaac-ConstrainedALBC-Main-{TDC,PID,ATDC}-v0` (`envs/tdc_main`). The legacy full-DOF
+family (`envs/full_dof`, `envs/tdc`, `Isaac-ConstrainedALBC-Full-*`, `-TDC-v0`) was
+removed in the 2026-09 cleanup — do NOT launch those ids; they are at tag
+`legacy-full-dof-final`. Real algorithm code lives in `envs/_core/`; `envs/main` keeps
+import shims (both are due to move in the same cleanup's WP4).
 
 ## Execution
 

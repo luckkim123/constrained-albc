@@ -55,8 +55,8 @@ The six terms (the `_BUILTIN_TERMS` registry, `rewards.py:220-227`) split into t
 | Penalty | `torque`, `thruster`, `smoothness`, `bias` |
 
 `att_rp` and `yaw_vel` are the only two tracking functions in this attitude-only
-env; there is no `lin_vel_tracking` here (only in the sibling
-`envs/full_dof/mdp/rewards.py`, §9). A seventh contribution, `termination_penalty`,
+env; there is no `lin_vel_tracking` here (it lived only in the retired full-DOF
+sibling, removed 2026-09 with that package, §9). A seventh contribution, `termination_penalty`,
 is applied outside `compute()` and is **not** one of the six tracked terms (§9).
 
 ---
@@ -261,9 +261,9 @@ gradient at zero error is $c_{\tanh}=0.3$, partially filling the dead zone
 There is no `lin_vel_tracking` function in this file — the attitude-only env has
 never had a linear-velocity command; the dead `lin_vel_tracking` function +
 `ALBCRewardCfg.lin_vel` field (legacy shape-compatibility) were removed 2026-07
-(§9). The sibling `envs/full_dof/mdp/rewards.py` (a distinct hand-forked file for
-the legacy full-DOF env) still defines and wires `lin_vel_tracking` into its own
-`RewardManager` — a separate module, untouched by this cleanup.
+(§9). The sibling full-DOF `mdp/rewards.py` (a distinct hand-forked file) defined
+and wired `lin_vel_tracking` into its own `RewardManager`; it was removed with that
+package in the 2026-09 cleanup (tag `legacy-full-dof-final`).
 
 ---
 
@@ -511,7 +511,7 @@ internally consistent (6 names, 6 terms, 6 episode-sum keys).
 
 | # | Gotcha | Reality | Cite |
 |---|---|---|---|
-| 1 | `lin_vel_tracking` / `joint1_centering_penalty` might still be in this file | Both were **removed 2026-07** along with `ALBCRewardCfg.lin_vel`/`k_joint1_center`; `lin_vel_tracking` still exists in the separate `envs/full_dof/mdp/rewards.py` module, `joint1_centering_penalty` is gone entirely (constraint-side `joint1_cumulative_cost` is the anti-drift mechanism now, §5.5) | `rewards.py:220-227,233` |
+| 1 | `lin_vel_tracking` / `joint1_centering_penalty` might still be in this file | Both were **removed 2026-07** along with `ALBCRewardCfg.lin_vel`/`k_joint1_center`; `lin_vel_tracking` lived in the separate full-DOF `mdp/rewards.py` module, removed 2026-09, `joint1_centering_penalty` is gone entirely (constraint-side `joint1_cumulative_cost` is the anti-drift mechanism now, §5.5) | `rewards.py:220-227,233` |
 | 2 | Module docstring used to contradict the `lin_ratio` field comment on whether the linear term was "the fix" | **Resolved**: the docstring now states the linear penalty was an attempted SS-error fix that caused its own dead zone and was disabled (`lin_ratio=0` everywhere); the live mitigation is the tanh penalty on `yaw_vel` only, `att_rp` has no saturating term | `rewards.py:14-23,80` |
 | 3 | tanh and arctan look mutually exclusive | Independent `if`s — both would stack if set; exclusivity is a convention. Shipped config activates **tanh only on `yaw_vel`**; `arctan` is a kept-but-unused heavy-tail alternative, never set nonzero | `rewards.py:64-74,143-148; config.py:467` |
 | 4 | Reading `rewards.py` alone, `k_bias=0` reads as "bias off" | Shipped config **overrides `k_bias=-2.0`** (term ON), and the override flips a coupled EMA-buffer update in a *second file* (`albc_env.py`) under the identical `k_bias != 0` guard | `rewards.py:118; config.py:473; albc_env.py:1159` |
@@ -520,7 +520,7 @@ internally consistent (6 names, 6 terms, 6 episode-sum keys).
 | 7 | `termination_penalty` is a reward term | Applied **outside** `compute()`, **not** `dt`-scaled, and **not** in `_BUILTIN_TERMS` — never appears under any `Reward/<name>` key. Off by default, never overridden | `rewards.py:114; albc_env.py:1178-1179` |
 | 8 | Retuning `reward.*.sigma` only affects the reward | It **also** retunes the integral-observation gate threshold, which borrows the reward sigma | `albc_env.py:195-204,1146-1153` |
 | 9 | `att_roll_weight=1.5` is an unexplained constant | Grounded in the shipped TAM: roll moment arm `0.007 m` vs pitch `0.145 m` (`config.py:84-85`), corroborated by the payload-DR authority comment | `rewards.py:109; config.py:84-85,200-205` |
-| 10 | `envs/main/mdp/rewards.py` and `envs/full_dof/...` are one shared module | **Distinct hand-forked files**; `full_dof` still wires `lin_vel_tracking` into its own 7-term `RewardManager` (it never had a joint1 term). A fix in one does not propagate | `rewards.py:220-227` vs `full_dof/mdp/rewards.py:113` |
+| 10 | `envs/main/mdp/rewards.py` and the full-DOF sibling were one shared module | **They were distinct hand-forked files**; the full-DOF copy wired `lin_vel_tracking` into its own 7-term `RewardManager` (it never had a joint1 term), and a fix in one did not propagate. Moot since 2026-09: only `envs/main` remains | `rewards.py:220-227`; the sibling is at tag `legacy-full-dof-final` |
 
 ---
 

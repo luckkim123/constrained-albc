@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 def sync_policy_obs_dim(env, train_cfg: dict) -> None:
     """Point the policy cfg's ``policy_obs_dim`` at the env's real observation width.
 
-    The static cfg defaults (69 main / 87 full_dof) already match
+    The static cfg defaults (69 main; 87 in the retired full-DOF variant) already match
     ``cfg.observation_space`` for every stock config, so this is a no-op there. A
     toggle that resizes the observation -- main's ``use_bias_ema_obs`` bumps it
     69 -> 72 -- changes the env without touching the agent cfg; without this sync the

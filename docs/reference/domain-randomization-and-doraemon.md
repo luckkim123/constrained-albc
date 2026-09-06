@@ -14,7 +14,7 @@
 >
 > This is a code-level reference verified against disk (adversarially
 > cross-checked). It reflects the shipped default (`DomainRandomizationCfg`,
-> `doraemon.enable = True`). The legacy full-DOF variant (`envs/full_dof/`) has
+> `doraemon.enable = True`). The legacy full-DOF variant (retired 2026-09, tag `legacy-full-dof-final`) had
 > its own, non-identical DORAEMON surface (18 params as of this writing — no
 > buoy volume/mass decorrelation) and is out of scope here.
 

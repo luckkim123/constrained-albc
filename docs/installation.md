@@ -47,7 +47,7 @@ cd /workspace/isaaclab && ./isaaclab.sh -p -m pip install -e /workspace/marinela
 cd /workspace/isaaclab && ./isaaclab.sh -p -m pip install -e /workspace/constrained-albc
 ```
 
-Verify the seven task IDs registered. `constrained_albc` must be imported first — its
+Verify the registered task IDs (17 at 2026-09). `constrained_albc` must be imported first — its
 `__init__.py` is what triggers `gym.register()` for every task; pip-installing the
 package alone does not register anything:
 
@@ -60,17 +60,9 @@ print('\n'.join(sorted(tasks)))
 "
 ```
 
-Expected output:
-
-```
-Isaac-ConstrainedALBC-Full-NoEncoder-v0
-Isaac-ConstrainedALBC-Full-PPO-Enc-v0
-Isaac-ConstrainedALBC-Full-PPO-v0
-Isaac-ConstrainedALBC-Full-TRPO-NoIPO-v0
-Isaac-ConstrainedALBC-Full-TRPO-v0
-Isaac-ConstrainedALBC-TDC-v0
-Isaac-ConstrainedALBC-TRPO-v0
-```
+Expected output: 17 ids — 13 `envs/main` (each RL variant and its `-SimToReal-v0`
+arm) and 4 `envs/tdc_main` classical baselines. See
+[`reference/task-reference.md`](reference/task-reference.md) for what each one is.
 
 See [`reference/task-reference.md`](reference/task-reference.md) for what each task ID
 is, its observation dims, and its typical launch command.

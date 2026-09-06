@@ -115,7 +115,7 @@ to `p_t`. See `constrained_albc/envs/_core/student/`.
 need `p_t` at inference. See `constrained_albc/envs/_core/student/runner.py`.
 
 **TDC** — Time Delay Control: a model-based control law (not RL) implemented
-as a separate task variant (`Isaac-ConstrainedALBC-TDC-v0`, `envs/tdc/`), used
+as separate task variants (`Isaac-ConstrainedALBC-Main-{TDC,PID,ATDC}-v0`, `envs/tdc_main/`), used
 as a classical-control comparison baseline. See
 `docs/explanation/tdc-control-law.md`.
 

@@ -9,7 +9,7 @@
 > privileged observation.
 >
 > This is a code-level reference verified against disk. The legacy full-DOF
-> variant (`envs/full_dof/`, `Isaac-ConstrainedALBC-Full-*-v0`, 87D obs / 24D
+> variant (retired 2026-09, tag `legacy-full-dof-final`; 87D obs / 24D
 > privileged) is a different network and is **not** described here.
 
 ---

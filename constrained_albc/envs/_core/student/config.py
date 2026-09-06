@@ -37,7 +37,7 @@ class StudentCfg:
 
     # Env variant package the teacher was trained in. FrozenTeacher resolves the
     # variant's agents.rsl_rl_ppo_cfg from this for the construct-time fallback
-    # encoder bounds. full_dof's StudentCfg subclass overrides it.
+    # encoder bounds. The retired full-DOF StudentCfg subclass overrode it.
     variant_module: str = "constrained_albc.envs.main"
 
     # Architecture

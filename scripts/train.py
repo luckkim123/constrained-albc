@@ -174,7 +174,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             env_cfg.doraemon.replay_curriculum_path = args_cli.replay_curriculum
 
     # CLI --fault / --privileged-fault-obs (FaultDR-AB, next-20260725-175508).
-    # getattr-guarded: tasks whose env cfg has no such field (e.g. full_dof, BlueROV)
+    # getattr-guarded: tasks whose env cfg has no such field (e.g. BlueROV)
     # get a warning instead of an AttributeError.
     if args_cli.fault:
         if getattr(env_cfg, "fault", None) is not None:

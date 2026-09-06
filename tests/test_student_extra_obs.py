@@ -8,7 +8,7 @@
 Also covers the student config/model widening for the extra channels (A3), the
 GRU rollout collector's extra-channel round-trip (A4), the --extra_obs_dim launch
 flag + student/env cross-check (A9), and the 2026-08-03 fix-wave regressions
-(train/eval sensor-cfg round-trip, full_dof/TDC AttributeError guard, the shared
+(train/eval sensor-cfg round-trip, legacy-variant AttributeError guard, the shared
 STUDENT_EXTRA_OBS_KEY constant, and the clone-on-return safety fix).
 
 Loads observations.py standalone (bypasses constrained_albc/__init__ -> isaaclab.sim
@@ -313,7 +313,7 @@ def test_extra_obs_cross_check_raises_when_dim_is_not_0_or_4():
 
 
 # ---------------------------------------------------------------------------
-# IMPORTANT-2: _resolve_extra_obs_env_flag tolerates env variants (full_dof, TDC)
+# IMPORTANT-2: _resolve_extra_obs_env_flag tolerates env variants (the classical baselines)
 # that have no 'use_student_extra_obs' field at all, instead of a bare AttributeError.
 # ---------------------------------------------------------------------------
 
@@ -330,22 +330,22 @@ def _load_resolve_extra_obs_env_flag():
 
 
 def test_resolve_extra_obs_env_flag_no_longer_raises_attributeerror_when_field_absent():
-    """The regression: full_dof/config.py's ALBCEnvCfg has no 'use_student_extra_obs'
+    """The regression: a variant cfg has no 'use_student_extra_obs'
     field, so reading it unconditionally used to raise AttributeError before gym.make
     ever ran. --extra_obs_dim==0 (the default) against such a cfg must resolve to False,
     not raise."""
     resolve = _load_resolve_extra_obs_env_flag()
-    full_dof_like_cfg = types.SimpleNamespace()  # no use_student_extra_obs attribute
-    assert resolve(full_dof_like_cfg, 0) is False
+    variant_cfg = types.SimpleNamespace()  # no use_student_extra_obs attribute
+    assert resolve(variant_cfg, 0) is False
 
 
 def test_resolve_extra_obs_env_flag_raises_named_error_when_dim_set_but_field_absent():
     """extra_obs_dim>0 against a variant with no field is a genuine user mistake and
     must get a named ValueError, not a bare AttributeError."""
     resolve = _load_resolve_extra_obs_env_flag()
-    full_dof_like_cfg = types.SimpleNamespace()
+    variant_cfg = types.SimpleNamespace()
     with pytest.raises(ValueError, match="has no 'use_student_extra_obs' field"):
-        resolve(full_dof_like_cfg, 4)
+        resolve(variant_cfg, 4)
 
 
 def test_resolve_extra_obs_env_flag_passes_through_when_field_present():
@@ -421,7 +421,7 @@ def test_checkpoint_roundtrips_env_sensor_cfg(tmp_path):
 
 def test_checkpoint_env_sensor_cfg_falls_back_when_env_variant_lacks_fields(tmp_path):
     """Degrades gracefully (getattr defaults) rather than crashing for env variants
-    (full_dof/TDC) that have no sensor-cfg fields at all -- those variants never enable
+    (the classical baselines) that have no sensor-cfg fields at all -- those never enable
     extra_obs_dim, so the fallback values are inert."""
     cfg_mod, models_mod = _load_student("config", "models")
     fake_self = _fake_student_runner_self(tmp_path, types.SimpleNamespace(), models_mod, cfg_mod)

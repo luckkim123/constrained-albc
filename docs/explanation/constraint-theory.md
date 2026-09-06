@@ -4,9 +4,9 @@ Results of analyzing the theoretical consistency of the ALBC codebase against th
 
 > File paths in this doc predate the repo split — current code lives in
 > `constrained_albc/envs/_core/algorithms/constraint_trpo.py` (shared by both env
-> packages via import shims) and `constrained_albc/envs/{main,full_dof}/mdp/constraints.py`
-> (still an equivalent pair per variant — `main` is the default attitude-only task,
-> `full_dof` is the legacy variant). The theory analysis
+> packages via import shims) and `constrained_albc/envs/main/mdp/constraints.py`
+> (`main` is the default attitude-only task; the full-DOF variant, which carried its own
+> separately-tuned copy, was retired 2026-09 — tag `legacy-full-dof-final`). The theory analysis
 > itself (ConstraintTRPO, IPO, cost-GAE, barrier) remains valid for the current
 > implementation. Standard terms (TRPO, IPO, KL divergence, GAE) are defined in
 > [glossary.md](../reference/glossary.md); `max_kl` below is the per-update KL trust-region budget (agent config field).

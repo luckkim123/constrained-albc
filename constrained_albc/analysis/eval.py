@@ -1034,7 +1034,8 @@ def run_evaluation(
     # Optional raw diagnostics (additive; keys present only when the matching
     # --save-* flag was set, so default output is byte-identical to before).
     if policy_obs_log:
-        out["policy_obs"] = np.stack(policy_obs_log, axis=0)  # (T, num_envs, policy_obs_dim: 69 main / 87 full_dof)
+        # (T, num_envs, policy_obs_dim: 69 main; 87 in the retired full-DOF variant)
+        out["policy_obs"] = np.stack(policy_obs_log, axis=0)
     if action_std_log:
         out["action_std"] = np.stack(action_std_log, axis=0)  # (T, num_envs, action_dim)
     if action_log:
@@ -1237,7 +1238,7 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
             _env_flag = "use_student_extra_obs" if _gen1 else "use_extra_policy_obs"
             # Guard the whole block, not each setattr: the flag and the four sensor params are
             # declared as one unit on ALBCEnvCfg, so if the gate field is absent this is a
-            # non-main variant (full_dof/TDC) that cannot publish the channels at all. Without
+            # non-main variant (a classical baseline) that cannot publish the channels at all. Without
             # this, setattr would CREATE dead fields and the student would be evaluated against
             # an env silently missing its extra channels.
             if not hasattr(env_cfg, _env_flag):
@@ -1866,9 +1867,13 @@ def run_robustness_eval(
             policy_nn.reset(torch.ones(num_envs, 1, dtype=torch.bool, device=device))
     raw_env.episode_length_buf[:] = 0
 
-    # Set zero commands
+    # Set zero commands. _vel_cmd_lin exists only on an env with a linear-velocity
+    # command; since the full-DOF family was retired (2026-09) no registered task has
+    # one, so the write is guarded rather than assumed -- same predicate as the
+    # has_lin_vel read above.
     raw_env._ang_cmd[:] = 0.0
-    raw_env._vel_cmd_lin[:] = 0.0
+    if hasattr(raw_env, "_vel_cmd_lin"):
+        raw_env._vel_cmd_lin[:] = 0.0
 
     terminated_ever = np.zeros(num_envs, dtype=bool)
     time_s = np.arange(total_steps) * step_dt
@@ -1883,7 +1888,8 @@ def run_robustness_eval(
 
             # Ensure zero commands every step (prevent resampling)
             raw_env._ang_cmd[:] = 0.0
-            raw_env._vel_cmd_lin[:] = 0.0
+            if hasattr(raw_env, "_vel_cmd_lin"):
+                raw_env._vel_cmd_lin[:] = 0.0
 
             with torch.inference_mode():
                 actions = policy(obs)
@@ -2258,9 +2264,10 @@ def run_switching_eval(
         raw_env._ang_cmd[:, 0] = 0.0
         raw_env._ang_cmd[:, 1] = 0.0
         raw_env._ang_cmd[:, 2] = yaw_rate_cmd
-        raw_env._vel_cmd_lin[:, 0] = vel_cmd[:, 0]
-        raw_env._vel_cmd_lin[:, 1] = vel_cmd[:, 1]
-        raw_env._vel_cmd_lin[:, 2] = vel_cmd[:, 2]
+        if hasattr(raw_env, "_vel_cmd_lin"):
+            raw_env._vel_cmd_lin[:, 0] = vel_cmd[:, 0]
+            raw_env._vel_cmd_lin[:, 1] = vel_cmd[:, 1]
+            raw_env._vel_cmd_lin[:, 2] = vel_cmd[:, 2]
         vel_cmd_x[step_idx] = vel_cmd[:, 0].cpu().numpy()
         vel_cmd_y[step_idx] = vel_cmd[:, 1].cpu().numpy()
         vel_cmd_z[step_idx] = vel_cmd[:, 2].cpu().numpy()

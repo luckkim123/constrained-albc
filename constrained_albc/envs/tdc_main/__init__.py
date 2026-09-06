@@ -13,7 +13,7 @@ thruster 6D by a stateless P controller with thruster allocation. DR, reward,
 command sampling and DORAEMON are identical to the RL environment so
 evaluations are directly comparable. Controller bodies (`tdc.py`,
 `kinematics.py`, `thruster_pd.py`) are reused unmodified from
-`envs.tdc.controllers` -- this package only supplies the `main`-specific glue
+`.controllers` -- this package also supplies the `main`-specific glue
 (`tdc_env.py`, `pid_env.py`) and config/registration. Both arms share the
 identical `ALBCTDCEnvCfg` (the TDE/PD selector is a code-path choice on the
 env class, not a config field).

@@ -10,7 +10,7 @@ keeping the TRPO + IPO algorithm, DR, reward, and constraint configuration
 identical. The actor receives only the policy observation o_t, while the critic
 and cost critic receive the full asymmetric observation cat([o_t, p_t]). Dims are
 variant-specific and always passed in via the runner cfg (defaults are main's,
-fallback only): main 69D + 28D = 97D; full_dof (legacy) 87D + 24D = 111D.
+fallback only): main 69D + 28D = 97D; retired full-DOF variant 87D + 24D = 111D.
 
 Architecture:
     Actor:       o_t -> MLP[256,128,64] -> 8D (Gaussian mean)

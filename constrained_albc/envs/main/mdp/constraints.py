@@ -286,7 +286,7 @@ def apply_joint1_constraint_arm(env_cfg) -> None:
 
     arm='none' is a no-op (byte-identical to the shipped config). 'B' appends exactly one
     continuous Average term (joint1_cumulative) whose IPO budget governs its strength. The
-    shared module-level _FULL_DOF_CONSTRAINT_TERMS (also used by full_dof) is never mutated:
+    shared module-level _MAIN_CONSTRAINT_TERMS is never mutated:
     a new list is built. (The wrapped-instantaneous arm A was removed 2026-07.)
     """
     arm = getattr(env_cfg, "joint1_constraint_arm", "none")

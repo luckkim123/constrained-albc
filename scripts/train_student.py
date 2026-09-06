@@ -209,10 +209,10 @@ def _check_tail_mode_consistency(cfg, env_cfg) -> None:
 def _resolve_extra_obs_env_flag(env_cfg, extra_obs_dim: int) -> bool:
     """Resolve env_cfg.use_student_extra_obs, tolerating env variants that lack the field.
 
-    IMPORTANT-2 fix (fix-wave 2026-08-03): full_dof/config.py's ALBCEnvCfg (and tdc,
+    IMPORTANT-2 fix (fix-wave 2026-08-03): the retired full-DOF ALBCEnvCfg (and tdc,
     which inherits it) declares an INDEPENDENT ALBCEnvCfg with no 'use_student_extra_obs'
     field, so reading it unconditionally raised a bare AttributeError before gym.make
-    ever ran -- breaking every full_dof/TDC launch regardless of --extra_obs_dim.
+    ever ran -- breaking every legacy full-DOF/TDC launch regardless of --extra_obs_dim.
     extra_obs_dim>0 against such a variant is a genuine user mistake (the variant cannot
     publish the channels), so that combination gets a named error; extra_obs_dim==0
     (the default) silently resolves to False, matching pre-obs4 behaviour.

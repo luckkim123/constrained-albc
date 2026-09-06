@@ -10,7 +10,7 @@
 > `envs/_core/algorithms/constraint_trpo.py`.
 >
 > This is a code-level reference verified against disk. The legacy full-DOF variant
-> (`envs/full_dof/`, `Isaac-ConstrainedALBC-Full-*-v0`) reuses the same constraint
+> (retired 2026-09, tag `legacy-full-dof-final`) declared its own, separately-tuned constraint
 > list constant but is a different task and is **not** described here.
 
 ---
@@ -684,7 +684,7 @@ the exact motivation for the `lb 68 -> 250` / `kl_ub 0.06 -> 0.12` recalibration
 - `constrained_albc/envs/main/mdp/constraints.py` — 10 shipped cost functions + 1
   experiment-only joint1 term, `ConstraintTermCfg`, `ALBCConstraintCfg`, `compute_all_costs`,
   `apply_joint1_constraint_arm` (2-way `{none, B}`)
-- `constrained_albc/envs/main/config.py` — `ALBCEnvCfg`, `_FULL_DOF_CONSTRAINT_TERMS` (the
+- `constrained_albc/envs/main/config.py` — `ALBCEnvCfg`, `_MAIN_CONSTRAINT_TERMS` (the
   shipped 10 budgets), DORAEMON overrides, joint1 toggles
 - `constrained_albc/envs/main/config_noconstraint.py` — `ALBCNoConstraintEnvCfg` (terms=[],
   TRPO-NoIPO / PPO-Enc ablations)

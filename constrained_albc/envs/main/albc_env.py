@@ -473,7 +473,7 @@ class ALBCEnv(DirectRLEnv):
         _OBS_NOISE_STD constant -- padded with 3 zeros when use_bias_ema_obs extends obs to
         72D, mirroring apply_bias_ema_obs. This keeps the DR/fault obs-noise layer active at
         eval exactly as before the bias_ema change (obs_noise_scale is a swept DORAEMON dim),
-        preserving parity with the baseline eval. Mirrors full_dof/albc_env.py's constant read.
+        preserving parity with the baseline eval. Mirrored the retired full-DOF env's constant read.
         """
         nm = self.cfg.observation_noise_model
         if nm is not None:

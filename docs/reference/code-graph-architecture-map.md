@@ -1,5 +1,10 @@
 # Code-Graph Architecture Map
 
+> **Retired in the 2026-09 cleanup.** This map is a generated snapshot taken before
+> `envs/full_dof/` and `envs/tdc/` were removed, so its `full-dof-cfg` community and
+> the `main / full_dof / tdc / _core / analysis` split no longer describe the tree.
+> Regenerate it, or read it as a record of the pre-cleanup graph.
+
 Graph-derived module map of `constrained-albc`: which files cluster together, how the
 clusters call each other, and which execution paths carry the most weight. Produced from
 the [code-review-graph](https://github.com/tirth8205/code-review-graph) (CRG) index, not

@@ -81,8 +81,8 @@ PhysX computes continuous PD internally. Commands are applied immediately with n
 
 | Environment | Kp (DR-off) | Kd (DR-off) | DR Range |
 |:---|:---|:---|:---|
-| `Isaac-ConstrainedALBC-TRPO-v0` (main) / `Isaac-ConstrainedALBC-Full-TRPO-v0` (legacy full-DOF) | 100.0 | 3.0 | Kp [30,150], Kd [0.3,7.0] |
-| `Isaac-ConstrainedALBC-TDC-v0` | 100.0 | 3.0 | Kp [30,150], Kd [0.3,7.0] (inherited from `full_dof`, unchanged) |
+| `Isaac-ConstrainedALBC-TRPO-v0` (main) | 100.0 | 3.0 | Kp [30,150], Kd [0.3,7.0] |
+| `Isaac-ConstrainedALBC-Main-TDC-v0` | 100.0 | 3.0 | Kp [30,150], Kd [0.3,7.0] (inherited from the retired full-DOF baseline, unchanged) |
 
 Note: DR samples Kp/Kd by **uniform sampling of a fixed absolute range** and overwrites the joint gain
 (`randomize_joint_gains` in each env's `mdp/events.py`, `dr.get(cfg.joint_stiffness_range)`) -- it is not a
@@ -134,7 +134,7 @@ Current status: reverted to `ImplicitActuatorCfg`. DelayedPDActuator is left as 
 | Environment | Kp | Kd | Delay | Gain DR |
 |:---|:---|:---|:---|:---|
 | `Isaac-ConstrainedALBC-TRPO-v0` (main, train) | 100 | 3 | 0 | Kp [30,150], Kd [0.3,7.0] (see §2.1) |
-| `Isaac-ConstrainedALBC-TDC-v0` | 100 | 3 | 0 | Kp [30,150], Kd [0.3,7.0] (inherited from `full_dof`; see §2.1 TDC row correction) |
+| `Isaac-ConstrainedALBC-Main-TDC-v0` | 100 | 3 | 0 | Kp [30,150], Kd [0.3,7.0] (inherited from the retired full-DOF baseline; see §2.1 TDC row correction) |
 
 ---
 
@@ -155,7 +155,7 @@ originally had heave on (pre-reorder) TAM columns `T4,T5`. The fix (2026-07-03, 
 reorders the TAM columns to firmware order via a single named constant:
 
 ```python
-# config.py (identical in envs/main and envs/full_dof)
+# config.py (envs/main)
 _ESC_CHANNEL_ORDER = (4, 0, 1, 5, 2, 3)  # new column j = base column ORDER[j]
 allocation_matrix = _reorder_columns(_BASE_ALLOCATION_MATRIX, _ESC_CHANNEL_ORDER)
 ```

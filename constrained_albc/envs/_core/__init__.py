@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Algorithm core shared by the main and full_dof env variants.
+"""Algorithm core for the env variants (shared with the retired full-DOF family until 2026-09).
 
 Holds the variant-independent training machinery (algorithms, encoder, runners,
 student distillation, logging utilities). Env/task logic (albc_env, config, mdp)

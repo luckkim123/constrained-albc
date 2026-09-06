@@ -121,12 +121,13 @@ The full list of 7 task IDs, their env packages, and status is maintained in
 | Task ID | Description |
 |---|---|
 | `Isaac-ConstrainedALBC-TRPO-v0` | **Main** — attitude-only ALBC (`envs/main`), ConstraintTRPO + IPO + asymmetric encoder, DORAEMON DR |
-| `Isaac-ConstrainedALBC-Full-TRPO-v0` | Legacy full-DOF (`envs/full_dof`) — velocity + attitude |
-| `Isaac-ConstrainedALBC-Full-NoEncoder-v0` | Full-DOF TRPO + IPO, no encoder (ablation) |
-| `Isaac-ConstrainedALBC-Full-PPO-v0` | Full-DOF unconstrained PPO baseline |
-| `Isaac-ConstrainedALBC-Full-TRPO-NoIPO-v0` | Full-DOF TRPO without IPO barrier (ablation) |
-| `Isaac-ConstrainedALBC-Full-PPO-Enc-v0` | Full-DOF PPO with asymmetric encoder |
-| `Isaac-ConstrainedALBC-TDC-v0` | TDC controller variant (`envs/tdc`) |
+| `Isaac-ConstrainedALBC-{NoEncoder,PPO,TRPO-NoIPO,PPO-Enc}-v0` | Ablation arms of the above (`envs/main`) |
+| `Isaac-ConstrainedALBC-*-SimToReal-v0` | The same arms on the section-5 plant (`envs/main/config_simtoreal.py`) |
+| `Isaac-ConstrainedALBC-Main-{TDC,PID,ATDC}-v0` | Classical-control baselines, no RL training (`envs/tdc_main`) |
+| `Isaac-ConstrainedALBC-Main-ResidualTDC-SimToReal-v0` | TDC plus a learned residual arm torque (`envs/tdc_main`) |
+
+The legacy full-DOF family (`envs/full_dof`, `envs/tdc`, `Isaac-ConstrainedALBC-Full-*` and
+`-TDC-v0`) was removed in the 2026-09 cleanup; recover it from tag `legacy-full-dof-final`.
 
 </details>
 

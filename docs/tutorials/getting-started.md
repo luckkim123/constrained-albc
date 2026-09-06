@@ -101,7 +101,7 @@ and writes one PNG per plot, one row per level:
 The default task is attitude-only, so `traj_linvel.png` /
 `summary_linvel.png` are **not** produced for it — those only appear when
 evaluating a linear-velocity-tracking task (e.g. the legacy
-`Isaac-ConstrainedALBC-Full-*` tasks).
+the retired `Isaac-ConstrainedALBC-Full-*` tasks, tag `legacy-full-dof-final`).
 
 Each trajectory plot draws two lines per level: the across-env **mean**, and a dashed **sample**
 line for one representative env (the median-attitude-error env, picked once and reused across

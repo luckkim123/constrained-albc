@@ -8,7 +8,7 @@ Conceptual overview of the default task, `Isaac-ConstrainedALBC-TRPO-v0`
 (`constrained_albc/envs/main/`) — attitude-only ALBC. For package layout and the
 RSL-RL dependency (stock, no fork) see [`../architecture.md`](../architecture.md);
 for the full registered-task table see the [README](../../README.md). The legacy
-full-DOF variants (`envs/full_dof/`, 87D obs) and the TDC variant (`envs/tdc/`) are
+full-DOF variants (87D obs) and their TDC variant were retired 2026-09 (tag `legacy-full-dof-final`) and are
 out of scope here — see the README's task table for those.
 
 ## The robot

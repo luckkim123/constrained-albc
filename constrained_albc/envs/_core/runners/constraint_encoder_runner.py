@@ -78,7 +78,7 @@ class ConstraintEncoderRunner(OnPolicyRunner):
         # (spec: docs/plans/2026-06-30-dr-derived-priv-obs-normalization-bounds.md).
         # Guards: PPO/NoEncoder variants may not carry encoder bound keys, and the
         # derivation encodes main's 28D p_t layout -- so it only applies to main
-        # envs. full_dof/tdc (legacy) keep their static cfg bounds; before the
+        # envs. The retired full-DOF/TDC family kept static cfg bounds; before the
         # _core extraction they would have hit this block through train.py's
         # main-runner dispatch and received wrong-layout bounds (latent hazard).
         policy_cfg = train_cfg["policy"]

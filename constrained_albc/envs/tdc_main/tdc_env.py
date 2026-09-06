@@ -6,12 +6,12 @@
 """Attitude-only ALBC environment driven by classical TDC + thruster P controller.
 
 This subclass replaces the RL policy with a fixed classical control pipeline,
-exactly mirroring `envs.tdc.tdc_env.ALBCTDCEnv` (the `full_dof`-based TDC
+exactly mirroring the retired `envs.tdc.tdc_env.ALBCTDCEnv` (the full-DOF-based TDC
 baseline) but glued onto `envs.main.ALBCEnv` (the paper's default
 attitude-only, 72D-obs task) instead:
-    - Arm 2D (roll/pitch): TDC + DLS IK (reuses `tdc.controllers.tdc`, unmodified)
+    - Arm 2D (roll/pitch): TDC + DLS IK (`controllers.tdc`)
     - Thruster 6D (surge/sway/heave/yaw): body-frame velocity/rate P control
-      (reuses `tdc.controllers.thruster_pd`, unmodified)
+      (`controllers.thruster_pd`)
 
 All other behaviour -- domain randomization, reward, constraints, observation,
 command sampling, DORAEMON curriculum -- is inherited unchanged from
@@ -19,12 +19,12 @@ command sampling, DORAEMON curriculum -- is inherited unchanged from
 
 Action pipeline integration
 ---------------------------
-Same pattern as the `full_dof` TDC glue: compute the classical controller
+Same pattern as the retired full-DOF TDC glue: compute the classical controller
 output as an 8D pseudo-action and delegate to `super()._pre_physics_step`
 so observation history, reward/cost accounting, and thruster lag all run as
 if these actions came from a policy.
 
-Difference from the `full_dof` glue
+Difference from the retired full-DOF glue
 ------------------------------------
 `main.ALBCEnv` is attitude-only and carries no linear-velocity command
 (`_vel_cmd_lin` does not exist on it -- no DVL on the real robot, per its
@@ -34,7 +34,7 @@ full thruster authority, so `lin_vel_cmd_body` is fed a zero target: with no
 commanded translation in this task, the controller's linear-velocity P loop
 degenerates to pure station-keeping (damping any measured Fx/Fy/Fz) rather
 than tracking a policy-commanded velocity. Everything else is identical to
-the `full_dof` glue.
+that glue.
 """
 
 from __future__ import annotations
@@ -46,9 +46,10 @@ import torch
 from isaaclab.utils.math import euler_xyz_from_quat
 
 from constrained_albc.envs.main.albc_env import ALBCEnv
-from constrained_albc.envs.tdc.controllers.kinematics import ALBCKinematics
-from constrained_albc.envs.tdc.controllers.tdc import TDCController
-from constrained_albc.envs.tdc.controllers.thruster_pd import ThrusterPDController
+
+from .controllers.kinematics import ALBCKinematics
+from .controllers.tdc import TDCController
+from .controllers.thruster_pd import ThrusterPDController
 
 if TYPE_CHECKING:
     from .config import ALBCTDCEnvCfg
@@ -131,7 +132,7 @@ class ALBCTDCEnv(ALBCEnv):
         )
 
         # IK starting point is the accumulated joint target (the arm's
-        # commanded trajectory), matching the full_dof glue. Using
+        # commanded trajectory), matching the retired full-DOF glue. Using
         # `_joint_pos_targets` here is required for the delta round-trip
         # below: encoding `(target - _joint_pos_targets) / delta_scale` into
         # the 8D action lets the parent's delta integration reproduce the
@@ -194,7 +195,7 @@ class ALBCTDCEnv(ALBCEnv):
     def _reset_idx(self, env_ids: torch.Tensor | None) -> None:
         super()._reset_idx(env_ids)
         # Coerce None / full-batch env_ids to the canonical tensor form used
-        # by ALBCEnv. Matches the full_dof glue's reset pattern.
+        # by ALBCEnv. Matches the retired full-DOF glue's reset pattern.
         env_ids_ = self._coerce_env_ids(env_ids)
         self._tdc.reset(env_ids_)
         # DR randomizes volume -> buoyancy force changes every reset; push the

@@ -61,7 +61,7 @@ class FrozenTeacher(nn.Module):
 
     Attributes:
         latent_dim / obs_dim / privileged_dim: from cfg (main 9/69/28,
-        full_dof 9/87/24)
+        retired full-DOF variant 9/87/24)
     """
 
     def __init__(self, cfg: StudentCfg, device: torch.device) -> None:
