@@ -18,7 +18,6 @@ import isaaclab.sim as sim_utils
 from isaaclab.envs import DirectRLEnvCfg, ViewerCfg
 from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sim import PhysxCfg, SimulationCfg
-from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.noise import GaussianNoiseCfg, NoiseModelWithAdditiveBiasCfg, UniformNoiseCfg
 
@@ -479,8 +478,6 @@ class ALBCEnvCfg(DirectRLEnvCfg):
         num_envs=4096, env_spacing=4.0, replicate_physics=True, clone_in_fabric=False
     )
 
-    terrain: TerrainImporterCfg | None = None
-
     # ==========================================================================
     # Robot and Hydrodynamics
     # ==========================================================================
@@ -552,13 +549,6 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     """Probability that episode starts WITH payload (mass > 0)."""
     payload_no_toggle_prob: float = 0.2
     """Probability that payload stays constant (no mid-episode toggle)."""
-    # -- Ocean Current OU Drift --
-    ou_theta: float = 0.15
-    """OU mean reversion rate (1/s). 0.15 gives ~6.7s time constant."""
-    ou_sigma: float = 0.05
-    """OU noise scale (m/s per sqrt(s)). 0.05 gives steady-state std ~0.091 m/s."""
-    ou_enable: bool = False
-    """Enable OU process drift on ocean current (False = fixed per episode)."""
 
     # ==========================================================================
     # Termination

@@ -263,11 +263,6 @@ class ConstraintTRPO:
         self.transition.dones = dones
 
         if "time_outs" in extras:
-            # BUG (dormant, normalize_value=False by default): self.transition.values is
-            # normalized-scale when normalize_value=True, but gets baked into raw-scale
-            # storage.rewards here -- the runner only denormalizes storage.values post-hoc
-            # (constraint_encoder_runner.py _compute_returns_with_value_norm), never this.
-            # Must fix before normalize_value is ever enabled.
             self.transition.rewards += self.gamma * torch.squeeze(
                 self.transition.values * extras["time_outs"].unsqueeze(1).to(self.device), 1
             )

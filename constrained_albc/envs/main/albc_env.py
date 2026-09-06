@@ -421,14 +421,6 @@ class ALBCEnv(DirectRLEnv):
         # served from the held sample instead of advancing it again. -1 = never advanced.
         self._extra_last_step = -1
         self._vel_cmd_step_counter = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
-        # Per-env command range scales. Permanently 1.0 -- inert residue of a command-difficulty
-        # curriculum that was wired to DORAEMON then removed (f4583fd, 2026-04-06: it drove
-        # degenerate "barely-move" policies). Command is a task target, NOT physics DR; never
-        # DORAEMON-managed. See :1368 and docs/reference/command-and-task.md #6.
-        self._cmd_lin_scale = torch.ones(self.num_envs, device=self.device)
-        self._cmd_att_scale = torch.ones(self.num_envs, device=self.device)
-        self._cmd_yaw_scale = torch.ones(self.num_envs, device=self.device)
-
     def _init_tracking_buffers(self) -> None:
         """Manipulability, cumulative yaw, mid-episode dynamics, and OU process buffers."""
         self._manipulability = torch.zeros(self.num_envs, device=self.device)
@@ -442,7 +434,6 @@ class ALBCEnv(DirectRLEnv):
         self._stashed_payload_mass = torch.zeros(self.num_envs, device=self.device)
         self._stashed_payload_cog_offset = torch.zeros(self.num_envs, 3, device=self.device)
         # OU process base current (mean-reversion target, set at reset)
-        self._ou_base_current = torch.zeros(self.num_envs, 3, device=self.device)
 
     def _init_force_buffers(self) -> None:
         """Hydrodynamic force/torque accumulation buffers."""
@@ -722,10 +713,6 @@ class ALBCEnv(DirectRLEnv):
                 toggle_ids = toggle_mask.nonzero(as_tuple=True)[0]
                 self._apply_payload_toggle(toggle_ids)
 
-        # Ocean current OU drift (per-step continuous update)
-        if self.cfg.ou_enable:
-            self._step_ocean_current_ou()
-
         # Update manipulability index (Yoshikawa)
         self._update_manipulability()
 
@@ -816,12 +803,8 @@ class ALBCEnv(DirectRLEnv):
         att_max = abs(self.cfg.att_cmd_rp_range[1])
         yaw_max = abs(self.cfg.yaw_rate_cmd_range[1])
 
-        # Per-env command-range scales (always 1.0; command difficulty is a fixed task knob, not DORAEMON)
-        att_s = self._cmd_att_scale[env_ids].unsqueeze(1)  # (n, 1)
-        yaw_s = self._cmd_yaw_scale[env_ids]  # (n,)
-
-        self._ang_cmd[env_ids, :2] = torch.empty(n, 2, device=self.device).uniform_(-1, 1) * (att_max * att_s)
-        self._ang_cmd[env_ids, 2] = torch.empty(n, device=self.device).uniform_(-1, 1) * (yaw_max * yaw_s)
+        self._ang_cmd[env_ids, :2] = torch.empty(n, 2, device=self.device).uniform_(-1, 1) * att_max
+        self._ang_cmd[env_ids, 2] = torch.empty(n, device=self.device).uniform_(-1, 1) * yaw_max
 
         # Zero-command envs: hovering / station-keeping
         zero_mask = torch.rand(n, device=self.device) < self.cfg.vel_cmd_zero_prob
@@ -934,34 +917,6 @@ class ALBCEnv(DirectRLEnv):
         # Z: uniform range
         lo, hi = cfg.payload_cog_offset_z
         self._stashed_payload_cog_offset[env_ids, 2] = torch.empty(n, device=self.device).uniform_(lo, hi)
-
-    def _step_ocean_current_ou(self) -> None:
-        """Advance OU process one step for ocean current drift.
-
-        dx = -theta * (x - mu) * dt + sigma * sqrt(dt) * N(0,1)
-
-        Only linear components (xyz). Angular stays zero. main_hydro and
-        buoy_hydro share one OceanCurrent component, so a single write covers both.
-        """
-        theta = self.cfg.ou_theta
-        sigma = self.cfg.ou_sigma
-        dt = self.step_dt
-
-        velocity_w = self._hydro.current.velocity_w  # (num_envs, 6) shared buffer
-        current = velocity_w[:, :3]
-        mu = self._ou_base_current
-
-        drift = -theta * (current - mu) * dt
-        diffusion = sigma * (dt**0.5) * torch.randn_like(current)
-        new_current = current + drift + diffusion
-
-        # Clamp to slightly beyond max_velocity (within encoder bounds).
-        # Note: axes with max_velocity=0 have OU drift clamped to zero.
-        max_vel = self._hydro.current.max_velocity[:3]
-        clamp_bound = max_vel * 1.05
-        new_current = new_current.clamp(-clamp_bound, clamp_bound)
-
-        velocity_w[:, :3] = new_current  # shared buffer -> buoy sees it too
 
     def _apply_action(self):
         """Apply joint position targets and hydrodynamic forces."""
@@ -1411,12 +1366,6 @@ class ALBCEnv(DirectRLEnv):
         """Mid-episode dynamics diagnostics (payload, OU current, cumulative yaw)."""
         if self.cfg.payload_toggle_steps != 0:
             log["Episode/payload_toggled"] = self._payload_toggled[env_ids].float().mean().item()
-        if self.cfg.ou_enable:
-            current = self._hydro.current.velocity_w[env_ids, :3]
-            base = self._ou_base_current[env_ids]
-            log["Episode/current_drift"] = (current - base).norm(dim=-1).mean().item()
-            log["Episode/current_mag"] = current.norm(dim=-1).mean().item()
-
         log["Episode/cumul_yaw_deg"] = torch.rad2deg(self._cumulative_yaw[env_ids].abs()).mean().item()
 
     def _collect_termination_metrics(self, log: dict[str, float | torch.Tensor], env_ids: torch.Tensor, n: int) -> None:
@@ -1600,8 +1549,6 @@ class ALBCEnv(DirectRLEnv):
         if not rand_cfg.enable:
             # Non-DR path: setup mid-episode dynamics with default values
             self._setup_payload_toggle(env_ids)
-            if self.cfg.ou_enable:
-                self._ou_base_current[env_ids] = self._hydro.current.velocity_w[env_ids, :3].clone()
             return
 
         # Create DRSampler (bundles rand_cfg + num_envs + device)
@@ -1645,8 +1592,6 @@ class ALBCEnv(DirectRLEnv):
 
         # Mid-episode dynamics setup with DR'd values (once, after randomization)
         self._setup_payload_toggle(env_ids)
-        if self.cfg.ou_enable:
-            self._ou_base_current[env_ids] = self._hydro.current.velocity_w[env_ids, :3].clone()
 
         if self._thruster is not None:
             self._thruster.randomize_parameters(
@@ -1761,8 +1706,6 @@ class ALBCEnv(DirectRLEnv):
 
         if self._has_ocean_current:
             randomize_ocean_current(env=self, env_ids=env_ids, sampled=sampled)
-            if self.cfg.ou_enable:
-                self._ou_base_current[env_ids] = self._hydro.current.velocity_w[env_ids, :3].clone()
 
         if self._thruster is not None:
             self._thruster.randomize_parameters(

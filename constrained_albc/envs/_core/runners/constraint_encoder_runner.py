@@ -115,9 +115,6 @@ class ConstraintEncoderRunner(OnPolicyRunner):
             policy_cfg["encoder_obs_lower"] = lower
             policy_cfg["encoder_obs_upper"] = upper
 
-        # Value normalization flag (set via train_cfg or algorithm config)
-        self._normalize_value = train_cfg.get("normalize_value", False)
-
         super().__init__(env, train_cfg, log_dir, device)
 
         # Detect encoder for conditional metrics logging
@@ -125,98 +122,6 @@ class ConstraintEncoderRunner(OnPolicyRunner):
         if self._has_encoder:
             logger.info("[ConstraintEncoderRunner] Encoder detected. Encoder metrics logging enabled.")
 
-        # Set up value normalization (HORA-style running mean/std).
-        #
-        # HORA flow (hora/algo/ppo/ppo.py:152-159, 364-368):
-        #   Rollout: critic -> denormalize (v*std+mean) -> raw values stored
-        #   GAE:     raw values -> returns, advantages (normalized mean=0,std=1)
-        #   Post-GAE: normalize values/returns in-place (critic targets)
-        #   Update:  critic learns to predict normalized values
-        #
-        # Without denormalization during rollout, GAE mixes raw rewards with
-        # normalized values once the critic converges, corrupting advantages.
-        if self._normalize_value:
-            self._value_running_mean = torch.zeros(1, device=device)
-            self._value_running_var = torch.ones(1, device=device)
-            self._value_count = 1e-4
-
-            def _compute_returns_with_value_norm(obs):
-                storage = self.alg.storage
-                std = torch.sqrt(self._value_running_var + 1e-8)
-                mean = self._value_running_mean
-
-                # 1. Denormalize stored values (critic outputs normalized scale
-                #    after training). On iter 0: mean=0, std=1, so identity.
-                storage.values[:] = storage.values * std + mean
-
-                # 2. Compute last_values and denormalize for GAE bootstrap.
-                last_values = self.alg.policy.evaluate(obs).detach()
-                last_values = last_values * std + mean
-
-                # 3. GAE on raw-scale values -> normalized advantages (mean=0).
-                # ConstraintTRPO lacks normalize_advantage_per_mini_batch (PPO-only attr);
-                # default to False so storage normalizes advantages here.
-                normalize_adv_pmb = getattr(self.alg, "normalize_advantage_per_mini_batch", False)
-                storage.compute_returns(
-                    last_values,
-                    self.alg.gamma,
-                    self.alg.lam,
-                    normalize_advantage=not normalize_adv_pmb,
-                )
-
-                # 4. Cost GAE (ConstraintTRPO-specific). The wrapper replaces the
-                # entire ConstraintTRPO.compute_returns, so we must still run the
-                # cost-side GAE path or barrier/IPO signals go to zero. Costs are
-                # NOT normalized (adaptive thresholds operate on raw units).
-                if getattr(self.alg, "num_constraints", 0) > 0:
-                    last_cost_values = self.alg.policy.evaluate_costs(obs).detach()
-                    self.alg._compute_cost_returns(last_cost_values)
-
-                # 5. Update running stats from raw returns, then normalize
-                #    values/returns in-place for critic loss targets.
-                self._normalize_storage_values()
-
-            self.alg.compute_returns = _compute_returns_with_value_norm
-            logger.info("[ConstraintEncoderRunner] Value normalization enabled (HORA-style).")
-
-    # ------------------------------------------------------------------
-    # Value normalization
-    # ------------------------------------------------------------------
-
-    def _normalize_storage_values(self) -> None:
-        """Update running stats and normalize values/returns for critic targets.
-
-        Called after GAE (which uses raw-scale values). Advantages are already
-        normalized by storage.compute_returns() and are NOT touched here.
-        """
-        storage = self.alg.storage
-        returns_flat = storage.returns.flatten()
-
-        # Update running statistics (Welford's algorithm)
-        batch_mean = returns_flat.mean()
-        batch_var = returns_flat.var()
-        batch_count = returns_flat.numel()
-
-        delta = batch_mean - self._value_running_mean
-        total_count = self._value_count + batch_count
-        self._value_running_mean = self._value_running_mean + delta * batch_count / total_count
-        m_a = self._value_running_var * self._value_count
-        m_b = batch_var * batch_count
-        m2 = m_a + m_b + delta**2 * self._value_count * batch_count / total_count
-        self._value_running_var = m2 / total_count
-        self._value_count = total_count
-
-        # Normalize values and returns in-place (for critic targets).
-        # Do NOT recompute advantages -- they are already normalized.
-        std = torch.sqrt(self._value_running_var + 1e-8)
-        storage.values[:] = (storage.values - self._value_running_mean) / std
-        storage.returns[:] = (storage.returns - self._value_running_mean) / std
-
-    # ------------------------------------------------------------------
-    # Properties
-    # ------------------------------------------------------------------
-
-    @property
     def _should_log(self) -> bool:
         """Whether logging is active (log_dir set and logs not disabled)."""
         return self.log_dir is not None and not self.disable_logs

@@ -256,7 +256,7 @@ class _BaseALBCRunnerCfg(RslRlOnPolicyRunnerCfg):
     """Shared ALBC runner constants (de-dup base; no behavior change).
 
     Runners below inherit these and override only what differs (class_name,
-    experiment_name, obs_groups, algorithm, policy, normalize_value).
+    experiment_name, obs_groups, algorithm, policy).
     """
 
     seed = 30
@@ -292,8 +292,6 @@ class ALBCTRPORunnerCfg(_BaseALBCRunnerCfg):
         "policy": ["policy", "privileged"],
         "critic": ["policy", "privileged"],
     }
-
-    normalize_value: bool = False
 
     algorithm = RslRlConstraintTRPOAlgorithmCfg()
     policy = _ALBCPolicyCfg()
