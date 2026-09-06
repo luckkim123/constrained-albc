@@ -25,11 +25,14 @@ construction and say nothing about assembly logic.
 """
 import argparse
 import os
+import pathlib
 import sys
 
-# This file lives in /workspace (operational scripts), not in the repo, so the SSOT
-# tree stays clean; _common is a repo module and has to be put on the path by hand.
-sys.path.insert(0, "/workspace/constrained-albc/scripts")
+# _common is a repo module and has to be put on the path by hand. Resolve it from THIS
+# file, never from an absolute /workspace path: the equivalence oracle runs this same
+# script inside a detached baseline worktree, and a hardcoded path would silently import
+# the changed tree's _common while claiming to measure the baseline (plan rule R4).
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "scripts"))
 
 from _common import install_overlay_import_hook, launch_app  # isort: skip
 
