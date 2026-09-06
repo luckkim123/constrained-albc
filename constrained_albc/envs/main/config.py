@@ -47,7 +47,6 @@ from .mdp.constraints import (
     velocity_limit_cost,
     yaw_rate_cost,
 )
-from .mdp.koopman import KOOPMAN_PRED_DIM
 from .mdp.rewards import ALBCRewardCfg, TrackingTermCfg
 
 # 10 constraint terms: 5 Probabilistic + 5 Average.
@@ -302,12 +301,6 @@ class DomainRandomizationCfg:
 #
 # Integral Error (3D): roll, pitch, yaw_rate
 # ==========================================================================
-# Width of the arm-B marine-feature block: sin/cos(roll), sin/cos(pitch), p|p|, q|q|, r|r|.
-# Kept here (not in mdp/observations.py) because config.py owns the observation_space
-# contract and importing mdp from config would be circular; ALBCEnv's runtime width assert
-# catches any drift between this number and what compute_marine_features actually emits.
-MARINE_FEATURE_DIM = 7
-
 _OBS_NOISE_STD = tuple(
     # --- Current Proprioception (20D) ---
     [0.0] * 3  # ang_cmd [att_rp(2) + yaw_rate(1)] (our command, no noise)
@@ -695,22 +688,6 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # separate from capacity crowding. Requires use_student_extra_obs=True (the channels
     # must be computed to be folded). Off by default = byte-identical to gen-1.
     use_extra_policy_obs: bool = False
-    # Koopman plan Phase 1 (arm B): append 7 physics-informed marine observables --
-    # sin/cos(roll), sin/cos(pitch) and the signed-quadratic body rates p|p|, q|q|, r|r|
-    # (the per-DOF quadratic-drag shape recurring in the marine Koopman literature).
-    # Pure functions of channels the policy ALREADY observes, so this is a dictionary lift
-    # testing optimization geometry, not new information -- see apply_marine_feature_obs and
-    # ALBCEnv._get_observations for the noise-realization rule that keeps it that way.
-    # Off by default = byte-identical to the E-int teacher plant.
-    use_marine_feature_obs: bool = False
-    # Koopman plan Phase 2 (arms 3-5, PLAN 12.2/12.7): append a FROZEN lifted-dynamics
-    # module's HORIZON-step-ahead prediction of [roll, pitch, p, q, r] -- 5 channels. Which
-    # arm it is (learned lift + linear K / same lift + MLP operator / random lift + linear K)
-    # lives entirely in the checkpoint this points at, so the three arms share one code path
-    # and differ only in the representation they hand the policy.
-    # Empty string = off = byte-identical to the E-int teacher plant.
-    koopman_module_path: str = ""
-
 
 def apply_bias_ema_obs(cfg) -> None:
     """Materialize the bias-ema-obs experiment toggle, in place.
@@ -801,74 +778,6 @@ def apply_extra_policy_obs(cfg) -> None:
         noise_cfg.std = tuple(noise_cfg.std) + zeros4
         bias_cfg.n_min = tuple(bias_cfg.n_min) + zeros4
         bias_cfg.n_max = tuple(bias_cfg.n_max) + zeros4
-
-
-def apply_marine_feature_obs(cfg) -> None:
-    """Materialize the Koopman arm-B marine-feature toggle, in place.
-
-    MUST be called from ALBCEnv.__init__ AFTER apply_extra_policy_obs and BEFORE
-    super().__init__(), for the same reason both of those must: observation_space and
-    observation_noise_model are consumed by DirectRLEnv.__init__ to build the gym spaces
-    and the noise model. It accepts whichever width the earlier materializers left, so the
-    three compose in any configuration.
-
-    use_marine_feature_obs=False (default): no-op, byte-identical to the E-int plant.
-    use_marine_feature_obs=True: observation_space += 7, appending
-    [sin(roll), cos(roll), sin(pitch), cos(pitch), p|p|, q|q|, r|r|] last.
-
-    The noise/bias tuples are extended by 7 ZEROS, and unlike the integral / bias_ema /
-    extra dims the reason here is NOT "these carry their own sensor model". It is that the
-    channels are computed from the PREVIOUS step's already-noised observation (see
-    ALBCEnv._get_observations), so they already carry the full noise realization the policy
-    saw. Adding an independent draw on top would hand the policy a SECOND, independently
-    noisy measurement of roll/pitch/pqr, which it could average against the raw channels to
-    recover a denoised attitude -- and the always-on euler noise (std 0.02 rad ~ 1.15 deg,
-    plus a +/-0.02 rad bias) dwarfs the 0.1 deg ss_error decision floor this arm is judged
-    on. Either that leak or a clean-state computation would turn a geometry test into an
-    information test and make a positive result uninterpretable (and undeployable).
-    """
-    if not cfg.use_marine_feature_obs:
-        return
-    cfg.observation_space += MARINE_FEATURE_DIM
-    if cfg.observation_noise_model is not None:
-        zeros7 = (0.0,) * MARINE_FEATURE_DIM
-        noise_cfg = cfg.observation_noise_model.noise_cfg
-        bias_cfg = cfg.observation_noise_model.bias_noise_cfg
-        noise_cfg.std = tuple(noise_cfg.std) + zeros7
-        bias_cfg.n_min = tuple(bias_cfg.n_min) + zeros7
-        bias_cfg.n_max = tuple(bias_cfg.n_max) + zeros7
-
-
-def apply_koopman_module_obs(cfg) -> None:
-    """Materialize the Koopman Phase-2 frozen-lift toggle, in place.
-
-    MUST be called from ALBCEnv.__init__ AFTER apply_marine_feature_obs and BEFORE
-    super().__init__(), for the same reason every other obs materializer must:
-    observation_space and observation_noise_model are consumed by DirectRLEnv.__init__.
-    It accepts whichever width the earlier materializers left, so all of them compose.
-
-    koopman_module_path="" (default): no-op, byte-identical to the E-int plant.
-    Otherwise: observation_space += 5, appending the frozen module's HORIZON-step-ahead
-    prediction of [roll, pitch, p, q, r] last.
-
-    The noise/bias tuples are extended by 5 ZEROS, for the same reason arm B's marine
-    features are (see apply_marine_feature_obs): the channels are computed from the PREVIOUS
-    step's already-noised observation, so they already carry the noise realization the policy
-    saw. An independent draw on top would hand the policy a second, independently noisy view
-    of roll/pitch/pqr to average against the raw channels, recovering a denoised attitude --
-    which would turn a representation test into an information test and make any positive
-    result uninterpretable and undeployable.
-    """
-    if not cfg.koopman_module_path:
-        return
-    cfg.observation_space += KOOPMAN_PRED_DIM
-    if cfg.observation_noise_model is not None:
-        zeros5 = (0.0,) * KOOPMAN_PRED_DIM
-        noise_cfg = cfg.observation_noise_model.noise_cfg
-        bias_cfg = cfg.observation_noise_model.bias_noise_cfg
-        noise_cfg.std = tuple(noise_cfg.std) + zeros5
-        bias_cfg.n_min = tuple(bias_cfg.n_min) + zeros5
-        bias_cfg.n_max = tuple(bias_cfg.n_max) + zeros5
 
 
 def apply_privileged_fault_obs(cfg) -> None:

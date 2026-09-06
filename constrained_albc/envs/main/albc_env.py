@@ -26,18 +26,13 @@ from isaaclab.utils.math import euler_xyz_from_quat, quat_apply, quat_apply_inve
 from marinelab.core import HydrodynamicsModel
 
 from .config import (
-    KOOPMAN_PRED_DIM,
-    MARINE_FEATURE_DIM,
     ALBCEnvCfg,
     apply_bias_ema_obs,
     apply_extra_policy_obs,
-    apply_koopman_module_obs,
-    apply_marine_feature_obs,
     apply_privileged_fault_obs,
 )
 from .mdp import faults
 from .mdp.constraints import apply_joint1_constraint_arm, compute_all_costs
-from .mdp.koopman import load_koopman_module
 from .mdp.events import (
     DRSampler,
     apply_joint_fault,
@@ -53,8 +48,6 @@ from .mdp.events import (
     reset_robot_pose_default,
 )
 from .mdp.observations import (
-    MARINE_SRC_IDX,
-    compute_marine_features,
     compute_policy_obs,
     compute_privileged_obs,
     compute_student_extra_obs,
@@ -131,16 +124,6 @@ class ALBCEnv(DirectRLEnv):
         # MUST run AFTER apply_bias_ema_obs -- that one asserts a pre-bump width of exactly 69 --
         # and before super().__init__(), for the same reason. See config.apply_extra_policy_obs.
         apply_extra_policy_obs(cfg)
-
-        # Materialize the Koopman arm-B marine-feature toggle (no-op unless
-        # cfg.use_marine_feature_obs). Runs LAST of the three obs materializers and before
-        # super().__init__(), for the same reason. See config.apply_marine_feature_obs.
-        apply_marine_feature_obs(cfg)
-
-        # Materialize the Koopman Phase-2 frozen-lift toggle (no-op unless
-        # cfg.koopman_module_path is set). Runs after apply_marine_feature_obs and before
-        # super().__init__(), for the same reason. See config.apply_koopman_module_obs.
-        apply_koopman_module_obs(cfg)
 
         # Materialize the Arm-B privileged-fault-obs toggle (no-op unless
         # cfg.use_privileged_fault_obs). MUST also run before super().__init__():
@@ -235,19 +218,13 @@ class ALBCEnv(DirectRLEnv):
             expected_obs_dim += 3
         if getattr(self.cfg, "use_extra_policy_obs", False):
             expected_obs_dim += 4
-        if getattr(self.cfg, "use_marine_feature_obs", False):
-            expected_obs_dim += MARINE_FEATURE_DIM
-        if getattr(self.cfg, "koopman_module_path", ""):
-            expected_obs_dim += KOOPMAN_PRED_DIM
         if expected_obs_dim != self.cfg.observation_space:
             raise ValueError(
                 f"observation_space={self.cfg.observation_space} != computed obs dim {expected_obs_dim} "
                 f"(proprio={PROPRIO_DIM}, hist_len={self._hist_len}, hist_action_len={self._hist_action_len}, "
                 f"use_integral_obs={self.cfg.use_integral_obs}, integral_dims={self.cfg.integral_dims}, "
                 f"use_bias_ema_obs={self.cfg.use_bias_ema_obs}, "
-                f"use_extra_policy_obs={getattr(self.cfg, 'use_extra_policy_obs', False)}, "
-                f"use_marine_feature_obs={getattr(self.cfg, 'use_marine_feature_obs', False)}, "
-                f"koopman_module_path={getattr(self.cfg, 'koopman_module_path', '')!r})"
+                f"use_extra_policy_obs={getattr(self.cfg, 'use_extra_policy_obs', False)})"
             )
 
         # Pre-build the integral error-gating sigma tensor once (step-invariant cfg constants).
@@ -425,31 +402,6 @@ class ALBCEnv(DirectRLEnv):
         # step regardless of error magnitude; meant to capture systematic per-env bias
         # that per-step tracking reward ignores.
         self._bias_ema = torch.zeros(self.num_envs, 3, device=self.device)
-        # Koopman arm-B: step at which each env last reset. _get_observations reads it to
-        # decide whether the previous step's obs_buf row belongs to THIS episode; written
-        # only in _reset_idx (never in the obs path, which rsl_rl also calls outside
-        # inference_mode -- an in-place write there raises "Inplace update to inference
-        # tensor", the failure the _extra_last_step guard below already documents).
-        # Allocated unconditionally, like the extra-obs state, to keep _reset_idx branch-free.
-        self._marine_reset_step = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
-
-        # Koopman Phase-2 frozen lift (PLAN 12.2 arms 3-5). None unless a checkpoint is given.
-        # Loading proves the h-step fold against iteration before anything trains on it.
-        self._koopman = None
-        if getattr(self.cfg, "koopman_module_path", ""):
-            if self._action_delay_buf is not None:
-                # The module was fitted against the action eval.py logs, which is the action
-                # handed to env.step() -- identical to self._actions only while the control
-                # delay is a pass-through. With a delay active the two diverge and the frozen
-                # operator would be driven by an input it was never fitted on.
-                raise ValueError(
-                    "koopman_module_path is set together with a nonzero control_delay_steps; "
-                    "the frozen operator was fitted on the undelayed action. Run them separately."
-                )
-            self._koopman = load_koopman_module(self.cfg.koopman_module_path, self.device)
-            print(f"[ALBCEnv] Koopman frozen lift loaded: {self.cfg.koopman_module_path} "
-                  f"(operator={self._koopman.arm_operator}, horizon={self._koopman.horizon}, "
-                  f"+{KOOPMAN_PRED_DIM} obs dims)")
         # E1/B2 student-extra channel state (gen-1: published as observations[STUDENT_EXTRA_OBS_KEY],
         # NOT part of policy_obs). Allocated unconditionally -- six small dead state items (four
         # tensors, a gravity constant, and a tick counter) when the flag is off, which keeps
@@ -545,17 +497,6 @@ class ALBCEnv(DirectRLEnv):
         # layer must be identity on them (see config.apply_extra_policy_obs).
         if getattr(self.cfg, "use_extra_policy_obs", False):
             base = base + [0.0, 0.0, 0.0, 0.0]
-        # Koopman arm-B: std 0 for the 7 marine features, because they are computed from the
-        # previous step's ALREADY-noised obs and so carry the fault/DR realization once
-        # already. A nonzero entry here would be a second, independent draw on the same
-        # underlying signal -- the denoising leak apply_marine_feature_obs exists to prevent.
-        if getattr(self.cfg, "use_marine_feature_obs", False):
-            base = base + [0.0] * MARINE_FEATURE_DIM
-        # Koopman Phase-2: std 0 for the same reason as arm B above -- the frozen module is
-        # fed the previous step's already-noised obs, so its prediction already carries that
-        # realization; an independent draw would be the denoising leak in another form.
-        if getattr(self.cfg, "koopman_module_path", ""):
-            base = base + [0.0] * KOOPMAN_PRED_DIM
         return torch.tensor(base, device=self.device)
 
     def _init_faults(self) -> None:
@@ -1261,56 +1202,6 @@ class ALBCEnv(DirectRLEnv):
         if self.cfg.use_extra_policy_obs:
             policy_obs = torch.cat([policy_obs, extra_obs], dim=-1)
 
-        # Koopman arm-B dictionary lift (72 -> 79). Lands last, matching the width order
-        # apply_marine_feature_obs bumps and _obs_noise_base_std pads. No-op when off.
-        #
-        # The load-bearing detail is WHICH roll/pitch/pqr the features are built from.
-        # DirectRLEnv noises obs_buf["policy"] IN PLACE right after this method returns
-        # (direct_rl_env.py: "add observation noise"), so on entry self.obs_buf still holds
-        # the PREVIOUS step's fully-noised observation -- all three layers, including the
-        # always-on model this method never sees. Building the features from that row makes
-        # them carry exactly the noise realization the policy itself saw, which is the whole
-        # point: the features must add NO information, only a nonlinear basis, or the arm
-        # stops testing optimization geometry. Building them from the clean current state
-        # instead would let the policy recover a denoised attitude via atan2(sin, cos)
-        # against the noisy raw channels -- euler noise is std 0.02 rad (~1.15 deg) plus a
-        # +/-0.02 rad bias, an order above the 0.1 deg ss_error floor this arm is judged on.
-        # Reading a buffer draws no RNG, so the plant stays byte-identical to the E-int
-        # baseline. It also costs one step of staleness (20 ms at 50 Hz), which is squarely
-        # in family with the 3-step body history already in o_t and is exactly what an
-        # onboard implementation computing from the last IMU frame would deliver.
-        if self.cfg.use_marine_feature_obs:
-            src = current_proprio[:, MARINE_SRC_IDX]
-            prev = getattr(self, "obs_buf", None)
-            if prev is not None:
-                # Fall back to this step's clean proprio only where the previous row is not
-                # ours: before the first step, and for one step after an episode reset (the
-                # stale row then belongs to the PREVIOUS episode, which would be actively
-                # misleading rather than merely noisy).
-                stale = (self._marine_reset_step >= self.common_step_counter).unsqueeze(-1)
-                src = torch.where(stale, src, prev["policy"][:, MARINE_SRC_IDX])
-            policy_obs = torch.cat([policy_obs, compute_marine_features(src)], dim=-1)
-
-        # Koopman Phase-2 frozen lift (72 -> 77). Lands last, matching the width order
-        # apply_koopman_module_obs bumps and _obs_noise_base_std pads. No-op when off.
-        #
-        # Fed the PREVIOUS step's fully-noised observation, for exactly the reason spelled
-        # out for arm B above: the module must hand the policy a REPRESENTATION, not a
-        # second and independently-noisy measurement it could average against the raw
-        # channels to denoise its own attitude. Reading obs_buf draws no RNG, so the plant
-        # stays byte-identical to the E-int baseline. The module is stateless and advances
-        # nothing, so the extra _get_observations call the encoder-logging path makes each
-        # training iteration is harmless here (unlike compute_student_extra_obs above).
-        if self._koopman is not None:
-            prev = getattr(self, "obs_buf", None)
-            src = policy_obs
-            if prev is not None:
-                # Same reset fallback as arm B: one step after a reset the stale row belongs
-                # to the previous episode, which is actively misleading rather than noisy.
-                stale = (self._marine_reset_step >= self.common_step_counter).unsqueeze(-1)
-                src = torch.where(stale, policy_obs, prev["policy"][:, : self._koopman.d_obs])
-            policy_obs = torch.cat([policy_obs, self._koopman(src, self._actions)], dim=-1)
-
         # Per-env sensor-noise fault: extra noise on top of the always-on noise model.
         # No-op (identity) when fault is disabled -> obs byte-identical. base_std tracks
         # the always-on noise model's std (69D, or 72D when use_bias_ema_obs extends it),
@@ -1836,7 +1727,6 @@ class ALBCEnv(DirectRLEnv):
         self._heave_rate_filt[env_ids] = 0.0
         self._extra_reset_pending[env_ids] = True
         self._student_extra_held[env_ids] = 0.0
-        self._marine_reset_step[env_ids] = self.common_step_counter
 
     # ------------------------------------------------------------------
     # Play-mode evaluation

@@ -193,8 +193,8 @@ sp_static.add_argument(
     default=False,
     help="Also store the APPLIED 8D action per step into data_<level>.npz (additive; off by "
     "default). action_magnitude keeps only the L2 norm and joint1_cmd only dim 0, so the full "
-    "vector is otherwise never logged; the Koopman offline fit (programs/koopman-lifting PLAN "
-    "12.3) needs it paired with --save-policy-obs.",
+    "vector is otherwise never logged. Any offline fit over the (obs, action) pair needs it "
+    "together with --save-policy-obs.",
 )
 sp_static.add_argument(
     "--excite-std",
