@@ -596,3 +596,19 @@ Each script chains its own exam (`sd_exam_generic.sh` → `.hq/work/p4/sd_r1`, `
 **Open leads (`omx wiki list`, 05:0x):** blocking finding/264, finding/352 unchanged. needs-experiment 27 = 3.9u list + finding/389. Nothing dropped.
 
 **Next reads:** none pending on the machine. The three user decisions above come first.
+
+---
+
+## 3.9w (2026-09-06 15:0x) -- DEPLOYMENT DECISION: R3a selected (user), pack exported + Mac gates PASSED, board gate pending (jump host offline)
+
+**Resume here.** decision/390 has the pack, the gates, and the board procedure. The user chose R3a for the next field test ("진행해줘", ~14:50) on the fault-type cells (decision/390 section 1). Still open from 3.9v: R4c approve/drop, R4b, R3a second realization -- the deployment does not close them.
+
+**Pack.** `deploy/retrain_simtoreal_p3/pack_r3a_p3b7500_gru_260906_145553` (container) = `~/albc_deploy/retrain_simtoreal_p3/pack_r3a_p3b7500_gru_260906_145553` (Mac). student `student_999.pt` of `trpo_sd_p3b7500_c3_dr5_beta0_s30_260906_003754`, teacher `p3b model_7500.pt`. Dims identical to the deployed pack; `npforward.py` byte-identical (8ab626b0); data swap of 5 files (`weights_gru.npz`, `weights_teacher.npz`, `golden/golden_gru.npz`, `golden/golden_teacher.npz`, `MANIFEST.gru.json`). Container self-close CLOSED (teacher act 6.4e-7, GRU latent 1.3e-7).
+
+**Mac gates PASSED 14:56-14:59.** sha256 5/5; `pack.self_close` on numpy 2.4.6 CLOSED (5.5e-7 / 8.9e-8); board package tests on a scratch copy of the clone with the pack dropped in: `test_npforward.py` ALL PASS, `test_np_policy_api.py` 12 passed / 2 xfailed (standing). Board runtime `src/albc_rl/npforward.py` AST-identical to the pack's.
+
+**Board gate PENDING.** `kim-macbookair` (Tailscale jump to agent-jetson) offline since ~10:50. Procedure in decision/390 section 4: confirm the board's branch/layout, back up the 5 files outside the ROS package, copy, run `test_npforward.py` on the board, sha256 three-way, then the field test with the operator. Robot work only with the operator.
+
+**GPU state unchanged:** both idle. R4c still queued, not fired.
+
+**Open leads (`omx wiki list`, 15:0x):** blocking finding/264, finding/352 unchanged. needs-experiment 28 = 3.9v list + decision/390 (the field test is the experiment that closes it). Nothing dropped.
