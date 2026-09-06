@@ -58,3 +58,13 @@ def test_no_out_and_no_group_tag_exits():
     ns = build_parser().parse_args(["--spec", "student_tcn", "--ckpt", "/a.pt"])
     with pytest.raises(SystemExit):
         resolve_out_dir(ns)
+
+
+# D5: --golden / --report are produced by the batch path only. Accepting them on
+# --spec returned 0 having written neither.
+@pytest.mark.parametrize("flag", ["--golden", "--report"])
+def test_spec_rejects_batch_only_flags(flag):
+    from constrained_albc.deploy.__main__ import main
+    with pytest.raises(SystemExit) as exc:
+        main(["--spec", "student_tcn", "--ckpt", "/nonexistent.pt", "--out", "/tmp/x", flag])
+    assert flag in str(exc.value)

@@ -592,3 +592,71 @@ def test_common_resolve_run_path_run_id_tree_returns_train(tmp_path):
     out = C.resolve_run_path(str(run_root), logs_root=str(tmp_path / "logs"))
     assert out == run_root / "train"
     assert (out / "events.out.tfevents.2.h").is_file()
+
+
+# ---------------------------------------------------------------------------
+# D4: "newest" must mean newest by TIME. run_id is <task_short>[_<tag>]_<ts>,
+# label BEFORE the date, so a run_id string sort groups by label first -- and
+# resolve_run documents index 0 as the newest run.
+# ---------------------------------------------------------------------------
+def _make_run_with_created(experiments_root, run_id, created):
+    root = _make_new_run(experiments_root, run_id)
+    m = json.loads((root / P.MANIFEST_NAME).read_text())
+    if created is not None:
+        m["created"] = created
+    (root / P.MANIFEST_NAME).write_text(json.dumps(m))
+    return root
+
+
+def test_find_runs_orders_by_created_not_run_id_string(tmp_path):
+    """A label that sorts high must not outrank a genuinely newer run."""
+    exp = tmp_path / "experiments"
+    _make_run_with_created(exp, "zzz_trpo_260101_000000", "2026-01-01T00:00:00")
+    _make_run_with_created(exp, "aaa_trpo_260901_000000", "2026-09-01T00:00:00")
+    runs = P.find_runs(str(exp))
+    assert [r.run_id for r in runs] == [
+        "aaa_trpo_260901_000000",
+        "zzz_trpo_260101_000000",
+    ]
+
+
+def test_find_runs_orders_by_run_id_ts_when_created_absent(tmp_path):
+    """No manifest ``created`` (legacy) -> fall back to the run_id's _<ts> suffix."""
+    exp = tmp_path / "experiments"
+    _make_run_with_created(exp, "zzz_trpo_260101_000000", None)
+    _make_run_with_created(exp, "aaa_trpo_260901_000000", None)
+    runs = P.find_runs(str(exp))
+    assert [r.run_id for r in runs][0] == "aaa_trpo_260901_000000"
+
+
+# ---------------------------------------------------------------------------
+# D8: an ABSENT manifest is the legacy case; a PRESENT but unreadable one is
+# corruption and must be reported, not silently demoted to the legacy path.
+# ---------------------------------------------------------------------------
+def test_corrupt_manifest_raises_naming_the_file(tmp_path):
+    root = tmp_path / "experiments" / "trpo_260901_000000"
+    (root / "train" / "tb").mkdir(parents=True)
+    (root / P.MANIFEST_NAME).write_text("{not json")
+    with pytest.raises(RuntimeError) as exc:
+        P._read_manifest_if_present(root)
+    assert P.MANIFEST_NAME in str(exc.value)
+
+
+def test_absent_manifest_still_returns_none(tmp_path):
+    root = tmp_path / "experiments" / "trpo_260901_000000"
+    root.mkdir(parents=True)
+    assert P._read_manifest_if_present(root) is None
+
+
+# ---------------------------------------------------------------------------
+# D3: the legacy scan must reach the <exp>/<group>/<run> layer that
+# train.py --run_group has written since 2026-06-08, not just <exp>/<run>.
+# ---------------------------------------------------------------------------
+def test_legacy_scan_reaches_the_group_layer(tmp_path):
+    logs = tmp_path / "logs" / "rsl_rl"
+    _make_legacy_run(logs, "albc_trpo_teacher", "flat_260101_000000")
+    grouped = logs / "albc_trpo_teacher" / "fault_dr" / "grouped_260901_000000"
+    grouped.mkdir(parents=True)
+    (grouped / "events.out.tfevents.1234.host").write_text("")
+    hit = P._find_legacy_run("grouped", str(logs))
+    assert hit is not None and hit.run_id == "grouped_260901_000000"

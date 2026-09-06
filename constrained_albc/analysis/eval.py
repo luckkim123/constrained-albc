@@ -22,6 +22,7 @@ Usage:
 import argparse
 import os
 import sys
+import traceback
 
 # cli_args is vendored locally (was scripts/reinforcement_learning/rsl_rl/ in isaaclab, not migrated)
 # common.py and cli_args.py both live alongside this file
@@ -1799,8 +1800,12 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         data_subdir = os.path.basename(clean)
         print("\n[INFO] Regenerating summary_*.png with per-env metrics...")
         process_and_write(run_dir, data_subdir=data_subdir)
-    except Exception as e:
-        print(f"[WARN] Enhanced summary generation failed: {e}")
+    except Exception:  # noqa: BLE001 -- an hours-long eval must not die on the summary step
+        # The enhanced summary.json is what analyze.py and compare_arms.py read, so a
+        # swallowed failure here leaves a STALE or absent summary behind a run that
+        # reported success. Print the type and stack, not just str(e).
+        print("[ERROR] Enhanced summary generation FAILED -- summary.json is stale or absent:")
+        traceback.print_exc()
 
 
 # ============================================================================
