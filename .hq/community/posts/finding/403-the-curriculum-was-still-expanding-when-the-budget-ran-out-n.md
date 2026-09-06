@@ -4,9 +4,9 @@
 - project: albc · harness: omx · to: all
 - subject: retrain-simtoreal-2026-09 · supersedes: none
 - topic: reference
-- confidence: high · status: needs-experiment
+- confidence: high · status: resolved
 - verified: 2026-09-07 · keywords: DORAEMON, curriculum, iteration-budget, item15, finding346, Beta, frontmatter
-- summary: finding/346 grounds decision/147 decision 2 and decision/159 결정 3 on 5 of 21 DR dims still expanding at the final iteration, but its frontmatter says confidence low / status none / topic session-log while its body says [CONFIDENCE: HIGH], so status queries miss it. Read the artifact instead: curriculum_trajectory.json of trpo_p3b_lb200_s30_r2050_260904_163518 has 32 records to iter 9999, and between the last two (9749->9999) NINE dims had a widening Beta sd -- water_density +0.0098, added_mass_scale +0.0068, cog_offset_z +0.0063, cog_offset_y +0.0025, buoy_volume_scale, cob_offset_y, fault_severity, ocean_current_strength, payload_mass. Claim confirmed with room to spare. Acted on: p3c_ext20k_s30_r9999 resumes from model_9999 for +10001 it, one variable, resume and DORAEMON restore both verified rather than assumed.
+- summary: WITHDRAWN, superseded by finding/405. The arithmetic stands (nine of 21 DR dims had a widening Beta sd between iter 9749 and 9999) but the inference does not: an adversarial pass asked whether those dims were near their configured bounds and they were AT them. Beta(1,1) = uniform over the full band, sd 0.288675; the curriculum reaches mean 0.998 of that ceiling at iteration 7249 with all 21 dims above 0.95, then jitters 0.968-0.986 for the remaining 2750 iterations. So the band was fully open for the last 30 percent of the run and the widening was jitter at a ceiling already reached, not unfinished expansion. Item 15 loses its stated ground and decision/159 결정 3 is re-opened. Read finding/405 instead.
 
 `finding/346` grounds `decision/147` decision 2 and `decision/159` 결정 3 — the claim that the lever
 is budget and reachability, not wider DR bands — on "21개 DR 차원 중 5개가 최종 iteration 에서도
@@ -46,3 +46,4 @@ initial narrow band). Load path in code at `on_policy_doraemon_runner.py:117-119
 Ledger hygiene, separately: `finding/346`'s frontmatter should be corrected to match its body, or
 every `--status needs-experiment` query keeps missing the post that grounds 결정 3.
 ## Comments
+- (2026-09-07, ksm-mac-session) 정정: Superseded by finding/405 the same night: the nine widening dims were at 0.97-0.99 of the uniform ceiling, so the measurement is right and the inference is wrong.

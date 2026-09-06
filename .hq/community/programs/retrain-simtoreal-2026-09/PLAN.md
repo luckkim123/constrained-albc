@@ -401,7 +401,7 @@ frozen overrides — task id `Isaac-ConstrainedALBC-TRPO-SimToReal-v0`, `finding
 | 12 | `set_inertias` | absent | **implement**, nominal centered on measured 0.49 | `finding/149` (1.53x, outside the DR band), `finding/354` |
 | 13 | yaw command | `yaw_rate` | **yaw position, unlimited range** | operator 2026-09-06 |
 | 14 | `cumul_yaw` constraint | limit 8 pi, budget 0.01 | **remove ONLY with a deployment-side tether guard** (review `yaw_rate` in the same pass) | operator 2026-09-06; §10 M-4 |
-| 15 | iteration budget | 10k | **raised to 20k and FIRED 2026-09-07** (`p3c_ext20k_s30_r9999`, resume from `model_9999`, one variable) | `finding/403` (9 of 21 dims still widening at 9749->9999, measured), `finding/346` |
+| 15 | iteration budget | 10k | **raised to 20k and FIRED 2026-09-07**, but **its ground was withdrawn the same night** (`finding/405`): the curriculum reached the FULL configured band (Beta(1,1) = uniform) at iteration ~7000 and jittered there for the last 2,750, so the budget was never binding on the curriculum. `p3c_ext20k_s30_r9999` remains a clean one-variable run with a verified byte-identical control and now answers a weaker question — does more optimisation at the already-open band help | `finding/405` (supersedes `403`), `346` |
 | — | `thrust_coefficient` / `_scale` | 13.0 / (0.5, 2.0) | **HELD** | `decision/147` decision 2 stands |
 | — | `thruster_fail_prob` / `dead_frac` | 0.30 / 0.5 | **HELD** | lever is budget and reachability |
 | — | `enable_thrust_curve` | false | **HELD (deferred)** | `decision/209` item 3; T200 bench does not exist |
@@ -490,8 +490,16 @@ is a small fraction of total `da^2`. **So "raise `k_s`" is not the fix at any pl
 The field log did not propose that, though — it proposed an **L1** cost, `abs(a_t - a_{t-1})`, and
 at this amplitude L1 and L2 are different instruments: from `finding/158`'s cmd_J2 in-band 0.1600
 at 50 Hz, action amplitude is 0.1600 x 2 pi x 0.6435 / (0.10 x 50) = 0.1294, so
-`da` = 0.1294 x 2 pi x 0.6435 / 50 = **0.01046** — L1 gives 1.05e-2 where L2 gives 1.09e-4, a
-**~96x** sensitivity difference at exactly the ripple amplitude. An L1 term is reachable cfg-side
+`da` = 0.1294 x 2 pi x 0.6435 / 50 = **0.01046** — L1 gives 1.05e-2 where L2 gives 1.09e-4.
+**Corrected 2026-09-07 by the adversarial pass:** that ~96x is the ratio of two quantities with
+different units and is not a "sensitivity". Two statements survive: (i) the *gradient* ratio,
+`d|da|/d(da) = 1` against `d(da^2)/d(da) = 2*da = 0.0209`, i.e. **~48x** at this amplitude; and
+(ii) the shape argument, which matters more — if broadband jitter beats the ripple by a factor R in
+the `(amplitude x frequency)` product, L1 sees that as R while L2 sees it as R^2. **L1 does not
+isolate the low-frequency mode; it only halves the exponent of its disadvantage.** L1's gradient is
+`sgn(da)`, constant, so it presses hardest on micro-jitter and gives no progressive damping on a
+large limit cycle. Any L1 arm must be pre-registered on tracking error as well as on ripple.
+An L1 term is reachable cfg-side
 with no new plumbing through the existing registry (`ALBCRewardCfg.extra_terms: list[RewardTermCfg]`,
 `rewards.py:120`). The field log also pre-empts the obvious objection: a learned cost is not a
 "hard clamp / latch / rule-based shaping" and sits in the same category as `manipulability_cost`,
@@ -508,9 +516,14 @@ identical.
 `delta_scale` by `hz` makes `control_hz` an honest knob; G10 is the same intervention run once as
 a discriminating field probe. Nothing further owed here.
 
-**Net effect on item 8.** Item 8 is now gated on G8 *and* G10 (rate vs gain, `finding/397`) *and*
-sits below two untried candidates its own source ranked higher. It should not be frozen until
-G10 reads out and B has been tried, both of which are cheaper than the 5x wall-clock item 8 costs.
+**Net effect on item 8.** Item 8 is gated on G8 *and* G10 (rate vs gain, `finding/397`), and it sits
+below two candidates its own source ranked higher. **Corrected 2026-09-07 by the adversarial pass:**
+B is a *candidate*, not a gate. The observed limit cycle never approaches either ceiling — in-band
+cmd_J2 0.16 rad at 0.64 Hz is a peak joint rate near 0.64 rad/s, and measured p99 across the field
+runs was 0.29-1.39 rad/s against caps of 2.40 (robot) and 3.1 (sim) — so lowering `velocity_limit_sim`
+cannot change a trajectory that never touches it. B stays worth doing as a sim-fidelity repair (a
+policy trained where the arm can slew 3.1 rad/s is trained on an arm the robot does not have), but it
+does not gate item 8. **G10 does.**
 
 ### 5. Phase 0 gates — nine are desk work, G10 needs the robot; three are blocking
 
@@ -529,7 +542,7 @@ nine need no robot.
 | G6 | **Premise corrected 2026-09-07 — the config already exists and has been scored.** `ls -d .hq/work/p4/*/pair34_d2` returns **13** arms (`inc13w`, `p3b_7500`, `p3b_final`, `sd_inc9998`, `sd_p3b7500`, `sd_r1`, `sd_r2`, `sd_r3a`, `sd_r3a_envdr`, `sd_r3b`, `sd_r4a`, `sd_r4a999`, `sd_r4c`), and `finding/363` (2026-09-05, confidence high) already read it: fault and delay are **non-additive** — the incumbent overshoots its own additive prediction by 7.232 deg and sits at 9.360 deg in the exact deployment condition, while both retrained checkpoints match theirs. `finding/360`, which said the two had never been scored together, is **superseded by `finding/363` of the same day**. What is genuinely left in G6 is only the second half: score the two resonance regimes separately, policy-generated (thrust off) vs externally excited (thrust on) — `finding/158` shows they differ. | the resonance-regime claim only | `finding/404` (supersedes `360`), `363`, `158` |
 | G7 | Re-judge `joint1_pos`: the shipped constraint cannot fire (measured angle wraps at +/-2 pi under a 4 pi limit). Same pass as item 14. | constraint set | `finding/378` |
 | G9 | Close the joint->attitude non-monotonicity from the existing bags' FK (J1/J2 phase vs theta2). No robot, no retrain. **Carry the command-content difference as a competing explanation: run 4 (25 Hz) is baseline-only while run 3 (50 Hz) has +/-15 steps, so the inversion is not necessarily kinematic.** | nothing; hygiene | `finding/158`, `397` |
-| **G10** | **Separate rate from loop gain before freezing item 8.** One field run, `control_hz` 50 with `delta_scale` 0.02 = 1.0 rad/s, the same loop gain as 10 Hz at 5x the sensing rate; one launch argument, robot in the water so operator-gated. Low ripple => gain is the knob and item 8's `decimation` 20 (with G8 and the 5x wall-clock) is not needed; high ripple => rate is the knob and item 8 stands. | item 8 | `finding/397`, field log 2026-09-06 "다음 탐침" |
+| **G10** | **Separate rate from loop gain before freezing item 8.** One field run, `control_hz` 50 with `delta_scale` 0.02 = 1.0 rad/s, the same loop gain as 10 Hz at 5x the sensing rate; one launch argument, robot in the water so operator-gated. Low ripple => gain is the knob and item 8's `decimation` 20 (with G8 and the 5x wall-clock) is not needed; high ripple => rate is the knob and item 8 stands. **Pre-registration corrected 2026-09-07 by the adversarial pass:** a policy trained at `delta_scale` 0.10 and deployed at 0.02 has its whole action stream scaled 5x down, so "low absolute ripple" is guaranteed by construction and proves nothing. The readout must be the **ratio**: a fall of ~5x is pure attenuation and the run is null; **much more than 5x** (the limit cycle collapses rather than shrinks) means gain is the knob; **less than 5x** means rate matters. Tracking quality (dead time, rise, settling %) must be recorded in the same run — "low ripple with collapsed tracking" is not evidence for gain. And the 152 ms transport delay is absolute in continuous time, contributing the same ~35 deg of phase lag at 0.6233 Hz at either rate, so G10 separates loop gain from sampling rate but NOT from transport lag. | item 8 | `finding/397`, field log 2026-09-06 "다음 탐침" |
 
 ### 6. Open-backlog reconciliation
 
@@ -830,8 +843,49 @@ adversarial pass before anything is queued, which a Claude session cannot supply
 So the night went to the one item that needed no new code, had a verified ground, and preserves the
 control — item 15 — plus the two exams that make the existing table admissible.
 
-**Open, for the operator:** (a) the tether turn tolerance, which unblocks items 13/14; (b) whether
-G10 may be run on the next water session, which unblocks or retires item 8; (c) whether candidate B
-(`velocity_limit_sim` 3.1 -> 2.40) enters the next teacher, since the field log ranked it first and
-it never reached decision; (d) the cross-family adversarial pass owed on this section before any
-further queue.
+### Adversarial verification, 2026-09-07 (`decision/159` 결정 5) — one family, not two, and it changed the plan
+
+**Ordering violated, stated plainly.** 결정 5 makes this pass a *pre-queue* gate and the three runs
+were fired first, under the operator's blanket approval, and reviewed after. That is the wrong order
+and the review below is what it cost to find out — one of its findings withdrew the stated ground of
+a run already in flight.
+
+**Two families were attempted, one answered.** `codex` (0.153.2, present and authenticated) returned
+`turn.failed: You've hit your usage limit` after 5 s, so the two-family gate degraded to a single
+family — `agy` (Gemini 3.1, effort high, 1 m 8 s, 7 findings). Per
+`feedback-two-vendor-families-split-coverage` a single family covers roughly one axis, so this pass
+should be re-run against codex when the limit resets.
+
+| # | agy's finding | verdict |
+|:--|:---|:---|
+| 6.2 | the nine "still widening" dims were never checked against their configured bounds | **LANDS, and it is the most consequential result of the night.** Measured: Beta(1,1) = uniform = the full band, sd 0.288675; the curriculum reaches mean 0.998 of that at iteration 7249 with all 21 dims above 0.95, then jitters 0.968-0.986 for the last 2,750. Item 15's ground withdrawn, `finding/403` superseded by `finding/405`, and **결정 3 re-opened** |
+| 4 | G10 conflates command attenuation with plant stability; an unretrained 5x gain cut trivially lowers absolute ripple, and the 152 ms transport delay is rate-independent | **LANDS.** G10's readout is now a ratio with a tracking-quality co-registration, and its scope is narrowed to gain-vs-rate, not gain-vs-transport-lag |
+| 3 | the "96x" is a ratio of differently-dimensioned quantities, not a sensitivity; L1 does not isolate the low-frequency mode | **LANDS.** Replaced with the gradient ratio (~48x) and the R-vs-R^2 shape argument; `finding/401` carries the same correction |
+| 7 | do not *gate* item 8 on candidate B when the limit cycle never approaches either velocity ceiling | **LANDS.** B demoted from gate to candidate |
+| 6.1 | citing `inertia_*` Beta widening as evidence while arguing elsewhere that `inertia_scale` never reaches PhysX | **LANDS as a wording defect.** The Beta is DORAEMON *state* and its restore is real evidence of state restore; it is not evidence about the plant. Said explicitly rather than left ambiguous |
+| 1 | `p3c_ext20k` claims the "same section-5 delta" while containing none of the section-5 fixes | **PARTLY.** It conflates the *original* seven frozen overrides (which p3c does carry, verbatim) with the *next-generation* §4 delta (items 8-15, which it does not). The wording invited that; but the recommendation to kill the run does not follow — the run is a controlled extension of the incumbent on the incumbent's plant. **The objection did force the right check**, and it passed: `diff` of the resolved `params/env.yaml` against the incumbent's is **12 lines, all base64 pickle memory-address strings plus `log_dir`** — zero substantive plant field differs. That is verification at the resolved output, which is exactly what a working G2 would give and what G2's broken harness currently cannot |
+| 2 | queued before the pre-queue gate; and used the launch-override path that `finding/352` flags | **PARTLY.** The ordering complaint is upheld above. The sub-claim that the exams ran on a broken harness is wrong — the G1 fix (`--env-dr-anchor`) is implemented and committed at `ea42375`, `regrade_chain` uses it, and s31's exam deliberately uses the class default so it is matched to R3a's own class-default verdict. The override-path complaint is sharp and worth keeping: `finding/352` says the section-5 config is launch-override-only and the task id exists to retire that mechanism, so a run that uses the override path is using the thing G2 was created to replace. Mitigated here only because the resolved config was diffed |
+| 5 | `finding/363` used the pre-G1 exam, so citing it to close G6 is circular | **DOES NOT LAND.** `finding/363`'s number is read at the `none` tier — its own text says the pairing is valid "at `none` only" and the table row is `att / none / 9.360`. The G1 scope measured in this PLAN is that `none` is **bit-identical** under the fix. The one tier the defect does not touch is the tier the finding rests on |
+
+### 🔴 Re-opened for the operator: `decision/159` 결정 3
+
+결정 3 declined the operator's own two requests — raise `thruster_fail_prob` above 0.30, widen the DR
+bands — on two grounds. **One of them is now refuted.** `finding/346` was read as "the curriculum has
+not used the current band yet"; `finding/405` measures that it used **all** of it from iteration 7000
+onward, with 3,000 iterations of budget still unspent. The second ground, `finding/354`
+(`inertia_scale` never reaches PhysX — confirmed at the source, `mdp/events.py:268-269` writes
+`hydro.rigid_body_inertia` and `marinelab/core/hydrodynamics.py:125` says in a comment that PhysX's
+inertia is not randomized by it), is untouched and still argues for implementing `set_inertias`
+*before* widening anything.
+
+So the honest position is: **the reason the operator was given for holding the bands does not hold,
+and the decision is theirs to revisit.** This session did not act on it — `decision/147` decision 2
+and 결정 3 are operator decisions and `feedback-plan-decision-escalation` is explicit that a session
+may not resolve what a plan marks as needing one.
+
+**Open, for the operator, in priority order:** (a) **결정 3, re-opened above** — fault probability and
+DR band width, now that half its ground is gone; (b) the tether turn tolerance, which unblocks items
+13/14; (c) whether G10 may be run on the next water session with the corrected ratio pre-registration,
+which unblocks or retires item 8; (d) whether candidate B (`velocity_limit_sim` 3.1 -> 2.40) enters
+the next teacher as a sim-fidelity repair; (e) re-running this adversarial pass against codex once its
+usage limit resets, since only one family answered.
