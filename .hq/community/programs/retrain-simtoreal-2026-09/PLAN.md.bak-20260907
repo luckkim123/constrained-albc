@@ -265,7 +265,7 @@ The incoming request called the next generation "R3b". **That name is taken and 
 | **R3a** | R1 + beta 1.0->0.0 anneal | **selected, deployed 2026-09-06** | `finding/387`, `decision/390` |
 | **R3b** | R1 + TCN 27-step window | **20/20 failed, closed** | `finding/388` |
 | R4a | R1 + 10k it, beta 0.5 | 20/20 failed | `finding/389` |
-| R4c | R3a recipe + 10k it | **fired 2026-09-06 20:48 (ksm-mac, operator-approved); trained rc 0 23:01, exam 5/5 23:53. Pre-registration NOT MET: 0 of 10 readable none/soft rows, every row a tie, max |delta| 0.079 deg** | `finding/387`, Update 2026-09-07 |
+| R4c | R3a recipe + 10k it | queued, never fired | `finding/387` |
 
 The next thing is a **teacher retrain** — a new Phase-3-class run in the `p3*` series.
 Labelling it R3b would merge it in the ledger with a closed experiment.
@@ -394,14 +394,14 @@ frozen overrides — task id `Isaac-ConstrainedALBC-TRPO-SimToReal-v0`, `finding
 
 | # | knob | R3a plant | next generation | ground |
 |:---|:---|:---|:---|:---|
-| 8 | `decimation` | 4 (50 Hz) | **20 (10 Hz)** — gated on G8 AND on G10 | operator 2026-09-06; R-2; `finding/158` (cmd mode amplitude 100x lower at 10 Hz); **`finding/397` — `delta_scale` was 0.10 in every field run, so `control_hz` and loop gain are perfectly collinear and this row's evidence cannot separate them** |
+| 8 | `decimation` | 4 (50 Hz) | **20 (10 Hz)** — gated on G8 | operator 2026-09-06; R-2; `finding/158` (cmd mode amplitude 100x lower at 10 Hz) |
 | 9 | action delay | `control_delay_steps` (0,3) = 0-60 ms, policy-step granularity | **re-implemented at physics-substep granularity**; 152 ms = 30.4 substeps at `dt` 0.005 | `finding/148`; §10 B-2 |
 | 10 | vertical channels during training | probabilistic via fault DR only | **`m0`,`m3` health pinned 0** | operator proposal 1 |
 | 11 | exogenous `Fz` disturbance | none | **NEW: randomized `Fz` with coupled `My`** | operator 2026-09-06; `finding/154`/`155` rank-1 geometry |
 | 12 | `set_inertias` | absent | **implement**, nominal centered on measured 0.49 | `finding/149` (1.53x, outside the DR band), `finding/354` |
 | 13 | yaw command | `yaw_rate` | **yaw position, unlimited range** | operator 2026-09-06 |
 | 14 | `cumul_yaw` constraint | limit 8 pi, budget 0.01 | **remove ONLY with a deployment-side tether guard** (review `yaw_rate` in the same pass) | operator 2026-09-06; §10 M-4 |
-| 15 | iteration budget | 10k | **raised to 20k and FIRED 2026-09-07** (`p3c_ext20k_s30_r9999`, resume from `model_9999`, one variable) | `finding/403` (9 of 21 dims still widening at 9749->9999, measured), `finding/346` |
+| 15 | iteration budget | 10k | **raise; number set by G4 and the item-8 cost below** | `finding/346` |
 | — | `thrust_coefficient` / `_scale` | 13.0 / (0.5, 2.0) | **HELD** | `decision/147` decision 2 stands |
 | — | `thruster_fail_prob` / `dead_frac` | 0.30 / 0.5 | **HELD** | lever is budget and reachability |
 | — | `enable_thrust_curve` | false | **HELD (deferred)** | `decision/209` item 3; T200 bench does not exist |
@@ -449,91 +449,23 @@ error rather than a raw accumulated angle, or the policy sees an unbounded input
 episode is unchanged, but the policy sees 300 decisions instead of 1500. The 0.62 Hz mode is
 ~16 steps per cycle at 10 Hz, still well resolved.
 
-### 4-bis. The three candidates the field log ranked ABOVE `decimation` 20 (added 2026-09-07)
-
-The 2026-09-06 field log (`03_notes/2026-09-06-r3a-fieldtest-log.md`, section "재학습 하네스")
-closes with a four-candidate table. Item 8 above is candidate **A**, and the field log ranks it
-**third, and only as a fallback**:
-
-| field-log rank | candidate | field log's own words | in this PLAN? |
-|:---|:---|:---|:---|
-| 1 | **B** `velocity_limit_sim` 3.1 -> 2.40 | "**먼저.** 근본 원인, 레이트 불변, R 계열 비교 가능성 유지. sim 충실도 수정이지 제어 설계 변경이 아니다" | **no** |
-| 2 | **C** action-rate cost, L1 `abs(a_t - a_{t-1})` | "**B 와 함께.** 채터를 직접 벌준다" | **no** |
-| 3 | **A** `decimation` 4 -> 20 | "B+C 가 안 닫을 때만. R1~R4 전체와 비교 불가가 된다" | **yes — item 8** |
-| — | **D** deployment-side `delta_scale` normalised by `hz` | "재학습 무관. `control_hz` 를 정직한 노브로 만든다" | **no** (it is what G10 tests) |
-
-**`decision/159`'s seven operator decisions mention none of B, C or D.** Decision 1 argues from
-`finding/158`'s command-amplitude gap alone. So the operator did not choose A over B and C — A was
-the only candidate that reached the decision. That is the drop this section repairs. Dispositions,
-each measured rather than asserted:
-
-**B — open, cheap, and rate-invariant; no recorded reason for the drop.** The sim's PhysX joint
-velocity cap is 3.1 rad/s (`envs/main/config.py:60`, the `arm_joint_vel` constraint comment) while
-the deployed driver caps at **2.398 rad/s** (`OPERATING_VELOCITY=100`, vault `finding/145`
-measured `+2.400 / -2.406`). At `control_hz` 50 the commanded authority `delta_scale x hz` is
-5.0 rad/s, above **both**. The counter-evidence is real but narrower than it looks: `finding/158`
-measured joint saturation duty 0.021% (J1) / 0.000% (J2) and p99 0.29-1.39 rad/s, so neither cap
-bound during the field runs — but run 4 was baseline-only and run 1 a single 15 deg step, so that
-measurement bounds **the observed ripple's mechanism**, not the plant mismatch itself. A policy
-trained where the arm can slew 3.1 rad/s is trained on an arm the robot does not have. Carry it as
-a candidate for the next teacher, not as settled either way.
-
-**C — the naive reading is refuted by arithmetic; the field log's actual proposal is not** (`finding/401`)**.**
-An L2 action-smoothness term already exists and is already live in the deployed teacher:
-`action_smoothness` (`envs/main/mdp/rewards.py:181`, `r_s = mean(da^2) + mean(d2a^2)` on the
-COMMANDED triple) with `k_s = -0.1` (`rewards.py:113`; `params/env.yaml:386` of
-`trpo_p3b_lb200_s30_r2050_260904_163518`). It has never been swept. Measured on that run's own log:
-`Reward/smoothness` = **-0.0100** against `Mean reward` ~= **175**, i.e. **1 part in 17,500**
-(0.0057% of the return). Reaching even 1% of the return needs `k_s` ~= **-17.5**, a 175x raise,
-and it would penalise broadband step-to-step jitter far harder than the 0.65 Hz component, which
-is a small fraction of total `da^2`. **So "raise `k_s`" is not the fix at any plausible magnitude.**
-The field log did not propose that, though — it proposed an **L1** cost, `abs(a_t - a_{t-1})`, and
-at this amplitude L1 and L2 are different instruments: from `finding/158`'s cmd_J2 in-band 0.1600
-at 50 Hz, action amplitude is 0.1600 x 2 pi x 0.6435 / (0.10 x 50) = 0.1294, so
-`da` = 0.1294 x 2 pi x 0.6435 / 50 = **0.01046** — L1 gives 1.05e-2 where L2 gives 1.09e-4, a
-**~96x** sensitivity difference at exactly the ripple amplitude. An L1 term is reachable cfg-side
-with no new plumbing through the existing registry (`ALBCRewardCfg.extra_terms: list[RewardTermCfg]`,
-`rewards.py:120`). The field log also pre-empts the obvious objection: a learned cost is not a
-"hard clamp / latch / rule-based shaping" and sits in the same category as `manipulability_cost`,
-so it is inside constraint 1 rather than outside it. Literature: CAPS (Mysore, Mabsout, Mancuso,
-Saenko, **arXiv:2012.06644**) regularises exactly this and reports that filters "behaved
-inconsistently with NN controllers, requiring the problem to be addressed at the control policy
-level during training"; its authors' stated hypothesis is that **temporal** smoothness alone
-suffices only in well-modelled environments and **spatial** smoothness is what buys robustness
-under domain shift — ALBC's term is temporal-only. Caveat kept honest: ALBC's ripple is a 0.62 Hz
-limit cycle, not the high-frequency chatter CAPS targets, so the mechanism is analogous, not
-identical.
-
-**D — not a retrain item at all, and already carried as G10.** Normalising the deployment-side
-`delta_scale` by `hz` makes `control_hz` an honest knob; G10 is the same intervention run once as
-a discriminating field probe. Nothing further owed here.
-
-**Net effect on item 8.** Item 8 is now gated on G8 *and* G10 (rate vs gain, `finding/397`) *and*
-sits below two untried candidates its own source ranked higher. It should not be frozen until
-G10 reads out and B has been tried, both of which are cheaper than the 5x wall-clock item 8 costs.
-
-### 5. Phase 0 gates — nine are desk work, G10 needs the robot; three are blocking
-
-**Header corrected 2026-09-07.** It read "none needs the robot" while G10, added in the same
-pass, says "robot in the water so operator-gated". G10 is the only robot-gated gate; the other
-nine need no robot.
+### 5. Phase 0 gates — none needs the robot; three are blocking
 
 | gate | what | blocks | record |
 |:---|:---|:---|:---|
-| **G1** | **Fix the Phase 4 exam.** `analysis/dr_config.py` builds DR from the CLASS DEFAULT at three sites and `eval.py:apply_dr_config` replaces `env_cfg.randomization` wholesale, discarding every `env.randomization.*` override. **Measured scope (Update 2026-09-07): on R3a re-graded with the fix, `none` is bit-identical, `soft`/`medium` all 10 cells stay inside the 0.10 deg floor, and only `hard` moves (-0.203 to -1.025). G1 keeps top priority because the verdict-driving deltas are all hard rows, but the re-grade is cheaper than 'everything'.** | everything scored | `finding/391`, `382`, `debugging/319` |
-| **G2** | **Make `test_simtoreal_cfg.py` actually assert.** It exits 0 during Kit startup with no PASS line, so the seven-field freeze is unverified. | the config freeze | `finding/402` (reproduced twice 2026-09-07), `379`, `377` |
+| **G1** | **Fix the Phase 4 exam.** `analysis/dr_config.py` builds DR from the CLASS DEFAULT at three sites and `eval.py:apply_dr_config` replaces `env_cfg.randomization` wholesale, discarding every `env.randomization.*` override. **Every existing Phase 4 number is void.** | everything scored | `finding/391`, `382`, `debugging/319` |
+| **G2** | **Make `test_simtoreal_cfg.py` actually assert.** It exits 0 during Kit startup with no PASS line, so the seven-field freeze is unverified. | the config freeze | `finding/379`, `377` |
 | **G8** | **Re-implement the action delay at physics-substep granularity.** Operator precondition on item 8. | item 8 | §10 B-2, `finding/148` |
 | G3 | Measure the sim's attitude mode directly (free-decay rollout) and compare against the real 0.6233 Hz. | sizing item 12 | `finding/158` |
 | G4 | Re-score `p3b_7500` and R3a on the FIXED exam, with `decimation` as a second axis AND the item-8 wall-clock sized. Confirm `env.decimation` actually reaches `eval.py` — `finding/382` shows Hydra overrides silently failing to. | items 8, 15 | `finding/391`, `362` |
 | G5 | Implement `set_inertias`; re-measure effective `I_pitch` under nonzero `inertia_scale`. | item 12 | `finding/354`, `149` |
-| G6 | **Premise corrected 2026-09-07 — the config already exists and has been scored.** `ls -d .hq/work/p4/*/pair34_d2` returns **13** arms (`inc13w`, `p3b_7500`, `p3b_final`, `sd_inc9998`, `sd_p3b7500`, `sd_r1`, `sd_r2`, `sd_r3a`, `sd_r3a_envdr`, `sd_r3b`, `sd_r4a`, `sd_r4a999`, `sd_r4c`), and `finding/363` (2026-09-05, confidence high) already read it: fault and delay are **non-additive** — the incumbent overshoots its own additive prediction by 7.232 deg and sits at 9.360 deg in the exact deployment condition, while both retrained checkpoints match theirs. `finding/360`, which said the two had never been scored together, is **superseded by `finding/363` of the same day**. What is genuinely left in G6 is only the second half: score the two resonance regimes separately, policy-generated (thrust off) vs externally excited (thrust on) — `finding/158` shows they differ. | the resonance-regime claim only | `finding/404` (supersedes `360`), `363`, `158` |
+| G6 | Add a `pair34_d*` exam config. **Fault and delay have never been scored together** although the robot has both. And score the two resonance regimes separately: policy-generated (thrust off) and externally excited (thrust on) — `finding/158` shows they differ. | claims about "the real robot's condition" | `finding/360`, `158` |
 | G7 | Re-judge `joint1_pos`: the shipped constraint cannot fire (measured angle wraps at +/-2 pi under a 4 pi limit). Same pass as item 14. | constraint set | `finding/378` |
-| G9 | Close the joint->attitude non-monotonicity from the existing bags' FK (J1/J2 phase vs theta2). No robot, no retrain. **Carry the command-content difference as a competing explanation: run 4 (25 Hz) is baseline-only while run 3 (50 Hz) has +/-15 steps, so the inversion is not necessarily kinematic.** | nothing; hygiene | `finding/158`, `397` |
-| **G10** | **Separate rate from loop gain before freezing item 8.** One field run, `control_hz` 50 with `delta_scale` 0.02 = 1.0 rad/s, the same loop gain as 10 Hz at 5x the sensing rate; one launch argument, robot in the water so operator-gated. Low ripple => gain is the knob and item 8's `decimation` 20 (with G8 and the 5x wall-clock) is not needed; high ripple => rate is the knob and item 8 stands. | item 8 | `finding/397`, field log 2026-09-06 "다음 탐침" |
+| G9 | Close the joint->attitude non-monotonicity from the existing bags' FK (J1/J2 phase vs theta2). No robot, no retrain. | nothing; hygiene | `finding/158` |
 
 ### 6. Open-backlog reconciliation
 
-**needs-apply-before-retrain (2, marinelab — count corrected 2026-09-07):** the live ledger, `omx wiki list --status needs-apply-before-retrain`, returns exactly `finding/264` and `finding/352`. `decision/209` is listed below because the plan carries it, but **its actual status is `none`, not `needs-apply-before-retrain`** — so a launch ack that enumerates the ledger will not name it, and the ack on `sd_p3b7500_c3_dr5_beta0_s31` correctly names only the two.
+**needs-apply-before-retrain (3, marinelab):**
 
 | item | disposition |
 |:---|:---|
@@ -546,21 +478,6 @@ nine need no robot.
 `379` (G2), `382` (G4), `391` (G1), `315` (closed by `performance_lb` 200, kept as precedent),
 `360` (G6), vault `145` (items 8/12), `148` (item 9/G8), `149` (item 12), `158` (items 8/9,
 G3/G6/G9).
-
-**Reconciliation against the live ledger, 2026-09-07.** Two of the slugs above do not actually
-hold `needs-experiment`, so a status query will not surface them and the word "carried" is
-doing work the ledger does not support: `finding/346` and `finding/360` both carry
-`status: none` with `confidence: low` and `topic: session-log` in their frontmatter, while
-`346`'s **body** is marked `[CONFIDENCE: HIGH]` and names its evidence artifact
-(`analyze_training.py --deep`, TIER 2 DORAEMON table). That is a frontmatter/body mismatch, not
-a weak claim — the claim itself is verified below under item 15. Fix the frontmatter or the
-status queries keep missing them.
-
-And five slugs carrying `needs-experiment` appear nowhere in this section:
-**`debugging/319`**, **`finding/363`** (now in G6 above), **`finding/395`**, **`finding/396`**
-(now in the Update 2026-09-07 tooling note), **`finding/397`** (now in item 8 and G10). Silent
-drops are defects by this program's own rule; they are named here so the next summary inherits
-them rather than re-losing them.
 
 **needs-experiment, explicitly DEFERRED with reason:**
 
@@ -580,13 +497,13 @@ them rather than re-losing them.
 queued with `omx queue-launch` only and fired by the operator's own shell, per the rule frozen
 at 3.5 and reaffirmed at 3.9.
 
-Order: **G1, G2, G10 (blocking; G8 only if G10 says rate) -> G3, G5, G7, G9 (desk) -> G4 (re-score + size item 8's
+Order: **G1, G2, G8 (blocking) -> G3, G5, G7, G9 (desk) -> G4 (re-score + size item 8's
 wall-clock, settles item 15) -> queue the teacher run -> operator fires -> G6 on the result.**
 
 ### 8. Cost stated plainly
 
 `decision/209` requires this to be said rather than discovered: **a teacher retrain obsoletes
-every student arm distilled from `p3b_7500`** — R1, R2, R3a, R3b, R4a, and R4c, which was fired on 2026-09-06 and returned null (Update 2026-09-07).
+every student arm distilled from `p3b_7500`** — R1, R2, R3a, R3b, R4a, and the unfired R4c.
 That includes the policy deployed to the robot on 2026-09-06. A fresh student ladder has to be
 re-run against the new teacher. `decision/209` calls this "the single largest hidden cost of
 the batch". The 2026-09-06 field result is the strongest reason to keep R3a running on the
@@ -622,7 +539,7 @@ review.** Its findings were then checked against the robot's bags rather than ac
 | B-1 | sim rigid-body inertia compared against a wet measurement | **PARTLY** — sim does model rotational added mass (`finding/149`: DR band 0.267-0.374), so it is not a dry/wet category error; but the `finding/354` `I_pitch` 0.12 branch is provenance-unverified and is **dropped**. Direction now cites `finding/149`'s 1.53x directly |
 | B-2 | 10 Hz quantizes the delay to {0,100,200} ms and never injects 152 ms | **CONFIRMED** — became item 9 and gate G8, the operator's precondition on item 8 |
 | B-2 | 10 Hz loses ~9 deg of phase margin at the mode (45.1 vs 36.4 deg) | **CONFIRMED** as arithmetic and as an omission. Reframed: `finding/158` shows the policy at 25/50 Hz is *driving* the mode, not damping it, so lower gain is right for that regime; phase margin matters in the thrust-on regime where the mode is externally excited. Both regimes are now scored separately (G6) |
-| M-1 | "25 Hz sits at the saturation boundary" is unsupported; falsify at <1% duty | **CONFIRMED, hypothesis KILLED.** Measured duty J1 0.021% / J2 0.000%. The `delta_scale 0.02` discriminator run is withdrawn — there is nothing left to discriminate **[SUPERSEDED 2026-09-07 -- `finding/397`. This withdrawal is filed under the SATURATION hypothesis, which is indeed dead. The mechanism `finding/158` KEPT is loop gain, and under it the probe still discriminates: `delta_scale` was 0.10 in all four field runs, so `control_hz` and `delta_scale x hz` are perfectly collinear and no field measurement can attribute the ripple to rate. Restored as gate G10.]** |
+| M-1 | "25 Hz sits at the saturation boundary" is unsupported; falsify at <1% duty | **CONFIRMED, hypothesis KILLED.** Measured duty J1 0.021% / J2 0.000%. The `delta_scale 0.02` discriminator run is withdrawn — there is nothing left to discriminate |
 | M-2 | Aliasing asserted without showing the 0.33 Hz band power | **CONFIRMED as a gap; claim SURVIVED the check.** Mode band 79.9% of energy vs 0.93% at 0.33 Hz, peak ratio 193x. Now quantified in `finding/158` |
 | M-3 | Literature over-cited | **CONFIRMED**, §9 rewritten; 1901.09732 demoted to background. agy's characterisation of 2209.14887's internal architecture is itself unverified and is not adopted |
 | M-4 | Unlimited yaw + `cumul_yaw` removal risks tether damage | **CONFIRMED** — the vehicle is tethered (session reached 192.168.2.100 with the robot in the water). Item 14 now requires a deployment-side guard and operator confirmation |
@@ -633,205 +550,3 @@ Two defects in this session's own measurement were found in the same pass and ar
 `finding/158`: the first FFT ran on the raw IMU frame because `rotate_imu` was called with three
 of its four arguments and a `try/except` swallowed the `TypeError`; and the saturation
 hypothesis above. `finding/157` is superseded.
-
-## Update 2026-09-07 — ksm-mac review of the 09-06 handoff: 5 of 7 judgments stand, item 8's evidence cannot separate rate from gain
-
-Requested by the operator via `03_notes/2026-09-07-retrain-handoff-to-ksm-mac.md`: review the
-seven judgments against the primary records rather than inherit them, and do not integrate if
-something is wrong. Read: vault `finding/157`/`158`, `03_notes/2026-09-06-r3a-fieldtest-log.md`,
-`2026-09-06-retrain-planning-prompt.md`, this PLAN's `## Update 2026-09-06`, the two
-`pending-launch.json` entries, and the `.hq/work/p4` npz arrays directly.
-`decision/159` had not synced at review time and was NOT read.
-
-### Verdict on the seven
-
-| # | judgment | verdict |
-|:--|:---|:---|
-| 1 | 10 Hz (`decimation` 20) | **stands, better supported than the handoff claims** — see below |
-| 2 | the field log's 0.33 Hz is aliasing | stands; `1/0.3485 = 2.87 s`, band power 79.9% vs 0.93% |
-| 3 | "R3b" is a taken name | stands (`finding/388`) |
-| 4 | every Phase 4 number is void | **overstated** — corrected in the G1 row above |
-| 5 | widening DR bands is not the lever | not independently checked here; `finding/354`/`346` were not re-read |
-| 6 | the saturation hypothesis is dead | the refutation stands; **the attached withdrawal does not** — see G10 |
-| 7 | three open items (G9, G3, G4) | stand; G9's framing needed the note now in its row |
-
-### Judgment 1 — the handoff's own worry resolves in its favour
-
-The handoff asks whether the amplitude comparison is fair when the runs differ in command
-content. From the field log: run 1 (10 Hz) is cmd (0,0) 145 s + roll +15 154 s + roll -15 30 s;
-run 3 (50 Hz) is roll +/-15, 250 s; run 4 (25 Hz) is **baseline only** — the operator stopped it
-before the steps. So runs 1 and 3 are **command-matched**, and they carry the core number:
-cmd_J2 in-band 0.00128 vs 0.1600, a 125x gap with no confound. Run 2 is an independent 10 Hz
-replicate at a LARGER step (+/-30) whose mode-band share is 0.028 against run 1's 0.030.
-The only unmatched run is run 4 — and it is the one G9 is opened on, hence the note added there.
-
-### Judgment 6 — what the withdrawal took with it (`finding/397`, new)
-
-`delta_scale` was **0.10 in every field run** (run 3 banner `0.1000/tick -> 5.000 rad/s`, run 4
-`-> 2.500`, 10 Hz `-> 1.0`). `control_hz` and loop gain are therefore perfectly collinear across
-all four runs and no field measurement can attribute the ripple to one rather than the other.
-`finding/158` states the mechanism as loop gain; item 8 adopts the rate. The one experiment that
-separates them — 50 Hz with `delta_scale` 0.02, the same 1.0 rad/s at 5x the sensing rate, one
-launch argument — was withdrawn under §10 M-1, whose subject is the dead saturation hypothesis.
-The ripple is also strongly non-proportional (2x gain -> 1.28x ripple; 2.5x gain -> 98x), with the
-step falling right where commanded authority crosses the measured 2.40 rad/s joint ceiling.
-Restored as **G10**, and item 8 now waits on it: if gain is the knob, `decimation` 20 is
-unnecessary and G8 plus the 5x wall-clock (12.5 h -> 62.5 h) go with it.
-
-### A second tooling defect (`finding/396`, new)
-
-`p4_score.pairing()` and `tools/compare_arms.py:check_anchor()` compare only the 23 sampled
-`dr_*` arrays, and the npz records **no thrust and no delay field**. Measured: `sd_r3a` and
-`sd_r3a_envdr` — same checkpoint, same seed, one graded at the class default and one at the
-section-5 band — have identical signatures (max abs diff `0.000e+00`, pairDR `0e+00` in all 20
-cells) while the hard tier differs by up to 1.03 deg. `check_anchor()` reasons forward correctly
-but the gate uses the converse, which fails for any plant field the npz does not sample-log.
-Harmless for today's 7-arm table (all graded at the class default); wrong the moment G1's fix is
-applied to some arms and not others, which is the next step. `decision/392` makes anchor identity
-the table-admission rule, so this needs a fix before G4's output enters any table.
-
-### R4c: fired, and null
-
-Fired 2026-09-06 20:48 with operator approval, trained rc 0 at 23:01, exam 5/5 at 23:53. Read
-against its own pre-registration ("readable only on the 8 none/soft rows; R4c beats R3a by more
-than 0.10 deg on a majority"): **0 of 10 readable rows, every one a tie, max |delta| 0.079 deg.**
-The pre-registration named this null at roughly even odds. Raising the budget 1000 -> 10000
-iterations (400 -> 9400 at beta=0) bought nothing measurable. `pending-launch.json` still reads
-`status: pending approval` because the launch went through the wrapper rather than `omx`.
-
-Scoreboard against the distillation teacher `p3b_7500`, recomputed here (R1 `0/1/19` and R4a
-`0/0/20` reproduce the ledger exactly, confirming the reference): R3a `9 tie / 2 better / 9 worse`,
-R4c `11 / 1 / 8`, R4c vs R3a `14 / 3 / 3`. The ledger's R3a `11/2/7` differs by two cells that sit
-**exactly on the 0.10 deg floor** (`healthy/none` +0.099, `healthy_d1/none` +0.100) — the deployed
-arm's verdict rests on cells 0.001 deg from the threshold. Still inside the seed-31 pre-registration
-band of 11 +/- 3.
-
-### Next runs — PLANNED, NOT QUEUED
-
-The operator approved both on 2026-09-07 and then instructed "plan only, do not proceed with
-training". Neither is in `omx queue-launch`; both are written here for the operator to queue and
-fire.
-
-| run | GPU | what | why now |
-|:---|:---|:---|:---|
-| teacher re-grade | 0 | `p3b_7500` through the same exam with `--env-dr-anchor` (~1 h) | half of G4. Every student row today compares a student to a teacher graded on a different plant; this is the only thing that makes the table valid, and it survives the teacher retrain |
-| `s31` | 1 | `sd_p3b7500_c3_dr5_beta0_s31`, already queued 2026-09-06T11:12 UTC | R3a reproducibility; pre-registered at class level (tie rows within 11 +/- 3) |
-
-Blocking gates are unchanged and none of this fires before them. Open and NOT carried: `decision/159`
-(not yet synced to the vault; its slug contains `r3b`, which judgment 3 forbids — confirm the title
-when it lands).
-
-
-## Update 2026-09-07 (night) — `decision/159` read; four plan defects repaired; two runs fired under blanket operator approval
-
-Operator instruction, 2026-09-07 ~01:05 KST, verbatim in intent: review the plan thoroughly against
-the literature, the prior results and the marinelab records; **fix it if there are problems and
-otherwise proceed with training**; do not ask for approval — "지금 미리 전부 발사 하는거 승인";
-and consider running in parallel on `ksm-nas` to save time. This section records what that produced.
-
-### What `decision/159` changed once it was readable
-
-It synced at **01:00:05** on 2026-09-07 (9,442 bytes) — the Update 2026-09-07 above was written
-without it and said so. Reading it does not overturn that review; it sharpens two entries and adds
-one obligation.
-
-- **Judgment 3 is now closed by the operator's own words.** Decision 0 states that `R1..R4c` are
-  *student* arms off `p3b_7500`, that R3b is already run and closed 20/20 (`finding/388`), and that
-  the next generation is therefore a new `p3*` **teacher** run. The `r3b` in `decision/159`'s own
-  slug is a negative mention, not a violation.
-- **Section 4-bis above is strengthened, not weakened.** None of the seven decisions mentions the
-  action-rate cost, `velocity_limit_sim`, or `delta_scale` normalisation. The operator was shown
-  candidate A alone.
-- **Decision 1 predates `finding/397`.** It reasons from `finding/158`'s command-amplitude gap, which
-  `finding/397` then showed cannot separate rate from loop gain. That is an escalation to the
-  operator, not something this session may reinterpret — item 8 stays gated on G10.
-- **Decision 5 makes a cross-family adversarial pass a PRE-QUEUE gate.** This session is Claude and so
-  is the review above; it does **not** satisfy that gate. Flagged as unmet below.
-- **Body defect in the record itself.** In `decision/159`'s "감수하는 비용" section, three wrapped
-  continuation lines have lost their first character: "가장 큰 / **은** 비용" (숨), "사다리를 /
-  **시** 돌려야" (다), "`m3` 를 / **리**하거나" (수). The title is also fenced in a code block rather
-  than an H1, unlike `finding/158`. The vault store is append-only, so this needs a comment or a
-  supersede — the operator's call, not repaired here.
-
-### `ksm-nas` — asked again, answered again: it is not a training resource
-
-The operator asked to consider parallelising there. `finding/394` measured it on 2026-09-06 and this
-session reproduced the measurement from ksm-mac at 01:10 on 2026-09-07: `ping 192.168.10.34` 100%
-loss and no ARP entry although this Mac sits on that same /24 as 192.168.10.17; `ssh` port 9931
-connection refused; and `tailscale status` lists ksm-mac, kim-macbookair, ksm-ubuntu, ksm-window-mini
-(offline), z-fold8 and a mullvad exit node — no `ksm-nas`. **Parallelism available tonight is
-ksm-ubuntu's two GPUs and nothing else**, which is what was used.
-
-### Fired, 2026-09-07, under the operator's blanket approval
-
-| run | GPU | what | ground | ETA |
-|:---|:---|:---|:---|:---|
-| `p3c_ext20k_s30_r9999` | 0 | **item 15**: resume the teacher from `model_9999` for +10,001 iterations, 10k -> **20k**. One variable: iterations. Same section-5 delta, same `performance_lb` 200, same seed 30. Control is `model_9999` of the same run | measured below | ~11:20 KST |
-| `sd_p3b7500_c3_dr5_beta0_s31` | 1 | R3a second realisation at seed 31, queued 2026-09-06T11:12 UTC and never fired | `finding/389`; the deployed arm's verdict rests on two cells 0.001 deg from the threshold | trained 01:25, exam ~02:50 |
-| `regrade_chain` (4 arms) | 1, chained | R1, R2, R4a, R4c re-graded with `--env-dr-anchor` | `decision/392` + `finding/396`: a table mixing anchored and class-default arms is inadmissible and the npz signature cannot detect the mix | ~08:45 |
-
-Launch-gate ack: the live ledger (`omx wiki list --status needs-apply-before-retrain`) returns
-exactly `finding/264` and `finding/352`, and the s31 `pending-launch.json` acknowledges exactly
-those two. Resume verified rather than assumed, per
-`feedback-resume-flag-overwritten-by-cli-default`: the log opens at `Learning iteration 9999/20000`
-and loads `RESUME_p3b_9999/model_9999.pt`, and the DORAEMON curriculum restored rather than
-restarting cold — `DR/buoyancy_force_mean` 76.02-76.11 against the incumbent's closing 76.37-76.45,
-`inertia_*` 0.1175 against 0.1182, `payload_mass` 1.614 against 1.625, i.e. fresh draws from the
-same widened Betas, not the initial narrow band. Load path confirmed in code at
-`envs/_core/runners/on_policy_doraemon_runner.py:117-119`. First readings: iteration 10117,
-`Mean reward` 210-216, above `performance_lb` 200, so the curriculum gate is open.
-
-**Item 15's ground, measured directly rather than cited.** `curriculum_trajectory.json` of
-`trpo_p3b_lb200_s30_r2050_260904_163518` has 32 records from iter 2249 to 9999. Between the last
-two (9749 -> 9999) **nine of the 21 DR dimensions still had a widening Beta sd**:
-`added_mass_scale` +0.0068, `water_density` +0.0098, `cog_offset_z` +0.0063, `cog_offset_y` +0.0025,
-`fault_severity` +0.0012, plus `cob_offset_y`, `buoy_volume_scale`, `ocean_current_strength`,
-`payload_mass`. `finding/346` said five; the direct measurement says nine. Either way **the
-curriculum had not converged when the budget ran out**, which is exactly what `decision/147`
-decision 2 and `decision/159` 결정 3 name as the lever instead of widening the bands.
-
-### G2 reproduced live — still open, and its docstring's claimed fix does not hold
-
-`test_simtoreal_cfg.py` was run twice tonight on an otherwise idle box, once via
-`/isaac-sim/python.sh` (its documented entry point) and once via `/workspace/isaaclab/isaaclab.sh -p`
-(the entry point `eval.py` and every training script use). **Both died during Kit startup with no
-PASS line, no traceback and no assertion output**, logs ending at the `gpu.foundation.plugin`
-warnings at 3,246 and 4,224 bytes. The file's own docstring theorises that
-`AppLauncher.add_app_launcher_args()` was the missing piece and it is already used, so that
-hypothesis is refuted: the failure survives it and survives the entry-point change. The body of the
-test is sound — real asserts, an explicit vacuity guard (`assert base`), an exact-difference-set
-check and a printed PASS line — so what is broken is the harness, not the check. **G2 stays
-blocking and now has a reproduction.**
-
-Note for whoever fixes it: G2 gates the **task-id** path (`Isaac-ConstrainedALBC-TRPO-SimToReal-v0`,
-`ALBCSimToRealEnvCfg`). Tonight's teacher run deliberately does **not** use it — `p3c_extend.sh`
-reproduces the incumbent's launch form byte for byte, `--task Isaac-ConstrainedALBC-TRPO-v0` plus
-the same six explicit Hydra overrides that produced `model_9999`. So G2 does not gate that run, and
-this is not a way around G2 for anything that does use the task id.
-
-### What was NOT launched, and why — the plan's own teacher is not launchable tonight
-
-Of the eight rows in the section-5 delta, **two are blocked on the operator or the robot and four
-are unwritten code**:
-
-| item | state |
-|:---|:---|
-| 8 `decimation` 20 | blocked — G10 needs the robot in the water and is operator-gated; `finding/397` says the field evidence cannot separate rate from gain |
-| 9 substep-granularity delay | **unwritten.** The delay is applied once per policy step at `albc_env.py:761` (`_pre_physics_step`), so its unit is 20 ms. Moving it to `_apply_action` (once per `dt` = 5 ms substep) is the fix, but `_actions` is deliberately overwritten there so history and `thruster_energy` observe the applied stream (`albc_env.py:752-760`); the move changes what the observation sees unless a separate applied buffer is carried. That is a design change, not a rename |
-| 10 verticals pinned dead | **unwritten.** `thruster_fixed_health` exists but its docstring says eval-only (`config.py:389`) and §4 forbids repurposing it; this needs a new atom in the shape of `thruster_dead_frac` |
-| 11 exogenous `Fz` with coupled `My` | **unwritten** |
-| 12 `set_inertias` | **unwritten, and the gap is confirmed at the source.** `mdp/events.py:268-269` writes `hydro.rigid_body_inertia`, and `marinelab/core/hydrodynamics.py:123-127` states in a comment that this feeds the Coriolis term only: "DR randomizes `_rigid_body_inertia` (hydro model uncertainty), but PhysX's actual inertia is NOT randomized by `inertia_scale` (only by `body_mass_scale` via `set_masses`)". `finding/354` stands |
-| 13, 14 yaw position / `cumul_yaw` | blocked — `decision/159` 결정 4 marks the tether a physical hazard requiring operator confirmation of the allowed turn count |
-| 15 iteration budget | **fired tonight** |
-
-Writing four plant features unreviewed and spending 12.5 h of GPU on them is the failure mode
-`feedback-plan-decision-escalation` records; and `decision/159` 결정 5 requires a cross-family
-adversarial pass before anything is queued, which a Claude session cannot supply for its own work.
-So the night went to the one item that needed no new code, had a verified ground, and preserves the
-control — item 15 — plus the two exams that make the existing table admissible.
-
-**Open, for the operator:** (a) the tether turn tolerance, which unblocks items 13/14; (b) whether
-G10 may be run on the next water session, which unblocks or retires item 8; (c) whether candidate B
-(`velocity_limit_sim` 3.1 -> 2.40) enters the next teacher, since the field log ranked it first and
-it never reached decision; (d) the cross-family adversarial pass owed on this section before any
-further queue.

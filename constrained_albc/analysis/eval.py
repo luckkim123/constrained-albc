@@ -262,6 +262,17 @@ sp_static.add_argument(
          "policy networks (different RNG consumption order).",
 )
 sp_static.add_argument(
+    "--env-dr-anchor",
+    action="store_true",
+    default=False,
+    help="Anchor the DR interpolation on the run's OWN env cfg instead of the bare "
+         "DomainRandomizationCfg class default. Without it apply_dr_config replaces "
+         "env_cfg.randomization wholesale, so every `env.randomization.*` Hydra "
+         "override is discarded -- the section-5 band thrust_coefficient_scale="
+         "(0.5,2.0) has been graded at the class default (0.7,1.3) in every exam to "
+         "date. OFF by default: results stay comparable with prior exams unless passed.",
+)
+sp_static.add_argument(
     "--extreme-ood",
     action="store_true",
     default=False,
@@ -482,6 +493,9 @@ TRAJECTORY_N_SEGMENTS = 31
 
 def apply_dr_config(env_cfg, scale: float) -> None:
     """Apply interpolated DR config to the environment config."""
+    # No-op unless --env-dr-anchor. Must precede the overwrite below: this is the first
+    # call in every mode, so it is the only point that still sees the pristine plant.
+    _dr_config_module.capture_env_dr_anchor(env_cfg)
     env_cfg.randomization = build_dr_config(scale)
     if _dr_config_module._DETERMINISTIC_DR:
         _collapse_dr_to_midpoint(env_cfg.randomization)
@@ -1313,6 +1327,17 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         DR_SCALE = {**DR_SCALE, "ood": 1.0}  # sentinel for display (DR% label); not used to build the cfg
         DR_COLORS["ood"] = "#FF00FF"  # magenta for OOD
         print("\n[INFO] OOD side-by-side: appended 'ood' level (DORAEMON-derived OOD bounds).\n")
+
+    # ---- env-dr-anchor: grade against the run's own plant, not the class default ----
+    # Set before the first apply_dr_config() (below, at env creation), which is where
+    # dr_config latches the anchor.
+    if args_cli.env_dr_anchor:
+        _dr_config_module._USE_ENV_DR_ANCHOR = True
+        print("[INFO] env-dr-anchor: hard anchor comes from the run's env cfg -- results "
+              "are NOT comparable with exams graded at the DomainRandomizationCfg default")
+        # Latch HERE, not at the first apply_dr_config: load_doraemon_dr runs in between
+        # and builds _DORAEMON_FULL_DR, which needs the anchor for its non-DORAEMON fields.
+        _dr_config_module.capture_env_dr_anchor(env_cfg)
 
     # ---- Deterministic DR: disable DORAEMON + collapse tuple DR ranges to midpoint ----
     # Applied AFTER env_cfg is built but BEFORE gym.make(...) so env init uses fixed values.

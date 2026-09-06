@@ -5,7 +5,7 @@
 - topic: pattern
 - confidence: high · status: needs-experiment
 - verified: measured · keywords: phase4, doraemon, dr, eval, confound, inc13w, pairDR
-- summary: inc13w == inc13 (identical md5, identical dr_ ranges, identical scorer tables): thrust_coefficient_scale is inert in eval.py static because --doraemon-dr defaults True and auto-loads the evaluated checkpoints own learned DR as the hard anchor, replacing the static cfg the Hydra override touched. No arm can fix it; --doraemon-dr-from or --no-doraemon-dr can, and per-env pairing additionally needs --deterministic-dr. The none rows stay valid.
+- summary: CORRECTED 2026-09-06 by finding/391: the inc13w==inc13 measurement STANDS, but the stated remedy does NOT. eval.py had NO flag that fixed the band. Option C (--no-doraemon-dr) only swaps the hard anchor between _DORAEMON_FULL_DR and a bare DomainRandomizationCfg class default; neither is the run own plant, so the section-5 thrust band could never apply by that route (finding/355 measured exactly that byte-identical result). The band became reachable only when --env-dr-anchor was added on 2026-09-06. Options A and B are unaffected.
 
 # finding/318's fix was a no-op: `inc13w` is byte-identical to `inc13`
 
@@ -87,3 +87,4 @@ overrides** — a strictly worse confound than the one `finding/318` chased. Tho
 configs (~3.3 h GPU) are candidate-only descriptive data unless a matched incumbent
 EXTRA arm is added.
 ## Comments
+- (2026-09-06, session) 정정: option C mechanism refuted by finding/391 (measured); the title asserted a fix that does not exist
