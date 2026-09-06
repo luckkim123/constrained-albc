@@ -73,6 +73,7 @@ def _install_stubs() -> None:
         if name not in sys.modules:
             stub(name)
     sys.modules[f"{pkg}.algorithms"].ConstraintTRPO = type("ConstraintTRPO", (), {})
+    sys.modules[f"{pkg}.algorithms"].ConstraintLagrangian = type("ConstraintLagrangian", (), {})
     sys.modules[f"{pkg}.encoder"].ActorCriticAsymConstrained = type("ActorCriticAsymConstrained", (), {})
     sys.modules[f"{pkg}.encoder"].ActorCriticEncoder = type("ActorCriticEncoder", (), {})
     sys.modules[f"{pkg}.runners"].ConstraintEncoderRunner = type("ConstraintEncoderRunner", (), {})

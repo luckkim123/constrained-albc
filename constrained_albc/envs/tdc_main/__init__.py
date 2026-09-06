@@ -21,12 +21,17 @@ env class, not a config field).
 Registered tasks:
     Isaac-ConstrainedALBC-Main-TDC-v0: ALBCTDCEnv (TDC = TDE + PD, no RL training required)
     Isaac-ConstrainedALBC-Main-PID-v0: ALBCPIDEnv (PD only, no TDE, no RL training required)
+    Isaac-ConstrainedALBC-Main-ATDC-v0: ALBCTDCEnv + online design-inertia adaptation
+        (paper-ablation-5000 arm N2; no RL training required)
+    Isaac-ConstrainedALBC-Main-ResidualTDC-SimToReal-v0: TDC + learned residual torque
+        (paper-ablation-5000 arm N4; this one DOES train, on the section-5 plant)
 """
 
 import gymnasium as gym
 
-from .config import ALBCTDCEnvCfg
+from .config import ALBCATDCEnvCfg, ALBCResidualTDCEnvCfg, ALBCTDCEnvCfg
 from .pid_env import ALBCPIDEnv
+from .residual_tdc_env import ALBCResidualTDCEnv
 from .tdc_env import ALBCTDCEnv
 
 ##
@@ -57,6 +62,38 @@ gym.register(
         "env_cfg_entry_point": f"{__name__}.config:ALBCTDCEnvCfg",
         "rsl_rl_cfg_entry_point": (
             "constrained_albc.envs.main.agents.rsl_rl_ppo_cfg:ALBCTRPORunnerCfg"
+        ),
+    },
+)
+
+# Arm N2 (paper-ablation-5000 §3-2, §4-2): ATDC = the same TDC law with the design
+# inertia adapted online instead of fixed. Same env class and same cfg as the TDC
+# arm except `tdc_controller.adaptive_m_hat`, so a TDC-vs-ATDC comparison isolates
+# the adaptation law. Evaluation-only, like its two siblings above.
+gym.register(
+    id="Isaac-ConstrainedALBC-Main-ATDC-v0",
+    entry_point="constrained_albc.envs.tdc_main:ALBCTDCEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.config:ALBCATDCEnvCfg",
+        "rsl_rl_cfg_entry_point": (
+            "constrained_albc.envs.main.agents.rsl_rl_ppo_cfg:ALBCTRPORunnerCfg"
+        ),
+    },
+)
+
+# Arm N4 (paper-ablation-5000 §3-2, §4-4): the only task in this package that trains.
+# TDC keeps authority and the policy adds a correction torque; the id carries the
+# SimToReal suffix because, unlike its evaluation-only siblings above, this arm has a
+# plant baked into its cfg and anchor (B) requires that to be the section-5 one.
+gym.register(
+    id="Isaac-ConstrainedALBC-Main-ResidualTDC-SimToReal-v0",
+    entry_point="constrained_albc.envs.tdc_main:ALBCResidualTDCEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.config:ALBCResidualTDCEnvCfg",
+        "rsl_rl_cfg_entry_point": (
+            "constrained_albc.envs.main.agents.ablation_cfgs:ALBCResidualTDCRunnerCfg"
         ),
     },
 )

@@ -126,7 +126,9 @@ class ALBCTDCEnv(ALBCEnv):
             [self._ang_cmd[:, 0], self._ang_cmd[:, 1], torch.zeros_like(roll)],
             dim=-1,
         )
-        p_ee_desired = self._tdc.compute(roll, pitch, ang_vel_b, target_euler)
+        p_ee_desired = self._tdc.compute(
+            roll, pitch, ang_vel_b, target_euler, residual_tau=self._residual_tau()
+        )
 
         # IK starting point is the accumulated joint target (the arm's
         # commanded trajectory), matching the full_dof glue. Using
@@ -171,6 +173,19 @@ class ALBCTDCEnv(ALBCEnv):
         )
 
         return torch.cat([arm_delta_action, thruster_cmds], dim=-1)
+
+    def _residual_tau(self) -> torch.Tensor | None:
+        """Additive arm torque to fold into the TDC law, or None for none.
+
+        None on this class and on `ALBCPIDEnv`: they are the pure classical arms and
+        `TDCController.compute` skips the term entirely when it is None, so this seam
+        leaves their output bit-identical. `ALBCResidualTDCEnv` (arm N4) overrides it
+        to return the policy's action, which is the whole of that arm.
+
+        A method rather than an attribute so the override cannot be defeated by
+        ordering -- it is read at the moment the torque is assembled.
+        """
+        return None
 
     # ------------------------------------------------------------------
     # Reset: propagate post-DR buoyancy force to the TDC controller.

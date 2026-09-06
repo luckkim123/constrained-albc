@@ -474,15 +474,7 @@ class ConstraintTRPO:
             ratio = torch.exp(log_prob - old_lp)
             reward_surr = -(adv * ratio).mean()
             cost_surrs = inv_one_minus_gamma * (ratio.unsqueeze(-1) * cost_advantages_flat).mean(dim=0)
-            margin = barrier_base - cost_surrs
-            # clamp(min=1e-8): numerical guard against log(<=0)=NaN when a line-search
-            # candidate (ratio != 1) momentarily drives margin<=0. Side effect: the barrier
-            # saturates at -log(1e-8)/barrier_t ~= 0.184 (barrier_t=100), NOT +inf, so a
-            # reward gain above that cap can cross the constraint boundary. Acceptable:
-            # NORBC is soft/near-satisfaction by design and the adaptive threshold re-anchors
-            # on the raw cost return each iteration. This clamp is not in NORBC Eq. (9)/(10).
-            barrier = -torch.log(margin.clamp(min=1e-8)).sum() / self._barrier_t
-            self._last_barrier_penalty = barrier.item()
+            barrier = self._constraint_penalty(cost_surrs, barrier_base)
             mean_entropy = self.policy.entropy.mean()
             self._last_mean_entropy = mean_entropy.item()
             # Entropy bonus: minimize -coef*H to maximize entropy.
@@ -520,6 +512,7 @@ class ConstraintTRPO:
         )
 
         # Store monitoring metrics
+        self._last_mean_cost_returns = mean_cost_returns.detach()
         self._last_violations = violations
         self._last_line_search_success = float(ls_success)
 
@@ -529,6 +522,32 @@ class ConstraintTRPO:
     # ==================================================================
     # Internal
     # ==================================================================
+
+    def _constraint_penalty(
+        self, cost_surrs: torch.Tensor, barrier_base: torch.Tensor
+    ) -> torch.Tensor:
+        """IPO log-barrier on the per-constraint cost surrogates.
+
+        Split out of `surrogate()` (2026-09-07) so a subclass can substitute a different
+        constraint mechanism without copying the ~70-line surrogate around it; the body
+        is unchanged, so every IPO arm is byte-identical to before the split. The one
+        subclass today is `ConstraintLagrangian` (paper-ablation-5000 arm N1), which
+        needs the comparison "IPO vs Lagrangian" to differ in exactly this term and
+        nothing else.
+
+        Returned value is ADDED to the minimized surrogate, so a larger return means a
+        stronger push away from the constraint boundary.
+        """
+        margin = barrier_base - cost_surrs
+        # clamp(min=1e-8): numerical guard against log(<=0)=NaN when a line-search
+        # candidate (ratio != 1) momentarily drives margin<=0. Side effect: the barrier
+        # saturates at -log(1e-8)/barrier_t ~= 0.184 (barrier_t=100), NOT +inf, so a
+        # reward gain above that cap can cross the constraint boundary. Acceptable:
+        # NORBC is soft/near-satisfaction by design and the adaptive threshold re-anchors
+        # on the raw cost return each iteration. This clamp is not in NORBC Eq. (9)/(10).
+        barrier = -torch.log(margin.clamp(min=1e-8)).sum() / self._barrier_t
+        self._last_barrier_penalty = barrier.item()
+        return barrier
 
     def _trpo_step(
         self,

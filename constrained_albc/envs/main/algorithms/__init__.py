@@ -5,6 +5,7 @@
 
 """Algorithms for constrained ALBC environments."""
 
+from .constraint_lagrangian import ConstraintLagrangian
 from .constraint_trpo import ConstraintTRPO
 
-__all__ = ["ConstraintTRPO"]
+__all__ = ["ConstraintLagrangian", "ConstraintTRPO"]

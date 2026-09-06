@@ -37,6 +37,7 @@ from .config import (
     DoraemonCfg,
     FaultInjectionCfg,
 )
+from .mdp.constraints import ALBCConstraintCfg
 
 
 @configclass
@@ -59,3 +60,24 @@ class ALBCSimToRealEnvCfg(ALBCEnvCfg):
     doraemon: DoraemonCfg = DoraemonCfg(
         enable=True, kl_ub=0.12, performance_lb=200.0, step_interval=250
     )
+
+
+@configclass
+class ALBCSimToRealNoConstraintEnvCfg(ALBCSimToRealEnvCfg):
+    """Section-5 delta plant WITH an empty constraint list.
+
+    The paper-ablation-5000 comparison suite needs both halves of a 2x2: the plant
+    (old / section-5) crossed with the constraint list (K=10 / empty). Three of the
+    seven training arms sit in the empty-constraint cell -- TRPO-NoIPO, no-both, and
+    PPO-Enc -- and on anchor (B) all of them train on the section-5 plant, so they
+    need a cfg that is `ALBCSimToRealEnvCfg` and `ALBCNoConstraintEnvCfg` at once.
+
+    Composed by inheritance rather than by adding a third variant of the seven-field
+    block: the plant values live in exactly one place (the parent), so an arm cannot
+    drift onto a half-applied plant, which is what `finding/352` asked for. The
+    emptying is the same one line `ALBCNoConstraintEnvCfg` applies to `ALBCEnvCfg`,
+    and it means the same thing here -- ConstraintEncoderRunner's auto-sync sees
+    num_constraints=0 and no-ops the IPO barrier and the cost critic.
+    """
+
+    constraints: ALBCConstraintCfg = ALBCConstraintCfg(terms=[])

@@ -67,6 +67,22 @@ class TDCControllerCfg:
     # Joint rate limiting (rad/s)
     max_joint_velocity: float = 2.5
 
+    # --- ATDC: gradient adaptation of the design inertia (arm N2) ---------
+    # OFF by default. With `adaptive_m_hat=False` not one tensor op below runs and
+    # `_m_hat` never leaves its nominal value, so the TDC and PID arms stay
+    # bit-identical to their pre-ATDC selves.
+    adaptive_m_hat: bool = False
+    m_hat_adapt_gain: float = 0.02
+    """Adaptation rate gamma. UNTUNED starting point, not a measured value --
+    PLAN.md paper-ablation-5000 §5/§8-R-3 puts the classical arms through a declared
+    gain grid, and this constant is an input to that search, not a result of it."""
+    m_hat_bounds: tuple[float, float] = (0.05, 0.60)
+    """Hard clamp on the adapted inertia, roughly 1/3x to 4x the nominal (0.15, 0.16).
+    Pure gradient adaptation has no leakage term, so a persistent steady-state error
+    drives m_hat monotonically to a bound; the clamp is what makes that bounded rather
+    than divergent. A run that sits at a bound is a finding about the gain, not a
+    working controller."""
+
     # Link lengths from URDF (used by kinematics)
     link1_length: float = ALBC_LINK1_LENGTH
     link2_length: float = ALBC_LINK2_LENGTH
@@ -115,6 +131,13 @@ class TDCController:
         # Design inertia — per-env (num_envs, 2) for future encoder adaptation
         m_hat_base = torch.tensor(cfg.m_hat, device=device, dtype=torch.float32)
         self._m_hat = m_hat_base.unsqueeze(0).expand(num_envs, -1).clone()
+        # Nominal, kept so reset() can restore it the way it already restores kp/kd.
+        self._m_hat_default = m_hat_base.clone()
+
+        # ATDC adaptation (arm N2). Read once here so the hot loop tests a bool.
+        self._adaptive_m_hat = bool(getattr(cfg, "adaptive_m_hat", False))
+        self._m_hat_adapt_gain = float(getattr(cfg, "m_hat_adapt_gain", 0.0))
+        self._m_hat_lo, self._m_hat_hi = getattr(cfg, "m_hat_bounds", (0.05, 0.60))
 
         # PD gains — per-env (num_envs, 2) for adaptive gain integration
         self._kp_default = cfg.kp
@@ -144,6 +167,7 @@ class TDCController:
         # --- Diagnostic buffers (read-only, populated by compute()) ---
         self._u_hat = torch.zeros(num_envs, 2, device=device)
         self._m_hat_u_pd = torch.zeros(num_envs, 2, device=device)
+        self._u_pd = torch.zeros(num_envs, 2, device=device)
         self._delta_T_b = torch.zeros(num_envs, 2, device=device)
         self._u_hat_prev = torch.zeros(num_envs, 2, device=device)
         self._epsilon_approx = torch.zeros(num_envs, 2, device=device)
@@ -165,6 +189,7 @@ class TDCController:
             self._T_b_prev,
             self._u_hat,
             self._m_hat_u_pd,
+            self._u_pd,
             self._delta_T_b,
             self._u_hat_prev,
             self._epsilon_approx,
@@ -294,6 +319,13 @@ class TDCController:
             self._m_hat_u_pd.copy_(m_hat_u_pd)
         else:
             m_hat_u_pd = self._compute_pd_torque(roll, pitch, nu, target_euler)
+            # Step 3b: ATDC adapts the design inertia from this step's tracking
+            # error. Deliberately AFTER the torque above, so the new estimate acts
+            # on the next control step -- a one-step delay is what makes this a
+            # discrete adaptation law rather than an implicit solve, and it keeps
+            # the non-adaptive path byte-identical (the branch simply never runs).
+            if self._adaptive_m_hat:
+                self._adapt_m_hat(roll, pitch, target_euler)
 
         # Step 4: TDE compensation torque
         tde_term = self._compute_tde_torque(T_b)
@@ -328,6 +360,11 @@ class TDCController:
         # Reset PD gains to defaults for reset environments
         self._kp[env_ids] = self._kp_default
         self._kd[env_ids] = self._kd_default
+        # Same for the design inertia. Without this an ATDC episode would inherit
+        # the previous episode's adapted estimate on the same env slot, which makes
+        # the arm's result depend on reset order. A no-op for every non-adaptive
+        # arm, where _m_hat never leaves _m_hat_default.
+        self._m_hat[env_ids] = self._m_hat_default
 
     # ------------------------------------------------------------------
     # Internal: Physics computations
@@ -428,7 +465,47 @@ class TDCController:
         u_pd = self._kd * e_dot + self._kp * e
         m_hat_u_pd = self._m_hat * u_pd
         self._m_hat_u_pd.copy_(m_hat_u_pd)
+        # Stashed for the ATDC adaptation law, which needs u_pd itself and not the
+        # inertia-scaled torque. Written on every call so the two never disagree;
+        # recomputing it in the adaptation block instead would duplicate this line.
+        self._u_pd.copy_(u_pd)
         return m_hat_u_pd
+
+    def _adapt_m_hat(
+        self,
+        roll: torch.Tensor,
+        pitch: torch.Tensor,
+        target_euler: torch.Tensor,
+    ) -> None:
+        """ATDC: one gradient step on the design inertia (arm N2).
+
+        The arm torque this controller asks for is ``tau = m_hat * u_pd`` (plus TDE),
+        so ``d tau_i / d m_hat_i = u_pd_i``. Taking a descent step on the squared
+        tracking error against that sensitivity gives
+
+            m_hat <- clamp(m_hat + gamma * dt * (e * u_pd), lo, hi)
+
+        which is the gradient (MIT-rule) form: when the error and the control effort
+        point the same way the controller is pushing correctly but not hard enough,
+        so the estimated inertia rises and the commanded torque with it. Expanded,
+        ``e * u_pd = kp * e^2 + kd * e * e_dot`` -- the first term grows the estimate
+        while an error persists, the second shrinks it while the error is closing, so
+        the law settles instead of ratcheting on a well-damped response.
+
+        Scope note for the paper: this is gradient adaptation of the TDC design
+        inertia, which is the mechanism the arm exists to compare against (PLAN.md
+        §3-2 N2, References [5] Baek et al. 2018). The exact law above was derived
+        from this controller's own torque expression, NOT transcribed from that
+        paper -- nobody has checked it against the published equations. Say that in
+        the paper, or check it first; do not cite the law as theirs.
+
+        Bounds, not a leakage term, keep it finite -- see `m_hat_bounds`.
+        """
+        e = torch.stack(
+            [target_euler[:, 0] - roll, target_euler[:, 1] - pitch], dim=-1
+        )
+        self._m_hat.add_(self._m_hat_adapt_gain * self.dt * e * self._u_pd)
+        self._m_hat.clamp_(self._m_hat_lo, self._m_hat_hi)
 
     def _compute_tde_torque(self, T_b: torch.Tensor) -> torch.Tensor:
         """Compute TDE compensation torque.
