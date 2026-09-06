@@ -265,6 +265,12 @@ def check_anchor(manifest: dict, levels: list[str]) -> dict:
         verdict[lvl] = {"ok": (not differing) and not vacuous,
                         "vacuous": vacuous, "reference": ref_name,
                         "n_fields": n_fields, "n_compared": len(compared),
+                        # The NAMES, not just the count: main() has to check that
+                        # every arm contributing a NUMBER to the table was one of
+                        # the arms actually compared. Two matching arms plus a
+                        # third with no npz used to read as a clean pass over a
+                        # three-row table.
+                        "compared": compared,
                         "differing": differing, "missing": missing,
                         "blind_to": sorted(blind) if compared else sorted(_PLANT_SCALARS)}
     return verdict
@@ -320,14 +326,18 @@ def _anchor_caveat(anchor: dict) -> str:
     # What "VERIFIED" does not cover. Without this the sentence above reads as a
     # same-exam guarantee, which it is not: an anchor difference confined to a
     # field the npz never sampled is invisible here (finding/396).
-    blind = sorted({k for v in anchor.values() for k in v.get("blind_to", ())})
-    if blind and ok:
+    #
+    # Reported PER TIER. A union over every tier would attach one tier's blindness
+    # to another tier that did log the field -- a false qualifier is as wrong as a
+    # missing one, and this sentence goes into the paper.
+    blind_by_tier = {lvl: v["blind_to"] for lvl, v in ok.items() if v.get("blind_to")}
+    if blind_by_tier:
         parts.append(
-            "Verified ONLY over the sample-logged DR axes; %s %s not recorded in "
-            "the npz, so an anchor difference confined to %s would not be detected "
-            "(finding/396)"
-            % (", ".join(blind), "is" if len(blind) == 1 else "are",
-               "it" if len(blind) == 1 else "them"))
+            "Verified ONLY over the sample-logged DR axes at " + ", ".join(
+                "%s (%s not recorded in the npz)" % (lvl, ", ".join(b))
+                for lvl, b in blind_by_tier.items())
+            + " -- an anchor difference confined to those fields would not be "
+              "detected there (finding/396)")
     return "; ".join(parts) + "."
 
 
@@ -446,7 +456,11 @@ def build_paired_figure(manifest: dict, levels: list[str], baseline: str, level:
                      fontsize=7)
         ax.legend(frameon=False, fontsize=5, loc="upper left")
         fig.tight_layout()
-    return fig, dropped
+    # Measured, so the provenance can state the span instead of asserting it. The
+    # axes are log-log unconditionally; the caveat used to claim "the arms span
+    # more than an order of magnitude" whether or not they did.
+    span = max(vals) / min(vals)
+    return fig, dropped, span
 
 
 def main() -> None:
@@ -496,7 +510,7 @@ def main() -> None:
             raise SystemExit(_anchor_refusal(args.paired_level, v))
         os.makedirs(args.out_dir, exist_ok=True)
         from paper_figures import _savefig, _write_manifest
-        fig, dropped = build_paired_figure(manifest, levels, args.paired, args.paired_level)
+        fig, dropped, span = build_paired_figure(manifest, levels, args.paired, args.paired_level)
         outputs = _savefig(fig, args.out_dir, args.stem)
         _write_manifest(
             args.out_dir,
@@ -513,22 +527,24 @@ def main() -> None:
                 "plotted; dropped per arm: %s."
                 % ("; ".join("%s %s" % (k, v) for k, v in sorted(dropped.items()))
                    if dropped else "none for any arm"),
-                "Log-log axes: the arms span more than an order of magnitude.",
+                "Log-log axes; the plotted values span %.1fx." % span,
                 _anchor_caveat(anchor),
             ],
             extra={"generator": "tools/compare_arms.py --paired",
                    "baseline": args.paired, "level": args.paired_level,
+                   "value_span": span,
                    "dropped_envs": dropped, "anchor_check": anchor,
                    "anchor_override": (not v["ok"]) and args.allow_mixed_anchor},
         )
         print("wrote %d outputs + manifest.json to %s" % (len(outputs), args.out_dir))
         return
 
-    sizes = None
-    if args.common_set:
-        rows, levels, axis, field, sizes = collect_common_set(manifest, args.stat)
-    else:
-        rows, levels, axis, field = collect(manifest)
+    # Gate BEFORE computing. collect_common_set intersects per-environment masks
+    # across arms, so two arms with different env counts raise an opaque numpy
+    # broadcast error -- burying the very condition the anchor gate exists to
+    # report clearly. The levels come from the manifest, so the gate needs nothing
+    # that collect() produces.
+    levels = manifest.get("levels") or DEFAULT_LEVELS
     anchor = check_anchor(manifest, levels)
     bad = {lvl: v for lvl, v in anchor.items() if not v["ok"]}
     if bad and not args.allow_mixed_anchor:
@@ -536,6 +552,33 @@ def main() -> None:
             print(_anchor_refusal(lvl, v), file=sys.stderr)
         raise SystemExit("anchor gate refused %d of %d tiers; nothing written."
                          % (len(bad), len(anchor)))
+
+    sizes = None
+    if args.common_set:
+        rows, levels, axis, field, sizes = collect_common_set(manifest, args.stat)
+    else:
+        rows, levels, axis, field = collect(manifest)
+
+    # An arm can carry a NUMBER at a tier (summary.json has it) while having no
+    # data_<tier>.npz to anchor-check. The gate above passes on the arms it could
+    # compare, and the table then publishes the unchecked arm beside them under a
+    # caveat that says VERIFIED -- which is the thing decision/392 forbids.
+    unverified = {}
+    for i, lvl in enumerate(levels):
+        checked = set(anchor.get(lvl, {}).get("compared", ()))
+        rogue = [r["name"] for r in rows
+                 if r["values"][i] is not None and r["name"] not in checked]
+        if rogue:
+            unverified[lvl] = rogue
+    if unverified and not args.allow_mixed_anchor:
+        for lvl, names in unverified.items():
+            print("ANCHOR UNCHECKED at %s: %s contribute a value to the table but "
+                  "carry no data_%s.npz, so their exam was never compared."
+                  % (lvl, ", ".join(names), lvl), file=sys.stderr)
+        raise SystemExit(
+            "arms in the table were never anchor-checked; nothing written.\n"
+            "Evaluate them at those tiers, or pass --allow-mixed-anchor (the "
+            "manifest will record exactly which arms went unchecked).")
     os.makedirs(args.out_dir, exist_ok=True)
 
     from paper_figures import _savefig, _write_csv, _write_latex_table, _write_manifest
@@ -581,7 +624,13 @@ def main() -> None:
             "environments, which charges a late-failing arm for its pre-failure excursion. "
             "Re-run with --common-set for the cross-arm comparison.",
         ]
-    caveats = [_anchor_caveat(anchor)] + provenance + [
+    unchecked_line = ([
+        "ANCHOR OVERRIDE: %s appear in this table with a value but were never "
+        "anchor-checked (no data_<tier>.npz), so their comparability to the rest "
+        "is asserted, not measured."
+        % "; ".join("%s at %s" % (", ".join(n), lvl) for lvl, n in unverified.items())
+    ] if unverified else [])
+    caveats = [_anchor_caveat(anchor)] + unchecked_line + provenance + [
         "Exams run before 2026-09-06 were graded on the DomainRandomizationCfg CLASS "
         "DEFAULT, not the run's own env cfg (finding/391). Arms remain comparable to "
         "each other; the graded plant is not the designed plant.",
@@ -600,9 +649,13 @@ def main() -> None:
                "arms": [r["name"] for r in rows],
                "levels": levels, "axis": axis, "field": field,
                "log_y": use_log,
-        "stat": args.stat if sizes is not None else "summary.json ss_error",
+        # Name the field actually read. This used to say "ss_error" whatever the
+        # manifest asked for, so a peak_rate table carried provenance claiming a
+        # steady-state error was computed.
+        "stat": args.stat if sizes is not None else "summary.json %s" % field,
         "anchor_check": anchor,
-        "anchor_override": bool(bad) and args.allow_mixed_anchor,
+        "anchor_override": (bool(bad) or bool(unverified)) and args.allow_mixed_anchor,
+        "anchor_unchecked_arms": unverified or None,
                "common_set": (
                    {lvl: {"n": n, "of": tot, "excluded_envs": ex,
                           "arms_measured": k, "arms_in_table": tot_arms}
@@ -685,8 +738,17 @@ def _self_check() -> None:
         # reads as a same-exam guarantee it cannot make (finding/396).
         v = check_anchor({"arms": [same, dup]}, ["x"])["x"]
         assert v["blind_to"] == sorted(_PLANT_SCALARS), v["blind_to"]
+        assert v["compared"] == ["a", "b"], v["compared"]
         line = _anchor_caveat({"x": v})
         assert "VERIFIED" in line and "thrust_coefficient_scale" in line, line
+
+        # The blind spot is per tier. A union would hang one tier's blindness on
+        # another tier that did log the field -- a false qualifier in the paper.
+        seeing = {"ok": True, "vacuous": False, "n_fields": 3, "n_compared": 2,
+                  "differing": [], "blind_to": []}
+        line = _anchor_caveat({"none": dict(v), "hard": dict(seeing)})
+        assert "hard" not in line.split("Verified ONLY")[1], \
+            "a tier that logged the scalars must not be tagged blind: " + line
     print("self-check OK")
 
 
