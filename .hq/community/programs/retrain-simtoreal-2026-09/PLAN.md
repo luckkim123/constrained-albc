@@ -888,6 +888,46 @@ and the decision is theirs to revisit.** This session did not act on it — `dec
 and 결정 3 are operator decisions and `feedback-plan-decision-escalation` is explicit that a session
 may not resolve what a plan marks as needing one.
 
+### G5 written but NOT live — and it contaminated one exam cell on the way in (`finding/407`)
+
+`decision/159` 결정 3's surviving half says implement `set_inertias`, so this is code the operator
+has already directed rather than a decision. It is written, its math is tested, and it is **not in
+the tree**:
+
+- `randomize_physx_inertia()` applies the congruence `I' = S^(1/2) I S^(1/2)`, so the diagonal
+  scales by exactly `s_i` while the tensor stays symmetric and positive-definite. It takes the
+  scale **handed over** by `_randomize_hydro_model` rather than re-sampling: `_sample_or_uniform`
+  returns the DORAEMON draw when `sampled` is present but a **fresh uniform** when it is not, so
+  re-sampling would silently decorrelate the hydro Coriolis inertia from the PhysX one on any
+  non-DORAEMON path.
+- `test_physx_inertia_congruence.py` passes: bit-identical no-op at scale 1.0, diagonal exactly
+  `I_ii * s_i`, symmetry and positive-definiteness preserved, and one ill-conditioned tensor where
+  diagonal-only scaling goes indefinite while the congruence does not. **That test caught my own
+  overclaim** — its first version asserted diagonal-only scaling *always* breaks PD, which is false
+  on a diagonally-dominant tensor. The claim was weakened rather than the fixture tuned.
+- **The live wiring is unverified.** Nothing has confirmed `set_inertias` actually moves this
+  articulation's PhysX inertia on a running env; both GPUs were busy. Do that before trusting it.
+- It sits in `g0c_runner/pending/g5_set_inertias.patch`, not in the tree, for the reason below.
+
+**The incident.** The edit was in the working tree from 02:03:44 to 02:09:00 while `sd_r3as31`'s
+exam was running. Python imports at process start, so `pair34_d2` — launched 02:07:46 — compiled and
+imported the modified module at 02:07:50 (`__pycache__/events.cpython-311.pyc`, 31,937 bytes against
+the 29,285 of the older cache). Four of five configs are clean; `pair34_d2` ran on a plant no other
+arm has, and it is the deployment condition `finding/363` rests on. Discard-and-re-run is queued
+(`g0c_runner/redo_s31_pair34d2.sh`).
+
+Two guards were missing and one is now in place. `HEAD` never moved, so a commit-based provenance
+line would have been accurate and useless; `check_anchor()` is blind because `inertia_scale` is
+*drawn* identically either way and only its *destination* changed — the same blindness `finding/396`
+recorded. And `sd_exam_generic2.sh` logged no git provenance at all, while `student_arm.sh` has
+logged `HEAD=` and `dirty=` all along: the training half carried the guard and the exam half, where
+it bit, carried none. **Fixed: the exam script now logs `HEAD` and `dirty` on every config line**,
+per-config rather than per-exam, since the contamination was per-config.
+
+**Standing rule from this, worth more than the feature:** while any exam or training chain is
+running, an edit under `constrained_albc/envs/**` belongs in a patch file, not in the tree. An
+uncommitted edit is a live plant change for every process that starts after it.
+
 **Open, for the operator, in priority order:** (a) **결정 3, re-opened above** — fault probability and
 DR band width, now that half its ground is gone; (b) the tether turn tolerance, which unblocks items
 13/14; (c) whether G10 may be run on the next water session with the corrected ratio pre-registration,
