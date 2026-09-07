@@ -14,7 +14,6 @@ from __future__ import annotations
 import os
 import sys
 
-import torch
 import torch.nn as nn
 
 sys.path.insert(

@@ -147,7 +147,7 @@ def collect_common_set(manifest: dict, stat: str = "mean") -> tuple[list[dict], 
             per_level[lvl] = (pe, ~term[-1])
         per_arm[arm["name"]] = per_level
 
-    common: dict[str, "np.ndarray"] = {}
+    common: dict[str, np.ndarray] = {}
     for lvl in levels:
         masks = [pl[lvl][1] for pl in per_arm.values() if lvl in pl]
         if masks:
@@ -409,11 +409,10 @@ def build_paired_figure(manifest: dict, levels: list[str], baseline: str, level:
     provenance while silently dropping environments 43 and 45 from the two arms
     that do fail there. Measured 2026-09-06.
     """
-    import numpy as np
-    from paper_figures import RAL_RC
     import matplotlib.pyplot as plt
-
+    import numpy as np
     from _analyze.recompute_metrics import _compute_enhanced_metrics
+    from paper_figures import RAL_RC
 
     per = {}
     for arm in manifest["arms"]:

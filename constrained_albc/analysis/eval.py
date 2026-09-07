@@ -35,9 +35,7 @@ from _eval_dr.dr_snapshot import (  # type: ignore[import-not-found]  # noqa: E4
     per_env_fault_from_tensors,
 )
 from _eval_dr.metrics import (  # type: ignore[import-not-found]  # noqa: E402
-    _get_block_step_range,
     _periodic_compute_metrics,
-    _pick_sample_env,
     compute_metrics,
     compute_seg_metrics,
     summarize_student_extra,
@@ -412,7 +410,6 @@ from dr_config import (  # type: ignore[import-not-found]  # noqa: E402
     load_doraemon_dr,
 )
 from eval_plots import (  # type: ignore[import-not-found]  # noqa: E402
-    _bar_subplot,
     _periodic_generate_plots,
     _plot_attitude_drift,
     _plot_position_drift,
@@ -422,7 +419,6 @@ from eval_plots import (  # type: ignore[import-not-found]  # noqa: E402
     generate_plots,
 )
 from eval_serialize import _build_mat_meta, write_eval_npz  # type: ignore[import-not-found]  # noqa: E402
-from matplotlib.ticker import MultipleLocator
 from paths import eval_dir_for_checkpoint  # type: ignore[import-not-found]  # noqa: E402  run_id-tree eval output (#2)
 from rsl_rl.runners import OnPolicyRunner
 

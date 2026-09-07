@@ -46,7 +46,7 @@ _ANALYSIS_DIR = os.path.join(REPO_ROOT, "constrained_albc", "analysis")
 if _ANALYSIS_DIR not in sys.path:
     sys.path.insert(0, _ANALYSIS_DIR)
 
-from _analyze.recompute_metrics import AXIS_UNITS, DECISION_FLOORS, floor_verdict, unit_for  # noqa: E402
+from _analyze.recompute_metrics import DECISION_FLOORS, floor_verdict, unit_for  # noqa: E402
 from common import DR_LEVELS  # noqa: E402
 
 # ---------------------------------------------------------------------------
@@ -406,7 +406,6 @@ def cmd_doraemon_curriculum(args: argparse.Namespace) -> None:
         ax.axis("off")
         outputs = _savefig(fig, out_dir, "doraemon_curriculum")
 
-    csv_note_path = None  # no tabular data here, figure-only
     manifest_path = _write_manifest(
         out_dir,
         [src_png],

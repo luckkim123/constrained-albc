@@ -27,6 +27,7 @@ _args = _parser.parse_args(["--headless"])
 app = AppLauncher(_args).app
 
 from isaaclab.utils import class_to_dict  # noqa: E402
+
 from constrained_albc.envs.main.config import ALBCEnvCfg  # noqa: E402
 from constrained_albc.envs.main.config_simtoreal import ALBCSimToRealEnvCfg  # noqa: E402
 

@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
-from constrained_albc.deploy.spec import ShapeSpec, ExportContractError
-from constrained_albc.deploy.verify import verify_npz
 
+from constrained_albc.deploy.spec import ExportContractError, ShapeSpec
+from constrained_albc.deploy.verify import verify_npz
 
 CONTRACT = {
     "a.weight": ShapeSpec(shape=(2, 3)),

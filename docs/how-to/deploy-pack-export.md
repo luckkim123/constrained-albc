@@ -8,7 +8,7 @@
 ## One command produces the whole pack
 
 ```bash
-cd /workspace/constrained-albc && python scripts/export_deploy.py \
+cd /workspace/constrained-albc && /isaac-sim/python.sh scripts/export_deploy_pack.py \
     --batch attitude_only_5000 \
     --student-ckpt <student .pt> --teacher-ckpt <teacher .pt> \
     --run-group <campaign> --tag pack_<label> \
@@ -20,9 +20,12 @@ cd /workspace/constrained-albc && python scripts/export_deploy.py \
 - `--golden` appends: golden vectors (CPU), `npforward.py` copy, parity self-close
   (loud-fail if not closed), `MANIFEST.json` (payload-derived dims + per-file sha256).
 - `--report` additionally writes `EXPORT_REPORT.md` alongside the pack.
-- Use `scripts/export_deploy.py` (import-isolation launcher), NOT
-  `python -m constrained_albc.deploy` — the `-m` form fires the package `__init__`
-  -> sim stack -> `pxr` and dies on export hosts.
+- Use `scripts/export_deploy_pack.py`, NOT `python -m constrained_albc.deploy` — the
+  `-m` form fires the package `__init__` -> sim stack -> `pxr` and dies on export hosts.
+  The sibling launcher `scripts/export_deploy.py` shares this CLI but injects a WIDER
+  stub set (`_isolate_training_imports`, i.e. the package stub plus `constrained_albc.envs`,
+  `.envs.main` and `isaaclab.utils`). Every pack that has actually shipped, the adopted GRU
+  one included (`2f057b9`, `decision/390`), came from `export_deploy_pack.py` — use it.
 
 ## Non-negotiable contracts
 

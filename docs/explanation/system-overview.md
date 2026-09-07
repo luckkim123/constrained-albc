@@ -106,7 +106,7 @@ sensing). So the teacher cannot run on-robot as trained. Deployment distills a
 **student** network (TCN or GRU, `constrained_albc/algorithms/student/`) that reconstructs `z` from the
 observation history alone, replacing the encoder at inference time while the actor
 weights are reused unchanged. The packaged export (teacher + student, golden-value
-self-check) is produced by `scripts/export_deploy.py`; see
+self-check) is produced by `scripts/export_deploy_pack.py`; see
 [`how-to/deploy-pack-export.md`](../how-to/deploy-pack-export.md) and
 [`how-to/sim-to-real.md`](../how-to/sim-to-real.md).
 

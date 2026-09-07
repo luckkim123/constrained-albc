@@ -30,7 +30,6 @@ import types
 from pathlib import Path
 
 import pytest
-import torch
 
 REPO = Path(__file__).resolve().parents[1]
 STUDENT_DIR = REPO / "constrained_albc" / "algorithms" / "student"

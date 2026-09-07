@@ -657,7 +657,6 @@ def compute_seg_metrics(data: dict) -> dict:
     """
     steps_per_seg = data["steps_per_segment"]
     num_segs = data["num_segments"]
-    seg_duration = data["segment_duration"]
     num_envs = data["actual_roll_deg"].shape[1]
 
     per_seg = []

@@ -3,7 +3,10 @@
 Arm W must match the incumbent's plant, or the head-to-head against model_9998 is void.
 Pickled buffers and path/name keys are excluded — they differ by construction.
 """
-import sys, glob, yaml
+import glob
+import sys
+
+import yaml
 
 SKIP = ('log_dir', 'run_name', 'seed', 'kl_ub', 'max_iterations', 'num_envs')
 

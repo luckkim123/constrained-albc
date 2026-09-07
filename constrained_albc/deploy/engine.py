@@ -109,8 +109,9 @@ def build_teacher_model(ckpt_path: str, device) -> nn.Module:
     the source checkpoint), and the post-load integrity gate below is the runtime
     guard that a unit test would otherwise provide."""
     _isolate_training_imports()
-    from constrained_albc.algorithms.encoder.actor_critic_encoder import ActorCriticEncoder
     from tensordict import TensorDict
+
+    from constrained_albc.algorithms.encoder.actor_critic_encoder import ActorCriticEncoder
 
     dev = torch.device(device)
     ckpt = torch.load(ckpt_path, map_location=dev, weights_only=False)

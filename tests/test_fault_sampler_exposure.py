@@ -9,7 +9,6 @@ by-path import pattern by the Mac session.
 import importlib.util
 from pathlib import Path
 
-import pytest
 import torch
 
 _FAULTS_PATH = Path(__file__).resolve().parents[1] / "constrained_albc" / "envs" / "main" / "mdp" / "faults.py"

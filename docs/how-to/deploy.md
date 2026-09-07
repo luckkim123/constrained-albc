@@ -14,7 +14,7 @@ without the encoder's privileged-obs latent `z` (9D).
 | | Then (removed) | Now (current) |
 |:---|:---|:---|
 | Adapter | proposed future work (HORA/RMA Phase 2) | built — `constrained_albc/algorithms/student/` trains a TCN (or GRU) encoder that reproduces the teacher's 9D `z` from a rolling window of the same 69D policy observation, no privileged obs needed at deployment |
-| Export mechanism | manual `torch.save(export_bundle, ...)` | `constrained_albc/deploy/` (`spec.py`/`engine.py`/`golden.py`/`pack.py`), driven by `scripts/export_deploy.py`, with a CPU-golden self-check and MANIFEST sha256 verification built in |
+| Export mechanism | manual `torch.save(export_bundle, ...)` | `constrained_albc/deploy/` (`spec.py`/`engine.py`/`golden.py`/`pack.py`), driven by `scripts/export_deploy_pack.py`, with a CPU-golden self-check and MANIFEST sha256 verification built in |
 
 Full command, contracts, and the Mac/agent-jetson handoff steps are in
 [deploy-pack-export.md](deploy-pack-export.md) — not duplicated here.
