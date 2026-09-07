@@ -51,6 +51,39 @@ _DETERMINISTIC_DR: bool = False
 # Set True by --extreme-ood (static mode) to overwrite DR with fixed OOD preset values.
 _APPLY_EXTREME_OOD: bool = False
 
+# Set True by --env-dr-anchor (static mode): anchor the interpolation on the run's OWN
+# env cfg instead of the bare DomainRandomizationCfg class default. Off by default, so
+# every exam stays byte-identical to the ones run before 2026-09-06.
+#
+# Why this exists: build_dr_config used to construct both the hard-anchor fallback and
+# the returned cfg from a bare DomainRandomizationCfg(), and eval.apply_dr_config
+# replaces env_cfg.randomization wholesale -- so a Hydra `env.randomization.*` override
+# never survived into the exam. The section-5 band thrust_coefficient_scale=(0.5,2.0)
+# was therefore graded at the class default (0.7,1.3) in every exam to date, and any
+# field outside _DR_TUPLE_FIELDS/_DR_FLOAT_FIELDS fell back to the class default rather
+# than to "its training range" -- see the max_thrust_scale note in _DR_TUPLE_FIELDS,
+# which silently assumes an env cfg equal to the class default.
+_USE_ENV_DR_ANCHOR: bool = False
+_ENV_DR_ANCHOR: DomainRandomizationCfg | None = None
+
+
+def capture_env_dr_anchor(env_cfg) -> None:
+    """Latch the pristine env randomization as the hard anchor. First call wins.
+
+    Must run before the first apply_dr_config(), which overwrites
+    env_cfg.randomization -- a later capture would anchor on the built cfg rather
+    than on the plant the run was actually configured with.
+    """
+    global _ENV_DR_ANCHOR
+    if not _USE_ENV_DR_ANCHOR or _ENV_DR_ANCHOR is not None:
+        return
+    _ENV_DR_ANCHOR = copy.deepcopy(env_cfg.randomization)
+    print(
+        "[INFO] env-dr-anchor: hard anchor = the run's own env cfg "
+        f"(thrust_coefficient_scale={_ENV_DR_ANCHOR.thrust_coefficient_scale}, "
+        f"control_delay_steps={_ENV_DR_ANCHOR.control_delay_steps})"
+    )
+
 # ---- DR interpolation helpers ----
 
 # Mapping from DORAEMON param names to DomainRandomizationCfg field names.
@@ -242,7 +275,14 @@ def load_doraemon_dr(run_dir: str) -> tuple[DomainRandomizationCfg | None, dict[
 
     # DomainRandomizationCfg holds the runtime (training) physics range; use it as
     # the base config so non-DORAEMON fields (joint, thruster) match training.
-    cfg = DomainRandomizationCfg()
+    #
+    # ... except the bare class default is NOT the run's training range whenever the run
+    # overrode it (the section-5 plant sets thrust_coefficient_scale=(0.5,2.0) against a
+    # class default of (0.7,1.3)). DORAEMON manages ~21 params and overwrites exactly
+    # those below; thrust_coefficient_scale is not one of them -- it does not appear in
+    # doraemon.py at all -- so with the class default here the band this comment promises
+    # to preserve silently reverted, on the path every exam actually takes.
+    cfg = copy.deepcopy(_ENV_DR_ANCHOR) if _ENV_DR_ANCHOR is not None else DomainRandomizationCfg()
     cfg.enable = True
 
     # CRITICAL: imported PARAM_SPECS uses base DomainRandomizationCfg bounds, but
@@ -291,13 +331,18 @@ def get_hard_dr_config() -> DomainRandomizationCfg:
     read OOD values for the hard level (visible as the hard bar exceeding the [0,1]
     HardDR band in summary_drdist.png).
     """
-    base = _DORAEMON_FULL_DR if _DORAEMON_FULL_DR is not None else DomainRandomizationCfg()
+    if _DORAEMON_FULL_DR is not None:
+        base = _DORAEMON_FULL_DR
+    elif _ENV_DR_ANCHOR is not None:
+        base = _ENV_DR_ANCHOR
+    else:
+        base = DomainRandomizationCfg()
     cfg = copy.deepcopy(base)
     cfg.enable = True
     return cfg
 
 
-def _make_nominal_dr() -> DomainRandomizationCfg:
+def _make_nominal_dr(anchor: DomainRandomizationCfg | None = None) -> DomainRandomizationCfg:
     """Construct true nominal DR config (single-point distribution at physics defaults).
 
     Fields listed in _TRUE_NOMINAL_PHYSICS use the explicit nominal value.
@@ -305,8 +350,8 @@ def _make_nominal_dr() -> DomainRandomizationCfg:
     the base DomainRandomizationCfg midpoint, since these are asset-specific
     and have no obvious physics-true value.
     """
-    base = DomainRandomizationCfg()
-    nominal = DomainRandomizationCfg()
+    base = anchor if anchor is not None else DomainRandomizationCfg()
+    nominal = copy.deepcopy(base)
 
     for field_name in _DR_TUPLE_FIELDS:
         if field_name in _TRUE_NOMINAL_PHYSICS:
@@ -325,7 +370,9 @@ def _make_nominal_dr() -> DomainRandomizationCfg:
     return nominal
 
 
-def build_dr_config(scale: float) -> DomainRandomizationCfg:
+def build_dr_config(
+    scale: float, base: DomainRandomizationCfg | None = None
+) -> DomainRandomizationCfg:
     """Build DR config by interpolating between true nominal and the hard anchor.
 
     Hard anchor priority:
@@ -336,17 +383,26 @@ def build_dr_config(scale: float) -> DomainRandomizationCfg:
     is far narrower than the actual training DR. That caused all four levels
     to evaluate near-nominal physics regardless of the requested scale.
     """
-    nominal = _make_nominal_dr()
+    # Anchor precedence: explicit `base` > the latched env anchor > class default.
+    # The class default is the historical behaviour and stays the fallback, so an exam
+    # run without --env-dr-anchor is byte-identical to every exam before 2026-09-06.
+    anchor = base if base is not None else _ENV_DR_ANCHOR
+    if anchor is None:
+        anchor = DomainRandomizationCfg()
+
+    nominal = _make_nominal_dr(anchor)
 
     if scale <= 0.0:
         nominal.enable = True
         return nominal
 
-    full: DomainRandomizationCfg = _DORAEMON_FULL_DR if _DORAEMON_FULL_DR is not None else DomainRandomizationCfg()
+    full: DomainRandomizationCfg = _DORAEMON_FULL_DR if _DORAEMON_FULL_DR is not None else anchor
     # Allow scale > 1.0 for OOD eval (extrapolate bounds beyond training distribution).
     f = scale
 
-    cfg = DomainRandomizationCfg()
+    # deepcopy so fields outside the two interpolation lists (control_delay_steps,
+    # fault knobs, ...) carry the anchor's values instead of the class default.
+    cfg = copy.deepcopy(anchor)
     cfg.enable = True
 
     for field_name in _DR_TUPLE_FIELDS:

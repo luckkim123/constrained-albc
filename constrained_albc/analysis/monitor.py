@@ -54,7 +54,7 @@ PANELS: list[dict[str, str | list[str]]] = [
         "metrics": [
             "Reward/att_rp",
             "Reward/lin_vel",
-            "Reward/yaw_vel",
+            "Reward/yaw",
             "Reward/torque",
             "Reward/thruster",
             "Reward/smoothness",
@@ -68,7 +68,8 @@ PANELS: list[dict[str, str | list[str]]] = [
             "Track/lin/err_x",
             "Track/lin/err_y",
             "Track/lin/err_z",
-            "Track/yaw/rate_err",
+            "Track/yaw/err_deg",
+            "Track/cmd_att/yaw_deg",
         ],
     },
     {
@@ -267,7 +268,7 @@ def cmd_plot(args: argparse.Namespace) -> None:
     reward_tags = [
         ("Reward/lin_vel", "lin_vel", "#4CAF50"),
         ("Reward/att_rp", "att_rp", "#2196F3"),
-        ("Reward/yaw_vel", "yaw_vel", "#F44336"),
+        ("Reward/yaw", "yaw", "#F44336"),
         ("Reward/torque", "torque", "#FF9800"),
         ("Reward/thruster", "thruster", "#9C27B0"),
         ("Reward/smoothness", "smoothness", "#795548"),

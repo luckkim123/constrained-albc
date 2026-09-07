@@ -11,17 +11,22 @@ Two types following the paper's framework:
 
 All constraints satisfy: J_Ck(pi) = E[sum gamma^t C_k] <= d_k
 
-Constraint layout (5 Probabilistic + 5 Average = 10 total in the shipped config):
+Constraint layout (4 Probabilistic + 6 Average = 10 total in the shipped config):
     [0]  attitude        (prob)  I(max(|roll|,|pitch|) > limit)
     [1]  arm_torque      (prob)  I(any |tau_j| > limit)
     [2]  arm_joint_vel   (prob)  I(any |q_dot_j| > limit)
     [3]  joint1_pos      (prob)  I(|theta1| > limit)
-    [4]  cumul_yaw       (prob)  I(|yaw_accumulated| > limit)
-    [5]  thruster_util   (avg)   max(|state_i|) over thrusters
-    [6]  rp_rate         (avg)   max(0, max(|p|,|q|) - threshold)
-    [7]  yaw_rate        (avg)   max(0, |w_z| - threshold)
-    [8]  rp_vel_settling (avg)   (|p| + |q|) / 2
+    [4]  thruster_util   (avg)   max(|state_i|) over thrusters
+    [5]  rp_rate         (avg)   max(0, max(|p|,|q|) - threshold)
+    [6]  yaw_rate        (avg)   max(0, |w_z| - threshold)
+    [7]  rp_vel_settling (avg)   (|p| + |q|) / 2
+    [8]  yaw_settling    (avg)   |w_z| gated on |yaw_err|
     [9]  manipulability  (avg)   max(0, threshold - w)
+
+cumulative_yaw_cost is still defined here but is NOT in the shipped config: with a yaw
+POSITION command the tether-wrap limit is an operational concern, not a control
+constraint. _cumulative_yaw tracking and the Episode/cumul_yaw_deg log stay as a free
+diagnostic.
 
 Experiment-only Average cost (joint1-constraint-redesign; NOT in the shipped
 config -- wired in by the experiment, reward centering removed 2026-07):
@@ -178,7 +183,7 @@ def yaw_rate_cost(
     """max(0, |w_z| - threshold). Penalizes excessive yaw rate only.
 
     ReLU-style: zero cost below threshold, linear penalty above.
-    Threshold > yaw_rate_cmd_range (0.5) so normal yaw tracking is unaffected.
+    0.55 rad/s = 31 deg/s cap on slew toward a heading target; a pi turn takes >= 5.7 s.
     Replaces the old yaw_velocity_cost which conflicted with yaw commands.
     """
     return (_robot.data.root_ang_vel_b[:, 2].abs() - soft_threshold).clamp(min=0.0)
@@ -225,6 +230,17 @@ def rp_vel_settling_cost(
     att_err_norm = _env._att_rp_err.abs().max(dim=-1).values
     settling_mask = (att_err_norm <= settling_threshold).float()
     return rp_vel * settling_mask
+
+
+def yaw_settling_cost(
+    _robot: Articulation,
+    _env: ALBCEnv,
+    settling_threshold: float,
+) -> torch.Tensor:
+    """|w_z| gated on |yaw_err| <= threshold. Type: Average. Damps yaw oscillation about the target."""
+    wz = _robot.data.root_ang_vel_b[:, 2].abs()
+    mask = (_env._yaw_err.abs() <= settling_threshold).float()
+    return wz * mask
 
 
 def manipulability_cost(

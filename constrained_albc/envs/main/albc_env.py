@@ -34,7 +34,7 @@ from .config import (
     apply_extra_policy_obs,
     apply_privileged_fault_obs,
 )
-from .mdp import faults
+from .mdp import disturbance, faults
 from .mdp.constraints import apply_joint1_constraint_arm, compute_all_costs
 from .mdp.events import (
     DRSampler,
@@ -49,6 +49,7 @@ from .mdp.events import (
     randomize_payload,
     reset_joint_positions_default,
     reset_robot_pose_default,
+    sample_control_delay_steps,
 )
 from .mdp.observations import (
     compute_policy_obs,
@@ -90,18 +91,18 @@ def _apply_control_delay(buf: DelayBuffer | None, actions: torch.Tensor) -> torc
 
 
 class ALBCEnv(DirectRLEnv):
-    """Attitude-only ALBC environment with constrained RL (pure roll/pitch + yaw-rate tracking).
+    """Attitude-only ALBC environment with constrained RL (pure roll/pitch + yaw-angle tracking).
 
     Linear-velocity tracking is removed entirely (no DVL on the real robot): the actor obs
     carries no measured linear velocity, no lin_vel command, and no lin_vel reward term. The
     critic still sees measured linear velocity (privileged p_t), so the asymmetry is preserved.
 
     Obs (69D): current_proprio(20D) + temporal_history(46D) + integral_error(3D).
-        Current: ang_cmd(3) [att_rp(2) + yaw_rate(1)], euler(3), ang_vel(3),
+        Current: ang_cmd(3) [att_rp(2) + yaw(1)], euler(3), ang_vel(3),
                  jpos(2), jvel(2), manipulability(1), thr(6).  -- no measured lin_vel.
         History (per step, strided): joint_tracking(4) + body_tracking(6) + action(8),
                  i.e. 10*hist_len + 8*hist_action_len; body_tracking = ang_err(3) + euler(3),
-                 where ang_err = [att_rp_err(2), yaw_rate_err(1)].  -- no lin_vel_err.
+                 where ang_err = [att_rp_err(2), yaw_err(1)].  -- no lin_vel_err.
     Action (8D): Delta arm targets (2D) + thruster commands (6D).  -- actuator count, target-invariant.
     """
 
@@ -231,7 +232,7 @@ class ALBCEnv(DirectRLEnv):
         # Pre-build the integral error-gating sigma tensor once (step-invariant cfg constants).
         # Avoids re-allocating torch.tensor(...) every step in _get_rewards (hot loop).
         if self.cfg.use_integral_obs and self.cfg.integral_gated:
-            # Attitude-only: 3 integral channels [roll, pitch, yaw_rate].
+            # Attitude-only: 3 integral channels [roll, pitch, yaw].
             # R1 decouple: read the independent per-axis integral_gate_threshold, NOT
             # reward.*.sigma -- removes the shared-sigma aliasing (reward.md 7 review). The
             # default (0.10, 0.10, 0.10) reproduces the historical copied value byte-identically.
@@ -389,14 +390,23 @@ class ALBCEnv(DirectRLEnv):
         # Previous-step velocity for settling cost constraints (anti-overshoot)
         self._prev_root_lin_vel_b = torch.zeros(self.num_envs, 3, device=self.device)
         self._prev_root_ang_vel_z = torch.zeros(self.num_envs, device=self.device)
-        # [0:2] = roll/pitch attitude (rad), [2] = yaw rate (rad/s)
+        # [0:2] = roll/pitch attitude (rad), [2] = yaw target heading (rad, world frame)
         self._ang_cmd = torch.zeros(self.num_envs, 3, device=self.device)
+        # Exogenous heave disturbance state (PLAN item 11). Piecewise-constant random hold:
+        # _dist_fz is the body-frame Fz held for _dist_hold_left more seconds, _dist_strength
+        # the per-env DORAEMON scale in [0,1] drawn at reset. Allocated unconditionally (three
+        # (N,) tensors) like _ou_base_current, so _reset_idx and the logger stay branch-free;
+        # they stay all-zero and are never read into a wrench when cfg.disturbance.enable is
+        # False, so the disabled path draws no RNG and is byte-identical.
+        self._dist_fz = torch.zeros(self.num_envs, device=self.device)
+        self._dist_hold_left = torch.zeros(self.num_envs, device=self.device)
+        self._dist_strength = torch.zeros(self.num_envs, device=self.device)
         self._att_rp_err = torch.zeros(self.num_envs, 2, device=self.device)
-        self._yaw_rate_err = torch.zeros(self.num_envs, device=self.device)
-        # 3D mixed error for history buffer: [att_rp_err(2), yaw_rate_err(1)]
+        self._yaw_err = torch.zeros(self.num_envs, device=self.device)
+        # 3D mixed error for history buffer: [att_rp_err(2), yaw_err(1)]
         self._ang_err = torch.zeros(self.num_envs, 3, device=self.device)
         # Leaky-integrated error for Hwangbo 2017 pattern
-        # Attitude-only: 3D [roll, pitch, yaw_rate] -- mirrors the 3 attitude-control channels
+        # Attitude-only: 3D [roll, pitch, yaw] -- mirrors the 3 attitude-control channels
         # (no linear-velocity integral; lin_vel tracking is removed).
         self._error_integral = torch.zeros(self.num_envs, self.cfg.integral_dims, device=self.device)
         # EMA bias buffer (3D, ungated) for sustained offset penalization. Updated every
@@ -442,6 +452,14 @@ class ALBCEnv(DirectRLEnv):
         self._hydro_torques = torch.zeros(self.num_envs, 3, device=self.device)
         self._buoy_hydro_forces = torch.zeros(self.num_envs, 3, device=self.device)
         self._buoy_hydro_torques = torch.zeros(self.num_envs, 3, device=self.device)
+        # Exogenous heave disturbance wrench (PLAN item 11), shaped for
+        # permanent_wrench_composer.add_forces_and_torques: (N, len(body_ids), 3).
+        # Only the z force column and the y torque column are ever written, so the rest
+        # stays zero for the life of the env. Lives here rather than next to _dist_fz
+        # because this is the force-buffer home and _init_body_ids has already run.
+        n_main_bodies = len(self._body_id)
+        self._dist_forces = torch.zeros(self.num_envs, n_main_bodies, 3, device=self.device)
+        self._dist_torques = torch.zeros(self.num_envs, n_main_bodies, 3, device=self.device)
 
     def _init_thrusters(self) -> None:
         """Initialize thruster model if configured (None = ALBC arm only)."""
@@ -457,12 +475,20 @@ class ALBCEnv(DirectRLEnv):
         if self.cfg.actuation_noise.enable:
             self.cfg.thrusters.actuation_noise_std = self.cfg.actuation_noise.thruster_noise_std
 
+        # PLAN item 10: thruster_always_dead pins channels to health 0 INDEPENDENTLY of
+        # fault.enable, but health lives inside ThrusterModel and its buffer is allocated
+        # only under enable_fault (set_thruster_health returns early on a None buffer).
+        # So a non-empty tuple must switch the buffer on by itself. With every live
+        # channel at health exactly 1.0 the multiply is identity, and an empty tuple
+        # leaves this expression equal to cfg.fault.enable -- byte-identical default.
+        enable_fault = self.cfg.fault.enable or bool(getattr(self.cfg.fault, "thruster_always_dead", ()))
+
         self._thruster = ThrusterModel(
             cfg=self.cfg.thrusters,
             num_envs=self.num_envs,
             device=self.device,
             enable_randomization=self.cfg.randomization.enable,
-            enable_fault=self.cfg.fault.enable,
+            enable_fault=enable_fault,
             enable_actuation_noise=self.cfg.actuation_noise.enable,
         )
 
@@ -622,7 +648,7 @@ class ALBCEnv(DirectRLEnv):
 
         Body tracking (6D) -- system response:
             [4:6]   roll/pitch attitude error (radians, wrapped)
-            [6]     yaw rate error (rad/s)
+            [6]     yaw heading error (rad, wrapped to (-pi, pi])
             [7:10]  euler angles (roll, pitch, yaw)
 
         Action (8D) -- recent control input:
@@ -637,15 +663,16 @@ class ALBCEnv(DirectRLEnv):
         # Roll/pitch: attitude error (wrapped to [-pi, pi])
         att_raw = self._ang_cmd[:, :2] - torch.stack([roll, pitch], dim=-1)
         att_rp_err = torch.atan2(torch.sin(att_raw), torch.cos(att_raw))
-        # Yaw: rate error
-        yaw_rate_err = self._ang_cmd[:, 2] - self._robot.data.root_ang_vel_b[:, 2]
-        ang_err = torch.cat([att_rp_err, yaw_rate_err.unsqueeze(-1)], dim=-1)
+        # Yaw: heading error wrapped to (-pi, pi] -- its sign is the shortest turn direction
+        yaw_raw = self._ang_cmd[:, 2] - yaw
+        yaw_err = torch.atan2(torch.sin(yaw_raw), torch.cos(yaw_raw))
+        ang_err = torch.cat([att_rp_err, yaw_err.unsqueeze(-1)], dim=-1)
 
         return torch.cat(
             [
                 joint_pos_error,  # 2D: q_des_{t-1} - q_actual_t
                 joint_vel,  # 2D: joint velocities
-                ang_err,  # 3D: [att_rp_err(2), yaw_rate_err(1)]
+                ang_err,  # 3D: [att_rp_err(2), yaw_err(1)]
                 torch.stack([roll, pitch, yaw], dim=-1),  # 3D: euler angles
                 self._prev_actions,  # 8D: action that produced current state
             ],
@@ -712,6 +739,12 @@ class ALBCEnv(DirectRLEnv):
             if toggle_mask.any():
                 toggle_ids = toggle_mask.nonzero(as_tuple=True)[0]
                 self._apply_payload_toggle(toggle_ids)
+
+        # Exogenous heave disturbance: age the per-env hold and re-draw where it expired.
+        # Here, not in _apply_action, so the hold is counted once per POLICY step (step_dt)
+        # rather than once per physics substep.
+        if self.cfg.disturbance.enable:
+            self._step_fz_disturbance()
 
         # Update manipulability index (Yoshikawa)
         self._update_manipulability()
@@ -785,32 +818,41 @@ class ALBCEnv(DirectRLEnv):
         """Sample random attitude commands for specified environments (no linear velocity).
 
         Roll/pitch: attitude command (radians) from att_cmd_rp_range.
-        Yaw: rate command (rad/s) from yaw_rate_cmd_range.
+        Yaw: target heading (radians, world frame) from yaw_cmd_range.
         Ranges use per-env cmd_*_scale, which is permanently 1.0 (inert residue; command
         difficulty is a fixed task knob, not DORAEMON-curriculum-managed).
         With probability ``vel_cmd_zero_prob``, an env receives a zero command.
         (The ``vel_cmd_*`` names are retained as the shared command-timing/zeroing knobs;
         they no longer drive any linear-velocity command.)
 
-        In play_mode, all commands are fixed to zero (hovering/station-keeping).
+        In play_mode, roll/pitch are fixed to zero and yaw holds the current heading
+        (hovering/station-keeping).
         """
+        # A yaw command is now a world-frame target ANGLE, so a zero/hover command means
+        # "hold the current heading", not 0 rad. Read yaw straight off the quaternion:
+        # _euler_cache is not yet refreshed on the reset path that calls this.
+        _, _, yaw_now = euler_xyz_from_quat(self._robot.data.root_quat_w)
+
         if self.cfg.play_mode:
-            self._ang_cmd[env_ids] = 0.0
+            self._ang_cmd[env_ids, :2] = 0.0
+            self._ang_cmd[env_ids, 2] = yaw_now[env_ids]
             self._vel_cmd_step_counter[env_ids] = 0
             return
 
         n = len(env_ids)
         att_max = abs(self.cfg.att_cmd_rp_range[1])
-        yaw_max = abs(self.cfg.yaw_rate_cmd_range[1])
+        yaw_lo, yaw_hi = self.cfg.yaw_cmd_range
 
         self._ang_cmd[env_ids, :2] = torch.empty(n, 2, device=self.device).uniform_(-1, 1) * att_max
-        self._ang_cmd[env_ids, 2] = torch.empty(n, device=self.device).uniform_(-1, 1) * yaw_max
+        self._ang_cmd[env_ids, 2] = torch.empty(n, device=self.device).uniform_(yaw_lo, yaw_hi)
 
-        # Zero-command envs: hovering / station-keeping
+        # Zero-command envs: hovering / station-keeping. Roll/pitch zero is level (absolute);
+        # yaw zero means "hold heading", so it takes the env's own current yaw.
         zero_mask = torch.rand(n, device=self.device) < self.cfg.vel_cmd_zero_prob
         if zero_mask.any():
             zero_ids = env_ids[zero_mask]
-            self._ang_cmd[zero_ids] = 0.0
+            self._ang_cmd[zero_ids, :2] = 0.0
+            self._ang_cmd[zero_ids, 2] = yaw_now[zero_ids]
         self._vel_cmd_step_counter[env_ids] = 0
 
     # ------------------------------------------------------------------
@@ -918,6 +960,50 @@ class ALBCEnv(DirectRLEnv):
         lo, hi = cfg.payload_cog_offset_z
         self._stashed_payload_cog_offset[env_ids, 2] = torch.empty(n, device=self.device).uniform_(lo, hi)
 
+    # ------------------------------------------------------------------
+    # Exogenous heave disturbance (PLAN item 11, decision/159 결정 2)
+    # ------------------------------------------------------------------
+
+    def _reset_fz_disturbance(self, env_ids: torch.Tensor, sampled: dict | None) -> None:
+        """Draw the per-env disturbance strength, then a fresh Fz and hold, for reset envs.
+
+        Strength resolution mirrors obs_noise_scale / fault_severity: the DORAEMON
+        sampled value when the dim is registered (training), else a uniform draw over
+        ``randomization.fz_disturbance_strength_range`` (eval sweep fallback).
+
+        Returns immediately -- drawing NOTHING -- when the disturbance is off, which is
+        what keeps the default path free of extra RNG.
+        """
+        if not self.cfg.disturbance.enable:
+            return
+        if sampled is not None and "fz_disturbance_strength" in sampled:
+            self._dist_strength[env_ids] = sampled["fz_disturbance_strength"]
+        else:
+            self._dist_strength[env_ids] = faults.sample_uniform_per_env(
+                len(env_ids), self.cfg.randomization.fz_disturbance_strength_range, self.device
+            )
+        self._draw_fz_disturbance(env_ids)
+
+    def _draw_fz_disturbance(self, env_ids: torch.Tensor) -> None:
+        """Re-draw Fz = U(-1, 1) * strength * fz_max and a fresh hold U(hold_s) for env_ids.
+
+        Random in BOTH magnitude and timing, per decision/159 결정 2 ("일정한 외란이
+        아니라 무작위 외란"). At strength 0 the force is exactly 0 for those envs.
+        """
+        dist = self.cfg.disturbance
+        fz, hold = disturbance.sample_fz_and_hold(
+            self._dist_strength[env_ids], dist.fz_max, dist.hold_s
+        )
+        self._dist_fz[env_ids] = fz
+        self._dist_hold_left[env_ids] = hold
+
+    def _step_fz_disturbance(self) -> None:
+        """Count the per-env hold down by one policy step and re-draw the expired envs."""
+        self._dist_hold_left -= self.step_dt
+        expired = self._dist_hold_left <= 0.0
+        if expired.any():
+            self._draw_fz_disturbance(expired.nonzero(as_tuple=True)[0])
+
     def _apply_action(self):
         """Apply joint position targets and hydrodynamic forces."""
         self._robot.set_joint_position_target(self._joint_pos_targets, joint_ids=self._albc_joint_ids)
@@ -976,6 +1062,23 @@ class ALBCEnv(DirectRLEnv):
             forces=payload_forces.unsqueeze(1),
             torques=payload_torques.unsqueeze(1),
         )
+
+        # Exogenous heave disturbance (PLAN item 11): the Fz the deployed depth PID puts
+        # through the one surviving vertical thruster, plus the pitch moment vertical
+        # geometry couples to it. ADDED, and added LAST, because the three calls above are
+        # SETs -- exactly the reason analysis/eval.py's E3 yaw-torque injector re-adds its
+        # torque after _apply_action on every physics substep. Being in _apply_action means
+        # it is re-applied every substep, so it also survives a reset zeroing the composer.
+        if self.cfg.disturbance.enable:
+            disturbance.write_fz_wrench(
+                self._dist_forces, self._dist_torques, self._dist_fz, self.cfg.disturbance.my_per_fz
+            )
+            self._robot.permanent_wrench_composer.add_forces_and_torques(
+                forces=self._dist_forces,
+                torques=self._dist_torques,
+                body_ids=self._body_id,
+                is_global=False,
+            )
 
     def _compute_payload_wrench(self) -> tuple[torch.Tensor, torch.Tensor]:
         """Compute payload weight force and torque in the gripper body frame.
@@ -1190,13 +1293,14 @@ class ALBCEnv(DirectRLEnv):
         return observations
 
     def _compute_ang_errors(self) -> None:
-        """Compute roll/pitch attitude error + yaw rate error from current state."""
-        roll, pitch, _ = self._euler_cache
+        """Compute roll/pitch attitude error + wrapped yaw heading error from current state."""
+        roll, pitch, yaw = self._euler_cache
         raw = self._ang_cmd[:, :2] - torch.stack([roll, pitch], dim=-1)
         self._att_rp_err = torch.atan2(torch.sin(raw), torch.cos(raw))
-        self._yaw_rate_err = self._ang_cmd[:, 2] - self._robot.data.root_ang_vel_b[:, 2]
+        yaw_raw = self._ang_cmd[:, 2] - yaw
+        self._yaw_err = torch.atan2(torch.sin(yaw_raw), torch.cos(yaw_raw))
         self._ang_err[:, :2] = self._att_rp_err
-        self._ang_err[:, 2] = self._yaw_rate_err
+        self._ang_err[:, 2] = self._yaw_err
 
     def _get_rewards(self) -> torch.Tensor:
         """Compute tracking rewards and constraint costs.
@@ -1204,18 +1308,18 @@ class ALBCEnv(DirectRLEnv):
         Returns:
             Reward tensor. Shape: (num_envs,).
         """
-        # Roll/pitch attitude error + yaw rate error
+        # Roll/pitch attitude error + wrapped yaw heading error
         self._compute_ang_errors()
 
         # Update leaky-integrated error: I = leak * I + err * dt
         if self.cfg.use_integral_obs:
             self._error_integral.mul_(self.cfg.integral_leak)
 
-            # Attitude-only: 3 integral channels [roll, pitch, yaw_rate]
+            # Attitude-only: 3 integral channels [roll, pitch, yaw]
             errs = [
                 self._att_rp_err[:, 0],  # roll
                 self._att_rp_err[:, 1],  # pitch
-                self._yaw_rate_err,  # yaw rate
+                self._yaw_err,  # yaw heading error (wrapped)
             ]
 
             if self.cfg.integral_gated:
@@ -1229,14 +1333,14 @@ class ALBCEnv(DirectRLEnv):
 
             self._error_integral.clamp_(-self.cfg.integral_clamp, self.cfg.integral_clamp)
 
-        # Update EMA bias buffer (3D ungated: roll, pitch, yaw_rate). Captures sustained
+        # Update EMA bias buffer (3D ungated: roll, pitch, yaw). Captures sustained
         # per-env offset that per-step tracking reward ignores. Consumed by bias_ema_penalty term.
         if self.cfg.reward.k_bias != 0.0:
             err3 = torch.stack(
                 [
                     self._att_rp_err[:, 0],  # roll
                     self._att_rp_err[:, 1],  # pitch
-                    self._yaw_rate_err,  # yaw rate
+                    self._yaw_err,  # yaw heading error (wrapped)
                 ],
                 dim=-1,
             )
@@ -1310,13 +1414,13 @@ class ALBCEnv(DirectRLEnv):
         log["Track/att/roll_err_deg"] = torch.rad2deg(att_err[:, 0]).abs().mean().item()
         log["Track/att/pitch_err_deg"] = torch.rad2deg(att_err[:, 1]).abs().mean().item()
 
-        # Yaw rate tracking
-        log["Track/yaw/rate_err"] = self._yaw_rate_err[env_ids].abs().mean().item()
+        # Yaw heading tracking
+        log["Track/yaw/err_deg"] = torch.rad2deg(self._yaw_err[env_ids]).abs().mean().item()
 
         # Command diagnostics (attitude + yaw grouped, linear grouped)
         log["Track/cmd_att/roll_deg"] = torch.rad2deg(self._ang_cmd[env_ids, 0]).abs().mean().item()
         log["Track/cmd_att/pitch_deg"] = torch.rad2deg(self._ang_cmd[env_ids, 1]).abs().mean().item()
-        log["Track/cmd_att/yaw_rate"] = self._ang_cmd[env_ids, 2].abs().mean().item()
+        log["Track/cmd_att/yaw_deg"] = torch.rad2deg(self._ang_cmd[env_ids, 2]).abs().mean().item()
 
         # Arm manipulability
         log["Track/arm/manip_mean"] = self._manipulability[env_ids].mean().item()
@@ -1366,6 +1470,13 @@ class ALBCEnv(DirectRLEnv):
         """Mid-episode dynamics diagnostics (payload, OU current, cumulative yaw)."""
         if self.cfg.payload_toggle_steps != 0:
             log["Episode/payload_toggled"] = self._payload_toggled[env_ids].float().mean().item()
+        if self.cfg.disturbance.enable:
+            # fz_abs_mean is the realized |Fz| (magnitude x strength x fz_max); strength_mean
+            # is the DORAEMON knob alone, so the two separate "the curriculum opened" from
+            # "this batch happened to draw small u".
+            log["Dist/fz_abs_mean"] = self._dist_fz[env_ids].abs().mean().item()
+            log["Dist/strength_mean"] = self._dist_strength[env_ids].mean().item()
+
         log["Episode/cumul_yaw_deg"] = torch.rad2deg(self._cumulative_yaw[env_ids].abs()).mean().item()
 
     def _collect_termination_metrics(self, log: dict[str, float | torch.Tensor], env_ids: torch.Tensor, n: int) -> None:
@@ -1522,15 +1633,42 @@ class ALBCEnv(DirectRLEnv):
         self._payload_toggle_counter[env_ids] = 0
         self._payload_toggled[env_ids] = False
 
-        # Re-draw per-env control delay lag and reset the delay buffer's history.
-        if self._action_delay_buf is not None:
-            lo, hi = self.cfg.randomization.control_delay_steps
-            new_lag = torch.randint(
-                low=lo, high=hi + 1, size=(len(env_ids),), dtype=torch.int, device=self.device
-            )
-            self._control_delay_steps[env_ids] = new_lag
-            self._action_delay_buf.set_time_lag(new_lag, env_ids)
-            self._action_delay_buf.reset(env_ids)
+        # NOTE: the control-delay lag re-draw used to live here. It moved to
+        # _reset_control_delay, called from _reset_physics, because the DORAEMON sample that
+        # now paces it (control_delay_strength) does not exist until _reset_physics runs --
+        # _reset_framework is called BEFORE it. Nothing else about the draw changed, and the
+        # buffer history reset moved with it (both still happen before the next
+        # _pre_physics_step, which is the only reader).
+
+    def _reset_control_delay(self, env_ids: torch.Tensor, sampled: dict | None) -> None:
+        """Re-draw the per-env action-delay lag and clear the delay buffer's history.
+
+        The lag is paced by the DORAEMON ``control_delay_strength`` knob: the sampled
+        per-env value when the dim is registered (training), else a uniform draw over
+        ``randomization.control_delay_strength_range`` (the eval-sweep fallback, same
+        pattern as obs_noise_scale / fault_severity / fz_disturbance_strength).
+
+        A cfg predating the range field falls back to ``(1.0, 1.0)`` -> strength 1 -> the
+        full ``[lo, hi]`` band, i.e. the pre-curriculum behaviour.
+
+        Returns immediately when ``_action_delay_buf`` is None, which is what
+        ``control_delay_steps == (0, 0)`` produces. That is the branch that keeps the
+        incumbent bit-identical: at the cfg default the block never runs at all, in the old
+        code or the new, so no RNG is drawn and no lag is written.
+        """
+        if self._action_delay_buf is None:
+            return
+        rng = getattr(self.cfg.randomization, "control_delay_strength_range", (1.0, 1.0))
+        if sampled is not None and "control_delay_strength" in sampled:
+            strength = sampled["control_delay_strength"]
+        else:
+            strength = faults.sample_uniform_per_env(len(env_ids), rng, self.device)
+        new_lag = sample_control_delay_steps(
+            self.cfg.randomization.control_delay_steps, strength, self.device
+        )
+        self._control_delay_steps[env_ids] = new_lag
+        self._action_delay_buf.set_time_lag(new_lag, env_ids)
+        self._action_delay_buf.reset(env_ids)
 
     def _reset_physics(self, env_ids: torch.Tensor) -> None:
         """Reset hydrodynamics, thrusters, payload, and apply domain randomization."""
@@ -1538,6 +1676,23 @@ class ALBCEnv(DirectRLEnv):
         self._buoy_hydro.reset(env_ids)
         if self._thruster is not None:
             self._thruster.reset(env_ids)
+
+        # Structurally-absent thruster channels (PLAN item 10): pin them dead for the
+        # reset envs. Placed HERE -- after _thruster.reset(), before the not-DR early
+        # return and before the fault block below -- because the tuple is independent of
+        # BOTH toggles: fault.enable=False never reaches the fault block, and DR-disabled
+        # returns before it, so either one alone would leave m0/m3 alive. On the
+        # fault.enable path the sampler applies the same mask again a few lines down;
+        # this write is then redundant but costs no RNG. Empty tuple = block skipped
+        # entirely = byte-identical.
+        if getattr(self.cfg.fault, "thruster_always_dead", ()) and self._thruster is not None:
+            n_thr = self.cfg.thrusters.num_thrusters
+            self._thruster.set_thruster_health(
+                env_ids,
+                faults.apply_always_dead(
+                    torch.ones(len(env_ids), n_thr, device=self.device), self.cfg.fault
+                ),
+            )
 
         self._payload_mass[env_ids] = self.cfg.payload_mass
         offset = torch.tensor(self.cfg.payload_attachment_offset, device=self.device, dtype=torch.float32)
@@ -1548,6 +1703,12 @@ class ALBCEnv(DirectRLEnv):
         if not rand_cfg.enable:
             # Non-DR path: setup mid-episode dynamics with default values
             self._setup_payload_toggle(env_ids)
+            # DORAEMON cannot run without DR, so both strengths fall back to a uniform draw.
+            # The delay call is here as well as at the end because control_delay_steps is
+            # read straight off the cfg by _draw_control_delay -- the buffer exists whether
+            # or not randomization.enable is set, exactly as it did before this moved.
+            self._reset_control_delay(env_ids, None)
+            self._reset_fz_disturbance(env_ids, None)
             return
 
         # Create DRSampler (bundles rand_cfg + num_envs + device)
@@ -1617,6 +1778,13 @@ class ALBCEnv(DirectRLEnv):
             )
             self._thruster.set_thruster_health(env_ids, health)
 
+        # Action-delay lag, paced by the DORAEMON control_delay_strength knob.
+        self._reset_control_delay(env_ids, sampled)
+
+        # Exogenous heave disturbance: strength from the DORAEMON draw when registered,
+        # then a fresh Fz and hold. No-op (and no RNG) unless cfg.disturbance.enable.
+        self._reset_fz_disturbance(env_ids, sampled)
+
     def _reset_task_and_state(self, env_ids: torch.Tensor) -> None:
         """Reset robot pose, joint DR, and velocity commands."""
         rand_cfg = self.cfg.randomization
@@ -1658,12 +1826,13 @@ class ALBCEnv(DirectRLEnv):
         self._sample_velocity_command(env_ids)
 
         # Initialize errors
-        roll_r, pitch_r, _ = euler_xyz_from_quat(self._robot.data.root_quat_w[env_ids])
+        roll_r, pitch_r, yaw_r = euler_xyz_from_quat(self._robot.data.root_quat_w[env_ids])
         raw = self._ang_cmd[env_ids, :2] - torch.stack([roll_r, pitch_r], dim=-1)
         self._att_rp_err[env_ids] = torch.atan2(torch.sin(raw), torch.cos(raw))
-        self._yaw_rate_err[env_ids] = self._ang_cmd[env_ids, 2] - self._robot.data.root_ang_vel_b[env_ids, 2]
+        yaw_raw = self._ang_cmd[env_ids, 2] - yaw_r
+        self._yaw_err[env_ids] = torch.atan2(torch.sin(yaw_raw), torch.cos(yaw_raw))
         self._ang_err[env_ids, :2] = self._att_rp_err[env_ids]
-        self._ang_err[env_ids, 2] = self._yaw_rate_err[env_ids]
+        self._ang_err[env_ids, 2] = self._yaw_err[env_ids]
         # Reset integral error on episode reset
         self._error_integral[env_ids] = 0.0
         self._bias_ema[env_ids] = 0.0
@@ -1712,6 +1881,11 @@ class ALBCEnv(DirectRLEnv):
                 time_constant_scale=rand_cfg.time_constant_scale,
                 max_thrust_scale=rand_cfg.max_thrust_scale,
             )
+
+        # The disturbance strength is a DR knob, so it must switch with the rest of them:
+        # eval.py's DR-switching pass would otherwise hold one strength for the whole run
+        # while every other parameter moved at each segment boundary. No-op when disabled.
+        self._reset_fz_disturbance(env_ids, sampled)
 
     def get_eval_snapshot(self) -> dict[str, float]:
         """Return current evaluation metrics for play-mode diagnostics.

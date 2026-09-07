@@ -25,7 +25,12 @@ _ED_AXIS_SPEC: dict[str, dict[str, Any]] = {
     "vx":    {"err": None, "actual": "lin_vel_x", "target": "target_vx",        "unit": "m/s", "thresh_key": "lv"},
     "vy":    {"err": None, "actual": "lin_vel_y", "target": "target_vy",        "unit": "m/s", "thresh_key": "lv"},
     "vz":    {"err": None, "actual": "lin_vel_z", "target": "target_vz",        "unit": "m/s", "thresh_key": "lv"},
-    "yaw":   {"err": None, "actual": "yaw_rate",  "target": "target_yaw_rate",  "unit": "rad/s", "thresh_key": "yaw"},
+    # yaw is a heading command: "yaw" is the measured heading, and target_yaw_rate
+    # (historical key) carries the heading target. Both rad. Deliberately NOT wrapped:
+    # this helper feeds heavy-tail / cross-axis "which envs fail" rankings, and an env
+    # that has swung past pi should rank as worse, not fold back under pi. Use
+    # metrics.total_yaw_error for the wrapped control error.
+    "yaw":   {"err": None, "actual": "yaw",       "target": "target_yaw_rate",  "unit": "rad",   "thresh_key": "yaw"},
 }
 
 

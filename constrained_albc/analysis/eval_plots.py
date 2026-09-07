@@ -29,10 +29,12 @@ try:
 except ImportError:
     _HAS_PLOTLY = False
 
-# Yaw rate is stored in SI rad/s in the npz (npz semantics unchanged). Plots and
-# their axis labels convert to deg/s at display time only, for visibility and
-# uniformity with the roll/pitch degree axes (audit P2 / USER-1). roll/pitch
-# attitude errors are already in degrees upstream.
+# Yaw is stored in SI radians in the npz (npz semantics unchanged): "yaw" is the
+# measured heading and "target_yaw_rate" -- historical key -- the heading target,
+# both rad; "yaw_rate" is still the measured body rate in rad/s. Plots and their axis
+# labels convert to degrees at display time only, for visibility and uniformity with
+# the roll/pitch degree axes (audit P2 / USER-1). roll/pitch attitude errors are
+# already in degrees upstream.
 _RAD2DEG = 180.0 / np.pi
 
 
@@ -68,7 +70,7 @@ def generate_plots(
     _plot_attitude_tracking(all_data, levels, output_dir)
     if has_lin_vel:
         _plot_lin_vel(all_data, levels, output_dir)
-    _plot_yaw_rate(all_data, levels, output_dir)
+    _plot_yaw(all_data, levels, output_dir)
     _plot_error(all_data, levels, output_dir)
     _plot_summary_attitude(all_metrics, levels, output_dir)
     if has_lin_vel:
@@ -81,7 +83,7 @@ def generate_plots(
         _plot_attitude_interactive(all_data, levels, output_dir)
         if has_lin_vel:
             _plot_lin_vel_interactive(all_data, levels, output_dir)
-        _plot_yaw_rate_interactive(all_data, levels, output_dir)
+        _plot_yaw_interactive(all_data, levels, output_dir)
         _plot_error_interactive(all_data, levels, output_dir)
 
 
@@ -244,8 +246,8 @@ def _plot_lin_vel_interactive(all_data: dict, levels: list[str], output_dir: str
     fig.write_html(os.path.join(output_dir, "traj_linvel.html"), include_plotlyjs="cdn")
 
 
-def _plot_yaw_rate_interactive(all_data: dict, levels: list[str], output_dir: str) -> None:
-    """Interactive yaw rate tracking per DR level (rows = DR)."""
+def _plot_yaw_interactive(all_data: dict, levels: list[str], output_dir: str) -> None:
+    """Interactive yaw HEADING tracking per DR level (rows = DR)."""
     ref = all_data[levels[0]]
     seg_names = ref["segment_names"]
     seg_steps = ref["steps_per_segment"]
@@ -266,8 +268,8 @@ def _plot_yaw_rate_interactive(all_data: dict, levels: list[str], output_dir: st
         d = all_data[lvl]
         color = _plotly_color(lvl)
         alive = ~d["terminated"][yaw_start:yaw_end]
-        target = d["target_yaw_rate"][yaw_start:yaw_end] * _RAD2DEG  # rad/s -> deg/s (display)
-        vals = np.where(alive, d["yaw_rate"][yaw_start:yaw_end], np.nan) * _RAD2DEG
+        target = d["target_yaw_rate"][yaw_start:yaw_end] * _RAD2DEG  # rad -> deg (display)
+        vals = np.where(alive, d["yaw"][yaw_start:yaw_end], np.nan) * _RAD2DEG
         mean = np.nanmean(vals, axis=1)
         std = np.nanstd(vals, axis=1)
 
@@ -275,7 +277,7 @@ def _plot_yaw_rate_interactive(all_data: dict, levels: list[str], output_dir: st
             go.Scatter(x=block_time, y=target, mode="lines",
                        line=dict(color="black", width=1.2, dash="dash"),
                        name="target", legendgroup="target", showlegend=(row_idx == 1),
-                       hovertemplate="t=%{x:.2f}s<br>target=%{y:.3f} deg/s<extra></extra>"),
+                       hovertemplate="t=%{x:.2f}s<br>target=%{y:.3f} deg<extra></extra>"),
             row=row_idx, col=1,
         )
         fig.add_trace(
@@ -290,17 +292,17 @@ def _plot_yaw_rate_interactive(all_data: dict, levels: list[str], output_dir: st
             go.Scatter(x=block_time, y=mean, mode="lines",
                        line=dict(color=color, width=1.5),
                        name=f"{lvl}", legendgroup=lvl, showlegend=True,
-                       hovertemplate=("t=%{x:.2f}s<br>mean=%{y:.3f} deg/s"
+                       hovertemplate=("t=%{x:.2f}s<br>mean=%{y:.3f} deg"
                                       f"<br>DR={int(DR_SCALE[lvl] * 100)}%<extra></extra>")),
             row=row_idx, col=1,
         )
 
     fig.update_layout(
-        title="Yaw Rate Tracking per DR Level (yaw block) -- interactive",
+        title="Yaw Heading Tracking per DR Level (yaw block) -- interactive",
         height=220 * len(levels), hovermode="x unified",
     )
     for row in range(1, len(levels) + 1):
-        fig.update_yaxes(title_text="Yaw Rate (deg/s)", row=row, col=1)
+        fig.update_yaxes(title_text="Yaw Heading (deg)", row=row, col=1)
     fig.update_xaxes(title_text="Time (s)", row=len(levels), col=1)
     fig.write_html(os.path.join(output_dir, "traj_yaw.html"), include_plotlyjs="cdn")
 
@@ -505,8 +507,8 @@ def _plot_lin_vel(all_data: dict, levels: list[str], output_dir: str) -> None:
 # Yaw rate tracking (per-DR-row, 1 column)
 # ---------------------------------------------------------------------------
 
-def _plot_yaw_rate(all_data: dict, levels: list[str], output_dir: str) -> None:
-    """Yaw rate tracking per DR level (Nx1 grid), cropped to yaw block."""
+def _plot_yaw(all_data: dict, levels: list[str], output_dir: str) -> None:
+    """Yaw HEADING tracking per DR level (Nx1 grid), cropped to yaw block."""
     ref = all_data[levels[0]]
     seg_names = ref["segment_names"]
     seg_steps = ref["steps_per_segment"]
@@ -517,7 +519,7 @@ def _plot_yaw_rate(all_data: dict, levels: list[str], output_dir: str) -> None:
         return
 
     fig, axes = plt.subplots(len(levels), 1, figsize=(14, 3 * len(levels)), sharex=True)
-    fig.suptitle("Yaw Rate Tracking per DR Level (yaw block)", fontsize=14, y=0.98)
+    fig.suptitle("Yaw Heading Tracking per DR Level (yaw block)", fontsize=14, y=0.98)
     if len(levels) == 1:
         axes = [axes]
 
@@ -530,9 +532,9 @@ def _plot_yaw_rate(all_data: dict, levels: list[str], output_dir: str) -> None:
         sample_idx = _pick_sample_env(d)
 
         ax = axes[row]
-        target = d["target_yaw_rate"][yaw_start:yaw_end] * _RAD2DEG  # rad/s -> deg/s (display)
+        target = d["target_yaw_rate"][yaw_start:yaw_end] * _RAD2DEG  # rad -> deg (display)
         ax.plot(block_time, target, "k--", linewidth=1.2, alpha=0.6, label="target")
-        vals = np.where(alive, d["yaw_rate"][yaw_start:yaw_end], np.nan) * _RAD2DEG
+        vals = np.where(alive, d["yaw"][yaw_start:yaw_end], np.nan) * _RAD2DEG
         mean = np.nanmean(vals, axis=1)
         std = np.nanstd(vals, axis=1)
         ax.plot(block_time, mean, color=color, linewidth=1.0, label="actual (mean)")
@@ -540,7 +542,7 @@ def _plot_yaw_rate(all_data: dict, levels: list[str], output_dir: str) -> None:
         if sample_idx is not None:
             ax.plot(block_time, vals[:, sample_idx], color=color, linewidth=1.2,
                     linestyle="--", alpha=0.9, label=f"sample (env {sample_idx})")
-        ax.set_ylabel("Yaw Rate (deg/s)", fontsize=9)
+        ax.set_ylabel("Yaw Heading (deg)", fontsize=9)
         ax.set_title(f"{lvl} (DR {dr_pct}%)", fontsize=10, fontweight="bold", color=color)
         ax.grid(True, alpha=0.3)
         if row == 0:
@@ -722,20 +724,20 @@ def _plot_summary_lin_vel(all_metrics: dict, levels: list[str], output_dir: str)
 def _plot_summary_yaw(all_metrics: dict, levels: list[str], output_dir: str) -> None:
     """Summary bar chart for yaw: SS error, jitter, rise, overshoot, zero-X, survival."""
     fig, axes = plt.subplots(3, 2, figsize=(12, 12))
-    fig.suptitle("Yaw Rate Summary", fontsize=14)
+    fig.suptitle("Yaw Heading Summary", fontsize=14)
     x = np.arange(len(levels))
     bar_colors = [DR_COLORS[lvl] for lvl in levels]
     xlabels = [f"{lvl}\n(DR {int(DR_SCALE[lvl] * 100)}%)" for lvl in levels]
 
-    # (0,0): SS error -- rad/s -> deg/s at display (npz stays SI)
+    # (0,0): SS error -- rad -> deg at display (metrics stay SI)
     ss_means = [float(np.nanmean(all_metrics[lvl]["yaw_ss_errors"])) * _RAD2DEG for lvl in levels]
     ss_stds = [float(np.nanstd(all_metrics[lvl]["yaw_ss_errors"])) * _RAD2DEG for lvl in levels]
-    _bar_subplot(axes[0, 0], x, ss_means, bar_colors, xlabels, "Error (deg/s)", "Yaw SS Error", yerr=ss_stds)
+    _bar_subplot(axes[0, 0], x, ss_means, bar_colors, xlabels, "Error (deg)", "Yaw SS Error", yerr=ss_stds)
 
-    # (0,1): SS jitter -- rad/s -> deg/s at display
+    # (0,1): SS jitter -- rad -> deg at display
     jt_means = [float(np.nanmean(all_metrics[lvl]["yaw_ss_jitters"])) * _RAD2DEG for lvl in levels]
     jt_stds = [float(np.nanstd(all_metrics[lvl]["yaw_ss_jitters"])) * _RAD2DEG for lvl in levels]
-    _bar_subplot(axes[0, 1], x, jt_means, bar_colors, xlabels, "Jitter (deg/s)", "SS Jitter (std of error in SS)", yerr=jt_stds)
+    _bar_subplot(axes[0, 1], x, jt_means, bar_colors, xlabels, "Jitter (deg)", "SS Jitter (std of error in SS)", yerr=jt_stds)
 
     # (1,0): Overshoot
     os_means = [float(np.nanmean(all_metrics[lvl]["yaw_overshoot_pcts"])) for lvl in levels]

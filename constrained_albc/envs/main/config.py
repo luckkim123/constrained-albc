@@ -36,7 +36,6 @@ from .mdp.constraints import (
     ALBCConstraintCfg,
     ConstraintTermCfg,
     attitude_limit_cost,
-    cumulative_yaw_cost,
     joint1_position_cost,
     manipulability_cost,
     rp_rate_cost,
@@ -45,28 +44,31 @@ from .mdp.constraints import (
     torque_limit_cost,
     velocity_limit_cost,
     yaw_rate_cost,
+    yaw_settling_cost,
 )
 from .mdp.rewards import ALBCRewardCfg, TrackingTermCfg
 
-# 10 constraint terms: 5 Probabilistic + 5 Average.
+# 10 constraint terms: 4 Probabilistic + 6 Average.
 # thruster_rate removed: structurally incompatible with entropy_coef>0 (noise alone violates 5x).
 # thruster_sat reverted to thruster_util (Average, budget=0.40): original form.
 _MAIN_CONSTRAINT_TERMS: list[ConstraintTermCfg] = [
-    # --- Probabilistic (5): binary indicator, budget = violation probability ---
+    # --- Probabilistic (4): binary indicator, budget = violation probability ---
     ConstraintTermCfg(func=attitude_limit_cost, params={"limit": 1.396}, budget=0.01, name="attitude"),
     ConstraintTermCfg(func=torque_limit_cost, params={"limit_nm": 9.5}, budget=0.08, name="arm_torque"),
-    # 2.8 = inside the 3.1 rad/s PhysX cap (albc.py velocity_limit_sim): soft must
+    # 2.15 = inside the 2.40 rad/s PhysX cap (albc.py velocity_limit_sim, = driver OPERATING_VELOCITY cap, vault finding/145; 2.8/3.1 ratio kept): soft must
     # bite before hard, else PhysX clamps first and this cost can never fire (dead
-    # constraint). Tunable within 2.5-2.8 per the wiki ripple card.
-    ConstraintTermCfg(func=velocity_limit_cost, params={"limit_rad_per_s": 2.8}, budget=0.02, name="arm_joint_vel"),
+    # constraint). The old 2.5-2.8 tunable window (wiki ripple card) assumed the 3.1 cap; rescale by 2.40/3.1 if revisited.
+    ConstraintTermCfg(func=velocity_limit_cost, params={"limit_rad_per_s": 2.15}, budget=0.02, name="arm_joint_vel"),
     ConstraintTermCfg(func=joint1_position_cost, params={"limit_rad": 4 * math.pi}, budget=0.01, name="joint1_pos"),
-    ConstraintTermCfg(func=cumulative_yaw_cost, params={"limit_rad": 8 * math.pi}, budget=0.01, name="cumul_yaw"),
-    # --- Average (5): continuous cost, soft threshold for attitude/velocity tracking ---
+    # --- Average (6): continuous cost, soft threshold for attitude/velocity tracking ---
     ConstraintTermCfg(func=thruster_utilization_cost, budget=0.40, name="thruster_util"),
     ConstraintTermCfg(func=rp_rate_cost, params={"soft_threshold": 0.5}, budget=0.10, name="rp_rate"),
     ConstraintTermCfg(func=yaw_rate_cost, params={"soft_threshold": 0.55}, budget=0.10, name="yaw_rate"),
     ConstraintTermCfg(
         func=rp_vel_settling_cost, params={"settling_threshold": 0.087}, budget=0.20, name="rp_vel_settling"
+    ),
+    ConstraintTermCfg(
+        func=yaw_settling_cost, params={"settling_threshold": 0.087}, budget=0.20, name="yaw_settling"
     ),
     ConstraintTermCfg(func=manipulability_cost, params={"w_threshold": 0.3}, budget=0.05, name="manipulability"),
 ]
@@ -188,7 +190,7 @@ class DomainRandomizationCfg:
     cog_offset_z: tuple[float, float] = (-0.04, 0.04)
 
     # -- Inertia / Mass --
-    inertia_scale: tuple[float, float] = (0.4, 2.0)
+    inertia_scale: tuple[float, float] = (0.4, 4.8)  # 2026-09-07 (PLAN item 12, decision/147 rule: measured outside band -> move the NOMINAL): measured assembly J_pitch 0.39-0.51 (vault finding/145 via finding/312) = scale 3.0-4.2 on the URDF 0.0994 since J = 0.0994*s + min(0.09*a, 0.0944*s) (clamp not binding). Nominal pinned to 4.0 (J 0.488) in doraemon._NOMINAL_OVERRIDES; upper 4.8 = 4.0 x 1.2 (K uncertainty); lower 0.4 kept as the light tail. Old ceiling was 0.334 (finding/312 wrote 0.39 assuming the clamp binds). Reaches PhysX only via set_inertias (G5).
     body_mass_scale: tuple[float, float] = (0.75, 1.25)
     water_density_range: tuple[float, float] = (995.0, 1025.0)
 
@@ -265,6 +267,15 @@ class DomainRandomizationCfg:
     # DORAEMON nominal=0 (no current at curriculum start) -> expands as policy
     # masters easier variants.
     ocean_current_strength_range: tuple[float, float] = (0.0, 1.0)
+    # -- Exogenous heave disturbance (DORAEMON-managed; PLAN §4 item 11) --
+    # Scalar strength [0, 1] multiplier on FzDisturbanceCfg.fz_max, same wiring as
+    # ocean_current_strength_range above. DORAEMON nominal=0 (no disturbance at
+    # curriculum start) -> expands to the full +-fz_max band as the policy masters it.
+    # The DORAEMON dim EXISTS even when cfg.disturbance.enable is False: the strength is
+    # sampled and then IGNORED (no wrench is added). That is deliberate -- it keeps NDIMS
+    # stable, so a run started with the disturbance off can enable it later without a
+    # doraemon_state.pt / curriculum_trajectory.json dimension mismatch.
+    fz_disturbance_strength_range: tuple[float, float] = (0.0, 1.0)
     # Observation-noise curriculum scale as a NORMALIZED knob u in [0, 1], managed by
     # DORAEMON. _get_observations multiplies the 69D _OBS_NOISE_STD by this per-env scale
     # and adds it as an EXTRA white-noise layer on top of the always-on noise_model.
@@ -282,27 +293,38 @@ class DomainRandomizationCfg:
     # DORAEMON's build_param_specs reads DR-knob bounds off this cfg only
     # (mirrors the two existing [0,1] knobs above; see doraemon.py _PARAM_DEFS).
     fault_severity_range: tuple[float, float] = (0.0, 1.0)
+    # Control-delay curriculum (PLAN item 12): a normalized knob u in [0, 1], DORAEMON-managed
+    # (same pattern as the three knobs above). Moves the CEILING of control_delay_steps, not
+    # its floor -- events.sample_control_delay_steps draws the per-env lag uniformly from
+    # [lo, lo + round(u * (hi - lo))]. Nominal u=0 -> every env at lo, which for the launch
+    # range is zero delay, the plant the deployed teacher actually trained on (finding/264);
+    # u=1 -> the full [lo, hi] band. Lives here (not on the delay tuple) because DORAEMON's
+    # build_param_specs reads DR-knob bounds off this cfg only.
+    # WITHOUT this dim nothing paced control_delay_steps at all: finding/264 recorded its
+    # absence from _PARAM_DEFS, and finding/315 measured a flat (0, 3) stalling a run from
+    # iteration 0. The launch ceiling is control_delay_steps=(0, 13) per finding/148.
+    control_delay_strength_range: tuple[float, float] = (0.0, 1.0)
 
 
 # ==========================================================================
 # 69D Observation Noise Model
 #
 # Current Proprioception (20D):
-#   Command (3D): ang_cmd(3) [att_rp(2) + yaw_rate(1)]
+#   Command (3D): ang_cmd(3) [att_rp(2) + yaw(1)]
 #   Body State (6D): euler(3), ang_vel(3)
 #   Arm State (5D): joint_pos(2), joint_vel(2), manipulability(1)
 #   Thruster (6D): filtered output (ESC feedback)
 #
 # Temporal History (46D, stride=3):
 #   Joint tracking x3 steps (12D): joint_pos_error(2), joint_vel(2)
-#   Body tracking x3 steps (18D): ang_err(3) [att_rp(2)+yaw_rate(1)], rpy(3)
+#   Body tracking x3 steps (18D): ang_err(3) [att_rp(2)+yaw(1)], rpy(3)
 #   Action x2 steps (16D): full_action(8)
 #
-# Integral Error (3D): roll, pitch, yaw_rate
+# Integral Error (3D): roll, pitch, yaw
 # ==========================================================================
 _OBS_NOISE_STD = tuple(
     # --- Current Proprioception (20D) ---
-    [0.0] * 3  # ang_cmd [att_rp(2) + yaw_rate(1)] (our command, no noise)
+    [0.0] * 3  # ang_cmd [att_rp(2) + yaw(1)] (our command, no noise)
     + [0.02] * 3  # euler
     + [0.04] * 3  # ang_vel
     + [0.02] * 2  # joint_pos
@@ -312,7 +334,7 @@ _OBS_NOISE_STD = tuple(
     # --- Joint Tracking History (12D = 4D x 3 steps) ---
     + ([0.02] * 2 + [0.04] * 2) * 3  # joint_pos_error + joint_vel
     # --- Body Tracking History (18D = 6D x 3 steps) ---
-    + ([0.04] * 3 + [0.02] * 3) * 3  # ang_err [att_rp+yaw_rate] + rpy (no lin_vel_err)
+    + ([0.04] * 3 + [0.02] * 3) * 3  # ang_err [att_rp+yaw] + rpy (no lin_vel_err)
     # --- Action History (16D = 8D x 2 steps) ---
     + [0.0] * 16  # actions (our command, no noise)
     # --- Integral Error (3D) ---
@@ -381,6 +403,19 @@ class FaultInjectionCfg:
     # Intended for eval only; leave None on any training run.
     thruster_fixed_health: tuple[float, ...] | None = None
 
+    # -- Structurally-absent channels (retrain-simtoreal-2026-09 PLAN §4 item 10) --
+    # Firmware ESC channel indices whose health is forced to EXACTLY 0.0 in EVERY env,
+    # applied AFTER the Bernoulli sampler and AFTER thruster_fixed_health, and applied
+    # even when enable=False -- these channels are STRUCTURALLY ABSENT from the policy's
+    # actuator set, not a fault, so they must never be alive regardless of the fault
+    # toggle. `()` (default) = off, no extra RNG draw, byte-identical to before.
+    # Retrain value: (0, 3) = m0, m3 (see the _ESC_CHANNEL_ORDER comment above,
+    # "m0,m3 = vertical (heave)"). decision/159 결정 2 takes the verticals out of the
+    # actuator set and re-injects the depth PID's heave as an exogenous wrench instead
+    # (see FzDisturbanceCfg below). A NEW atom in the shape of thruster_dead_frac:
+    # thruster_fixed_health is eval-only by its docstring and is NOT repurposed here.
+    thruster_always_dead: tuple[int, ...] = ()
+
     # -- Sensor noise fault (per-env extra observation noise scale) --
     # Per-env multiplier ADDED on top of the always-on _OBS_NOISE_STD model:
     # extra_noise = scale[env] * N(0, 1) * obs_noise_std. 0 = nominal sensor.
@@ -413,6 +448,26 @@ class ActuationNoiseCfg:
 
 
 @configclass
+class FzDisturbanceCfg:
+    """Exogenous heave force the deployed depth PID would put through the one surviving vertical
+    thruster, with the pitch moment that vertical geometry couples to it (decision/159 결정 2, PLAN §4 item 11).
+    OFF by default; the retrain launch enables it. Randomized in magnitude and in timing."""
+
+    enable: bool = False
+    # Physical ceiling, not a measurement: one vertical thruster at the nominal thrust_coefficient (13 N).
+    # The depth PID cannot exceed m0's authority. DORAEMON scales this from 0
+    # (see DomainRandomizationCfg.fz_disturbance_strength_range),
+    # so a ceiling above the real PID output is margin, a ceiling below it would be an error.
+    # NO field measurement of the PID's Fz exists as of 2026-09-07 -- request one from the water session.
+    fz_max: float = 13.0                     # N, body-frame z
+    # Realised on the robot: deployed_tam.json My/Fz = -0.1458 (finding/155). Lever 0.145 m
+    # confirmed by tape (finding/156). Do NOT re-derive the sign from the sim TAM columns.
+    my_per_fz: float = -0.1458               # N.m per N, body-frame y
+    # Piecewise-constant random hold: each env re-draws Fz after a hold of U(lo, hi) seconds.
+    hold_s: tuple[float, float] = (1.0, 5.0)
+
+
+@configclass
 class ALBCEnvCfg(DirectRLEnvCfg):
     """Attitude-only ALBC environment configuration.
 
@@ -434,23 +489,23 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     observation_space: int = 69  # 20D current proprio + 46D history + 3D integral
     # Breakdown: cmd(3) + body(6) + arm(5) + thruster(6) = 20D current
     #            + joint_hist(12) + body_hist(18) + action_hist(16) = 46D history
-    #            + integral(3) [roll, pitch, yaw_rate]
+    #            + integral(3) [roll, pitch, yaw]
     state_space: int = 28  # Privileged info (see observations.py compute_privileged_obs)
     # Integral error observation (Hwangbo 2017 pattern, validated in R7/R8 experiments)
     use_integral_obs: bool = True
-    integral_dims: int = 3  # [roll, pitch, yaw_rate]
+    integral_dims: int = 3  # [roll, pitch, yaw]
     integral_leak: float = 0.99  # Leaky integrator decay: I_{t+1} = leak * I_t + err * dt
     integral_clamp: float = 2.0  # Windup prevention: clamp |I| <= this value
     integral_gated: bool = True  # Error-gated integration: only accumulate when |err| < integral_gate_threshold
-    # Per-axis settling-band gate threshold [roll, pitch, yaw_rate] for the integral-obs
+    # Per-axis settling-band gate threshold [roll, pitch, yaw] for the integral-obs
     # accumulator (R1 decouple, reward.md 7 review). The gate accumulates only while
     # |err| < this. DECOUPLED from reward.*.sigma: default (0.10, 0.10, 0.10) reproduces the
-    # historical shared-sigma value byte-identically (att_rp.sigma=yaw_vel.sigma=0.10), but
+    # historical shared-sigma value byte-identically (att_rp.sigma=yaw.sigma=0.10), but
     # retuning a tracking-kernel sigma no longer silently retunes this gate -- removes the
-    # aliasing that confounded reward-kernel ablations. roll/pitch in rad, yaw_rate in rad/s.
+    # aliasing that confounded reward-kernel ablations. all three in rad (yaw is an angle now).
     integral_gate_threshold: tuple[float, float, float] = (0.10, 0.10, 0.10)
     # bias-ema obs: ON by default since P-B1 (adopted 2026-07-16). Exposes the 3D _bias_ema
-    # buffer [roll, pitch, yaw_rate] the reward.k_bias penalty already reads but the policy
+    # buffer [roll, pitch, yaw] the reward.k_bias penalty already reads but the policy
     # cannot observe (non-Markov bias reward, R1). +3 obs dims, 69->72D; materialized by
     # apply_bias_ema_obs() below, called from ALBCEnv.__init__ before super().__init__().
     use_bias_ema_obs: bool = True  # P-B1: -68% roll/-29% pitch at DR-fair none; hard-level caveat DR-confounded (wiki)
@@ -515,22 +570,24 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     """Number of action history steps to include in observation (newest N of hist_len)."""
 
     # ==========================================================================
-    # Task: Command Tracking (attitude only -- roll/pitch + yaw rate; no linear velocity)
+    # Task: Command Tracking (attitude only -- roll/pitch + yaw angle; no linear velocity)
     # ==========================================================================
     att_cmd_rp_range: tuple[float, float] = (-math.pi / 6.0, math.pi / 6.0)
     """Roll/pitch attitude command range (radians). +-30 degrees."""
-    yaw_rate_cmd_range: tuple[float, float] = (-0.5, 0.5)
-    """Yaw rate command range (rad/s, body frame)."""
+    yaw_cmd_range: tuple[float, float] = (-math.pi, math.pi)
+    """Yaw TARGET HEADING command range (rad, world frame). Full circle: the wrapped
+    error picks the shortest turn, so any target is at most pi away."""
     vel_cmd_resample_steps: int = 250
     """Resample velocity command every N steps (250 = 5s at 50Hz)."""
     vel_cmd_zero_prob: float = 0.1
     """Probability of zeroing velocity command per env on each resample."""
 
     play_mode: bool = False
-    """Play/eval mode: disable command resampling, fix all commands to zero (hovering)."""
+    """Play/eval mode: disable command resampling; roll/pitch fixed to zero and yaw held
+    at each env's current heading (hovering/station-keeping)."""
 
     reward: ALBCRewardCfg = ALBCRewardCfg(
-        yaw_vel=TrackingTermCfg(k=3.5, sigma=0.10, quad_ratio=1.0, tanh_coef=0.3, tanh_eps=0.10),
+        yaw=TrackingTermCfg(k=3.5, sigma=0.10, quad_ratio=1.0, tanh_coef=0.3, tanh_eps=0.10),
         # r13: restored k_bias=-2.0 (r11_emabias strength). r12_baseline halving to
         # -1.0 combined with latent=16 produced rank #7 (hard roll 1.26 vs r11_emabias
         # 0.62, rank #1). Full strength emabias was verified strongest single
@@ -575,6 +632,15 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # only). The 72D policy obs is UNCHANGED in both arms -- the real robot has no
     # thruster FDI, so the deployable actor never sees this.
     use_privileged_fault_obs: bool = False
+
+    # ==========================================================================
+    # Exogenous heave disturbance (off by default; see FzDisturbanceCfg)
+    # ==========================================================================
+    # Sibling of fault/randomization/actuation_noise: the wrench the deployed depth PID
+    # puts on the hull once the verticals are out of the policy's actuator set
+    # (fault.thruster_always_dead=(0,3)). NOT in the 28D privileged vector -- adding it
+    # would change the state_space contract, so the critic does not see it either.
+    disturbance: FzDisturbanceCfg = FzDisturbanceCfg()
 
     # Per-step multiplicative actuation noise (3rd channel; off by default). Sibling
     # of fault/randomization -- independently toggleable, never entangled with them.
@@ -690,7 +756,7 @@ def apply_bias_ema_obs(cfg) -> None:
 
     use_bias_ema_obs=False (default): no-op, byte-identical to today (69D obs).
     use_bias_ema_obs=True: observation_space 69 -> 72, appending the 3D _bias_ema
-    buffer [roll, pitch, yaw_rate] after the integral dims (see
+    buffer [roll, pitch, yaw] after the integral dims (see
     ALBCEnv._get_observations). The noise/bias tuples tied to the 69 obs channels are
     extended by 3 zeros each, mirroring how the 3 integral dims are already treated
     (computed, not sensor-noised: _OBS_NOISE_STD / _OBS_BIAS_MAG both end in [0.0]*3

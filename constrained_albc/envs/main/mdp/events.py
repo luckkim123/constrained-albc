@@ -188,8 +188,15 @@ def _randomize_hydro_model(
     dr: DRSampler,
     sampled: dict[str, torch.Tensor] | None = None,
     volume_key: str = "volume_scale",
-) -> None:
+) -> torch.Tensor:
     """Apply domain randomization to a hydrodynamics model.
+
+    Returns the ``inertia_scale`` draw it used, shape ``(len(env_ids), 3)``. The caller
+    needs the SAME tensor to push the scale into PhysX (``randomize_physx_inertia``):
+    re-calling ``_sample_or_uniform`` there would return identical values on the DORAEMON
+    path (``sampled`` present) but a FRESH uniform draw when ``sampled`` is None, silently
+    decorrelating the hydro Coriolis inertia from the PhysX rigid-body inertia. Hand the
+    value over rather than re-deriving it.
 
     Args:
         volume_key: sampled-dict key AND ``dr.cfg`` attribute name for the volume
@@ -281,6 +288,52 @@ def _randomize_hydro_model(
             clamped = torch.where(exceeded, max_am, am_diag)
             hydro.added_mass_matrix[env_ids] = torch.diag_embed(clamped)
 
+    return inertia_scales
+
+
+def randomize_physx_inertia(
+    env: ALBCEnv,
+    env_ids: torch.Tensor,
+    body_ids: list[int],
+    scales: torch.Tensor,
+) -> None:
+    """Push a per-axis inertia scale into PhysX (G5 / item 12, `finding/354`).
+
+    Until this existed, ``inertia_scale`` reached only the hydrodynamics model's Coriolis
+    term. ``marinelab/core/hydrodynamics.py:125`` says so in a comment -- "DR randomizes
+    _rigid_body_inertia (hydro model uncertainty), but PhysX's actual inertia is NOT
+    randomized by inertia_scale (only by body_mass_scale via set_masses)" -- so the DR
+    dimension DORAEMON was widening could not move the rigid-body dynamics at all, and
+    `finding/149`'s 1.53x measured-vs-sim rotational inertia gap had no lever.
+
+    ``scales`` is per-axis ``(N, 3)``, so the diagonal must scale by ``s_i`` exactly while
+    the tensor stays symmetric positive-definite. The congruence ``I' = S^(1/2) I S^(1/2)``
+    does that: ``I'_ij = I_ij * sqrt(s_i * s_j)``, which is ``I_ii * s_i`` on the diagonal
+    and consistently interpolated off it. Scaling only the three diagonal entries gives the
+    same diagonal but is not guaranteed to stay positive-definite -- it usually does on a
+    diagonally-dominant tensor and can fail on an ill-conditioned one, which is the case
+    ``test_physx_inertia_congruence.py`` pins. The congruence has no such case.
+
+    NOT VERIFIED LIVE as of 2026-09-07: the congruence math is covered by that test, but
+    nothing has yet confirmed that ``set_inertias`` moves this articulation's PhysX inertia
+    on a running env (both GPUs were busy). Do that before trusting the feature.
+
+    PhysX inertias are a flattened row-major 3x3 per body, ``(num_envs, num_bodies, 9)``,
+    and ``set_inertias`` takes CPU tensors -- same contract as ``set_masses`` above.
+    """
+    env_ids_cpu = env_ids.cpu()
+    inertias = env._robot.root_physx_view.get_inertias()
+    default = env._robot.data.default_inertia
+
+    root = scales.clamp_min(1e-9).sqrt().cpu()                 # (N, 3)
+    congruence = root.unsqueeze(-1) * root.unsqueeze(-2)       # (N, 3, 3)
+
+    for body_idx in body_ids:
+        base = default[env_ids_cpu, body_idx].view(-1, 3, 3)   # (N, 3, 3)
+        inertias[env_ids_cpu, body_idx] = (base * congruence).reshape(-1, 9)
+
+    env._robot.root_physx_view.set_inertias(inertias, env_ids_cpu)
+
 
 def randomize_hydrodynamics(
     env: ALBCEnv,
@@ -290,9 +343,49 @@ def randomize_hydrodynamics(
 ) -> None:
     """Randomize hydrodynamic parameters for main body and buoy."""
     env_ids = _ensure_env_ids(env, env_ids)
-    _randomize_hydro_model(env._hydro, env_ids, dr, sampled)  # main: volume_scale
+    main_scales = _randomize_hydro_model(env._hydro, env_ids, dr, sampled)  # main: volume_scale
     # Buoy volume uses buoy_volume_scale (decorrelated from the main body's).
-    _randomize_hydro_model(env._buoy_hydro, env_ids, dr, sampled, volume_key="buoy_volume_scale")
+    buoy_scales = _randomize_hydro_model(env._buoy_hydro, env_ids, dr, sampled, volume_key="buoy_volume_scale")
+
+    # G5 / item 12: the same draw, now also reaching PhysX. Both models sample the shared
+    # `inertia_scale` key, so on the DORAEMON path main_scales and buoy_scales are the same
+    # tensor; they are passed separately anyway so the two bodies stay independent if that
+    # ever changes.
+    randomize_physx_inertia(env, env_ids, env._body_id, main_scales)
+    randomize_physx_inertia(env, env_ids, env._buoy_body_id, buoy_scales)
+
+
+def sample_control_delay_steps(
+    control_delay_steps: tuple[int, int],
+    strength: torch.Tensor,
+    device: str | torch.device,
+) -> torch.Tensor:
+    """Per-env integer action-delay lag, paced by a DORAEMON strength [n] in [0, 1].
+
+    The curriculum moves the CEILING, never the floor: env i draws uniformly from the
+    INCLUSIVE integer range ``[lo, lo + round(s_i * (hi - lo))]``. So ``s = 0`` pins every
+    env at ``lo`` -- for the launch range that is zero delay, the plant the deployed teacher
+    was actually trained on (finding/264) -- and ``s = 1`` restores the full ``[lo, hi]``,
+    the same DISTRIBUTION as ``randint(lo, hi + 1)`` though not the same RNG draw.
+
+    Rounding is ``torch.round``, i.e. half-to-EVEN: s=0.5 on (0, 13) gives ceiling 6, not 7,
+    and s=0.5 on (0, 5) gives 2, not 3.
+
+    Why this needs a curriculum at all: ``control_delay_steps`` was never in DORAEMON's
+    ``_PARAM_DEFS`` (finding/264), so nothing paced it, and finding/315 measured a flat
+    (0, 3) from iteration 0 stalling the run under a mistuned ``performance_lb``. The launch
+    ceiling of 13 comes from finding/148 -- 152 ms median cmd->joint latency, 132-260 ms
+    range, against a 20 ms control tick.
+
+    The returned lag is clamped to ``hi`` so it can never exceed the DelayBuffer's
+    ``history_length`` (allocated from the same cfg ``hi``), even if a config override hands
+    in a strength above 1.
+    """
+    lo, hi = control_delay_steps
+    hi_eff = lo + torch.round(strength * (hi - lo))
+    span = (hi_eff - lo + 1.0).clamp(min=1.0)
+    u = torch.rand(strength.shape[0], device=device)
+    return (lo + (u * span).floor()).clamp(max=float(hi)).to(torch.int)
 
 
 def randomize_ocean_current(

@@ -23,7 +23,7 @@ tanh term on r_yaw (config.py, tanh_coef=0.3); r_att has no saturating term, so
 its SS-error dead zone remains.
 
 r_att:  k_att * (exp(-e^2/2s^2) - q_quad*e^2)          (roll/pitch attitude)
-r_yaw:  k_yaw * (exp(-e^2/2s^2) - q_quad*e^2 - tanh)   (yaw rate; tanh live)
+r_yaw:  k_yaw * (exp(-e^2/2s^2) - q_quad*e^2 - tanh)   (yaw angle, wrapped; tanh live)
 r_tau:  k_tau * mean(tau^2)                 (joint torque energy;   k_tau  < 0)
 r_thr:  k_thr * mean(thruster_cmd^2)        (thruster energy;       k_thr  < 0)
 r_s:    k_s   * (mean(da^2) + mean(d2a^2))  (action smoothness;     k_s    < 0)
@@ -103,11 +103,11 @@ class RewardTermCfg:
 
 @configclass
 class ALBCRewardCfg:
-    """Tracking reward config. Two tracking terms (att_rp, yaw_vel) + penalty terms."""
+    """Tracking reward config. Two tracking terms (att_rp, yaw) + penalty terms."""
 
     att_rp: TrackingTermCfg = TrackingTermCfg(k=9.0, sigma=0.10, quad_ratio=0.833)
     att_roll_weight: float = 1.5  # roll weight in err_sq (weak TAM actuation: 0.007m vs pitch 0.145m)
-    yaw_vel: TrackingTermCfg = TrackingTermCfg(k=3.5, sigma=0.10, quad_ratio=1.0)
+    yaw: TrackingTermCfg = TrackingTermCfg(k=3.5, sigma=0.10, quad_ratio=1.0)
     k_tau: float = -0.01  # joint torque penalty
     k_thr: float = -0.35  # thruster energy penalty
     k_s: float = -0.1  # action smoothness penalty
@@ -162,10 +162,10 @@ def att_rp_tracking(env: ALBCEnv) -> torch.Tensor:
     return _exp_quad_saturating(err_sq, err_abs_w, cfg.att_rp)
 
 
-def yaw_vel_tracking(env: ALBCEnv) -> torch.Tensor:
-    """r_yaw: Scalar tracking for yaw rate."""
-    err = env._yaw_rate_err
-    return _exp_quad_saturating(err.pow(2), err.abs(), env.cfg.reward.yaw_vel)
+def yaw_tracking(env: ALBCEnv) -> torch.Tensor:
+    """r_yaw: Scalar tracking for the wrapped yaw heading error (rad, shortest path)."""
+    err = env._yaw_err
+    return _exp_quad_saturating(err.pow(2), err.abs(), env.cfg.reward.yaw)
 
 
 def joint_torque(robot: Articulation, env: ALBCEnv) -> torch.Tensor:
@@ -197,7 +197,8 @@ def action_smoothness(env: ALBCEnv) -> torch.Tensor:
 def bias_ema_penalty(env: ALBCEnv) -> torch.Tensor:
     """r_bias = sum_i w_i * bias_ema_i^2. Sustained-offset penalty.
 
-    Uses env._bias_ema (3D, ungated EMA of [roll, pitch, yaw_rate] tracking errors)
+    Uses env._bias_ema (3D, ungated EMA of [roll, pitch, yaw] tracking errors; the yaw
+    entry is the wrapped heading error)
     updated each step. Squared form so reward gradient grows with offset; per-axis
     weights let roll (weak TAM authority) receive a stronger anti-bias signal than yaw.
     """
@@ -219,7 +220,7 @@ class RewardManager:
     # (name, weight getter, value fn(robot, env)) -- one row per builtin term.
     _BUILTIN_TERMS: tuple[tuple[str, Callable, Callable], ...] = (
         ("att_rp", lambda c: c.att_rp.k, lambda robot, env: att_rp_tracking(env)),
-        ("yaw_vel", lambda c: c.yaw_vel.k, lambda robot, env: yaw_vel_tracking(env)),
+        ("yaw", lambda c: c.yaw.k, lambda robot, env: yaw_tracking(env)),
         ("torque", lambda c: c.k_tau, joint_torque),
         ("thruster", lambda c: c.k_thr, lambda robot, env: thruster_energy(env)),
         ("smoothness", lambda c: c.k_s, lambda robot, env: action_smoothness(env)),

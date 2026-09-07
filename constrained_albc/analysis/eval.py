@@ -44,7 +44,7 @@ from _eval_dr.trajectory import (  # type: ignore[import-not-found]  # noqa: E40
     ATT_AMP_DEG,
     LIN_VEL_AMP,
     WARMUP_SEGMENTS,
-    YAW_RATE_AMP,
+    YAW_AMP,
     build_step_trajectory,
 )
 
@@ -167,10 +167,14 @@ sp_static.add_argument(
     help="Static eval attitude step amplitude in deg; default = full trained box (trajectory.ATT_AMP_DEG).",
 )
 sp_static.add_argument(
-    "--yaw-rate-amp",
+    "--yaw-amp",
+    "--yaw-rate-amp",  # deprecated alias: the command is a heading target now, not a rate
+    dest="yaw_amp",
     type=float,
     default=None,
-    help="Static eval yaw-rate step amplitude in rad/s; default = full trained box (trajectory.YAW_RATE_AMP).",
+    help="Static eval yaw HEADING step amplitude in rad; default = full trained box "
+    "(trajectory.YAW_AMP). --yaw-rate-amp is a deprecated alias kept so existing exam "
+    "scripts keep running.",
 )
 sp_static.add_argument(
     "--save-policy-obs",
@@ -261,6 +265,17 @@ sp_static.add_argument(
          "policy networks (different RNG consumption order).",
 )
 sp_static.add_argument(
+    "--env-dr-anchor",
+    action="store_true",
+    default=False,
+    help="Anchor the DR interpolation on the run's OWN env cfg instead of the bare "
+         "DomainRandomizationCfg class default. Without it apply_dr_config replaces "
+         "env_cfg.randomization wholesale, so every `env.randomization.*` Hydra "
+         "override is discarded -- the section-5 band thrust_coefficient_scale="
+         "(0.5,2.0) has been graded at the class default (0.7,1.3) in every exam to "
+         "date. OFF by default: results stay comparable with prior exams unless passed.",
+)
+sp_static.add_argument(
     "--extreme-ood",
     action="store_true",
     default=False,
@@ -341,9 +356,9 @@ _add_common(sp_segmented)
 sp_segmented.add_argument("--segment_duration", type=float, default=5.0)
 sp_segmented.add_argument("--num_segments", type=int, default=10)
 sp_segmented.add_argument("--kp_pos", type=float, default=0.5, help="Outer-loop position P-gain (s^-1). vel_cmd = clip(Kp_pos * pos_err, ±vel_sat).")
-sp_segmented.add_argument("--kp_yaw", type=float, default=0.5, help="Outer-loop yaw P-gain (s^-1). yaw_rate_cmd = clip(Kp_yaw * yaw_err, ±yaw_rate_sat).")
+sp_segmented.add_argument("--kp_yaw", type=float, default=0.5, help="DEPRECATED, accepted but ignored: the policy takes a yaw heading target directly, so the outer yaw P-loop is gone.")
 sp_segmented.add_argument("--vel_sat", type=float, default=0.25, help="Velocity command saturation (m/s). Matches training range.")
-sp_segmented.add_argument("--yaw_rate_sat", type=float, default=0.25, help="Yaw rate command saturation (rad/s).")
+sp_segmented.add_argument("--yaw_rate_sat", type=float, default=0.25, help="DEPRECATED, accepted but ignored (see --kp_yaw).")
 sp_segmented.add_argument("--doraemon-dr", action=argparse.BooleanOptionalAction, default=True)
 # Student-policy mode (optional)
 sp_segmented.add_argument("--student_ckpt", type=str, default=None,
@@ -480,6 +495,9 @@ TRAJECTORY_N_SEGMENTS = 31
 
 def apply_dr_config(env_cfg, scale: float) -> None:
     """Apply interpolated DR config to the environment config."""
+    # No-op unless --env-dr-anchor. Must precede the overwrite below: this is the first
+    # call in every mode, so it is the only point that still sees the pristine plant.
+    _dr_config_module.capture_env_dr_anchor(env_cfg)
     env_cfg.randomization = build_dr_config(scale)
     if _dr_config_module._DETERMINISTIC_DR:
         _collapse_dr_to_midpoint(env_cfg.randomization)
@@ -513,7 +531,7 @@ def apply_dr_mid_episode(raw_env, dr_cfg: DomainRandomizationCfg) -> None:
 # ============================================================================
 # Trajectory + metrics (static mode)
 # Moved to _eval_dr/{trajectory,metrics}.py (pure numpy, Isaac-Sim-free):
-#   build_step_trajectory + ATT_AMP_DEG/LIN_VEL_AMP/YAW_RATE_AMP/WARMUP_SEGMENTS
+#   build_step_trajectory + ATT_AMP_DEG/LIN_VEL_AMP/YAW_AMP/WARMUP_SEGMENTS
 #   _step_response_one_segment, _classify_segment, _get_block_step_range,
 #   _pick_sample_env, _step_response_scalar_segment, compute_metrics
 # imported at module top.
@@ -814,6 +832,9 @@ def run_evaluation(
     lin_vel_norm = np.zeros((total_steps, num_envs))
     # Yaw rate (body frame)
     yaw_rate = np.zeros((total_steps, num_envs))
+    # Measured heading (rad, wrapped): the yaw command is a position now, so the yaw
+    # tracking error is wrap(target - yaw) and needs the angle, not just the rate.
+    actual_yaw_rad = np.zeros((total_steps, num_envs))
     # Action magnitude
     action_magnitude = np.zeros((total_steps, num_envs))
     # Joint1 (arm rotation) trajectory for flat-target drift analysis. joint1_cmd
@@ -884,6 +905,8 @@ def run_evaluation(
         # present; lin-vel is injected only when the env tracks it.
         raw_env._ang_cmd[:, 0] = target_roll_rad[step_idx]
         raw_env._ang_cmd[:, 1] = target_pitch_rad[step_idx]
+        # yaw slot = world-frame heading TARGET (rad). The trajectory dict key is still
+        # "yaw_rate" for npz-consumer compatibility; the quantity is an angle.
         raw_env._ang_cmd[:, 2] = targets["yaw_rate"][step_idx]
         if has_lin_vel:
             raw_env._vel_cmd_lin[:, 0] = targets["vx"][step_idx]
@@ -937,9 +960,11 @@ def run_evaluation(
         )
 
         # Attitude: actual + error
-        roll_cur, pitch_cur, _ = euler_xyz_from_quat(raw_env._robot.data.root_quat_w)
+        roll_cur, pitch_cur, yaw_cur = euler_xyz_from_quat(raw_env._robot.data.root_quat_w)
         actual_roll[step_idx] = torch.rad2deg(roll_cur).cpu().numpy()
         actual_pitch[step_idx] = torch.rad2deg(pitch_cur).cpu().numpy()
+        # Wrap to (-pi, pi] so metrics can difference it against the heading target.
+        actual_yaw_rad[step_idx] = torch.atan2(torch.sin(yaw_cur), torch.cos(yaw_cur)).cpu().numpy()
 
         att_err = raw_env._att_rp_err
         error_roll[step_idx] = torch.rad2deg(att_err[:, 0]).cpu().numpy()
@@ -986,12 +1011,14 @@ def run_evaluation(
         "time": time_s,
         "target_roll_deg": target_roll_deg,
         "target_pitch_deg": target_pitch_deg,
+        # Heading TARGET in rad (key name kept: eval_plots/eval_serialize/_analyze read it).
         "target_yaw_rate": targets["yaw_rate"],
         "actual_roll_deg": actual_roll,
         "actual_pitch_deg": actual_pitch,
         "error_roll": error_roll,
         "error_pitch": error_pitch,
         "yaw_rate": yaw_rate,
+        "yaw": actual_yaw_rad,  # measured heading (rad, wrapped) -- pairs with target_yaw_rate
         "action_magnitude": action_magnitude,
         "delta_action": delta_action,
         # Joint1 drift diagnostics (per-step, (T, num_envs)): policy command,
@@ -1313,6 +1340,17 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         DR_COLORS["ood"] = "#FF00FF"  # magenta for OOD
         print("\n[INFO] OOD side-by-side: appended 'ood' level (DORAEMON-derived OOD bounds).\n")
 
+    # ---- env-dr-anchor: grade against the run's own plant, not the class default ----
+    # Set before the first apply_dr_config() (below, at env creation), which is where
+    # dr_config latches the anchor.
+    if args_cli.env_dr_anchor:
+        _dr_config_module._USE_ENV_DR_ANCHOR = True
+        print("[INFO] env-dr-anchor: hard anchor comes from the run's env cfg -- results "
+              "are NOT comparable with exams graded at the DomainRandomizationCfg default")
+        # Latch HERE, not at the first apply_dr_config: load_doraemon_dr runs in between
+        # and builds _DORAEMON_FULL_DR, which needs the anchor for its non-DORAEMON fields.
+        _dr_config_module.capture_env_dr_anchor(env_cfg)
+
     # ---- Deterministic DR: disable DORAEMON + collapse tuple DR ranges to midpoint ----
     # Applied AFTER env_cfg is built but BEFORE gym.make(...) so env init uses fixed values.
     if args_cli.deterministic_dr or args_cli.extreme_ood:
@@ -1522,7 +1560,7 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         segment_duration=args_cli.segment_duration,
         step_dt=step_dt,
         att_amp_deg=args_cli.att_amp_deg,
-        yaw_rate_amp=args_cli.yaw_rate_amp,
+        yaw_amp=args_cli.yaw_amp,
     )
     if getattr(args_cli, "flat_target", False):
         # Pure station-keeping: zero every command channel so the only thing that
@@ -1536,8 +1574,8 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         f", warmup={WARMUP_SEGMENTS} segs ({warmup_steps} steps)"
     )
     _att_amp_used = ATT_AMP_DEG if args_cli.att_amp_deg is None else args_cli.att_amp_deg
-    _yaw_rate_amp_used = YAW_RATE_AMP if args_cli.yaw_rate_amp is None else args_cli.yaw_rate_amp
-    print(f"[INFO] Targets: att +-{_att_amp_used}deg, lin +-{LIN_VEL_AMP}m/s, yaw +-{_yaw_rate_amp_used}rad/s")
+    _yaw_amp_used = YAW_AMP if args_cli.yaw_amp is None else args_cli.yaw_amp
+    print(f"[INFO] Targets: att +-{_att_amp_used}deg, lin +-{LIN_VEL_AMP}m/s, yaw +-{_yaw_amp_used}rad")
 
     # ---- Run evaluation for each DR level ----
     all_data = {}
@@ -1716,9 +1754,9 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
                 print(f"      {ax_name}: SS={ss:.3f} Jit={jt:.3f} Rise={rt:.3f}s OS={os_p:.1f}% ZX={zx:.1f}")
             print(f"      Survival:  {metrics['lin_vel_survival']:.0f}%")
         print("    [Yaw]")
-        print(f"      Error:     {metrics['total_yaw_rate_error']:.4f} rad/s")
-        print(f"      SS error:  {np.nanmean(metrics['yaw_ss_errors']):.4f} rad/s")
-        print(f"      SS jitter: {np.nanmean(metrics['yaw_ss_jitters']):.4f} rad/s")
+        print(f"      Error:     {metrics['total_yaw_error']:.4f} rad")
+        print(f"      SS error:  {np.nanmean(metrics['yaw_ss_errors']):.4f} rad")
+        print(f"      SS jitter: {np.nanmean(metrics['yaw_ss_jitters']):.4f} rad")
         print(f"      Rise time: {np.nanmean(metrics['yaw_rise_times']):.3f} s")
         print(f"      Overshoot: {np.nanmean(metrics['yaw_overshoot_pcts']):.1f}%")
         print(f"      Zero-X:   {np.nanmean(metrics['yaw_zero_crossings']):.1f}")
@@ -1762,7 +1800,7 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
             f"{np.nanmean(m['att_overshoot_pcts']):5.1f}% "
             f"{np.nanmean(m['att_zero_crossings']):5.1f} "
             f"{lv_col} "
-            f"{m['total_yaw_rate_error']:7.4f} "
+            f"{m['total_yaw_error']:7.4f} "
             f"{np.nanmean(m['yaw_ss_errors']):7.4f} "
             f"{m['survival_rate']:5.0f}%"
         )
@@ -1864,11 +1902,16 @@ def run_robustness_eval(
             policy_nn.reset(torch.ones(num_envs, 1, dtype=torch.bool, device=device))
     raw_env.episode_length_buf[:] = 0
 
-    # Set zero commands. _vel_cmd_lin exists only on an env with a linear-velocity
-    # command; since the full-DOF family was retired (2026-09) no registered task has
-    # one, so the write is guarded rather than assumed -- same predicate as the
-    # has_lin_vel read above.
-    raw_env._ang_cmd[:] = 0.0
+    # Set zero commands. Roll/pitch zero is level (absolute); the yaw slot is a heading
+    # TARGET now, so hovering means holding the heading the env starts at. Latch it ONCE
+    # here -- re-reading the live yaw every step would make the target chase the robot and
+    # the yaw error would be identically zero, silently voiding the hover test.
+    # _vel_cmd_lin exists only on an env with a linear-velocity command; since the full-DOF
+    # family was retired (2026-09) no registered task has one, so that write is guarded.
+    _, _, _hold_yaw = euler_xyz_from_quat(raw_env._robot.data.root_quat_w)
+    _hold_yaw = _hold_yaw.clone()
+    raw_env._ang_cmd[:, :2] = 0.0
+    raw_env._ang_cmd[:, 2] = _hold_yaw
     if hasattr(raw_env, "_vel_cmd_lin"):
         raw_env._vel_cmd_lin[:] = 0.0
 
@@ -1883,8 +1926,10 @@ def run_robustness_eval(
         for local_step in range(steps_per_dr):
             global_step = dr_i * steps_per_dr + local_step
 
-            # Ensure zero commands every step (prevent resampling)
-            raw_env._ang_cmd[:] = 0.0
+            # Ensure zero commands every step (prevent resampling). Yaw re-asserts the
+            # LATCHED heading, not the live one.
+            raw_env._ang_cmd[:, :2] = 0.0
+            raw_env._ang_cmd[:, 2] = _hold_yaw
             if hasattr(raw_env, "_vel_cmd_lin"):
                 raw_env._vel_cmd_lin[:] = 0.0
 
@@ -2237,14 +2282,18 @@ def run_switching_eval(
     # Cascade PID setup
     origin_t = raw_env.scene.env_origins  # (N, 3)
     kp_pos = float(args_cli.kp_pos)
-    kp_yaw = float(args_cli.kp_yaw)
     vel_sat = float(args_cli.vel_sat)
-    yaw_rate_sat = float(args_cli.yaw_rate_sat)
+    # The yaw outer loop is gone: the policy takes a heading target directly, so the
+    # segmented mode passes yaw=0 straight into _ang_cmd[:, 2] instead of a P-loop rate.
+    if args_cli.kp_yaw != 0.5 or args_cli.yaw_rate_sat != 0.25:
+        print("[WARN] --kp_yaw / --yaw_rate_sat are deprecated and ignored: the yaw command is a heading target, so no outer yaw P-loop runs.")
     # Logs for commands sent to policy
     vel_cmd_x = np.zeros((total_steps, num_envs))
     vel_cmd_y = np.zeros((total_steps, num_envs))
     vel_cmd_z = np.zeros((total_steps, num_envs))
-    yaw_rate_cmd_arr = np.zeros((total_steps, num_envs))
+    # Heading command actually sent (constant 0 = hold world heading 0). Kept under the
+    # historical npz key so downstream readers do not break.
+    yaw_cmd_arr = np.zeros((total_steps, num_envs))
 
     for step_idx in range(total_steps):
         # Cascade PID outer loop: target xyz=0, yaw=0 (all in world frame rel to env origin)
@@ -2253,14 +2302,10 @@ def run_switching_eval(
         pos_err_w = origin_t - pos_w   # drive robot back toward origin
         pos_err_b = quat_rotate_inverse(quat_w, pos_err_w)  # rotate to body frame
         vel_cmd = torch.clamp(kp_pos * pos_err_b, -vel_sat, vel_sat)
-        _, _, yaw_w = euler_xyz_from_quat(quat_w)
-        yaw_err = torch.atan2(torch.sin(-yaw_w), torch.cos(-yaw_w))  # wrap (0 - yaw)
-        yaw_rate_cmd = torch.clamp(kp_yaw * yaw_err, -yaw_rate_sat, yaw_rate_sat)
-
-        # Roll/pitch target = 0; yaw_rate = outer-loop output; vel_cmd = outer-loop output
+        # Roll/pitch target = 0; yaw = heading target 0 (world frame); vel_cmd = outer-loop output
         raw_env._ang_cmd[:, 0] = 0.0
         raw_env._ang_cmd[:, 1] = 0.0
-        raw_env._ang_cmd[:, 2] = yaw_rate_cmd
+        raw_env._ang_cmd[:, 2] = 0.0
         # Unguarded on purpose: run_segmented refuses at setup when the env has no
         # _vel_cmd_lin, so reaching this line means the buffer exists. A hasattr here
         # would silently drop the cascade command while vel_cmd_x/y/z below still
@@ -2271,7 +2316,6 @@ def run_switching_eval(
         vel_cmd_x[step_idx] = vel_cmd[:, 0].cpu().numpy()
         vel_cmd_y[step_idx] = vel_cmd[:, 1].cpu().numpy()
         vel_cmd_z[step_idx] = vel_cmd[:, 2].cpu().numpy()
-        yaw_rate_cmd_arr[step_idx] = yaw_rate_cmd.cpu().numpy()
 
         # DR switch at every segment boundary (except step 0 = reset-time DR)
         if step_idx > 0 and step_idx % steps_per_seg == 0:
@@ -2340,7 +2384,7 @@ def run_switching_eval(
         "vel_cmd_x": vel_cmd_x,
         "vel_cmd_y": vel_cmd_y,
         "vel_cmd_z": vel_cmd_z,
-        "yaw_rate_cmd": yaw_rate_cmd_arr,
+        "yaw_rate_cmd": yaw_cmd_arr,  # heading command (rad), key name kept for readers
         "action_magnitude": action_magnitude,
         "terminated": terminated,
         "time_to_failure": time_to_failure,

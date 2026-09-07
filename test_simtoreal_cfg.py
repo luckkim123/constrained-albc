@@ -8,6 +8,17 @@ fields, with exactly the launched values, and nothing else moved.
 
 Run:  /isaac-sim/python.sh test_simtoreal_cfg.py   (needs an idle box: Kit takes a lock)
 
+2026-09-07 -- WHY THIS USED TO LOOK BROKEN (finding/379, and its stated cause was wrong).
+The symptom was "exits 0 during Kit startup with no PASS line", reproduced through BOTH entry
+points on an idle box. It was never a startup failure: a bisecting probe reached every stage,
+built both configs (85 top-level keys each) and then BLOCKED in `app.close()`. The asserts had
+already run and the PASS line had already been written -- into a block-buffered stdout that was
+never flushed, because the process never got past `close()` to exit. Kit's own banner fills the
+first few 4 KB blocks, which is why the log ends mid-banner and looks like a startup death.
+Two fixes, both here: print with flush=True, and hard-exit instead of returning through
+`app.close()`. Verified: PYTHONUNBUFFERED=1 alone makes the unmodified file print
+"PASS  339 fields compared; exactly 7 moved, all seven as launched".
+
 """
 import argparse
 
@@ -82,7 +93,14 @@ for k, want in EXPECTED.items():
     got = norm(variant[k])
     assert got == norm(want), f"{k}: variant has {got!r}, override block says {want!r}"
 
-print(f"PASS  {len(base)} fields compared; exactly {len(moved)} moved, all seven as launched")
+print(f"PASS  {len(base)} fields compared; exactly {len(moved)} moved, all seven as launched", flush=True)
 for k in sorted(EXPECTED):
-    print(f"  {k:44} {base[k]!r:>11}  ->  {norm(variant[k])!r}")
-app.close()
+    print(f"  {k:44} {base[k]!r:>11}  ->  {norm(variant[k])!r}", flush=True)
+
+# `app.close()` blocks here (measured 2026-09-07), so anything still sitting in a buffered
+# stdout is lost and the process never returns an exit status a caller can read. Flush first,
+# then leave without going through Kit's shutdown -- this script owns no state worth unwinding.
+import sys, os  # noqa: E402
+sys.stdout.flush()
+sys.stderr.flush()
+os._exit(0)

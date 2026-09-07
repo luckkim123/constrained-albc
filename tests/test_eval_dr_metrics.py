@@ -190,8 +190,11 @@ def _build_perfect_tracking_static_data(num_envs: int = 4, seg_duration: float =
         "target_vy": targets["vy"],
         "target_vz": targets["vz"],
         "lin_vel_norm": np.zeros((total_steps, num_envs)),  # |actual - target| norm = 0
-        # Yaw rate: actual == target
+        # Yaw: measured heading == heading target (perfect tracking). The command is a
+        # position now, so compute_metrics reads data["yaw"]; data["yaw_rate"] stays as
+        # the measured body-rate column run_evaluation still records.
         "yaw_rate": col(targets["yaw_rate"]),
+        "yaw": col(targets["yaw_rate"]),
         "target_yaw_rate": targets["yaw_rate"],
     }
 
@@ -207,7 +210,8 @@ def test_compute_metrics_perfect_tracking():
     # Steady-state errors are ~ 0 under perfect tracking.
     assert m["total_att_error"] == pytest.approx(0.0, abs=1e-9)
     assert m["total_lin_vel_error"] == pytest.approx(0.0, abs=1e-9)
-    assert m["total_yaw_rate_error"] == pytest.approx(0.0, abs=1e-9)
+    assert m["total_yaw_error"] == pytest.approx(0.0, abs=1e-9)
+    assert np.allclose(np.array(m["yaw_ss_errors"]), 0.0, atol=1e-9)
 
     # Per-segment SS errors collected. The attitude block has 11 segments:
     # 3x3 grid (9) + return-to-neutral doubled (2); "att zero (post-warmup)"
@@ -219,6 +223,28 @@ def test_compute_metrics_perfect_tracking():
     for ax in ("vx", "vy", "vz"):
         assert len(m["lin_vel_ss_errors"][ax]) == 10
         assert np.allclose(np.array(m["lin_vel_ss_errors"][ax]), 0.0, atol=1e-9)
+
+
+# The wrapped-error property: perfect tracking alone cannot catch a missing wrap,
+# because a correct and an unwrapped implementation agree when the heading sits on the
+# target. These two do not agree.
+def test_yaw_metrics_wrap_across_the_branch_cut():
+    """A heading offset by exactly 2*pi from the target is the SAME heading -> zero error."""
+    data = _build_perfect_tracking_static_data()
+    data["yaw"] = data["yaw"] + 2.0 * np.pi
+    m = compute_metrics(data)
+    assert m["total_yaw_error"] == pytest.approx(0.0, abs=1e-9)
+    assert np.allclose(np.array(m["yaw_ss_errors"]), 0.0, atol=1e-9)
+
+
+def test_yaw_metrics_take_the_short_way():
+    """cmd=+3.0 rad from yaw=-3.0 rad is a 0.283 rad error the short way, not 6.0."""
+    data = _build_perfect_tracking_static_data()
+    data["target_yaw_rate"] = np.full_like(data["target_yaw_rate"], 3.0)
+    data["yaw"] = np.full_like(data["yaw"], -3.0)
+    m = compute_metrics(data)
+    assert m["total_yaw_error"] == pytest.approx(2.0 * np.pi - 6.0, abs=1e-9)
+    assert m["total_yaw_error"] < 0.3  # emphatically not 6.0
 
 
 # An env terminated from step 0 is all-NaN along the time axis, so the per-env

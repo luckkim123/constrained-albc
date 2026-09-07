@@ -1,5 +1,14 @@
 # Reward System (`envs/main`)
 
+> ⚠️ **Stale on yaw (branch `yaw-position`).** The yaw command changed from a body
+> RATE (rad/s) to a world-frame HEADING TARGET (rad), and the tracking error is now
+> the wrapped shortest-path difference. Renames: `reward.yaw_vel` -> `reward.yaw`,
+> `yaw_vel_tracking` -> `yaw_tracking`, `_yaw_rate_err` -> `_yaw_err`,
+> `yaw_rate_cmd_range` -> `yaw_cmd_range`, `Reward/yaw_vel` -> `Reward/yaw`,
+> `Track/yaw/rate_err` -> `Track/yaw/err_deg`. The `cumul_yaw` constraint was dropped
+> and `yaw_settling` added. Every yaw statement below still describes the RATE era and
+> has not been rewritten. See `DEPLOY_NOTE_yaw.md` at the repo root.
+
 > **Scope**: Reward computation of the default task
 > `Isaac-ConstrainedALBC-TRPO-v0` (`constrained_albc/envs/main/`) — the shared
 > tracking kernel, the six weighted terms `RewardManager` sums each step, the
@@ -582,7 +591,7 @@ for name, value in reward_sums.items():
 log["Reward/total"] = total
 ```
 
-The emitted keys are exactly `Reward/att_rp`, `Reward/yaw_vel`, `Reward/torque`,
+The emitted keys are exactly `Reward/att_rp`, `Reward/yaw`, `Reward/torque`,
 `Reward/thruster`, `Reward/smoothness`, `Reward/bias`
 (the `_BUILTIN_TERMS` names; cfg `extra_terms` append their own keys), plus a derived `Reward/total`. A reader mapping a wandb curve
 back to a term should look for the exact tag `Reward/<name>`.
