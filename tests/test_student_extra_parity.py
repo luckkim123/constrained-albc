@@ -83,14 +83,26 @@ def _load_student(*module_names: str):
 # CORRECTED 2026-08-03: the first draft of this test omitted the TCN allowance and would
 # have failed on correct code -- a gate that cries wolf gets deleted, which is worse than
 # no gate. Verified against the code: runner.py has exactly 5 `self.student(` calls.
+#
+# REVISED 2026-09-07 (WP11): the two sets used to coincide, because every function that
+# assembled the input also called the encoder. `_gru_seq_forward` split them -- it runs the
+# encoder on an `x_seq` its CALLER already assembled, so it forwards without assembling,
+# while `_compute_loss_gru` and `learn` still assemble and no longer forward directly. Each
+# gate below is therefore stated over its own set: the exact set of encoder forwards (a new
+# one still cannot ship unnoticed), and the set that must assemble.
 _SITES = {
     REPO / "constrained_albc" / "algorithms" / "student" / "runner.py": (
+        # ASSEMBLE: every function that builds encoder input via student_input.
         {"_dagger_action", "_compute_loss_gru", "learn"},   # sites (a) (b) (c)
-        {"_compute_loss_tcn"},                              # TCN path, no extra by design
+        # FORWARD: the exact set of functions that call the encoder. `_compute_loss_tcn`
+        # is the TCN path (no extra channels by design, A3); `_gru_seq_forward` is the WP11
+        # segmented GRU forward, whose caller assembled x_seq. `_compute_loss_gru` and
+        # `learn` assemble and then delegate the forward, so they are NOT in this set.
+        {"_dagger_action", "_compute_loss_tcn", "_gru_seq_forward"},
     ),
     REPO / "constrained_albc" / "analysis" / "student_policy.py": (
         {"__call__"},                                       # site (d)
-        set(),
+        {"__call__"},
     ),
 }
 
@@ -116,22 +128,23 @@ def _fns_calling_student_input(tree):
 
 
 def test_every_encoder_forward_uses_the_shared_layout():
-    for path, (must_route, allowed_unrouted) in _SITES.items():
+    for path, (must_assemble, expected_forwards) in _SITES.items():
         tree = ast.parse(path.read_text())
         forwards = _fns_calling_the_encoder(tree)
         routed = _fns_calling_student_input(tree)
         # (1) Catches a NEW forward added without anyone noticing -- the failure that
         #     would have let runner.py's end-of-rollout hidden recompute (site c) ship
         #     unwidened. A new function calling the encoder fails here until it is
-        #     deliberately classified as routed or TCN-only.
-        assert forwards == must_route | allowed_unrouted, (
+        #     deliberately classified in the FORWARD set.
+        assert forwards == expected_forwards, (
             f"{path.name}: encoder forwards are {sorted(forwards)}, expected "
-            f"{sorted(must_route | allowed_unrouted)}. A forward was added, removed, or "
-            "renamed -- route it through student_input and update _SITES deliberately."
+            f"{sorted(expected_forwards)}. A forward was added, removed, or renamed -- "
+            "classify it in _SITES deliberately."
         )
-        # (2) Every forward that is not on the TCN allowance must use the shared layout.
-        assert must_route <= routed, (
-            f"{path.name}: {sorted(must_route - routed)} call the encoder without student_input"
+        # (2) Every assembly site must build its input through the shared layout.
+        assert must_assemble <= routed, (
+            f"{path.name}: {sorted(must_assemble - routed)} are assembly sites that never "
+            "call student_input"
         )
 
 
@@ -150,11 +163,11 @@ def test_tail_split_routes_through_every_gru_site():
     runtime anyway (tail mode has a non-None scale with a None extra, which student_input
     rejects) -- this gate moves that failure from the first tail-mode run to CI, and makes
     a future site copy the complete pattern."""
-    for path, (must_route, _allowed) in _SITES.items():
+    for path, (must_assemble, _forwards) in _SITES.items():
         tree = ast.parse(path.read_text())
         split_callers = _fns_calling(tree, "split_policy_tail")
-        assert must_route <= split_callers, (
-            f"{path.name}: {sorted(must_route - split_callers)} route through student_input "
+        assert must_assemble <= split_callers, (
+            f"{path.name}: {sorted(must_assemble - split_callers)} route through student_input "
             "but never call split_policy_tail -- tail mode would raise at that site."
         )
 

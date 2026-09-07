@@ -329,6 +329,55 @@ class StudentRunner:
         total = loss_action + self.cfg.lambda_latent * loss_latent
         return {"loss_total": total, "loss_action": loss_action, "loss_latent": loss_latent}
 
+    def _gru_seq_forward(self, x_seq, h_in: torch.Tensor, dones_seq):
+        """Run the GRU over a chunk, zeroing the carried hidden at every post-reset step.
+
+        ``dones_seq[e, t]`` is the ``prev_dones`` the collector recorded alongside
+        ``obs_t``: True means ``obs_t`` is the FIRST observation of a new episode, so the
+        hidden fed INTO step t belongs to the previous episode and must be zero. One fused
+        GRU call cannot express a mid-sequence reset, which is the defect this replaces:
+        training used to collapse a rollout's dones into ``any()`` and zero the whole
+        window's start hidden, so for an env that reset at step k the steps before k lost
+        their true carried hidden and the steps after k inherited the previous episode's.
+
+        Envs whose window holds no reset keep the fused path, so this leaves them
+        bit-for-bit unchanged; only the envs that actually reset run stepwise, and there
+        are few of those inside a 24-step window.
+
+        ``x_seq`` arrives already assembled by ``student_input`` at the caller -- this
+        function deliberately does not re-assemble it (tests/test_student_extra_parity).
+        """
+        if dones_seq is None:
+            return self.student(x_seq, hidden=h_in)
+        dirty = dones_seq.any(dim=1)
+        if not bool(dirty.any()):
+            return self.student(x_seq, hidden=h_in)
+
+        # Stepwise over the reset envs, fused over the rest, then stitched back in the
+        # original env order (index_copy is out-of-place, so autograd flows through both).
+        dirty_idx = torch.nonzero(dirty).squeeze(-1)
+        xd, dd = x_seq[dirty], dones_seq[dirty]
+        hd = h_in[:, dirty].contiguous()
+        steps = []
+        for t in range(xd.shape[1]):
+            hd = hd * (~dd[:, t]).view(1, -1, 1).to(hd.dtype)
+            o_t, hd = self.student(xd[:, t : t + 1], hidden=hd)
+            steps.append(o_t)
+        o_dirty = torch.cat(steps, dim=1)
+
+        out = x_seq.new_zeros(x_seq.shape[0], x_seq.shape[1], o_dirty.shape[-1])
+        h_out = torch.zeros_like(h_in)
+        out = out.index_copy(0, dirty_idx, o_dirty)
+        h_out = h_out.index_copy(1, dirty_idx, hd)
+
+        clean = ~dirty
+        if bool(clean.any()):
+            clean_idx = torch.nonzero(clean).squeeze(-1)
+            o, h = self.student(x_seq[clean], hidden=h_in[:, clean].contiguous())
+            out = out.index_copy(0, clean_idx, o)
+            h_out = h_out.index_copy(1, clean_idx, h)
+        return out, h_out
+
     def _compute_loss_gru(self, batch, h_in: torch.Tensor) -> dict[str, torch.Tensor]:
         """h_in: (num_layers, M_envs, gru_hidden) — rollout-start hidden for this
         minibatch's envs. Threaded across iters so GRU can accumulate evidence
@@ -343,7 +392,7 @@ class StudentRunner:
                 obs_raw=batch.obs_seq, obs_n=obs_seq_n, n_tail=self._tail_n
             )
         x_seq = student_input(obs_seq_n, extra_seq, self._extra_scale)
-        l_hat_seq, _ = self.student(x_seq, hidden=h_in)                 # (envs, T, 9)
+        l_hat_seq, _ = self._gru_seq_forward(x_seq, h_in, batch.dones_seq)   # (envs, T, 9)
         M = l_hat_seq.shape[0] * l_hat_seq.shape[1]
         l_hat = l_hat_seq.reshape(M, -1)
         obs_normed = self.teacher.normalize_obs(batch.obs_t)
@@ -412,19 +461,18 @@ class StudentRunner:
             epoch_totals = {"loss_total": 0.0, "loss_action": 0.0, "loss_latent": 0.0, "grad_norm": 0.0}
             n_updates = 0
 
-            # GRU hidden threading: snapshot the rollout-start hidden, zero it
-            # for envs that reset mid-rollout (rare given episode length), then
-            # reuse the same snapshot across n_epochs so gradient flow through
-            # each env's 24-step chunk starts from the correct initial state.
+            # GRU hidden threading: snapshot the rollout-start hidden and reuse the same
+            # snapshot across n_epochs so gradient flow through each env's 24-step chunk
+            # starts from the correct initial state. Mid-rollout resets are NOT handled
+            # here -- `_gru_seq_forward` zeroes the hidden at each env's own reset step,
+            # including step 0 (where `done_flat[0]` is the carried `prev_dones`). The
+            # previous code zeroed this snapshot for any env with a reset anywhere in the
+            # window, which was wrong on both sides of that env's reset step.
             if self.cfg.encoder_type == "gru":
                 assert self.train_hidden is not None
-                T_ = self.buffer.step_idx
-                any_done_in_rollout = self.buffer.done_flat[:T_].any(dim=0)
                 h_start = self.train_hidden.detach().clone()
-                h_start[:, any_done_in_rollout] = 0.0
             else:
                 h_start = None
-                any_done_in_rollout = None
 
             for _ in range(self.cfg.n_epochs):
                 if self.cfg.encoder_type == "tcn":
@@ -471,10 +519,11 @@ class StudentRunner:
                         obs_all_n, extra_all = split_policy_tail(
                             obs_raw=obs_all, obs_n=obs_all_n, n_tail=self._tail_n
                         )
-                    _, h_end = self.student(
-                        student_input(obs_all_n, extra_all, self._extra_scale), hidden=h_start
+                    _, h_end = self._gru_seq_forward(
+                        student_input(obs_all_n, extra_all, self._extra_scale),
+                        h_start,
+                        self.buffer.done_flat[:T_].transpose(0, 1),
                     )
-                    h_end[:, any_done_in_rollout] = 0.0
                     self.train_hidden = h_end.detach()
 
             # Log
