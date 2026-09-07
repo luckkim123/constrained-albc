@@ -18,10 +18,41 @@ Three faults (see FaultInjectionCfg):
 
 Toggle-off contract: every apply_* function returns its input UNCHANGED when the fault
 buffer is None, so a fault-disabled env is byte-identical to the fault-free env.
+
+ONE deliberate exception: ``apply_always_dead`` ignores ``cfg.enable`` entirely. Its
+channels are structurally absent from the actuator set rather than failing, so they must
+stay dead on the fault-disabled path too. Its toggle is its own empty tuple, not `enable`
+-- do not "fix" it to respect the flag. See PLAN §4 item 10.
 """
 from __future__ import annotations
 
 import torch
+
+
+def apply_always_dead(health: torch.Tensor, cfg) -> torch.Tensor:
+    """Force ``cfg.thruster_always_dead`` channels to health exactly 0.0, IN PLACE.
+
+    These are firmware ESC channels that are STRUCTURALLY ABSENT from the policy's
+    actuator set -- not a fault. So this applies in EVERY env, on every path
+    (fixed-health override, Bernoulli sampler, and the fault-disabled baseline), and
+    it does NOT consult ``cfg.enable``: a policy must never see a pinned-dead channel
+    alive. Retrain-simtoreal-2026-09 PLAN §4 item 10 / decision/159 결정 2 pins
+    ``(0, 3)`` = m0, m3 (the vertical/heave pair, config.py ESC wiring comment).
+
+    ``()`` (the default) is a no-op that touches nothing and draws no RNG, so a cfg
+    leaving it empty is byte-identical to the pre-item-10 code. getattr-guarded like
+    ``thruster_dead_frac`` / ``thruster_fixed_health`` so cfgs predating the field
+    fall through unchanged.
+    """
+    always_dead = getattr(cfg, "thruster_always_dead", ())
+    num_thrusters = health.shape[1]
+    for i in always_dead:
+        if not 0 <= i < num_thrusters:
+            raise ValueError(
+                f"thruster_always_dead index {i} out of range for num_thrusters={num_thrusters}"
+            )
+        health[:, i] = 0.0
+    return health
 
 
 def sample_thruster_health(
@@ -55,6 +86,10 @@ def sample_thruster_health(
     every existing caller that does not pass it is unaffected. At severity=0 the
     fail probability is 0 for every thruster, so ``torch.where`` returns all ones
     regardless of ``cfg.thruster_fail_prob``.
+
+    Finally ``apply_always_dead`` pins ``cfg.thruster_always_dead`` to 0.0 on BOTH
+    paths (fixed and Bernoulli), last, so a structurally-absent channel outranks
+    every sampled value. Empty tuple (default) = no-op, no extra RNG.
     """
     fixed = getattr(cfg, "thruster_fixed_health", None)
     if fixed is not None:
@@ -63,7 +98,7 @@ def sample_thruster_health(
                 f"thruster_fixed_health has {len(fixed)} entries, expected num_thrusters={num_thrusters}"
             )
         vec = torch.tensor(fixed, device=device, dtype=torch.float32)
-        return vec.unsqueeze(0).expand(num_envs, num_thrusters).clone()
+        return apply_always_dead(vec.unsqueeze(0).expand(num_envs, num_thrusters).clone(), cfg)
 
     shape = (num_envs, num_thrusters)
     fail_prob = cfg.thruster_fail_prob if severity is None else severity.unsqueeze(-1) * cfg.thruster_fail_prob
@@ -74,7 +109,8 @@ def sample_thruster_health(
     if dead_frac > 0.0:
         dead = torch.rand(shape, device=device, generator=generator) < dead_frac
         residual = torch.where(dead, torch.zeros_like(residual), residual)
-    return torch.where(fail, residual, torch.ones(shape, device=device))
+    health = torch.where(fail, residual, torch.ones(shape, device=device))
+    return apply_always_dead(health, cfg)
 
 
 def sample_uniform_per_env(

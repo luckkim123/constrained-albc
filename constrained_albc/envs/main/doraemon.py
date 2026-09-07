@@ -83,6 +83,16 @@ _PARAM_DEFS: list[tuple[str, str, float, float]] = [
     # and expands to the full base fail-probability distribution as the policy
     # masters simpler variants. Same wiring as ocean_current_strength/obs_noise_scale.
     ("fault_severity", "fault_severity_range", 0.0, 1.0),
+    # Exogenous heave-disturbance strength (PLAN §4 item 11, decision/159 결정 2): a
+    # normalized scale in [0,1] on cfg.disturbance.fz_max, applied per env at reset in
+    # albc_env._reset_fz_disturbance. Nominal=0 (_NOMINAL_OVERRIDES below) -> curriculum
+    # starts with no disturbance and widens to the full +-fz_max band. Same wiring as
+    # ocean_current_strength/obs_noise_scale/fault_severity.
+    # The dim is registered UNCONDITIONALLY, including when cfg.disturbance.enable is
+    # False -- the strength is then sampled and ignored. Keeping it means NDIMS does not
+    # move when a run turns the disturbance on, so doraemon_state.pt and
+    # curriculum_trajectory.json stay dimension-compatible across that switch.
+    ("fz_disturbance_strength", "fz_disturbance_strength_range", 0.0, 1.0),
 ]
 NDIMS = len(_PARAM_DEFS)
 
@@ -92,6 +102,7 @@ _NOMINAL_OVERRIDES: dict[str, float] = {
     "payload_cog_offset_xy_u": 0.0,  # start with no XY offset, widen as policy masters it
     "obs_noise_scale": 0.0,  # start with no extra sensor noise, widen as policy masters it
     "fault_severity": 0.0,  # start fault-free, widen as policy masters simpler fault variants
+    "fz_disturbance_strength": 0.0,  # start undisturbed, widen to the full +-fz_max heave band
     "inertia_scale": 4.0,  # 2026-09-07 PLAN item 12: curriculum STARTS at the measured assembly inertia (J 0.49 = 4.0 x URDF 0.0994 + added 0.09), not at the URDF guess. Without an override the start would be the band midpoint 2.6.
 }
 
