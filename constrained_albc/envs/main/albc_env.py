@@ -35,7 +35,7 @@ from .config import (
     apply_marine_feature_obs,
     apply_privileged_fault_obs,
 )
-from .mdp import faults
+from .mdp import disturbance, faults
 from .mdp.constraints import apply_joint1_constraint_arm, compute_all_costs
 from .mdp.koopman import load_koopman_module
 from .mdp.events import (
@@ -413,6 +413,15 @@ class ALBCEnv(DirectRLEnv):
         self._prev_root_ang_vel_z = torch.zeros(self.num_envs, device=self.device)
         # [0:2] = roll/pitch attitude (rad), [2] = yaw rate (rad/s)
         self._ang_cmd = torch.zeros(self.num_envs, 3, device=self.device)
+        # Exogenous heave disturbance state (PLAN item 11). Piecewise-constant random hold:
+        # _dist_fz is the body-frame Fz held for _dist_hold_left more seconds, _dist_strength
+        # the per-env DORAEMON scale in [0,1] drawn at reset. Allocated unconditionally (three
+        # (N,) tensors) like _ou_base_current, so _reset_idx and the logger stay branch-free;
+        # they stay all-zero and are never read into a wrench when cfg.disturbance.enable is
+        # False, so the disabled path draws no RNG and is byte-identical.
+        self._dist_fz = torch.zeros(self.num_envs, device=self.device)
+        self._dist_hold_left = torch.zeros(self.num_envs, device=self.device)
+        self._dist_strength = torch.zeros(self.num_envs, device=self.device)
         self._att_rp_err = torch.zeros(self.num_envs, 2, device=self.device)
         self._yaw_rate_err = torch.zeros(self.num_envs, device=self.device)
         # 3D mixed error for history buffer: [att_rp_err(2), yaw_rate_err(1)]
@@ -498,6 +507,14 @@ class ALBCEnv(DirectRLEnv):
         self._hydro_torques = torch.zeros(self.num_envs, 3, device=self.device)
         self._buoy_hydro_forces = torch.zeros(self.num_envs, 3, device=self.device)
         self._buoy_hydro_torques = torch.zeros(self.num_envs, 3, device=self.device)
+        # Exogenous heave disturbance wrench (PLAN item 11), shaped for
+        # permanent_wrench_composer.add_forces_and_torques: (N, len(body_ids), 3).
+        # Only the z force column and the y torque column are ever written, so the rest
+        # stays zero for the life of the env. Lives here rather than next to _dist_fz
+        # because this is the force-buffer home and _init_body_ids has already run.
+        n_main_bodies = len(self._body_id)
+        self._dist_forces = torch.zeros(self.num_envs, n_main_bodies, 3, device=self.device)
+        self._dist_torques = torch.zeros(self.num_envs, n_main_bodies, 3, device=self.device)
 
     def _init_thrusters(self) -> None:
         """Initialize thruster model if configured (None = ALBC arm only)."""
@@ -513,12 +530,20 @@ class ALBCEnv(DirectRLEnv):
         if self.cfg.actuation_noise.enable:
             self.cfg.thrusters.actuation_noise_std = self.cfg.actuation_noise.thruster_noise_std
 
+        # PLAN item 10: thruster_always_dead pins channels to health 0 INDEPENDENTLY of
+        # fault.enable, but health lives inside ThrusterModel and its buffer is allocated
+        # only under enable_fault (set_thruster_health returns early on a None buffer).
+        # So a non-empty tuple must switch the buffer on by itself. With every live
+        # channel at health exactly 1.0 the multiply is identity, and an empty tuple
+        # leaves this expression equal to cfg.fault.enable -- byte-identical default.
+        enable_fault = self.cfg.fault.enable or bool(getattr(self.cfg.fault, "thruster_always_dead", ()))
+
         self._thruster = ThrusterModel(
             cfg=self.cfg.thrusters,
             num_envs=self.num_envs,
             device=self.device,
             enable_randomization=self.cfg.randomization.enable,
-            enable_fault=self.cfg.fault.enable,
+            enable_fault=enable_fault,
             enable_actuation_noise=self.cfg.actuation_noise.enable,
         )
 
@@ -785,6 +810,12 @@ class ALBCEnv(DirectRLEnv):
         if self.cfg.ou_enable:
             self._step_ocean_current_ou()
 
+        # Exogenous heave disturbance: age the per-env hold and re-draw where it expired.
+        # Here, not in _apply_action, so the hold is counted once per POLICY step (step_dt)
+        # rather than once per physics substep -- same clock as the OU drift above.
+        if self.cfg.disturbance.enable:
+            self._step_fz_disturbance()
+
         # Update manipulability index (Yoshikawa)
         self._update_manipulability()
 
@@ -1022,6 +1053,50 @@ class ALBCEnv(DirectRLEnv):
 
         velocity_w[:, :3] = new_current  # shared buffer -> buoy sees it too
 
+    # ------------------------------------------------------------------
+    # Exogenous heave disturbance (PLAN item 11, decision/159 결정 2)
+    # ------------------------------------------------------------------
+
+    def _reset_fz_disturbance(self, env_ids: torch.Tensor, sampled: dict | None) -> None:
+        """Draw the per-env disturbance strength, then a fresh Fz and hold, for reset envs.
+
+        Strength resolution mirrors obs_noise_scale / fault_severity: the DORAEMON
+        sampled value when the dim is registered (training), else a uniform draw over
+        ``randomization.fz_disturbance_strength_range`` (eval sweep fallback).
+
+        Returns immediately -- drawing NOTHING -- when the disturbance is off, which is
+        what keeps the default path free of extra RNG.
+        """
+        if not self.cfg.disturbance.enable:
+            return
+        if sampled is not None and "fz_disturbance_strength" in sampled:
+            self._dist_strength[env_ids] = sampled["fz_disturbance_strength"]
+        else:
+            self._dist_strength[env_ids] = faults.sample_uniform_per_env(
+                len(env_ids), self.cfg.randomization.fz_disturbance_strength_range, self.device
+            )
+        self._draw_fz_disturbance(env_ids)
+
+    def _draw_fz_disturbance(self, env_ids: torch.Tensor) -> None:
+        """Re-draw Fz = U(-1, 1) * strength * fz_max and a fresh hold U(hold_s) for env_ids.
+
+        Random in BOTH magnitude and timing, per decision/159 결정 2 ("일정한 외란이
+        아니라 무작위 외란"). At strength 0 the force is exactly 0 for those envs.
+        """
+        dist = self.cfg.disturbance
+        fz, hold = disturbance.sample_fz_and_hold(
+            self._dist_strength[env_ids], dist.fz_max, dist.hold_s
+        )
+        self._dist_fz[env_ids] = fz
+        self._dist_hold_left[env_ids] = hold
+
+    def _step_fz_disturbance(self) -> None:
+        """Count the per-env hold down by one policy step and re-draw the expired envs."""
+        self._dist_hold_left -= self.step_dt
+        expired = self._dist_hold_left <= 0.0
+        if expired.any():
+            self._draw_fz_disturbance(expired.nonzero(as_tuple=True)[0])
+
     def _apply_action(self):
         """Apply joint position targets and hydrodynamic forces."""
         self._robot.set_joint_position_target(self._joint_pos_targets, joint_ids=self._albc_joint_ids)
@@ -1080,6 +1155,23 @@ class ALBCEnv(DirectRLEnv):
             forces=payload_forces.unsqueeze(1),
             torques=payload_torques.unsqueeze(1),
         )
+
+        # Exogenous heave disturbance (PLAN item 11): the Fz the deployed depth PID puts
+        # through the one surviving vertical thruster, plus the pitch moment vertical
+        # geometry couples to it. ADDED, and added LAST, because the three calls above are
+        # SETs -- exactly the reason analysis/eval.py's E3 yaw-torque injector re-adds its
+        # torque after _apply_action on every physics substep. Being in _apply_action means
+        # it is re-applied every substep, so it also survives a reset zeroing the composer.
+        if self.cfg.disturbance.enable:
+            disturbance.write_fz_wrench(
+                self._dist_forces, self._dist_torques, self._dist_fz, self.cfg.disturbance.my_per_fz
+            )
+            self._robot.permanent_wrench_composer.add_forces_and_torques(
+                forces=self._dist_forces,
+                torques=self._dist_torques,
+                body_ids=self._body_id,
+                is_global=False,
+            )
 
     def _compute_payload_wrench(self) -> tuple[torch.Tensor, torch.Tensor]:
         """Compute payload weight force and torque in the gripper body frame.
@@ -1526,6 +1618,13 @@ class ALBCEnv(DirectRLEnv):
             log["Episode/current_drift"] = (current - base).norm(dim=-1).mean().item()
             log["Episode/current_mag"] = current.norm(dim=-1).mean().item()
 
+        if self.cfg.disturbance.enable:
+            # fz_abs_mean is the realized |Fz| (magnitude x strength x fz_max); strength_mean
+            # is the DORAEMON knob alone, so the two separate "the curriculum opened" from
+            # "this batch happened to draw small u".
+            log["Dist/fz_abs_mean"] = self._dist_fz[env_ids].abs().mean().item()
+            log["Dist/strength_mean"] = self._dist_strength[env_ids].mean().item()
+
         log["Episode/cumul_yaw_deg"] = torch.rad2deg(self._cumulative_yaw[env_ids].abs()).mean().item()
 
     def _collect_termination_metrics(self, log: dict[str, float | torch.Tensor], env_ids: torch.Tensor, n: int) -> None:
@@ -1700,6 +1799,23 @@ class ALBCEnv(DirectRLEnv):
         if self._thruster is not None:
             self._thruster.reset(env_ids)
 
+        # Structurally-absent thruster channels (PLAN item 10): pin them dead for the
+        # reset envs. Placed HERE -- after _thruster.reset(), before the not-DR early
+        # return and before the fault block below -- because the tuple is independent of
+        # BOTH toggles: fault.enable=False never reaches the fault block, and DR-disabled
+        # returns before it, so either one alone would leave m0/m3 alive. On the
+        # fault.enable path the sampler applies the same mask again a few lines down;
+        # this write is then redundant but costs no RNG. Empty tuple = block skipped
+        # entirely = byte-identical.
+        if getattr(self.cfg.fault, "thruster_always_dead", ()) and self._thruster is not None:
+            n_thr = self.cfg.thrusters.num_thrusters
+            self._thruster.set_thruster_health(
+                env_ids,
+                faults.apply_always_dead(
+                    torch.ones(len(env_ids), n_thr, device=self.device), self.cfg.fault
+                ),
+            )
+
         self._payload_mass[env_ids] = self.cfg.payload_mass
         offset = torch.tensor(self.cfg.payload_attachment_offset, device=self.device, dtype=torch.float32)
         self._payload_attachment_offset[env_ids] = offset
@@ -1711,6 +1827,8 @@ class ALBCEnv(DirectRLEnv):
             self._setup_payload_toggle(env_ids)
             if self.cfg.ou_enable:
                 self._ou_base_current[env_ids] = self._hydro.current.velocity_w[env_ids, :3].clone()
+            # DORAEMON cannot run without DR, so the strength falls back to the uniform draw.
+            self._reset_fz_disturbance(env_ids, None)
             return
 
         # Create DRSampler (bundles rand_cfg + num_envs + device)
@@ -1782,6 +1900,10 @@ class ALBCEnv(DirectRLEnv):
                 len(env_ids), self.cfg.thrusters.num_thrusters, self.cfg.fault, self.device, severity=severity
             )
             self._thruster.set_thruster_health(env_ids, health)
+
+        # Exogenous heave disturbance: strength from the DORAEMON draw when registered,
+        # then a fresh Fz and hold. No-op (and no RNG) unless cfg.disturbance.enable.
+        self._reset_fz_disturbance(env_ids, sampled)
 
     def _reset_task_and_state(self, env_ids: torch.Tensor) -> None:
         """Reset robot pose, joint DR, and velocity commands."""
@@ -1881,6 +2003,11 @@ class ALBCEnv(DirectRLEnv):
                 time_constant_scale=rand_cfg.time_constant_scale,
                 max_thrust_scale=rand_cfg.max_thrust_scale,
             )
+
+        # The disturbance strength is a DR knob, so it must switch with the rest of them:
+        # eval.py's DR-switching pass would otherwise hold one strength for the whole run
+        # while every other parameter moved at each segment boundary. No-op when disabled.
+        self._reset_fz_disturbance(env_ids, sampled)
 
     def get_eval_snapshot(self) -> dict[str, float]:
         """Return current evaluation metrics for play-mode diagnostics.

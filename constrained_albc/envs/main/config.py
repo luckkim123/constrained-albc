@@ -267,6 +267,15 @@ class DomainRandomizationCfg:
     # DORAEMON nominal=0 (no current at curriculum start) -> expands as policy
     # masters easier variants.
     ocean_current_strength_range: tuple[float, float] = (0.0, 1.0)
+    # -- Exogenous heave disturbance (DORAEMON-managed; PLAN §4 item 11) --
+    # Scalar strength [0, 1] multiplier on FzDisturbanceCfg.fz_max, same wiring as
+    # ocean_current_strength_range above. DORAEMON nominal=0 (no disturbance at
+    # curriculum start) -> expands to the full +-fz_max band as the policy masters it.
+    # The DORAEMON dim EXISTS even when cfg.disturbance.enable is False: the strength is
+    # sampled and then IGNORED (no wrench is added). That is deliberate -- it keeps NDIMS
+    # stable, so a run started with the disturbance off can enable it later without a
+    # doraemon_state.pt / curriculum_trajectory.json dimension mismatch.
+    fz_disturbance_strength_range: tuple[float, float] = (0.0, 1.0)
     # Observation-noise curriculum scale as a NORMALIZED knob u in [0, 1], managed by
     # DORAEMON. _get_observations multiplies the 69D _OBS_NOISE_STD by this per-env scale
     # and adds it as an EXTRA white-noise layer on top of the always-on noise_model.
@@ -389,6 +398,19 @@ class FaultInjectionCfg:
     # Intended for eval only; leave None on any training run.
     thruster_fixed_health: tuple[float, ...] | None = None
 
+    # -- Structurally-absent channels (retrain-simtoreal-2026-09 PLAN §4 item 10) --
+    # Firmware ESC channel indices whose health is forced to EXACTLY 0.0 in EVERY env,
+    # applied AFTER the Bernoulli sampler and AFTER thruster_fixed_health, and applied
+    # even when enable=False -- these channels are STRUCTURALLY ABSENT from the policy's
+    # actuator set, not a fault, so they must never be alive regardless of the fault
+    # toggle. `()` (default) = off, no extra RNG draw, byte-identical to before.
+    # Retrain value: (0, 3) = m0, m3 (see the _ESC_CHANNEL_ORDER comment above,
+    # "m0,m3 = vertical (heave)"). decision/159 결정 2 takes the verticals out of the
+    # actuator set and re-injects the depth PID's heave as an exogenous wrench instead
+    # (see FzDisturbanceCfg below). A NEW atom in the shape of thruster_dead_frac:
+    # thruster_fixed_health is eval-only by its docstring and is NOT repurposed here.
+    thruster_always_dead: tuple[int, ...] = ()
+
     # -- Sensor noise fault (per-env extra observation noise scale) --
     # Per-env multiplier ADDED on top of the always-on _OBS_NOISE_STD model:
     # extra_noise = scale[env] * N(0, 1) * obs_noise_std. 0 = nominal sensor.
@@ -418,6 +440,26 @@ class ActuationNoiseCfg:
     enable: bool = False
     thruster_noise_std: float = 0.05
     joint_noise_std: float = 0.05
+
+
+@configclass
+class FzDisturbanceCfg:
+    """Exogenous heave force the deployed depth PID would put through the one surviving vertical
+    thruster, with the pitch moment that vertical geometry couples to it (decision/159 결정 2, PLAN §4 item 11).
+    OFF by default; the retrain launch enables it. Randomized in magnitude and in timing."""
+
+    enable: bool = False
+    # Physical ceiling, not a measurement: one vertical thruster at the nominal thrust_coefficient (13 N).
+    # The depth PID cannot exceed m0's authority. DORAEMON scales this from 0
+    # (see DomainRandomizationCfg.fz_disturbance_strength_range),
+    # so a ceiling above the real PID output is margin, a ceiling below it would be an error.
+    # NO field measurement of the PID's Fz exists as of 2026-09-07 -- request one from the water session.
+    fz_max: float = 13.0                     # N, body-frame z
+    # Realised on the robot: deployed_tam.json My/Fz = -0.1458 (finding/155). Lever 0.145 m
+    # confirmed by tape (finding/156). Do NOT re-derive the sign from the sim TAM columns.
+    my_per_fz: float = -0.1458               # N.m per N, body-frame y
+    # Piecewise-constant random hold: each env re-draws Fz after a hold of U(lo, hi) seconds.
+    hold_s: tuple[float, float] = (1.0, 5.0)
 
 
 @configclass
@@ -592,6 +634,15 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # only). The 72D policy obs is UNCHANGED in both arms -- the real robot has no
     # thruster FDI, so the deployable actor never sees this.
     use_privileged_fault_obs: bool = False
+
+    # ==========================================================================
+    # Exogenous heave disturbance (off by default; see FzDisturbanceCfg)
+    # ==========================================================================
+    # Sibling of fault/randomization/actuation_noise: the wrench the deployed depth PID
+    # puts on the hull once the verticals are out of the policy's actuator set
+    # (fault.thruster_always_dead=(0,3)). NOT in the 28D privileged vector -- adding it
+    # would change the state_space contract, so the critic does not see it either.
+    disturbance: FzDisturbanceCfg = FzDisturbanceCfg()
 
     # Per-step multiplicative actuation noise (3rd channel; off by default). Sibling
     # of fault/randomization -- independently toggleable, never entangled with them.
