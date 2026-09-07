@@ -2261,10 +2261,13 @@ def run_switching_eval(
         raw_env._ang_cmd[:, 0] = 0.0
         raw_env._ang_cmd[:, 1] = 0.0
         raw_env._ang_cmd[:, 2] = yaw_rate_cmd
-        if hasattr(raw_env, "_vel_cmd_lin"):
-            raw_env._vel_cmd_lin[:, 0] = vel_cmd[:, 0]
-            raw_env._vel_cmd_lin[:, 1] = vel_cmd[:, 1]
-            raw_env._vel_cmd_lin[:, 2] = vel_cmd[:, 2]
+        # Unguarded on purpose: run_segmented refuses at setup when the env has no
+        # _vel_cmd_lin, so reaching this line means the buffer exists. A hasattr here
+        # would silently drop the cascade command while vel_cmd_x/y/z below still
+        # records it into the npz.
+        raw_env._vel_cmd_lin[:, 0] = vel_cmd[:, 0]
+        raw_env._vel_cmd_lin[:, 1] = vel_cmd[:, 1]
+        raw_env._vel_cmd_lin[:, 2] = vel_cmd[:, 2]
         vel_cmd_x[step_idx] = vel_cmd[:, 0].cpu().numpy()
         vel_cmd_y[step_idx] = vel_cmd[:, 1].cpu().numpy()
         vel_cmd_z[step_idx] = vel_cmd[:, 2].cpu().numpy()
@@ -2439,6 +2442,21 @@ def run_segmented(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     clip_actions = run_agent_dict.get("clip_actions") if run_agent_dict else agent_cfg.clip_actions
     env = RslRlVecEnvWrapper(env, clip_actions=clip_actions)
     raw_env = env.unwrapped
+    # Capability precondition, checked at the earliest point the env exists. segmented's
+    # outer loop is a cascade POSITION controller whose output is a linear-velocity
+    # command, delivered through `_vel_cmd_lin`. That buffer belonged to the full-DOF
+    # family (retired 2026-09, tag legacy-full-dof-final); the attitude-only main env
+    # has none by design -- see envs/main/albc_env.py::_sample_velocity_command, "no
+    # linear velocity". Skipping the write instead of refusing would let the mode finish
+    # while the command reached nothing, yet vel_cmd_x/y/z still went into the npz and
+    # pos_drift_* measured free drift under a "cascade PID" header.
+    if not hasattr(raw_env, "_vel_cmd_lin"):
+        raise RuntimeError(
+            f"segmented mode drives a cascade position loop through _vel_cmd_lin, and "
+            f"'{args_cli.task}' has no linear-velocity command. The full-DOF family that "
+            f"had one was removed in the 2026-09 cleanup (recover from tag "
+            f"legacy-full-dof-final). Use `eval.py static` for the attitude-only tasks."
+        )
     step_dt = raw_env.step_dt
     num_envs = raw_env.num_envs
     device = raw_env.device

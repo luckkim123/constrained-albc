@@ -33,6 +33,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`eval.py segmented` refused instead of silently dropping its command** (found by the
+  pre-merge review of this branch, so the defect never left it). WP5 deleted the full-DOF
+  family, which owned `_vel_cmd_lin`; the three cascade-command writes in
+  `run_switching_eval` were wrapped in `hasattr` rather than removed. On every remaining
+  task that condition is permanently false, so the outer loop delivered nothing while
+  `vel_cmd_x/y/z` still went into the npz and `pos_drift_*` measured free drift under a
+  "cascade PID" header -- a loud `AttributeError` traded for a quiet mislabel. `run_segmented`
+  now raises at setup naming the retired family and the recovery tag, and the per-step writes
+  are unguarded again because reaching them proves the buffer exists. No computed metric
+  changed: `compute_seg_metrics` never read `vel_cmd_*`. Gate:
+  `tests/test_eval_segmented_lin_vel_gate.py`, both assertions watched failing on the
+  pre-fix file.
 - **GRU student episode boundaries** (WP11). Training collapsed a rollout's dones into
   `any()` and zeroed the whole window's start hidden for any env that reset in it, so steps
   before the reset lost their carried hidden and steps after it inherited the previous
