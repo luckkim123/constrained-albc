@@ -108,6 +108,7 @@ def test_generate_plots_produces_pngs(tmp_path):
             "target_vy": np.zeros(n_steps),
             "target_vz": np.zeros(n_steps),
             "yaw_rate": rng.standard_normal((n_steps, n_envs)) * 0.05,
+            "yaw": rng.standard_normal((n_steps, n_envs)) * 0.05,  # measured heading (6aaa285)
             "target_yaw_rate": np.zeros(n_steps),
             "error_roll": rng.standard_normal((n_steps, n_envs)) * 2.0,
             "error_pitch": rng.standard_normal((n_steps, n_envs)) * 2.0,

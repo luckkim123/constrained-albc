@@ -105,6 +105,8 @@ class _FakeDRCfg:
     payload_cog_offset_xy_u_range = (0.0, 1.0)
     obs_noise_scale_range = (0.0, 1.0)
     fault_severity_range = (0.0, 1.0)
+    fz_disturbance_strength_range = (0.0, 1.0)
+    control_delay_strength_range = (0.0, 1.0)
 
 
 def test_build_param_specs_reads_bounds_and_midpoint_nominal():
