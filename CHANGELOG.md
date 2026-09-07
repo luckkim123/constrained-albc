@@ -64,6 +64,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   module's depth and every student run then wrote its logs, checkpoints and experiments index
   one directory ABOVE the repo, with nothing failing to say so. Guard:
   `tests/test_student_log_root.py`.
+- **A sixth inert gate, deleted rather than repaired.**
+  `tests/test_current_migration.py::test_ou_update_shapes_on_shared_buffer` reimplemented
+  the Ornstein-Uhlenbeck current update inline and asserted on its own arithmetic, so it
+  could not fail whatever `albc_env` did -- and its constants had already drifted from the
+  cfg it claimed to mirror (`sigma=0.1` vs `ou_sigma=0.05`). WP3 then removed the method
+  itself, leaving a check with no counterpart in production. Deleted; the file's real gate,
+  `test_marinelab_oceancurrent_api_surface`, is untouched. That makes three distinct ways a
+  gate here has read green while measuring nothing: the wrong TREE (an absolute path into
+  another checkout), the wrong AXIS (a name-based rule that cannot see `__file__` depth),
+  and NOTHING AT ALL (this one, plus an empty-directory scan).
 - **Five tests that measured the wrong tree.** `tests/deploy/test_isolation.py` hardcoded
   `REPO = "/workspace/constrained-albc"`, and four more hardcoded
   `/workspace/marinelab/...`; in any clone they exercised the canonical repos instead of
