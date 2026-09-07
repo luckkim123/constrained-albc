@@ -135,7 +135,10 @@ def _load_doraemon_standalone():
         sys.modules["isaaclab"] = _isaaclab
         sys.modules["isaaclab.utils"] = _utils
 
-    _marinelab_root = Path("/workspace/marinelab/marinelab")
+    # Resolved from __file__: a hardcoded /workspace/... makes a clone test the CANONICAL
+    # marinelab rather than its own sibling (plan rule R4; same shape as the inert
+    # tests/deploy/test_isolation.py gate the 2026-09 cleanup fixed).
+    _marinelab_root = Path(__file__).resolve().parents[2] / "marinelab" / "marinelab"
     if "marinelab" not in sys.modules:
         _marinelab = types.ModuleType("marinelab")
         _marinelab.__path__ = [str(_marinelab_root)]

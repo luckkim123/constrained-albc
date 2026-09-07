@@ -554,7 +554,6 @@ class ALBCEnv(DirectRLEnv):
         if self._doraemon is not None:
             ndims = self._doraemon_ndims
             self._episode_dr_xi = torch.zeros(self.num_envs, ndims, device=self.device)
-            self._episode_dr_log_probs = torch.zeros(self.num_envs, device=self.device)
             self._episode_return_accum = torch.zeros(self.num_envs, device=self.device)
 
         # DR-owned per-env obs-noise scale (parallel to, and independent of, the fault
@@ -1470,7 +1469,6 @@ class ALBCEnv(DirectRLEnv):
                     xi=self._episode_dr_xi[valid_ids],
                     returns=returns,
                     success=success,
-                    log_probs=self._episode_dr_log_probs[valid_ids],
                 )
 
         reward_sums = self._reward_manager.reset(env_ids)
@@ -1561,10 +1559,9 @@ class ALBCEnv(DirectRLEnv):
         sampled: dict[str, torch.Tensor] | None = None
         if self._doraemon is not None:
             n = len(env_ids)
-            xi_physical, log_probs = self._doraemon.sample(n)
+            xi_physical, _ = self._doraemon.sample(n)
             sampled = {spec.name: xi_physical[:, i] for i, spec in enumerate(self._doraemon.dist.params)}
             self._episode_dr_xi[env_ids] = xi_physical
-            self._episode_dr_log_probs[env_ids] = log_probs
             self._episode_return_accum[env_ids] = 0.0
 
             # Command scales fixed at 1.0 (not DORAEMON-managed).

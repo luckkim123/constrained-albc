@@ -38,7 +38,10 @@ if _MDP not in sys.path:
     sys.path.insert(0, _MDP)
 import faults  # noqa: E402
 
-THRUSTER_PY = Path("/workspace/marinelab/marinelab/core/thruster.py")
+# Resolved from __file__: a hardcoded /workspace/... makes a clone test the CANONICAL
+# marinelab rather than its own sibling (plan rule R4; same shape as the inert
+# tests/deploy/test_isolation.py gate the 2026-09 cleanup fixed).
+THRUSTER_PY = Path(__file__).resolve().parents[2] / "marinelab" / "marinelab" / "core" / "thruster.py"
 
 # Live ALBC TAM (reordered), so the wrench check exercises the real geometry.
 # From constrained_albc/envs/main/config.py _reorder_columns(_BASE, _ESC_ORDER).
