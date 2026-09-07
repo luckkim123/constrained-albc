@@ -10,7 +10,6 @@ import argparse
 import json
 from pathlib import Path
 
-import _pathsetup  # noqa: F401  ensure analysis/ on sys.path (for `from common import`)
 import numpy as np
 from common import DR_LEVELS as _SL_DR_LEVELS  # type: ignore[import-not-found]
 

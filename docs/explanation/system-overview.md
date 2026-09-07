@@ -8,7 +8,7 @@ Conceptual overview of the default task, `Isaac-ConstrainedALBC-TRPO-v0`
 (`constrained_albc/envs/main/`) — attitude-only ALBC. For package layout and the
 RSL-RL dependency (stock, no fork) see [`../architecture.md`](../architecture.md);
 for the full registered-task table see the [README](../../README.md). The legacy
-full-DOF variants (`envs/full_dof/`, 87D obs) and the TDC variant (`envs/tdc/`) are
+full-DOF variants (87D obs) and their TDC variant were retired 2026-09 (tag `legacy-full-dof-final`) and are
 out of scope here — see the README's task table for those.
 
 ## The robot
@@ -103,10 +103,10 @@ scheduler mechanics: [`reference/domain-randomization-and-doraemon.md`](../refer
 The teacher actor reads `[o_t, z]`, and `z` is computed from the **privileged**
 `p_t`, which the real robot cannot observe (no DVL, no direct hydrodynamic-parameter
 sensing). So the teacher cannot run on-robot as trained. Deployment distills a
-**student** network (TCN or GRU, `envs/main/student/`) that reconstructs `z` from the
+**student** network (TCN or GRU, `constrained_albc/algorithms/student/`) that reconstructs `z` from the
 observation history alone, replacing the encoder at inference time while the actor
 weights are reused unchanged. The packaged export (teacher + student, golden-value
-self-check) is produced by `scripts/export_deploy.py`; see
+self-check) is produced by `scripts/export_deploy_pack.py`; see
 [`how-to/deploy-pack-export.md`](../how-to/deploy-pack-export.md) and
 [`how-to/sim-to-real.md`](../how-to/sim-to-real.md).
 
@@ -117,15 +117,26 @@ constrained_albc/envs/main/
 ├── albc_env.py       # env: 8D action, 69D obs, 28D privileged
 ├── config.py         # ALBCEnvCfg + DomainRandomizationCfg + constraint terms
 ├── doraemon.py        # ALBC-specific DORAEMON param defs (engine lives in marinelab)
-├── agents/            # rsl_rl_ppo_cfg.py (policy / algorithm / runner cfgs)
-├── algorithms/         # constraint_trpo.py (ConstraintTRPO + IPO) — shim, impl in envs/_core/algorithms/
-├── encoder/            # actor_critic_encoder.py, actor_critic_asym_constrained.py — shims, impl in envs/_core/encoder/
-├── runners/            # constraint_encoder_runner.py — shim, impl in envs/_core/runners/
-├── student/            # TCN / GRU distillation (collector, models, runner, teacher) — shims, impl in envs/_core/student/
+├── agents/            # rsl_rl_ppo_cfg.py, ablation_cfgs.py (policy / algorithm / runner cfgs)
 ├── mdp/                # constraints.py, rewards.py, observations.py, events.py, faults.py
-└── utils/
+└── utils/              # priv_obs_bounds.py (main's own 28D bound derivation)
+
+constrained_albc/algorithms/          # variant-independent training machinery
+├── constraint_trpo.py     # ConstraintTRPO + IPO barrier
+├── constraint_lagrangian.py  # arm N1: the same budget via Lagrangian multipliers
+├── encoder/               # actor_critic_encoder.py, actor_critic_asym_constrained.py
+├── runners/               # constraint_encoder_runner.py, on_policy_doraemon_runner.py
+├── student/               # TCN / GRU distillation (collector, models, runner, teacher)
+└── utils/                 # metric logging, run symlinks
 ```
 
-Registered task IDs (7 total: main + legacy full-DOF ablations + TDC): see the
+The split is by *what changes per env variant*: task logic (env, config, mdp) is
+per-variant under `envs/`, the training machinery is not and was promoted out of
+`envs/_core/` to its own top-level package in the 2026-09 cleanup. Every `__init__`
+under `algorithms/` is docstring-only, so importers spell the module out
+(`from constrained_albc.algorithms.constraint_trpo import ConstraintTRPO`); that is
+what lets the deploy export load the sim-free half on a host without Isaac Sim.
+
+Registered task IDs (17 total: 13 `main` + 4 `tdc_main`): see the
 [README](../../README.md#registered-environments). Package/entry-point layout across
 `envs/analysis/scripts/tests`: [`../architecture.md`](../architecture.md).

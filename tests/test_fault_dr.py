@@ -135,7 +135,10 @@ def _load_doraemon_standalone():
         sys.modules["isaaclab"] = _isaaclab
         sys.modules["isaaclab.utils"] = _utils
 
-    _marinelab_root = Path("/workspace/marinelab/marinelab")
+    # Resolved from __file__: a hardcoded /workspace/... makes a clone test the CANONICAL
+    # marinelab rather than its own sibling (plan rule R4; same shape as the inert
+    # tests/deploy/test_isolation.py gate the 2026-09 cleanup fixed).
+    _marinelab_root = Path(__file__).resolve().parents[2] / "marinelab" / "marinelab"
     if "marinelab" not in sys.modules:
         _marinelab = types.ModuleType("marinelab")
         _marinelab.__path__ = [str(_marinelab_root)]
@@ -214,9 +217,9 @@ def test_arm_b_on_bumps_state_space_28_to_34():
 
 
 def _load_runners_init_standalone():
-    core_dir = Path(__file__).resolve().parent.parent / "constrained_albc" / "envs" / "_core"
-    runners_pkg = "constrained_albc.envs._core.runners"
-    for pkg_name in ["constrained_albc", "constrained_albc.envs", "constrained_albc.envs._core"]:
+    core_dir = Path(__file__).resolve().parent.parent / "constrained_albc" / "algorithms"
+    runners_pkg = "constrained_albc.algorithms.runners"
+    for pkg_name in ["constrained_albc", "constrained_albc.algorithms"]:
         if pkg_name not in sys.modules:
             sys.modules[pkg_name] = types.ModuleType(pkg_name)
     if not hasattr(sys.modules.get(runners_pkg), "sync_privileged_dim"):

@@ -64,19 +64,24 @@ def _install_stubs() -> None:
         RslRlPpoAlgorithmCfg=_BaseCfg,
     )
 
-    # Sibling relative imports (..algorithms / ..encoder / ..runners): the cfg
-    # module only registers these symbols on the runner module; it does not call
-    # them at class-definition time, so empty placeholders suffice.
-    pkg = "constrained_albc.envs.main"
-    for name in ["constrained_albc", "constrained_albc.envs", pkg,
-                 f"{pkg}.algorithms", f"{pkg}.encoder", f"{pkg}.runners"]:
+    # The cfg modules import the training machinery from constrained_albc.algorithms
+    # (module by module -- that package keeps a docstring-only __init__, so there is
+    # no package-level re-export). They only register these symbols on the rsl_rl
+    # runner module; nothing is called at class-definition time, so empty
+    # placeholders suffice, and stubbing the leaf module keeps the real torch /
+    # rsl_rl.storage import chain out of this Isaac-free test.
+    algo = "constrained_albc.algorithms"
+    for name in ["constrained_albc", algo, f"{algo}.encoder", f"{algo}.runners"]:
         if name not in sys.modules:
             stub(name)
-    sys.modules[f"{pkg}.algorithms"].ConstraintTRPO = type("ConstraintTRPO", (), {})
-    sys.modules[f"{pkg}.algorithms"].ConstraintLagrangian = type("ConstraintLagrangian", (), {})
-    sys.modules[f"{pkg}.encoder"].ActorCriticAsymConstrained = type("ActorCriticAsymConstrained", (), {})
-    sys.modules[f"{pkg}.encoder"].ActorCriticEncoder = type("ActorCriticEncoder", (), {})
-    sys.modules[f"{pkg}.runners"].ConstraintEncoderRunner = type("ConstraintEncoderRunner", (), {})
+    for module, symbol in [
+        (f"{algo}.constraint_trpo", "ConstraintTRPO"),
+        (f"{algo}.constraint_lagrangian", "ConstraintLagrangian"),
+        (f"{algo}.encoder.actor_critic_asym_constrained", "ActorCriticAsymConstrained"),
+        (f"{algo}.encoder.actor_critic_encoder", "ActorCriticEncoder"),
+        (f"{algo}.runners.constraint_encoder_runner", "ConstraintEncoderRunner"),
+    ]:
+        stub(module, **{symbol: type(symbol, (), {})})
 
 
 def _load_by_path(name: str, path: str):

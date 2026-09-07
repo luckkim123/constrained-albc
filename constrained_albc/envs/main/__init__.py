@@ -12,7 +12,7 @@ Uses 8D action space (2D arm + 6D thruster) with constrained RL.
 28D privileged obs for asymmetric encoder (static min-max normalization).
 
 Registered tasks (these are the default ALBC tasks; the legacy full-DOF envs live in
-`constrained_albc.envs.full_dof` under `Isaac-ConstrainedALBC-Full-*` ids):
+the retired `Isaac-ConstrainedALBC-Full-*` ids, tag `legacy-full-dof-final`):
     Isaac-ConstrainedALBC-TRPO-v0:       TRPO + IPO + Asymmetric Encoder (production)
     Isaac-ConstrainedALBC-NoEncoder-v0:  TRPO + IPO without encoder (ablation baseline 1)
     Isaac-ConstrainedALBC-PPO-v0:        Standard PPO + asymmetric critic (ablation baseline 2)

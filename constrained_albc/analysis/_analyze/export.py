@@ -23,10 +23,10 @@ import json
 import os
 
 import numpy as np
+
 # scipy.io is imported lazily in _npz_to_mat: a module-level import makes the
 # whole _analyze package unimportable on system python3 (numpy 2.x + old scipy),
 # which the CSV/paired paths do not deserve.
-
 from ._shared import _load_npz
 
 

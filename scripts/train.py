@@ -139,10 +139,8 @@ from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
 # Overlay-owned runner dispatch (the one divergence from upstream train.py).
-from constrained_albc.envs.main.runners import (
-    ConstraintEncoderRunner,
-    OnPolicyDoraemonRunner,
-)
+from constrained_albc.algorithms.runners.constraint_encoder_runner import ConstraintEncoderRunner
+from constrained_albc.algorithms.runners.on_policy_doraemon_runner import OnPolicyDoraemonRunner
 
 # import logger
 logger = logging.getLogger(__name__)
@@ -174,7 +172,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             env_cfg.doraemon.replay_curriculum_path = args_cli.replay_curriculum
 
     # CLI --fault / --privileged-fault-obs (FaultDR-AB, next-20260725-175508).
-    # getattr-guarded: tasks whose env cfg has no such field (e.g. full_dof, BlueROV)
+    # getattr-guarded: tasks whose env cfg has no such field (e.g. BlueROV)
     # get a warning instead of an AttributeError.
     if args_cli.fault:
         if getattr(env_cfg, "fault", None) is not None:
@@ -245,7 +243,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     # Point <experiment>/latest at this run so tools reach the newest run without
     # knowing its timestamp (e.g. tensorboard --logdir logs/rsl_rl/<exp>/latest).
-    from constrained_albc.envs.main.utils import update_latest_symlink
+    from constrained_albc.algorithms.utils.run_links import update_latest_symlink
 
     os.makedirs(log_dir, exist_ok=True)
     update_latest_symlink(log_dir)

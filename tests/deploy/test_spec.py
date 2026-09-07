@@ -1,5 +1,6 @@
 import pytest
-from constrained_albc.deploy.spec import ShapeSpec, ExportSpec, ExportContractError
+
+from constrained_albc.deploy.spec import ExportContractError, ExportSpec, ShapeSpec
 
 
 def test_shapespec_defaults_to_float32():

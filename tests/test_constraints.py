@@ -307,7 +307,7 @@ def test_compute_all_costs_stacks_K():
 # ---------------------------------------------------------------------------
 # joint1-constraint-redesign wiring: apply_joint1_constraint_arm(env_cfg) appends
 # exactly one Average term for arm 'B' and leaves arm 'none' byte-identical, WITHOUT
-# mutating the shared module-level _FULL_DOF_CONSTRAINT_TERMS (also used by full_dof).
+# mutating the shared module-level _MAIN_CONSTRAINT_TERMS.
 #
 # These call the REAL helper (not a reproduction). The helper is invoked from
 # ALBCEnv.__init__ (AFTER hydra applies overrides), NOT a cfg __post_init__ -- because
@@ -360,7 +360,7 @@ def test_apply_arm_rejects_unknown():
 
 
 def test_apply_arm_does_not_mutate_shared_list():
-    """Appending must NOT mutate the shared _FULL_DOF_CONSTRAINT_TERMS (full_dof reuses it)."""
+    """Appending must NOT mutate the shared _MAIN_CONSTRAINT_TERMS."""
     cfg, shared = _cfg_with_terms("B", 0.05)
     C.apply_joint1_constraint_arm(cfg)
     assert len(shared) == 10  # the original shared list object is untouched (new list built)

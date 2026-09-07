@@ -86,41 +86,6 @@ def compute_policy_obs(
     )
 
 
-# Column indices, inside the 20D proprio block of compute_policy_obs, of the five signals the
-# marine features are built from: euler roll/pitch at [3:5] and body rates p/q/r at [6:9].
-MARINE_SRC_IDX = (3, 4, 6, 7, 8)
-
-
-def compute_marine_features(src: torch.Tensor) -> torch.Tensor:
-    """Koopman arm-B dictionary lift: 7 physics-informed observables (see config.MARINE_FEATURE_DIM).
-
-    Args:
-        src: ``(num_envs, 5)`` = [roll, pitch, p, q, r], gathered at MARINE_SRC_IDX.
-
-    Returns:
-        ``(num_envs, 7)`` = [sin(roll), cos(roll), sin(pitch), cos(pitch), p|p|, q|q|, r|r|].
-
-    sin/cos give the attitude a wrap-free, linear-in-the-lift representation; the signed
-    quadratic rates are the per-DOF quadratic-drag shape the marine Koopman literature uses.
-    Every column is a pointwise function of channels the policy already observes, so this adds
-    no information -- deliberately, since the surviving hypothesis is optimization geometry.
-    The caller decides WHICH realization of those channels to pass (ALBCEnv passes the
-    previous step's noised observation, never clean state -- see ALBCEnv._get_observations).
-    """
-    roll, pitch = src[:, 0], src[:, 1]
-    rates = src[:, 2:5]
-    return torch.cat(
-        [
-            torch.sin(roll).unsqueeze(-1),
-            torch.cos(roll).unsqueeze(-1),
-            torch.sin(pitch).unsqueeze(-1),
-            torch.cos(pitch).unsqueeze(-1),
-            rates * rates.abs(),
-        ],
-        dim=-1,
-    )
-
-
 def compute_privileged_obs(
     env: ALBCEnv,
 ) -> torch.Tensor:
@@ -269,7 +234,7 @@ def compute_student_extra_obs(
               ground truth would hand the student a signal the robot cannot produce.
 
     Gen-1: NOT part of policy_obs; the frozen teacher actor never sees these. The env
-    publishes the return value under STUDENT_EXTRA_OBS_KEY (_core/student/models.py),
+    publishes the return value under STUDENT_EXTRA_OBS_KEY (constrained_albc/algorithms/student/models.py),
     whose value is "student_extra" -- spelled out here because this module must stay
     torch-only at runtime and so cannot import the constant. State buffers
     (_depth_meas_prev, _heave_rate_filt, _extra_reset_pending) live on env and are

@@ -14,12 +14,12 @@ import rsl_rl.runners.on_policy_runner as _runner_module
 
 from isaaclab.utils import configclass
 
-# Through the `..algorithms` re-export, exactly as `rsl_rl_ppo_cfg.py` imports
-# ConstraintTRPO. Reaching into `envs/_core` directly instead looks tidier and breaks
-# `tests/test_config_equivalence.py`: that test loads this module against stubbed
-# sibling packages, so an import that bypasses `{pkg}.algorithms` pulls the real
-# algorithm module and, through it, a real `rsl_rl.storage` the stub cannot serve.
-from ..algorithms import ConstraintLagrangian
+# Spelled out to the module, exactly as `rsl_rl_ppo_cfg.py` imports ConstraintTRPO:
+# `constrained_albc.algorithms` keeps a docstring-only __init__ (the deploy isolation
+# path loads submodules under stubbed parents), so there is no package-level re-export
+# to import from. `tests/test_config_equivalence.py` stubs this exact module name.
+from constrained_albc.algorithms.constraint_lagrangian import ConstraintLagrangian
+
 from .rsl_rl_ppo_cfg import (
     ALBCTRPORunnerCfg,
     RslRlConstraintTRPOAlgorithmCfg,

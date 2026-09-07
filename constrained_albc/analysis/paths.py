@@ -25,6 +25,7 @@ run produced before train.py adopts this tree) still resolves to a best-effort
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 from dataclasses import dataclass, field
@@ -166,7 +167,14 @@ class RunHandle:
 
 def _is_run_dir(d: Path) -> tuple[bool, dict | None]:
     """A directory is a run when it holds a manifest or a ``train`` entry."""
-    manifest = _read_manifest_if_present(d)
+    try:
+        manifest = _read_manifest_if_present(d)
+    except RuntimeError as exc:
+        # One corrupt manifest must not take the whole scan down. The raise stays for
+        # callers that NAMED the run (resolve_run, emit_run_manifest); the scan warns
+        # and treats the directory like a legacy one (merge review 2026-09-07).
+        logging.getLogger(__name__).warning("%s -- skipped in find_runs scan", exc)
+        manifest = None
     return (manifest is not None or (d / TRAIN_LINK_NAME).exists()), manifest
 
 
@@ -222,9 +230,33 @@ def find_runs(experiments_root: str = EXPERIMENTS_ROOT) -> list[RunHandle]:
             is_run, manifest = _is_run_dir(sub)
             if is_run:
                 runs.append(RunHandle(run_id=sub.name, root=sub, manifest=manifest))
-    runs.sort(key=lambda r: r.run_id, reverse=True)
+    runs.sort(key=_run_recency_key, reverse=True)
     return runs
 
+
+def _run_recency_key(run: RunHandle) -> datetime:
+    """Newest-first ordering key for :func:`list_runs` / :func:`resolve_run` index 0.
+
+    run_id is ``<task_short>[_<tag>]_<ts>`` -- label BEFORE the date -- so sorting the
+    run_id string groups by task and tag first and only then by time, which is not the
+    "newest run" that ``resolve_run`` documents itself as returning.
+
+    Manifest ``created`` is preferred, the run_id's ``_<ts>`` suffix is the fallback for
+    legacy runs that carry no manifest. Unparseable on both counts sorts oldest rather
+    than raising, because ``list_runs`` scans whatever is on disk.
+
+    ponytail: ``created`` is the manifest WRITE time, so a run registered post-hoc
+    (``emit_run_manifest`` on a finished run) stamps the registration date and sorts as
+    if it were new. Swap the two keys if that ever outweighs the legacy-run case.
+    """
+    created = (run.manifest or {}).get("created")
+    if created:
+        try:
+            return datetime.fromisoformat(str(created))
+        except ValueError:
+            pass
+    parsed = _parse_run_ts(run.run_id)
+    return parsed[1] if parsed is not None else datetime.min
 
 def resolve_run(
     run_spec: str,
@@ -507,11 +539,16 @@ def emit_run_manifest(
 
     # train/ -> log_dir relative symlink (so RunHandle.tb_dir / checkpoints_dir resolve).
     train_link = run_root / "train"
+    train_link_ok = True
     if not train_link.exists():
         try:
             train_link.symlink_to(os.path.relpath(log_dir.resolve(), run_root))
-        except OSError:
-            pass  # symlink may be unsupported; manifest paths still point callers to log_dir
+        except OSError as exc:
+            train_link_ok = False
+            logging.getLogger(__name__).warning(
+                "run %s: could not create the train symlink at %s (%s); the manifest will "
+                "point tb/checkpoints at the log dir directly", rid, train_link, exc,
+            )
 
     manifest = Manifest(
         run_id=rid,
@@ -520,7 +557,11 @@ def emit_run_manifest(
         parent_run_id=parent_run_id,
         config=config or {},
         git=_git_state(),
-        paths={"tb": "train", "checkpoints": "train", "evals": []},
+        paths=(
+            {"tb": "train", "checkpoints": "train", "evals": []}
+            if train_link_ok
+            else {"tb": str(log_dir), "checkpoints": str(log_dir), "evals": []}
+        ),
     )
     write_manifest(run_root, manifest)
     return RunHandle(run_id=rid, root=run_root, manifest=manifest.to_dict())
@@ -555,20 +596,30 @@ def _timestamp_from_log_dir(log_dir: Path) -> str | None:
     Returns None (caller generates a fresh ts) if the leaf does not start with a parseable
     timestamp.
     """
-    leaf = log_dir.name
-    parts = leaf.split("_")
+    parsed = _parse_run_ts(log_dir.name)
+    return parsed[0] if parsed is not None else None
+
+
+def _parse_run_ts(name: str) -> tuple[str, datetime] | None:
+    """Parse a run/log-dir leaf's timestamp, returning ``(text, datetime)`` or None.
+
+    Dual-accept (2026-06-05 label-before-date flip):
+      new format -> ts is the TRAILING field-pair (trpo_main_teacher_260525_232805)
+      legacy     -> ts is the LEADING field-pair  (260525_232805_trpo_main_teacher)
+    Trailing is tried first (current), then leading (older folders). RUN_TS_FORMAT
+    (short) is what train.py emits; the long legacy format is kept for older resolves.
+
+    Two callers need different halves of this: :func:`_timestamp_from_log_dir` reuses the
+    text so a run_id keeps its training folder's ts verbatim, and :func:`_run_recency_key`
+    needs it ordered. They must accept exactly the same set of names, so there is one parser.
+    """
+    parts = name.split("_")
     if len(parts) < 2:
         return None
-    # Dual-accept (2026-06-05 label-before-date flip):
-    #   new format -> ts is the TRAILING field-pair (trpo_main_teacher_260525_232805)
-    #   legacy     -> ts is the LEADING field-pair  (260525_232805_trpo_main_teacher)
-    # Try trailing first (current), then leading (older folders). RUN_TS_FORMAT (short)
-    # is what train.py emits; the long legacy format is kept for older resolves.
     for candidate in (f"{parts[-2]}_{parts[-1]}", f"{parts[0]}_{parts[1]}"):
         for fmt in (RUN_TS_FORMAT, "%Y-%m-%d_%H-%M-%S"):
             try:
-                datetime.strptime(candidate, fmt)
-                return candidate
+                return candidate, datetime.strptime(candidate, fmt)
             except ValueError:
                 continue
     return None
@@ -601,8 +652,11 @@ def _read_manifest_if_present(run_root: Path) -> dict | None:
         return None
     try:
         return json.loads(out.read_text())
-    except (json.JSONDecodeError, OSError):
-        return None
+    except (json.JSONDecodeError, OSError) as exc:
+        # An ABSENT manifest is the legacy case this helper exists for; a PRESENT but
+        # unreadable one is corruption, and returning None for it silently demotes the
+        # run to the legacy path instead of reporting the broken file.
+        raise RuntimeError(f"corrupt run manifest: {out}") from exc
 
 
 def _find_legacy_run(run_spec: str, legacy_logs_root: str) -> RunHandle | None:
@@ -615,14 +669,16 @@ def _find_legacy_run(run_spec: str, legacy_logs_root: str) -> RunHandle | None:
     root = Path(legacy_logs_root)
     if not root.exists():
         return None
-    candidates: list[Path] = []
-    for exp_dir in root.iterdir():
-        if not exp_dir.is_dir():
-            continue
-        for run_dir in exp_dir.iterdir():
-            if run_dir.is_dir() and list(run_dir.glob("events.out.tfevents.*")):
-                candidates.append(run_dir)
-    candidates.sort(key=lambda p: p.name, reverse=True)
+    # Both depths: <exp>/<run> and the <exp>/<group>/<run> layer train.py --run_group
+    # has written since 2026-06-08. Scanning only the first silently hides every
+    # grouped legacy run.
+    candidates = [
+        d for d in (*root.glob("*/*"), *root.glob("*/*/*"))
+        if d.is_dir() and list(d.glob("events.out.tfevents.*"))
+    ]
+    # Newest FIRST, by time -- same contract (and the same reason) as _run_recency_key;
+    # the name is only the tiebreaker for leaves that carry no parseable timestamp.
+    candidates.sort(key=lambda d: ((_parse_run_ts(d.name) or (None, datetime.min))[1], d.name), reverse=True)
     matches = [c for c in candidates if run_spec in c.name]
     if not matches:
         return None

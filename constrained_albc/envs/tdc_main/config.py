@@ -17,8 +17,9 @@ from isaaclab.utils import configclass
 
 from constrained_albc.envs.main.config import ALBCEnvCfg
 from constrained_albc.envs.main.config_simtoreal import ALBCSimToRealEnvCfg
-from constrained_albc.envs.tdc.controllers.tdc import TDCControllerCfg
-from constrained_albc.envs.tdc.controllers.thruster_pd import ThrusterPDCfg
+
+from .controllers.tdc import TDCControllerCfg
+from .controllers.thruster_pd import ThrusterPDCfg
 
 
 @configclass
@@ -35,7 +36,7 @@ class ALBCTDCEnvCfg(ALBCEnvCfg):
     tdc_controller: TDCControllerCfg = TDCControllerCfg()
     """Arm TDC controller for roll/pitch attitude stabilization.
 
-    Same gains as the `full_dof` TDC baseline (`envs.tdc.config.ALBCTDCEnvCfg`):
+    Gains inherited from the retired full-DOF TDC baseline (tag legacy-full-dof-final):
     `m_hat=(0.15, 0.16)`, `kp=48.0`, `kd=14.0`, `h=0.180`,
     `max_joint_velocity=2.5 rad/s`. The gains came from the original ROS reference
     implementation at 40.0/12.0 and were raised +20% on 2026-04-22 for OOD robustness
@@ -47,7 +48,7 @@ class ALBCTDCEnvCfg(ALBCEnvCfg):
     thruster_pd: ThrusterPDCfg = ThrusterPDCfg()
     """6-DOF thruster PD: lin vel (Fx,Fy,Fz) + roll/pitch (Tx,Ty) + yaw rate (Tz).
 
-    Same gains as the `full_dof` TDC baseline. `main` has no linear-velocity
+    Same gains as the retired full-DOF TDC baseline. `main` has no linear-velocity
     command (attitude-only task), so `tdc_env.ALBCTDCEnv` feeds a zero
     lin-vel target -- the controller then holds station on Fx/Fy/Fz instead
     of tracking a commanded velocity.

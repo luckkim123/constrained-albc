@@ -1,0 +1,151 @@
+"""Student policy training configuration."""
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass
+
+# Repo root = constrained-albc/. Used to anchor log_dir_root to an ABSOLUTE path:
+# train_student.py runs via isaaclab.sh from /workspace/isaaclab, so a relative root would
+# leak student output into the isaaclab repo. Anchoring here keeps teacher and student
+# output in one source-of-truth tree.
+#
+# The hop count tracks this module's depth and MUST be re-counted whenever the file moves:
+# dirname(__file__) is <repo>/constrained_albc/algorithms/student, so three hops reach the
+# repo. It was four while this lived at constrained_albc/envs/_core/student/, and the 2026-09
+# WP4 promotion to constrained_albc/algorithms/ left the four in place -- every student run
+# then wrote one directory ABOVE the repo, with nothing failing to say so.
+# `tests/test_student_log_root.py` is the guard.
+_REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+
+
+@dataclass
+class StudentCfg:
+    """Hyperparameters for student encoder supervised training.
+
+    Fields must stay primitive-only (str/int/float/bool/tuple) -- runner.py's
+    _save_checkpoint persists the whole cfg as ``vars(self.cfg)`` inside the checkpoint,
+    and eval.py / student_policy.py both unpickle it back out but currently use
+    differing torch.load ``weights_only`` settings historically. A non-primitive field
+    would load fine under one and raise under the other; explicit primitives keep both
+    loaders safe regardless of that setting.
+    """
+
+    # Experiment. experiment_name shares the teacher's "albc_trpo" prefix (2026-05-26) so
+    # teacher (albc_trpo_teacher) and student (albc_trpo_student) cluster together under
+    # both logs/rsl_rl/ and experiments/rsl_rl/.
+    experiment_name: str = "albc_trpo_student"
+    run_name: str = "student_tcn"
+    seed: int = 42
+
+    # Teacher (set by the caller; no hardcoded run -- the teacher is whichever
+    # trained checkpoint you distil from).
+    teacher_run_dir: str = ""
+    teacher_checkpoint: str = "model_4999.pt"
+
+    # Env variant package the teacher was trained in. FrozenTeacher resolves the
+    # variant's agents.rsl_rl_ppo_cfg from this for the construct-time fallback
+    # encoder bounds. The retired full-DOF StudentCfg subclass overrode it.
+    variant_module: str = "constrained_albc.envs.main"
+
+    # Architecture
+    encoder_type: str = "tcn"       # "tcn" or "gru"
+    policy_obs_dim: int = 69        # attitude-only: 20 proprio + 46 history + 3 integral
+    privileged_dim: int = 28        # attitude-only: 24 DR + 3 measured lin_vel + 1 control delay (critic-only)
+    latent_dim: int = 9             # must match teacher encoder output
+
+    # TCN-specific
+    # H=9 mirrors teacher's embedded history: stride=3 x 3 steps = 9 physical
+    # steps at 50 Hz (180 ms). Sampled at stride=1 for denser temporal signal.
+    # Kernels shrunk to fit H=9: (3,3,3) strides (1,1,1) -> L_out 9->7->5->3.
+    tcn_history: int = 9
+    tcn_input_channels: int = 32    # after per-step channel transform
+    tcn_conv_channels: tuple[int, ...] = (64, 128, 128)
+    tcn_conv_kernels: tuple[int, ...] = (3, 3, 3)
+    tcn_conv_strides: tuple[int, ...] = (1, 1, 1)
+    tcn_head_hidden: int = 128
+
+    # GRU-specific
+    gru_layers: int = 1
+    gru_hidden: int = 128
+    # Intermediate head layer dim (128 -> gru_head_hidden -> latent_dim).
+    # 0 disables intermediate layer (shallow head: Linear + LN(latent)).
+    # Teacher's encoder has a 128->64->9 pattern; matching this eases
+    # representation of teacher's per-dim latent structure (per-dim stds
+    # 0.17..0.48). Default 64 adds ~8K params, ~10% inference cost.
+    gru_head_hidden: int = 64
+
+    # E1/B2 extra sensor channels (gen-1 side-channel). 0 = off (default recipe).
+    # simplified: GRU-only -- TCN would need flat_buf/ring widening for a retired
+    # architecture; extend if a TCN arm ever needs the channels.
+    extra_obs_dim: int = 0
+    # X1-tailsplit: recover the gen-1 input assembly from a gen-2 env whose policy_obs
+    # folds the 4 channels at the TAIL (use_extra_policy_obs). The student input becomes
+    # cat(norm(obs)[..., :-4], obs[..., -4:] / extra_obs_scale) -- same width, gen-1
+    # channel normalization convention. Mutually exclusive with extra_obs_dim > 0
+    # (guarded in extra_scale_tensor); GRU-only like the side channel. False keeps every
+    # encoder forward byte-identical to the pre-X1 recipe.
+    extra_obs_from_policy_tail: bool = False
+    # Static per-channel scales (divide before the encoder): IMU specific force ~ +-15
+    # m/s^2 -> /10; heave rate ~ +-1 m/s -> /1. Static (not a running normalizer) so the
+    # board runtime can replicate normalization from constants; calibration knobs, tune
+    # against real sensor ranges at bring-up.
+    extra_obs_scale: tuple[float, ...] = (10.0, 10.0, 10.0, 1.0)
+
+    # Training
+    num_envs: int = 4096
+    n_steps_per_rollout: int = 24
+    n_epochs: int = 5
+    minibatch_size: int = 8192
+    lr: float = 5e-4
+    max_iterations: int = 1000
+    grad_clip_norm: float = 1.0
+    lambda_latent: float = 1.0
+    save_interval: int = 100
+
+    # DAgger (on-policy correction). During rollout collection the env is stepped with
+    # beta*a_teacher + (1-beta)*a_student, where a_student is the action the student's own
+    # latent induces. beta is annealed linearly from dagger_beta_start (iter 0) to
+    # dagger_beta_end (iter >= dagger_anneal_iters), then held. The teacher's (l_t, a_t)
+    # are STILL recorded as the supervision targets every step (DAgger relabeling) -- only
+    # the action that drives the env changes. Defaults beta_start=beta_end=1.0 -> beta==1
+    # always -> pure teacher-driven rollout == the current off-policy BC recipe, so this is
+    # INERT until a run sets dagger_beta_end < 1. A DAgger run: start 1.0, end 0.0, anneal 600.
+    dagger_beta_start: float = 1.0
+    dagger_beta_end: float = 1.0
+    dagger_anneal_iters: int = 0
+    # How beta combines the two policies. "blend" executes beta*a_teacher + (1-beta)*a_student,
+    # a convex mix of two action VECTORS -- which is what runs before 2026-07-29 did, and which
+    # visits states NEITHER policy induces (where the policies disagree, e.g. opposing thruster
+    # pairs, the average is a command neither would issue). DAgger's distribution argument needs
+    # stochastic SELECTION between the policies, which is "select": per env per step, execute the
+    # teacher's action with probability beta, else the student's. Default stays "blend" so the
+    # B4b arm (trpo_sdeint_b4b_beta05_s30_260729_153436) remains reproducible; "select" is the
+    # correct semantics and should be preferred for any new DAgger arm.
+    dagger_mix: str = "blend"  # "blend" | "select"
+
+    # Logging. log_dir_root is ABSOLUTE (anchored to the constrained-albc repo) so student
+    # output does not leak into the isaaclab cwd train_student.py runs from. It mirrors the
+    # teacher layout logs/rsl_rl/<experiment_name>/. experiments_root is derived from this in
+    # train_student.py (repo_root/experiments).
+    log_dir_root: str = os.path.join(_REPO_ROOT, "logs", "rsl_rl", experiment_name)
+    logger: str = "wandb"           # "wandb" or "tensorboard"
+    wandb_project: str = "albc_trpo_student"
+
+    # Environment
+    task: str = "Isaac-ConstrainedALBC-TRPO-v0"
+    device: str = "cuda:0"          # overridden by CUDA_VISIBLE_DEVICES at launch
+
+
+def dagger_beta_at(cfg: StudentCfg, it: int) -> float:
+    """Teacher-action mixing coefficient at iteration ``it`` (1.0 = pure teacher).
+
+    Linear anneal from ``dagger_beta_start`` at it=0 to ``dagger_beta_end`` at
+    it>=``dagger_anneal_iters``, held at ``dagger_beta_end`` after. ``dagger_anneal_iters<=0``
+    means no anneal -- beta is constant ``dagger_beta_end`` (so the default
+    start=end=1.0 gives beta==1.0 every iteration = the current teacher-only recipe).
+    Pure float math, no torch: kept import-light so it is unit-testable without Isaac Sim.
+    """
+    if cfg.dagger_anneal_iters <= 0:
+        return cfg.dagger_beta_end
+    frac = min(1.0, max(0.0, it / cfg.dagger_anneal_iters))
+    return cfg.dagger_beta_start + (cfg.dagger_beta_end - cfg.dagger_beta_start) * frac

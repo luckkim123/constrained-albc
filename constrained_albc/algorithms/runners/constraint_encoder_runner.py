@@ -1,0 +1,269 @@
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
+"""Single runner for constrained ALBC: encoder metrics + constraint state.
+
+Flat subclass of OnPolicyRunner that combines:
+    - Teacher encoder metrics logging (if encoder present)
+    - Log-barrier constraint metrics (TRPO + IPO)
+    - Auto-sync of num_constraints and policy_obs_dim from env config
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import os
+
+import torch
+from rsl_rl.runners import OnPolicyRunner
+
+from ..utils.logging import flush_metrics, log_encoder_metrics
+from . import sync_policy_obs_dim, sync_privileged_dim
+
+logger = logging.getLogger(__name__)
+
+
+class ConstraintEncoderRunner(OnPolicyRunner):
+    """OnPolicyRunner with encoder metrics and log-barrier constraint support.
+
+    Provides:
+        - Encoder metrics: z latent statistics, gradient norms (when encoder present)
+        - Constraint metrics: barrier margins, penalty (Modified IPO)
+        - Auto-sync: num_constraints and policy_obs_dim from env config to algorithm/policy config
+    """
+
+    def __init__(self, env, train_cfg, log_dir=None, device="cpu"):
+        # Auto-sync num_constraints from env config before parent init.
+        # train_cfg is a plain dict (from agent_cfg.to_dict()), so use dict
+        # key access instead of hasattr/getattr which only work on objects.
+        constraints_cfg = getattr(env.unwrapped.cfg, "constraints", None)
+        if constraints_cfg is not None:
+            env_k = constraints_cfg.num_constraints
+            alg_cfg = train_cfg["algorithm"]
+            policy_cfg = train_cfg["policy"]
+
+            if "num_constraints" in alg_cfg and alg_cfg["num_constraints"] != env_k:
+                logger.info(
+                    "Auto-syncing num_constraints: alg %d -> %d",
+                    alg_cfg["num_constraints"],
+                    env_k,
+                )
+                alg_cfg["num_constraints"] = env_k
+                alg_cfg["constraint_budgets"] = constraints_cfg.constraint_budgets
+
+            if "num_constraints" in policy_cfg and policy_cfg["num_constraints"] != env_k:
+                logger.info(
+                    "Auto-syncing num_constraints: policy %d -> %d",
+                    policy_cfg["num_constraints"],
+                    env_k,
+                )
+                policy_cfg["num_constraints"] = env_k
+
+            # Cache constraint names for logging
+            self._constraint_names = constraints_cfg.constraint_names
+        else:
+            self._constraint_names = ()
+
+        # Auto-sync policy_obs_dim / privileged_dim from env config (mirrors num_constraints above).
+        sync_policy_obs_dim(env, train_cfg)
+        sync_privileged_dim(env, train_cfg)
+
+        # Override encoder normalization bounds with DR-derived values.
+        # The hardcoded _PRIV_OBS_LOWER/UPPER in rsl_rl_ppo_cfg.py are only a
+        # construct-time fallback; here we recompute the bounds directly from the
+        # live DR config so they cannot drift from the ranges DR actually samples
+        # (spec: docs/plans/2026-06-30-dr-derived-priv-obs-normalization-bounds.md).
+        # Guards: PPO/NoEncoder variants may not carry encoder bound keys, and the
+        # derivation encodes main's 28D p_t layout -- so it only applies to main
+        # envs. The retired full-DOF/TDC family kept static cfg bounds; before the
+        # extraction to a shared package they would have hit this block through train.py's
+        # main-runner dispatch and received wrong-layout bounds (latent hazard).
+        policy_cfg = train_cfg["policy"]
+        env_cfg = env.unwrapped.cfg
+        if (
+            type(env.unwrapped).__module__.startswith("constrained_albc.envs.main")
+            and "encoder_obs_lower" in policy_cfg
+            and "encoder_obs_upper" in policy_cfg
+            and env_cfg.thrusters is not None
+        ):
+            # Lazy, deliberately variant-specific import: the deriver lives with
+            # main's p_t layout definition, not in the shared algorithm package.
+            from constrained_albc.envs.main.utils.priv_obs_bounds import (
+                derive_priv_obs_bounds_from_dr,
+            )
+
+            # Pass the LIVE hydro cfg (not a fresh default) so a task that overrides
+            # hydrodynamics flows into the bounds -- closing the same base-drift vector
+            # this refactor exists to eliminate (spec section 4).
+            lower, upper = derive_priv_obs_bounds_from_dr(
+                env_cfg.randomization,
+                env_cfg.ocean_current.max_velocity,
+                env_cfg.thrusters,
+                hydro_cfg=env_cfg.hydrodynamics,
+                buoy_hydro_cfg=env_cfg.buoy_hydrodynamics,
+            )
+            if getattr(env_cfg, "use_privileged_fault_obs", False):
+                # Arm B: compute_privileged_obs appends 6D true per-thruster health
+                # (always in [0, 1] by construction) as p_t's last 6 dims -- fixed
+                # unit-range bounds, not DR-derived (no DR-range field for it).
+                lower = lower + [0.0] * 6
+                upper = upper + [1.0] * 6
+            logger.info("Overriding encoder_obs_lower/upper with DR-derived bounds (margin 0)")
+            policy_cfg["encoder_obs_lower"] = lower
+            policy_cfg["encoder_obs_upper"] = upper
+
+        super().__init__(env, train_cfg, log_dir, device)
+
+        # Detect encoder for conditional metrics logging
+        self._has_encoder = hasattr(self.alg.policy, "encoder")
+        if self._has_encoder:
+            logger.info("[ConstraintEncoderRunner] Encoder detected. Encoder metrics logging enabled.")
+
+    @property
+    def _should_log(self) -> bool:
+        """Whether logging is active (log_dir set and logs not disabled)."""
+        return self.log_dir is not None and not self.disable_logs
+
+    # ------------------------------------------------------------------
+    # Auxiliary state persistence helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _save_aux_state(path: str, name: str, state: dict) -> None:
+        """Save auxiliary state dict alongside a model checkpoint."""
+        aux_path = os.path.join(os.path.dirname(path), name)
+        torch.save(state, aux_path)
+
+    @staticmethod
+    def _load_aux_state(path: str, name: str, device: str) -> dict | None:
+        """Load auxiliary state dict from alongside a model checkpoint, or None."""
+        aux_path = os.path.join(os.path.dirname(path), name)
+        if os.path.exists(aux_path):
+            return torch.load(aux_path, map_location=device, weights_only=False)
+        return None
+
+    # ------------------------------------------------------------------
+    # Training loop overrides
+    # ------------------------------------------------------------------
+
+    def learn(self, num_learning_iterations: int, init_at_random_ep_len: bool = False) -> None:
+        """Reset environments before training."""
+        if hasattr(self.alg, "set_max_iterations"):
+            self.alg.set_max_iterations(num_learning_iterations)
+        self.env.reset()
+        super().learn(num_learning_iterations, init_at_random_ep_len)
+
+    def log(self, locs: dict, width: int = 80, pad: int = 35) -> None:
+        """Extended log with encoder metrics and constraint metrics."""
+        super().log(locs, width, pad)
+
+        iteration = locs["it"]
+
+        # Encoder metrics (z latent health: z_mean, z_std, z_min, z_max)
+        if self._has_encoder and self._should_log:
+            log_encoder_metrics(
+                writer=self.writer,
+                policy=self.alg.policy,
+                env=self.env,
+                iteration=iteration,
+                device=self.device,
+                logger_type=self.logger_type,
+            )
+
+        # Constraint metrics
+        if self._should_log:
+            self._log_constraint_metrics(iteration)
+
+        # DORAEMON: update DR distribution based on episode statistics
+        raw_env = self.env.unwrapped
+        if hasattr(raw_env, "_doraemon") and raw_env._doraemon is not None:
+            metrics = raw_env._doraemon.step(iteration=iteration)
+            if self._should_log:
+                prefixed = {f"DORAEMON/{k}": v for k, v in metrics.items()}
+                flush_metrics(self.writer, prefixed, iteration, self.logger_type)
+
+    # ------------------------------------------------------------------
+    # Checkpoint save/load
+    # ------------------------------------------------------------------
+
+    def save(self, path: str, infos: dict | None = None) -> None:
+        """Save model checkpoint, DORAEMON state, and adaptive entropy state."""
+        super().save(path, infos)
+
+        # Save DORAEMON distribution state
+        raw_env = self.env.unwrapped
+        if hasattr(raw_env, "_doraemon") and raw_env._doraemon is not None:
+            self._save_aux_state(path, "doraemon_state.pt", raw_env._doraemon.state_dict())
+
+            # Persist the curriculum trajectory for later replay (overwrite each checkpoint).
+            # CurriculumReplayer has no export_recording, so a replay run writes nothing.
+            if hasattr(raw_env._doraemon, "export_recording"):
+                recording = raw_env._doraemon.export_recording()
+                if recording["trajectory"]:
+                    traj_path = os.path.join(os.path.dirname(path), "curriculum_trajectory.json")
+                    with open(traj_path, "w") as f:
+                        json.dump(recording, f)
+
+    def load(self, path: str, load_optimizer: bool = True, map_location: str | None = None) -> dict:
+        """Load model checkpoint, DORAEMON state, and adaptive entropy state."""
+        infos = super().load(path, load_optimizer, map_location)
+
+        # Restore DORAEMON distribution state
+        raw_env = self.env.unwrapped
+        if hasattr(raw_env, "_doraemon") and raw_env._doraemon is not None:
+            doraemon_state = self._load_aux_state(path, "doraemon_state.pt", self.device)
+            if doraemon_state is not None:
+                raw_env._doraemon.load_state_dict(doraemon_state)
+                logger.info("Restored DORAEMON distribution state from checkpoint")
+
+        return infos
+
+    # ------------------------------------------------------------------
+    # Constraint metrics
+    # ------------------------------------------------------------------
+
+    def _log_constraint_metrics(self, iteration: int) -> None:
+        """Log constraint metrics to TensorBoard/WandB.
+
+        Logs per-constraint: cost_return, violation, d_k, barrier_margin.
+        Also logs aggregate barrier penalty and policy diagnostics.
+        """
+        alg = self.alg
+        if not hasattr(alg, "num_constraints"):
+            return
+
+        K = alg.num_constraints
+        metrics: dict[str, float] = {}
+
+        # Per-constraint: violation + barrier margin (2-level hierarchy for WandB grouping)
+        for k in range(K):
+            suffix = self._constraint_names[k] if k < len(self._constraint_names) else str(k)
+            metrics[f"Constraint/viol/{suffix}"] = alg._last_violations[k]
+            metrics[f"Constraint/margin/{suffix}"] = alg._last_barrier_margins[k]
+
+        # Aggregate constraint metric
+        metrics["Constraint/barrier_penalty"] = alg._last_barrier_penalty
+
+        # Policy diagnostics
+        metrics["Policy/line_search_success"] = alg._last_line_search_success
+        metrics["Policy/entropy"] = alg._last_mean_entropy
+        metrics["Policy/clip_fraction"] = alg._last_clip_fraction
+        metrics["Policy/encoder_grad_norm"] = alg._last_encoder_grad_norm
+        metrics["Policy/surrogate_loss"] = alg._last_surrogate_loss
+
+        # Gradient step norms (consolidated from GradDecomp + SigmaStep)
+        metrics["Grad/enc_step"] = alg._last_enc_step_norm
+        metrics["Grad/actor_step"] = alg._last_actor_step_norm
+        metrics["Grad/sigma_step"] = alg._last_sigma_step_norm
+        metrics["Grad/sigma_dir"] = alg._last_sigma_step_mean  # positive = noise increase
+
+        # Noise std (consolidated from per-dim NoiseStd)
+        with torch.no_grad():
+            per_dim_std = self.alg.policy.log_std.exp()
+        metrics["Noise/std_mean"] = per_dim_std.mean().item()
+        metrics["Noise/std_min"] = per_dim_std.min().item()
+
+        flush_metrics(self.writer, metrics, iteration, self.logger_type)

@@ -39,7 +39,11 @@ if "isaaclab" not in sys.modules:
 # `marinelab` package (real __path__, so marinelab/__init__.py -- which pulls Isaac Sim --
 # never runs) before loading the shim, mirroring the package-shim pattern used by
 # marinelab's own conftest.
-_MARINELAB_ROOT = Path("/workspace/marinelab/marinelab")
+# Resolved from __file__, never hardcoded: this repo is checked out beside marinelab in
+# the same workspace, and a hardcoded /workspace/... made every clone test the CANONICAL
+# marinelab instead of its own sibling -- the same inert-gate shape the 2026-09 cleanup
+# found in tests/deploy/test_isolation.py. (plan rule R4)
+_MARINELAB_ROOT = Path(__file__).resolve().parents[2] / "marinelab" / "marinelab"
 if "marinelab" not in sys.modules:
     _marinelab = types.ModuleType("marinelab")
     _marinelab.__path__ = [str(_MARINELAB_ROOT)]
@@ -101,6 +105,8 @@ class _FakeDRCfg:
     payload_cog_offset_xy_u_range = (0.0, 1.0)
     obs_noise_scale_range = (0.0, 1.0)
     fault_severity_range = (0.0, 1.0)
+    fz_disturbance_strength_range = (0.0, 1.0)
+    control_delay_strength_range = (0.0, 1.0)
 
 
 def test_build_param_specs_reads_bounds_and_midpoint_nominal():
@@ -176,14 +182,14 @@ def _add_n(buf, start, n, ndims=1):
     """Add n episodes whose returns are start, start+1, ... (so we can track identity)."""
     vals = torch.arange(start, start + n, dtype=torch.float32)
     xi = vals.unsqueeze(-1).repeat(1, ndims)
-    return buf.add(xi, returns=vals, success=torch.zeros(n), log_probs=torch.zeros(n))
+    return buf.add(xi, returns=vals, success=torch.zeros(n))
 
 
 def test_episode_buffer_caps_at_capacity():
     """get_all() never returns more than `capacity` rows (the IS estimate window)."""
     buf = _make_buffer(capacity=3)
     _add_n(buf, 0, 10)
-    _, returns, _, _ = buf.get_all()
+    _, returns, _ = buf.get_all()
     assert returns.shape[0] == 3
 
 
@@ -191,7 +197,7 @@ def test_episode_buffer_exact_fill_preserved():
     """Filling exactly to capacity keeps all rows, in order."""
     buf = _make_buffer(capacity=4)
     _add_n(buf, 10, 4)  # returns 10,11,12,13
-    _, returns, _, _ = buf.get_all()
+    _, returns, _ = buf.get_all()
     assert torch.equal(returns, torch.tensor([10.0, 11.0, 12.0, 13.0]))
 
 
@@ -200,7 +206,7 @@ def test_episode_buffer_evicts_oldest_on_wrap():
     buf = _make_buffer(capacity=3)
     _add_n(buf, 0, 3)   # fill: 0,1,2
     _add_n(buf, 3, 2)   # overflow by 2: writes 3,4 over slots 0,1 -> retained {2,3,4}
-    _, returns, _, _ = buf.get_all()
+    _, returns, _ = buf.get_all()
     assert set(returns.tolist()) == {2.0, 3.0, 4.0}  # oldest (0,1) evicted
     assert 0.0 not in returns.tolist() and 1.0 not in returns.tolist()
 
@@ -209,7 +215,7 @@ def test_episode_buffer_clear_empties():
     buf = _make_buffer(capacity=3)
     _add_n(buf, 0, 3)
     buf.clear()
-    _, returns, _, _ = buf.get_all()
+    _, returns, _ = buf.get_all()
     assert returns.shape[0] == 0
 
 
@@ -217,6 +223,6 @@ def test_episode_buffer_single_add_over_capacity_keeps_tail():
     """A single batch larger than capacity keeps only its most-recent rows."""
     buf = _make_buffer(capacity=3)
     _add_n(buf, 0, 5)  # one batch of 5 into capacity-3 buffer
-    _, returns, _, _ = buf.get_all()
+    _, returns, _ = buf.get_all()
     assert returns.shape[0] == 3
     assert set(returns.tolist()) == {2.0, 3.0, 4.0}  # tail kept, head dropped

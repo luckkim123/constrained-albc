@@ -1,5 +1,5 @@
-from constrained_albc.deploy.verify import ContractReport
 from constrained_albc.deploy.report import build_report
+from constrained_albc.deploy.verify import ContractReport
 
 
 def test_report_contains_guide_fields():

@@ -6,7 +6,7 @@ logs/
 logs_queue/
 outputs/
 wandb/
-experiments/
+/experiments/
 .omc/
 docs/superpowers/
 

@@ -33,7 +33,10 @@ from pathlib import Path
 import pytest
 import torch
 
-THRUSTER_PY = Path("/workspace/marinelab/marinelab/core/thruster.py")
+# Resolved from __file__: a hardcoded /workspace/... makes a clone test the CANONICAL
+# marinelab rather than its own sibling (plan rule R4; same shape as the inert
+# tests/deploy/test_isolation.py gate the 2026-09 cleanup fixed).
+THRUSTER_PY = Path(__file__).resolve().parents[2] / "marinelab" / "marinelab" / "core" / "thruster.py"
 
 
 def _load_thruster_module():

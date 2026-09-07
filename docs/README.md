@@ -28,7 +28,7 @@ Organized [Diátaxis](https://diataxis.fr/)-style by reader intent. English-only
 
 | Doc | Task |
 |---|---|
-| [deploy-pack-export](how-to/deploy-pack-export.md) | produce a self-verifying teacher+student deploy pack via `export_deploy.py` (current export procedure) |
+| [deploy-pack-export](how-to/deploy-pack-export.md) | produce a self-verifying teacher+student deploy pack via `export_deploy_pack.py` (current export procedure) |
 | [deploy](how-to/deploy.md) | superseded pointer page — old FullDOF export is dead; redirects to `deploy-pack-export.md` |
 | [domain-randomization](how-to/domain-randomization.md) | enable/disable DR, work with the DORAEMON curriculum, add a new DR parameter |
 | [run-on-dgx](how-to/run-on-dgx.md) | run a campaign stage on the NVIDIA DGX: three-repo sync, launch conventions, why the split is safe, how results come back |
@@ -74,7 +74,7 @@ Organized [Diátaxis](https://diataxis.fr/)-style by reader intent. English-only
 > main-network-architecture,observation-space}.md` are verified against commit `c5a8a08`
 > and describe the **default** task `Isaac-ConstrainedALBC-TRPO-v0` (`envs/main`,
 > 69D obs / 28D privileged / 8D action). The **legacy** full-DOF variants
-> (`envs/full_dof`, 87D obs / 24D privileged) are out of scope for those pages -- see
+> (retired 2026-09, 87D obs / 24D privileged; tag `legacy-full-dof-final`) is out of scope for those pages -- see
 > [`task-reference.md`](reference/task-reference.md) for the full task table. Archive
 > pages (`experiments-archive.md`, `design-history.md`, `debug-history.md`) predate the
 > `envs/main` split and are historical narrative, not maintained as living reference.

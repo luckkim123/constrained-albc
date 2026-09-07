@@ -210,6 +210,15 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.spec:
         assert args.ckpt, "--spec needs --ckpt"
+        # Single export writes the payload only. --golden and --report are produced by the
+        # batch path, which has the teacher to cross-check against; accepting them here
+        # would return 0 having silently written neither.
+        ignored = [f"--{f}" for f in ("golden", "report") if getattr(args, f)]
+        if ignored:
+            raise SystemExit(
+                f"{' and '.join(ignored)} {'are' if len(ignored) > 1 else 'is'} not produced by "
+                f"--spec (single export); use --batch, which has the teacher needed to close parity."
+            )
         out_dir = resolve_out_dir(args)
         if args.spec == "teacher_actor":
             spec = SPEC_REGISTRY[args.spec]()

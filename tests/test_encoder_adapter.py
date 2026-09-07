@@ -6,10 +6,10 @@ import subprocess
 import sys
 
 import yaml
+from _profile import PROFILE_DIR, REPO  # test-side store resolver
 
-REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PROFILE = os.path.join(REPO, ".omx", "profile", "metrics.yaml")
-ADAPTER = os.path.join(REPO, ".omx", "profile", "encoder_adapter.py")
+PROFILE = os.path.join(PROFILE_DIR, "metrics.yaml")
+ADAPTER = os.path.join(PROFILE_DIR, "encoder_adapter.py")
 FIXTURE = os.path.join(REPO, "tests", "fixtures", "encoder", "mini_encoder_24d.pt")
 
 
@@ -77,6 +77,7 @@ def test_matches_engine_z_ranges():
     if ANALYSIS not in sys.path:
         sys.path.insert(0, ANALYSIS)
     import importlib
+
     import torch
     sweep = importlib.import_module("_encoder.sweep")
     common = importlib.import_module("common")

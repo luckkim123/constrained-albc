@@ -6,7 +6,7 @@
 """Shared constants and utilities for ALBC analysis scripts.
 
 Covers both the default attitude-only env (envs/main, 27D privileged) and the
-legacy full-DOF env (envs/full_dof, 24D privileged). The sweep builder dispatches
+retired full-DOF env (24D privileged, tag legacy-full-dof-final). The sweep builder dispatches
 on the checkpoint's privileged dim, so a single tool analyzes either variant.
 
 Provides DR constants, checkpoint-based encoder architecture inference,
@@ -239,7 +239,7 @@ def _build_constrained_albc_24d_sweep(
     """Build sweep params for the 24 DR parameters of constrained ALBC privileged obs.
 
     Layout matches the first 24 dims of compute_privileged_obs (the randomized DR
-    params). The legacy full_dof env's privileged is exactly these 24D; the default
+    params). The retired full-DOF env's privileged was exactly these 24D; the default
     envs/main env appends 3D measured lin_vel ([24:27], critic-only, not a DR sweep
     target) for a 27D total -- so 27D checkpoints use _build_constrained_albc_27d_sweep
     and only this 24-param DR prefix is swept either way.

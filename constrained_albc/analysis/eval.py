@@ -22,6 +22,7 @@ Usage:
 import argparse
 import os
 import sys
+import traceback
 
 # cli_args is vendored locally (was scripts/reinforcement_learning/rsl_rl/ in isaaclab, not migrated)
 # common.py and cli_args.py both live alongside this file
@@ -34,9 +35,7 @@ from _eval_dr.dr_snapshot import (  # type: ignore[import-not-found]  # noqa: E4
     per_env_fault_from_tensors,
 )
 from _eval_dr.metrics import (  # type: ignore[import-not-found]  # noqa: E402
-    _get_block_step_range,
     _periodic_compute_metrics,
-    _pick_sample_env,
     compute_metrics,
     compute_seg_metrics,
     summarize_student_extra,
@@ -196,8 +195,8 @@ sp_static.add_argument(
     default=False,
     help="Also store the APPLIED 8D action per step into data_<level>.npz (additive; off by "
     "default). action_magnitude keeps only the L2 norm and joint1_cmd only dim 0, so the full "
-    "vector is otherwise never logged; the Koopman offline fit (programs/koopman-lifting PLAN "
-    "12.3) needs it paired with --save-policy-obs.",
+    "vector is otherwise never logged. Any offline fit over the (obs, action) pair needs it "
+    "together with --save-policy-obs.",
 )
 sp_static.add_argument(
     "--excite-std",
@@ -426,7 +425,6 @@ from dr_config import (  # type: ignore[import-not-found]  # noqa: E402
     load_doraemon_dr,
 )
 from eval_plots import (  # type: ignore[import-not-found]  # noqa: E402
-    _bar_subplot,
     _periodic_generate_plots,
     _plot_attitude_drift,
     _plot_position_drift,
@@ -436,7 +434,6 @@ from eval_plots import (  # type: ignore[import-not-found]  # noqa: E402
     generate_plots,
 )
 from eval_serialize import _build_mat_meta, write_eval_npz  # type: ignore[import-not-found]  # noqa: E402
-from matplotlib.ticker import MultipleLocator
 from paths import eval_dir_for_checkpoint  # type: ignore[import-not-found]  # noqa: E402  run_id-tree eval output (#2)
 from rsl_rl.runners import OnPolicyRunner
 
@@ -450,11 +447,14 @@ import isaaclab_tasks  # noqa: F401
 from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
-from constrained_albc.envs.main.algorithms import ConstraintTRPO
+from constrained_albc.algorithms.constraint_trpo import ConstraintTRPO
+from constrained_albc.algorithms.encoder.actor_critic_encoder import ActorCriticEncoder
+from constrained_albc.algorithms.runners import sync_policy_obs_dim
+from constrained_albc.algorithms.runners.constraint_encoder_runner import ConstraintEncoderRunner
+from constrained_albc.algorithms.utils.run_links import update_latest_symlink
 from constrained_albc.envs.main.config import (
     DomainRandomizationCfg,
 )
-from constrained_albc.envs.main.encoder import ActorCriticEncoder
 from constrained_albc.envs.main.mdp import (
     DRSampler,
     randomize_body_mass,
@@ -462,8 +462,6 @@ from constrained_albc.envs.main.mdp import (
     randomize_ocean_current,
     randomize_payload,
 )
-from constrained_albc.envs.main.runners import ConstraintEncoderRunner, sync_policy_obs_dim
-from constrained_albc.envs.main.utils import update_latest_symlink
 
 # Runtime-mutable copies (overridden by --ood-scale in static mode)
 DR_LEVELS: list[str] = list(_DEFAULT_DR_LEVELS)
@@ -1060,7 +1058,8 @@ def run_evaluation(
     # Optional raw diagnostics (additive; keys present only when the matching
     # --save-* flag was set, so default output is byte-identical to before).
     if policy_obs_log:
-        out["policy_obs"] = np.stack(policy_obs_log, axis=0)  # (T, num_envs, policy_obs_dim: 69 main / 87 full_dof)
+        # (T, num_envs, policy_obs_dim: 69 main; 87 in the retired full-DOF variant)
+        out["policy_obs"] = np.stack(policy_obs_log, axis=0)
     if action_std_log:
         out["action_std"] = np.stack(action_std_log, axis=0)  # (T, num_envs, action_dim)
     if action_log:
@@ -1107,7 +1106,7 @@ class _InstrumentedStudentPolicy:
         # OBSERVATION -- it advances no state, draws no RNG, and copies to host immediately, so
         # the instrument is unperturbed. Local import because constrained_albc.envs triggers env
         # registration (and Isaac) at import time; same pattern as build_student_policy_fn.
-        from constrained_albc.envs._core.student.models import STUDENT_EXTRA_OBS_KEY
+        from constrained_albc.algorithms.student.models import STUDENT_EXTRA_OBS_KEY
 
         self._extra_key = STUDENT_EXTRA_OBS_KEY
         # X1 tail mode: the channels ride inside policy_obs (last _tail_n dims, raw),
@@ -1263,7 +1262,7 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
             _env_flag = "use_student_extra_obs" if _gen1 else "use_extra_policy_obs"
             # Guard the whole block, not each setattr: the flag and the four sensor params are
             # declared as one unit on ALBCEnvCfg, so if the gate field is absent this is a
-            # non-main variant (full_dof/TDC) that cannot publish the channels at all. Without
+            # non-main variant (a classical baseline) that cannot publish the channels at all. Without
             # this, setattr would CREATE dead fields and the student would be evaluated against
             # an env silently missing its extra channels.
             if not hasattr(env_cfg, _env_flag):
@@ -1837,8 +1836,12 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         data_subdir = os.path.basename(clean)
         print("\n[INFO] Regenerating summary_*.png with per-env metrics...")
         process_and_write(run_dir, data_subdir=data_subdir)
-    except Exception as e:
-        print(f"[WARN] Enhanced summary generation failed: {e}")
+    except Exception:  # noqa: BLE001 -- an hours-long eval must not die on the summary step
+        # The enhanced summary.json is what analyze.py and compare_arms.py read, so a
+        # swallowed failure here leaves a STALE or absent summary behind a run that
+        # reported success. Print the type and stack, not just str(e).
+        print("[ERROR] Enhanced summary generation FAILED -- summary.json is stale or absent:")
+        traceback.print_exc()
 
 
 # ============================================================================
@@ -1903,11 +1906,14 @@ def run_robustness_eval(
     # TARGET now, so hovering means holding the heading the env starts at. Latch it ONCE
     # here -- re-reading the live yaw every step would make the target chase the robot and
     # the yaw error would be identically zero, silently voiding the hover test.
+    # _vel_cmd_lin exists only on an env with a linear-velocity command; since the full-DOF
+    # family was retired (2026-09) no registered task has one, so that write is guarded.
     _, _, _hold_yaw = euler_xyz_from_quat(raw_env._robot.data.root_quat_w)
     _hold_yaw = _hold_yaw.clone()
     raw_env._ang_cmd[:, :2] = 0.0
     raw_env._ang_cmd[:, 2] = _hold_yaw
-    raw_env._vel_cmd_lin[:] = 0.0
+    if hasattr(raw_env, "_vel_cmd_lin"):
+        raw_env._vel_cmd_lin[:] = 0.0
 
     terminated_ever = np.zeros(num_envs, dtype=bool)
     time_s = np.arange(total_steps) * step_dt
@@ -1924,7 +1930,8 @@ def run_robustness_eval(
             # LATCHED heading, not the live one.
             raw_env._ang_cmd[:, :2] = 0.0
             raw_env._ang_cmd[:, 2] = _hold_yaw
-            raw_env._vel_cmd_lin[:] = 0.0
+            if hasattr(raw_env, "_vel_cmd_lin"):
+                raw_env._vel_cmd_lin[:] = 0.0
 
             with torch.inference_mode():
                 actions = policy(obs)
@@ -2299,6 +2306,10 @@ def run_switching_eval(
         raw_env._ang_cmd[:, 0] = 0.0
         raw_env._ang_cmd[:, 1] = 0.0
         raw_env._ang_cmd[:, 2] = 0.0
+        # Unguarded on purpose: run_segmented refuses at setup when the env has no
+        # _vel_cmd_lin, so reaching this line means the buffer exists. A hasattr here
+        # would silently drop the cascade command while vel_cmd_x/y/z below still
+        # records it into the npz.
         raw_env._vel_cmd_lin[:, 0] = vel_cmd[:, 0]
         raw_env._vel_cmd_lin[:, 1] = vel_cmd[:, 1]
         raw_env._vel_cmd_lin[:, 2] = vel_cmd[:, 2]
@@ -2475,6 +2486,21 @@ def run_segmented(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     clip_actions = run_agent_dict.get("clip_actions") if run_agent_dict else agent_cfg.clip_actions
     env = RslRlVecEnvWrapper(env, clip_actions=clip_actions)
     raw_env = env.unwrapped
+    # Capability precondition, checked at the earliest point the env exists. segmented's
+    # outer loop is a cascade POSITION controller whose output is a linear-velocity
+    # command, delivered through `_vel_cmd_lin`. That buffer belonged to the full-DOF
+    # family (retired 2026-09, tag legacy-full-dof-final); the attitude-only main env
+    # has none by design -- see envs/main/albc_env.py::_sample_velocity_command, "no
+    # linear velocity". Skipping the write instead of refusing would let the mode finish
+    # while the command reached nothing, yet vel_cmd_x/y/z still went into the npz and
+    # pos_drift_* measured free drift under a "cascade PID" header.
+    if not hasattr(raw_env, "_vel_cmd_lin"):
+        raise RuntimeError(
+            f"segmented mode drives a cascade position loop through _vel_cmd_lin, and "
+            f"'{args_cli.task}' has no linear-velocity command. The full-DOF family that "
+            f"had one was removed in the 2026-09 cleanup (recover from tag "
+            f"legacy-full-dof-final). Use `eval.py static` for the attitude-only tasks."
+        )
     step_dt = raw_env.step_dt
     num_envs = raw_env.num_envs
     device = raw_env.device

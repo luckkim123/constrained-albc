@@ -99,7 +99,7 @@ sys.modules["isaaclab.utils"].configclass = lambda cls: cls
 
 _tdc_pkg_dir = (
     Path(__file__).resolve().parent.parent
-    / "constrained_albc" / "envs" / "tdc"
+    / "constrained_albc" / "envs" / "tdc_main"
 )
 _controllers_dir = _tdc_pkg_dir / "controllers"
 
@@ -138,7 +138,7 @@ class TDCControllerCfg:
 # Build a fake package hierarchy so relative imports in tdc.py resolve correctly.
 # tdc.py imports from isaaclab.utils and marinelab.assets (mocked above).
 # TDCControllerCfg is defined in controllers/tdc.py itself (not in config.py).
-_PKG = "constrained_albc.envs.tdc"
+_PKG = "constrained_albc.envs.tdc_main"
 _CTRL_PKG = f"{_PKG}.controllers"
 
 # Register package stubs

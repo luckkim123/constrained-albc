@@ -8,7 +8,7 @@
 Also covers the student config/model widening for the extra channels (A3), the
 GRU rollout collector's extra-channel round-trip (A4), the --extra_obs_dim launch
 flag + student/env cross-check (A9), and the 2026-08-03 fix-wave regressions
-(train/eval sensor-cfg round-trip, full_dof/TDC AttributeError guard, the shared
+(train/eval sensor-cfg round-trip, legacy-variant AttributeError guard, the shared
 STUDENT_EXTRA_OBS_KEY constant, and the clone-on-return safety fix).
 
 Loads observations.py standalone (bypasses constrained_albc/__init__ -> isaaclab.sim
@@ -116,25 +116,25 @@ def test_zero_order_hold_serves_stale_sample_and_uses_sensor_dt():
 
 
 _STUDENT_DIR = (
-    Path(__file__).resolve().parent.parent / "constrained_albc" / "envs" / "_core" / "student"
+    Path(__file__).resolve().parent.parent / "constrained_albc" / "algorithms" / "student"
 )
 
 
 def _load_student(*module_names):
-    """Exec _core/student modules by path without importing constrained_albc.
+    """Exec algorithms/student modules by path without importing constrained_albc.
     Verbatim shape of tests/test_student_eval_obs_width.py::_load_student_models."""
-    for pkg in ("constrained_albc", "constrained_albc.envs",
-                "constrained_albc.envs._core", "constrained_albc.envs._core.student"):
+    for pkg in ("constrained_albc",
+                "constrained_albc.algorithms", "constrained_albc.algorithms.student"):
         if pkg not in sys.modules:
             m = types.ModuleType(pkg)
             m.__path__ = []
             sys.modules[pkg] = m
     out = []
     for name in module_names:
-        full = f"constrained_albc.envs._core.student.{name}"
+        full = f"constrained_albc.algorithms.student.{name}"
         spec = importlib.util.spec_from_file_location(full, _STUDENT_DIR / f"{name}.py")
         mod = importlib.util.module_from_spec(spec)
-        mod.__package__ = "constrained_albc.envs._core.student"
+        mod.__package__ = "constrained_albc.algorithms.student"
         sys.modules[full] = mod
         spec.loader.exec_module(mod)
         out.append(mod)
@@ -313,7 +313,7 @@ def test_extra_obs_cross_check_raises_when_dim_is_not_0_or_4():
 
 
 # ---------------------------------------------------------------------------
-# IMPORTANT-2: _resolve_extra_obs_env_flag tolerates env variants (full_dof, TDC)
+# IMPORTANT-2: _resolve_extra_obs_env_flag tolerates env variants (the classical baselines)
 # that have no 'use_student_extra_obs' field at all, instead of a bare AttributeError.
 # ---------------------------------------------------------------------------
 
@@ -330,22 +330,22 @@ def _load_resolve_extra_obs_env_flag():
 
 
 def test_resolve_extra_obs_env_flag_no_longer_raises_attributeerror_when_field_absent():
-    """The regression: full_dof/config.py's ALBCEnvCfg has no 'use_student_extra_obs'
+    """The regression: a variant cfg has no 'use_student_extra_obs'
     field, so reading it unconditionally used to raise AttributeError before gym.make
     ever ran. --extra_obs_dim==0 (the default) against such a cfg must resolve to False,
     not raise."""
     resolve = _load_resolve_extra_obs_env_flag()
-    full_dof_like_cfg = types.SimpleNamespace()  # no use_student_extra_obs attribute
-    assert resolve(full_dof_like_cfg, 0) is False
+    variant_cfg = types.SimpleNamespace()  # no use_student_extra_obs attribute
+    assert resolve(variant_cfg, 0) is False
 
 
 def test_resolve_extra_obs_env_flag_raises_named_error_when_dim_set_but_field_absent():
     """extra_obs_dim>0 against a variant with no field is a genuine user mistake and
     must get a named ValueError, not a bare AttributeError."""
     resolve = _load_resolve_extra_obs_env_flag()
-    full_dof_like_cfg = types.SimpleNamespace()
+    variant_cfg = types.SimpleNamespace()
     with pytest.raises(ValueError, match="has no 'use_student_extra_obs' field"):
-        resolve(full_dof_like_cfg, 4)
+        resolve(variant_cfg, 4)
 
 
 def test_resolve_extra_obs_env_flag_passes_through_when_field_present():
@@ -421,7 +421,7 @@ def test_checkpoint_roundtrips_env_sensor_cfg(tmp_path):
 
 def test_checkpoint_env_sensor_cfg_falls_back_when_env_variant_lacks_fields(tmp_path):
     """Degrades gracefully (getattr defaults) rather than crashing for env variants
-    (full_dof/TDC) that have no sensor-cfg fields at all -- those variants never enable
+    (the classical baselines) that have no sensor-cfg fields at all -- those never enable
     extra_obs_dim, so the fallback values are inert."""
     cfg_mod, models_mod = _load_student("config", "models")
     fake_self = _fake_student_runner_self(tmp_path, types.SimpleNamespace(), models_mod, cfg_mod)
@@ -465,7 +465,7 @@ def test_student_extra_obs_key_is_a_shared_constant():
 
     repo = Path(__file__).resolve().parent.parent
     albc_env = (repo / "constrained_albc" / "envs" / "main" / "albc_env.py").read_text()
-    runner_src = (repo / "constrained_albc" / "envs" / "_core" / "student" / "runner.py").read_text()
+    runner_src = (repo / "constrained_albc" / "algorithms" / "student" / "runner.py").read_text()
     student_policy_src = (repo / "constrained_albc" / "analysis" / "student_policy.py").read_text()
 
     assert "STUDENT_EXTRA_OBS_KEY" in albc_env

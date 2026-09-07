@@ -82,7 +82,7 @@ def test_resolve_by_substring_and_index(tmp_path):
 def test_resolve_legacy_fallback(tmp_path):
     exp = tmp_path / "experiments"            # empty active tree
     logs = tmp_path / "logs" / "rsl_rl"
-    _make_legacy_run(logs, "full_dof_trpo", "2026-04-01_09-00-00_old")
+    _make_legacy_run(logs, "legacy_trpo", "2026-04-01_09-00-00_old")
     h = P.resolve_run(
         "old", experiments_root=str(exp), legacy_logs_root=str(logs),
     )
@@ -96,7 +96,7 @@ def test_resolve_active_precedes_legacy(tmp_path):
     exp = tmp_path / "experiments"
     logs = tmp_path / "logs" / "rsl_rl"
     _make_new_run(exp, "2026-05-25_16-00-00_trpo")
-    _make_legacy_run(logs, "full_dof_trpo", "2026-04-01_09-00-00_trpo")  # also matches "trpo"
+    _make_legacy_run(logs, "legacy_trpo", "2026-04-01_09-00-00_trpo")  # also matches "trpo"
     h = P.resolve_run("trpo", experiments_root=str(exp), legacy_logs_root=str(logs))
     assert not h.is_legacy
     assert h.run_id == "2026-05-25_16-00-00_trpo"
@@ -292,7 +292,7 @@ def test_find_runs_ignores_alias_symlink_and_backup(tmp_path):
         ("Isaac-ConstrainedALBC-TRPO-v0", "trpo"),
         ("Isaac-ConstrainedALBC-PPO-v0", "ppo"),
         ("Isaac-ConstrainedALBC-NoEncoder-v0", "noenc"),
-        ("Isaac-ConstrainedALBC-TDC-v0", "tdc"),
+        ("Isaac-ConstrainedALBC-Main-TDC-v0", "tdc"),
         # Superset substrings must match the longer pattern first.
         ("Isaac-ConstrainedALBC-TRPO-NoIPO-v0", "trpo-noipo"),  # not "trpo"
         ("Isaac-ConstrainedALBC-PPO-Enc-v0", "ppo-enc"),        # not "ppo"
@@ -387,7 +387,7 @@ def test_timestamp_from_log_dir_accepts_short_and_legacy(tmp_path):
 # ---------------------------------------------------------------------------
 def _fake_log_dir(tmp_path, leaf="2026-05-25_16-02-48", with_params=True):
     """Create a fake train.py log_dir with optional params/{env,agent}.yaml."""
-    log_dir = tmp_path / "logs" / "rsl_rl" / "full_dof_trpo" / leaf
+    log_dir = tmp_path / "logs" / "rsl_rl" / "legacy_trpo" / leaf
     (log_dir / "params").mkdir(parents=True)
     if with_params:
         (log_dir / "params" / "env.yaml").write_text("env: {}\n")
@@ -459,7 +459,7 @@ def test_emit_manifest_records_config_and_tag(tmp_path):
 def test_emit_manifest_without_params_still_writes_manifest(tmp_path):
     log_dir = _fake_log_dir(tmp_path, with_params=False)
     exp = tmp_path / "experiments"
-    h = P.emit_run_manifest("Isaac-ConstrainedALBC-TDC-v0", log_dir, experiments_root=str(exp))
+    h = P.emit_run_manifest("Isaac-ConstrainedALBC-Main-TDC-v0", log_dir, experiments_root=str(exp))
     assert (h.root / P.MANIFEST_NAME).is_file()
     # No params to copy -> config dir exists but is empty of yamls.
     assert not (h.root / "config" / "env.yaml").exists()
@@ -477,7 +477,7 @@ def test_eval_dir_for_checkpoint_in_run_tree(tmp_path):
 
 def test_eval_dir_for_checkpoint_legacy_returns_none(tmp_path):
     # A checkpoint under logs/rsl_rl (not in the run_id tree) -> None (keep legacy default).
-    ckpt = tmp_path / "logs" / "rsl_rl" / "full_dof_trpo" / "2026-05-25_16-02-48" / "model_0.pt"
+    ckpt = tmp_path / "logs" / "rsl_rl" / "legacy_trpo" / "2026-05-25_16-02-48" / "model_0.pt"
     out = P.eval_dir_for_checkpoint(ckpt, "static", experiments_root=str(tmp_path / "experiments"))
     assert out is None
 
@@ -487,7 +487,7 @@ def test_eval_dir_for_checkpoint_detects_via_unresolved_symlink_path(tmp_path):
     logs/). Detection must use the unresolved path, so the run_id is still recognized."""
     exp = tmp_path / "experiments"
     # train is a symlink to a real logs dir; checkpoint accessed through the symlink path.
-    real_logs = tmp_path / "logs" / "rsl_rl" / "full_dof_trpo" / "2026-05-25_16-02-48_trpo"
+    real_logs = tmp_path / "logs" / "rsl_rl" / "legacy_trpo" / "2026-05-25_16-02-48_trpo"
     (real_logs).mkdir(parents=True)
     (real_logs / "model_4999.pt").write_text("")
     run_root = exp / "2026-05-25_16-02-48_trpo"
@@ -565,7 +565,7 @@ import common as C  # noqa: E402  sibling on the same sys.path as paths
 
 def test_common_resolve_run_path_legacy_fullpath(tmp_path):
     """Legacy full path -> returns that dir unchanged (behavior preserved)."""
-    leg = tmp_path / "logs" / "rsl_rl" / "full_dof_trpo" / "2026-05-25_16-00-00_r1"
+    leg = tmp_path / "logs" / "rsl_rl" / "legacy_trpo" / "2026-05-25_16-00-00_r1"
     leg.mkdir(parents=True)
     (leg / "events.out.tfevents.1.h").write_text("")
     out = C.resolve_run_path(str(leg), logs_root=str(tmp_path / "logs" / "rsl_rl"))
@@ -574,7 +574,7 @@ def test_common_resolve_run_path_legacy_fullpath(tmp_path):
 
 def test_common_resolve_run_path_legacy_substring(tmp_path):
     logs = tmp_path / "logs" / "rsl_rl"
-    leg = logs / "full_dof_trpo" / "2026-05-25_16-00-00_r1"
+    leg = logs / "legacy_trpo" / "2026-05-25_16-00-00_r1"
     leg.mkdir(parents=True)
     (leg / "events.out.tfevents.1.h").write_text("")
     out = C.resolve_run_path("r1", logs_root=str(logs))
@@ -592,3 +592,81 @@ def test_common_resolve_run_path_run_id_tree_returns_train(tmp_path):
     out = C.resolve_run_path(str(run_root), logs_root=str(tmp_path / "logs"))
     assert out == run_root / "train"
     assert (out / "events.out.tfevents.2.h").is_file()
+
+
+# ---------------------------------------------------------------------------
+# D4: "newest" must mean newest by TIME. run_id is <task_short>[_<tag>]_<ts>,
+# label BEFORE the date, so a run_id string sort groups by label first -- and
+# resolve_run documents index 0 as the newest run.
+# ---------------------------------------------------------------------------
+def _make_run_with_created(experiments_root, run_id, created):
+    root = _make_new_run(experiments_root, run_id)
+    m = json.loads((root / P.MANIFEST_NAME).read_text())
+    if created is not None:
+        m["created"] = created
+    (root / P.MANIFEST_NAME).write_text(json.dumps(m))
+    return root
+
+
+def test_find_runs_orders_by_created_not_run_id_string(tmp_path):
+    """A label that sorts high must not outrank a genuinely newer run."""
+    exp = tmp_path / "experiments"
+    _make_run_with_created(exp, "zzz_trpo_260101_000000", "2026-01-01T00:00:00")
+    _make_run_with_created(exp, "aaa_trpo_260901_000000", "2026-09-01T00:00:00")
+    runs = P.find_runs(str(exp))
+    assert [r.run_id for r in runs] == [
+        "aaa_trpo_260901_000000",
+        "zzz_trpo_260101_000000",
+    ]
+
+
+def test_find_runs_orders_by_run_id_ts_when_created_absent(tmp_path):
+    """No manifest ``created`` (legacy) -> fall back to the run_id's _<ts> suffix."""
+    exp = tmp_path / "experiments"
+    _make_run_with_created(exp, "zzz_trpo_260101_000000", None)
+    _make_run_with_created(exp, "aaa_trpo_260901_000000", None)
+    runs = P.find_runs(str(exp))
+    assert [r.run_id for r in runs][0] == "aaa_trpo_260901_000000"
+
+
+# ---------------------------------------------------------------------------
+# D8: an ABSENT manifest is the legacy case; a PRESENT but unreadable one is
+# corruption and must be reported, not silently demoted to the legacy path.
+# ---------------------------------------------------------------------------
+def test_corrupt_manifest_raises_naming_the_file(tmp_path):
+    root = tmp_path / "experiments" / "trpo_260901_000000"
+    (root / "train" / "tb").mkdir(parents=True)
+    (root / P.MANIFEST_NAME).write_text("{not json")
+    with pytest.raises(RuntimeError) as exc:
+        P._read_manifest_if_present(root)
+    assert P.MANIFEST_NAME in str(exc.value)
+
+
+def test_absent_manifest_still_returns_none(tmp_path):
+    root = tmp_path / "experiments" / "trpo_260901_000000"
+    root.mkdir(parents=True)
+    assert P._read_manifest_if_present(root) is None
+
+
+def test_find_runs_survives_one_corrupt_manifest(tmp_path):
+    """D8 at the scan boundary: one corrupt sibling must not hide the good runs."""
+    exp = tmp_path / "experiments"
+    _make_run_with_created(exp, "good_trpo_260901_000000", None)
+    bad = _make_new_run(exp, "bad_trpo_260101_000000")
+    (bad / P.MANIFEST_NAME).write_text("{not json")
+    runs = P.find_runs(str(exp))
+    assert "good_trpo_260901_000000" in [r.run_id for r in runs]
+
+
+# ---------------------------------------------------------------------------
+# D3: the legacy scan must reach the <exp>/<group>/<run> layer that
+# train.py --run_group has written since 2026-06-08, not just <exp>/<run>.
+# ---------------------------------------------------------------------------
+def test_legacy_scan_reaches_the_group_layer(tmp_path):
+    logs = tmp_path / "logs" / "rsl_rl"
+    _make_legacy_run(logs, "albc_trpo_teacher", "flat_260101_000000")
+    grouped = logs / "albc_trpo_teacher" / "fault_dr" / "grouped_260901_000000"
+    grouped.mkdir(parents=True)
+    (grouped / "events.out.tfevents.1234.host").write_text("")
+    hit = P._find_legacy_run("grouped", str(logs))
+    assert hit is not None and hit.run_id == "grouped_260901_000000"

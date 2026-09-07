@@ -19,6 +19,10 @@ Loaded via importlib to bypass constrained_albc.__init__ (which pulls in
 isaaclab.sim). rewards.py only needs the configclass decorator.
 """
 
+# ---------------------------------------------------------------------------
+# Mock the one isaaclab dependency, then load rewards.py directly.
+# ---------------------------------------------------------------------------
+import dataclasses
 import importlib.util
 import sys
 import types
@@ -27,11 +31,6 @@ from types import SimpleNamespace
 
 import pytest
 import torch
-
-# ---------------------------------------------------------------------------
-# Mock the one isaaclab dependency, then load rewards.py directly.
-# ---------------------------------------------------------------------------
-import dataclasses
 
 
 def _mock_configclass(cls):

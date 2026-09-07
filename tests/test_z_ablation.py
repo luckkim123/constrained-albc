@@ -63,15 +63,14 @@ sys.modules.setdefault("rsl_rl.networks", _rsl_rl_networks)
 # ---------------------------------------------------------------------------
 # Load _z_ablation.py directly without triggering constrained_albc.__init__
 # ---------------------------------------------------------------------------
-_CORE_ENCODER_DIR = (
+_ENCODER_DIR = (
     Path(__file__).resolve().parent.parent
     / "constrained_albc"
-    / "envs"
-    / "_core"
+    / "algorithms"
     / "encoder"
 )
 
-_MODULE_PATH = _CORE_ENCODER_DIR / "_z_ablation.py"
+_MODULE_PATH = _ENCODER_DIR / "_z_ablation.py"
 _spec = importlib.util.spec_from_file_location("_z_ablation", _MODULE_PATH)
 assert _spec is not None and _spec.loader is not None, f"cannot load {_MODULE_PATH}"
 _mod = importlib.util.module_from_spec(_spec)
@@ -84,15 +83,15 @@ validate_ablation_mode = _mod.validate_ablation_mode
 # ---------------------------------------------------------------------------
 # Load ActorCriticEncoder via importlib direct-load (avoids constrained_albc.__init__)
 # ---------------------------------------------------------------------------
-_ENC_PKG = "constrained_albc.envs.main.encoder"
+_ENC_PKG = "constrained_albc.algorithms.encoder"
 
 # Register package stubs so relative imports inside the encoder modules resolve.
-for _pkg in ["constrained_albc", "constrained_albc.envs", "constrained_albc.envs.main", _ENC_PKG]:
+for _pkg in ["constrained_albc", "constrained_albc.algorithms", _ENC_PKG]:
     sys.modules.setdefault(_pkg, types.ModuleType(_pkg))
 
 # Load _policy_base.py first (actor_critic_encoder.py imports `from ._policy_base import PolicyBase`).
 _pb_spec = importlib.util.spec_from_file_location(
-    f"{_ENC_PKG}._policy_base", _CORE_ENCODER_DIR / "_policy_base.py"
+    f"{_ENC_PKG}._policy_base", _ENCODER_DIR / "_policy_base.py"
 )
 assert _pb_spec is not None and _pb_spec.loader is not None
 _pb_mod = importlib.util.module_from_spec(_pb_spec)
@@ -105,7 +104,7 @@ sys.modules[f"{_ENC_PKG}._z_ablation"] = _mod
 
 # Load actor_critic_encoder.py with correct package context.
 _ace_spec = importlib.util.spec_from_file_location(
-    f"{_ENC_PKG}.actor_critic_encoder", _CORE_ENCODER_DIR / "actor_critic_encoder.py"
+    f"{_ENC_PKG}.actor_critic_encoder", _ENCODER_DIR / "actor_critic_encoder.py"
 )
 assert _ace_spec is not None and _ace_spec.loader is not None
 _ace_mod = importlib.util.module_from_spec(_ace_spec)

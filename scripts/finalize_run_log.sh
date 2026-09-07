@@ -2,10 +2,10 @@
 # Finalize a run's stdout log after training ends.
 #
 # Moves the transient launch stdout out of logs_queue/ and into the run's OWN
-# data-tier dir (next to its checkpoints), records a light .omx pointer, and
+# data-tier dir (next to its checkpoints), records a light run-ledger pointer, and
 # archives the launch wrapper. This is the convention that replaces the old
 # workspace-root logs_queue/ dump (trashed 2026-07-24): heavy stdout belongs in
-# logs/rsl_rl/<run_id>/, .omx keeps only a pointer -- same split as
+# logs/rsl_rl/<run_id>/, the run ledger keeps only a pointer -- same split as
 # checkpoint-pointer.json.
 #
 # run_id is minted by train.py at launch (<label>_<tag>_<ts>), so the launch
@@ -36,13 +36,13 @@ echo "[ok] stdout -> $DEST"
 # 4) archive the launch wrapper alongside it (exact reproduction recipe)
 [ -f "logs_queue/launch_${NAME}.sh" ] && { mv "logs_queue/launch_${NAME}.sh" "$RUNDIR/launch.sh"; echo "[ok] wrapper -> $RUNDIR/launch.sh"; }
 
-# 5) light pointer in the omx run ledger dir (dir may still be *_PLACEHOLDER)
-OMXDIR="$(find .omx/runs -maxdepth 1 -type d -name "*${NAME}*" 2>/dev/null | sort | head -1 || true)"
-if [ -n "$OMXDIR" ]; then
-  printf '{"stdout": "%s"}\n' "$DEST" > "$OMXDIR/stdout-pointer.json"
-  echo "[ok] pointer -> $OMXDIR/stdout-pointer.json"
+# 5) light pointer in the run ledger dir (dir may still be *_PLACEHOLDER)
+LEDGERDIR="$(find .hq/work/experiments/runs -maxdepth 1 -type d -name "*${NAME}*" 2>/dev/null | sort | head -1 || true)"
+if [ -n "$LEDGERDIR" ]; then
+  printf '{"stdout": "%s"}\n' "$DEST" > "$LEDGERDIR/stdout-pointer.json"
+  echo "[ok] pointer -> $LEDGERDIR/stdout-pointer.json"
 else
-  echo "[warn] no .omx/runs dir for '$NAME' -- pointer skipped"
+  echo "[warn] no .hq/work/experiments/runs dir for '$NAME' -- pointer skipped"
 fi
 
 # 6) drop the dead pid files and remove logs_queue/ if now empty

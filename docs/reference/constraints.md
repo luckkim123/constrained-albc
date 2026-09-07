@@ -7,10 +7,10 @@
 > ALBC policy. Ten IPO constraints ship on this task — **5 probabilistic** (binary
 > violation-probability budgets) + **5 average** (expected-magnitude budgets) —
 > defined in `envs/main/config.py` and consumed by `ConstraintTRPO` in
-> `envs/_core/algorithms/constraint_trpo.py`.
+> `constrained_albc/algorithms/constraint_trpo.py`.
 >
 > This is a code-level reference verified against disk. The legacy full-DOF variant
-> (`envs/full_dof/`, `Isaac-ConstrainedALBC-Full-*-v0`) reuses the same constraint
+> (retired 2026-09, tag `legacy-full-dof-final`) declared its own, separately-tuned constraint
 > list constant but is a different task and is **not** described here.
 
 ---
@@ -234,7 +234,7 @@ fights normal yaw maneuvering.
 
 ## 4. ConstraintTRPO optimization
 
-Algorithm body: `envs/_core/algorithms/constraint_trpo.py`. `ConstraintTRPO` is a standalone algorithm
+Algorithm body: `constrained_albc/algorithms/constraint_trpo.py`. `ConstraintTRPO` is a standalone algorithm
 (aliased `ALBCConstraintTRPO`, `rsl_rl_ppo_cfg.py:25`), not an `rsl_rl.PPO` subclass.
 
 **Provenance — NORBC's "Modified IPO", implemented faithfully (not a bespoke hybrid).** Kim et
@@ -437,7 +437,7 @@ Per-constraint MSE is `.mean(dim=0)` over the batch → $K$-vector → `.mean()`
 
 **Separate networks, one shared gradient clip (the reward/cost coupling).** `self.critic`
 (scalar) and `self.cost_critic` ($K$-dim) are **independent** MLPs, disjoint parameters, no
-shared backbone (`envs/_core/encoder/_policy_base.py:86,91` — the `value_backbone.` prefix is a
+shared backbone (`constrained_albc/algorithms/encoder/_policy_base.py:86,91` — the `value_backbone.` prefix is a
 classification catch, not an actual shared trunk). Disjoint parameters mean `total.backward()`
 does not cross-couple their gradients ($\partial L_{V_C}/\partial\theta_{\text{reward
 critic}}=0$).
@@ -596,7 +596,7 @@ activations are unchanged.
 
 Constraint metrics are emitted once per training iteration by
 `ConstraintEncoderRunner._log_constraint_metrics` (invoked from the overridden `log()`, gated on
-`self._should_log`; `envs/_core/runners/constraint_encoder_runner.py:259-261`). The algorithm keeps per-step
+`self._should_log`; `constrained_albc/algorithms/runners/constraint_encoder_runner.py:259-261`). The algorithm keeps per-step
 running state (`_last_violations`, `_last_barrier_margins`, `_last_barrier_penalty`) read only
 for this logging (`constraint_trpo.py:129-133`).
 
@@ -684,14 +684,14 @@ the exact motivation for the `lb 68 -> 250` / `kl_ub 0.06 -> 0.12` recalibration
 - `constrained_albc/envs/main/mdp/constraints.py` — 10 shipped cost functions + 1
   experiment-only joint1 term, `ConstraintTermCfg`, `ALBCConstraintCfg`, `compute_all_costs`,
   `apply_joint1_constraint_arm` (2-way `{none, B}`)
-- `constrained_albc/envs/main/config.py` — `ALBCEnvCfg`, `_FULL_DOF_CONSTRAINT_TERMS` (the
+- `constrained_albc/envs/main/config.py` — `ALBCEnvCfg`, `_MAIN_CONSTRAINT_TERMS` (the
   shipped 10 budgets), DORAEMON overrides, joint1 toggles
 - `constrained_albc/envs/main/config_noconstraint.py` — `ALBCNoConstraintEnvCfg` (terms=[],
   TRPO-NoIPO / PPO-Enc ablations)
-- `constrained_albc/envs/_core/algorithms/constraint_trpo.py` — ConstraintTRPO + IPO barrier,
+- `constrained_albc/algorithms/constraint_trpo.py` — ConstraintTRPO + IPO barrier,
   adaptive threshold, cost GAE, TRPO step, std clamp, cost critic
 - `constrained_albc/envs/main/agents/rsl_rl_ppo_cfg.py` — `RslRlConstraintTRPOAlgorithmCfg`
   (runtime barrier_alpha/max_kl/std/entropy values)
-- `constrained_albc/envs/_core/runners/constraint_encoder_runner.py` — `_log_constraint_metrics`,
+- `constrained_albc/algorithms/runners/constraint_encoder_runner.py` — `_log_constraint_metrics`,
   `num_constraints` auto-sync
 - `.omx/profile/analyze_training.py` — `ANOMALY_RULES`, `_constraint_margin`

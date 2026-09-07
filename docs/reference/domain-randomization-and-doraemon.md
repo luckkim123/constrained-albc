@@ -14,7 +14,7 @@
 >
 > This is a code-level reference verified against disk (adversarially
 > cross-checked). It reflects the shipped default (`DomainRandomizationCfg`,
-> `doraemon.enable = True`). The legacy full-DOF variant (`envs/full_dof/`) has
+> `doraemon.enable = True`). The legacy full-DOF variant (retired 2026-09, tag `legacy-full-dof-final`) had
 > its own, non-identical DORAEMON surface (18 params as of this writing — no
 > buoy volume/mass decorrelation) and is out of scope here.
 
@@ -64,7 +64,7 @@ aspirational.
 | `constrained_albc/envs/main/config.py` | `DomainRandomizationCfg` / `FaultInjectionCfg` + the live `DoraemonCfg` override |
 | `constrained_albc/envs/main/mdp/events.py` | reset-time APPLICATION of sampled values to physics |
 | `constrained_albc/envs/main/albc_env.py` | WIRING: samples, stashes, records episodes, owns `_doraemon` |
-| `constrained_albc/envs/_core/runners/` | per-iteration `_doraemon.step()` call site (real impl; `envs/main/runners/` holds the import shims) |
+| `constrained_albc/algorithms/runners/` | per-iteration `_doraemon.step()` call site (the only copy; the `envs/main/runners/` shims were deleted in the 2026-09 cleanup) |
 | `constrained_albc/analysis/{eval.py,dr_config.py,common.py}` | EVAL-side fixed DR (bypasses the curriculum) |
 
 ---
@@ -219,7 +219,9 @@ policy masters simpler variants (`mu = 0` clamps to `0.01` → `a = 1.0, b = 99.
 ### `EpisodeBuffer`
 
 A ring buffer (cap `2000`, `doraemon.py:228`) storing, per finished episode: the
-sampled `xi`, the return, the binary `success`, and the `log_probs`.
+sampled `xi`, the return, and the binary `success`. (A per-episode `log_probs`
+column was stored until the 2026-09 cleanup; nothing ever read it, see the IS note
+below.)
 `get_stats()` (`doraemon.py:208`) emits per-dimension **physical** mean/std — these
 are the `DORAEMON/mean/<param>` and `DORAEMON/std/<param>` wandb signals.
 
@@ -312,12 +314,11 @@ $$
 \hat G(\phi)=\frac{1}{K}\sum_{k=1}^{K}\exp\!\Big(\mathrm{clip}\big(\log p_\phi(\xi_k)-\log p_{\phi_{\text{prev}}}(\xi_k),\,-5,\,+5\big)\Big)\,\sigma_k
 $$
 
-> **The denominator is `prev_dist` evaluated *live*, not the buffered
-> `log_probs`.** `_estimate_success_rate` (`doraemon.py:486`) recomputes
-> `prev_dist.log_prob(xi)` at call time. The class docstring line
-> (`doraemon.py:307`, "Unnormalized IS with stored per-episode log probs") is
-> **stale** — the stored `log_probs` (and `returns`) are effectively dead for the
-> optimization.
+> **The denominator is `prev_dist` evaluated *live*.** `_estimate_success_rate`
+> recomputes `prev_dist.log_prob(xi)` at call time. The buffer's `log_probs`
+> column, which nothing read, was removed in the 2026-09 cleanup together with
+> the class docstring that claimed it was used; the stored `returns` remain
+> effectively dead for the optimization.
 
 **ESS revert gate.** After optimizing, the update is discarded if the
 importance-sampling estimator is too degenerate (`doraemon.py:458`):
@@ -435,32 +436,31 @@ $$
 The env owns `_doraemon`, created in `_init_doraemon` (`albc_env.py:445`),
 branching on `replay_curriculum_path`: empty ⇒ `DoraemonScheduler` (live
 learning), set ⇒ `CurriculumReplayer` (frozen, §7). When active, per-env buffers
-`_episode_dr_xi` / `_episode_dr_log_probs` / `_episode_return_accum` are
-allocated.
+`_episode_dr_xi` / `_episode_return_accum` are allocated.
 
 **End-to-end loop:**
 
 ```
-per RESET   : xi, log_probs = _doraemon.sample(N)      -> stash per-env -> events apply xi to physics
+per RESET   : xi, _ = _doraemon.sample(N)              -> stash per-env -> events apply xi to physics
 per STEP    : _episode_return_accum += reward           (gated on _doraemon active)
 on next RESET (per finished env):
               success = (_episode_return_accum >= performance_lb)   # <-- binarization is HERE, in the CALLER
-              _doraemon.record_episodes(xi, returns, success, log_probs)   (albc_env.py:1399)
+              _doraemon.record_episodes(xi, returns, success)   (albc_env.py:1399)
 per ITER    : runner.log() -> metrics = _doraemon.step(iteration=it)  -> re-emit under DORAEMON/ prefix
 ```
 
 > **The success binarization lives in the caller, not the engine.**
 > `success = return >= performance_lb` is computed in `albc_env.py:1398` and the
-> engine's `record_episodes` receives a **pre-computed `success` tensor**. This is
-> why the engine class docstring (`doraemon.py:307`) is misleading — the engine
-> never binarizes and never reads the stored `log_probs` for its math.
+> engine's `record_episodes` receives a **pre-computed `success` tensor**. The
+> engine never binarizes, and its IS math reads no per-episode `log_probs` (that
+> buffer column was removed in the 2026-09 cleanup).
 
 **Runner split** — behavior is otherwise identical:
 
 | Path | Runner | `iteration` kwarg |
 |:---|:---|:---|
-| TRPO (default) | `ConstraintEncoderRunner` (`envs/_core/runners/constraint_encoder_runner.py:266`) | passed |
-| PPO ablations | `OnPolicyDoraemonRunner` (`envs/_core/runners/on_policy_doraemon_runner.py:83`) | not passed → `_trajectory` iter falls back to `_step_count` |
+| TRPO (default) | `ConstraintEncoderRunner` (`constrained_albc/algorithms/runners/constraint_encoder_runner.py:266`) | passed |
+| PPO ablations | `OnPolicyDoraemonRunner` (`constrained_albc/algorithms/runners/on_policy_doraemon_runner.py:83`) | not passed → `_trajectory` iter falls back to `_step_count` |
 
 **Checkpointing.** `state_dict` (`doraemon.py:773`) serializes `dist_a` / `dist_b`
 + step/episode counts + the full episode buffer. `export_recording`
@@ -561,9 +561,9 @@ trap and the correcting fact with its anchor.
 
 2. **The engine does not binarize; the caller does.** `success = return >=
    performance_lb` is computed in `albc_env.py:1398`; `record_episodes` receives a
-   ready-made `success` tensor. The class docstring at `doraemon.py:307`
-   ("stored per-episode log probs") is **stale** — the IS estimator recomputes
-   `log_prob` live under `prev_dist` and never uses the buffered `log_probs`.
+   ready-made `success` tensor. The IS estimator recomputes `log_prob` live under
+   `prev_dist`; the buffered `log_probs` column it never used was removed in the
+   2026-09 cleanup.
 
 3. **Read the caller's `DoraemonCfg`, not the engine defaults.** Live `kl_ub` is
    **0.12** and `performance_lb` is **250.0** (`config.py:527`), not the engine's
@@ -620,6 +620,6 @@ trap and the correcting fact with its anchor.
 | **Live `DoraemonCfg` override** | `config.py:527` |
 | Reset-time application | `envs/main/mdp/events.py:46`, `:88`, `:144`, `:214` |
 | Sample + record wiring | `albc_env.py:445`, `:1398`, `:1493` |
-| Runner step call site | `envs/_core/runners/constraint_encoder_runner.py:266` |
+| Runner step call site | `constrained_albc/algorithms/runners/constraint_encoder_runner.py:266` |
 | Eval levels / anchor | `analysis/dr_config.py:206`, `:275`; `common.py:36`; `eval.py:345` |
 | Eval modes | `analysis/eval.py:890` (static), `:1183` (level loop), `:1517` (periodic) |

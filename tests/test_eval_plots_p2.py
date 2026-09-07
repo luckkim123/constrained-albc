@@ -22,11 +22,9 @@ sys.path.insert(0, os.path.abspath(_ANALYSIS))
 import matplotlib  # noqa: E402
 
 matplotlib.use("Agg")
-import matplotlib.axes  # noqa: E402
-
 import common  # type: ignore[import-not-found]  # noqa: E402
 import eval_plots  # type: ignore[import-not-found]  # noqa: E402
-
+import matplotlib.axes  # noqa: E402
 
 # --- OOD 5-level: render order + KeyError-safe scale/color (USER-2) ---
 
@@ -64,7 +62,7 @@ def test_in_dist_dr_levels_unchanged():
 # --- yaw deg/s display conversion (USER-1) ---
 
 def test_rad2deg_constant():
-    assert eval_plots._RAD2DEG == 180.0 / np.pi
+    assert 180.0 / np.pi == eval_plots._RAD2DEG
     # 1 rad/s -> ~57.2958 deg/s
     assert abs(1.0 * eval_plots._RAD2DEG - 57.29577951) < 1e-6
 

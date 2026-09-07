@@ -1,7 +1,8 @@
 """Student-in-the-loop policy for evaluation (used by eval.py student mode).
 
 Builds an inference-time policy that pairs the student encoder with the frozen
-teacher actor. Training of the student lives in `envs/main/student/runner.py`.
+teacher actor. Training of the student lives in
+`constrained_albc/algorithms/student/runner.py`.
 
 Usage from a separate eval script:
     from constrained_albc.analysis.student_policy import (
@@ -23,8 +24,8 @@ import os
 
 import torch
 
-from constrained_albc.envs.main.student.config import StudentCfg
-from constrained_albc.envs.main.student.models import (
+from constrained_albc.algorithms.student.config import StudentCfg
+from constrained_albc.algorithms.student.models import (
     POLICY_TAIL_N,
     STUDENT_EXTRA_OBS_KEY,
     extra_scale_tensor,
@@ -32,7 +33,7 @@ from constrained_albc.envs.main.student.models import (
     split_policy_tail,
     student_input,
 )
-from constrained_albc.envs.main.student.teacher import FrozenTeacher
+from constrained_albc.algorithms.student.teacher import FrozenTeacher
 
 
 class StudentInLoopPolicy:

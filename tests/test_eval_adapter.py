@@ -6,10 +6,10 @@ import subprocess
 import sys
 
 import yaml
+from _profile import PROFILE_DIR, REPO  # test-side store resolver
 
-REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PROFILE = os.path.join(REPO, ".omx", "profile", "metrics.yaml")
-ADAPTER = os.path.join(REPO, ".omx", "profile", "eval_adapter.py")
+PROFILE = os.path.join(PROFILE_DIR, "metrics.yaml")
+ADAPTER = os.path.join(PROFILE_DIR, "eval_adapter.py")
 FIXTURE_DIR = os.path.join(REPO, "tests", "fixtures", "eval")
 _FIXTURE_NPZ = os.path.join(FIXTURE_DIR, "data_none.npz")
 SEG_FIXTURE_DIR = os.path.join(REPO, "tests", "fixtures", "segmented")
@@ -64,6 +64,9 @@ def test_analyze_eval_returns_driver_dict():
 
 def test_cli_emits_json():
     """The adapter is runnable as a subprocess emitting JSON (exp-analyze code-exec)."""
+    if not os.path.exists(_FIXTURE_NPZ):
+        import pytest
+        pytest.skip("fixture absent — copy from SOURCE.txt")
     result = subprocess.run(
         [sys.executable, ADAPTER, "heavy-tail", FIXTURE_DIR],
         capture_output=True, text=True, timeout=60,

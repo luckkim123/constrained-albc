@@ -86,7 +86,7 @@ def _infer_teacher_dims(sd: dict) -> dict:
 def build_teacher_model(ckpt_path: str, device) -> nn.Module:
     """Teacher: build ActorCriticEncoder directly and load model_state_dict.
 
-    Mirrors FrozenTeacher's construction (constrained_albc/envs/main/student/
+    Mirrors FrozenTeacher's construction (constrained_albc/algorithms/student/
     teacher.py) but bypasses FrozenTeacher so we don't import rsl_rl_ppo_cfg --
     that import drags in isaaclab_rl -> the sim stack -> pxr, absent on export
     hosts. The architecture dims (obs/latent/priv/action) AND the encoder-obs
@@ -109,8 +109,9 @@ def build_teacher_model(ckpt_path: str, device) -> nn.Module:
     the source checkpoint), and the post-load integrity gate below is the runtime
     guard that a unit test would otherwise provide."""
     _isolate_training_imports()
-    from constrained_albc.envs.main.encoder import ActorCriticEncoder
     from tensordict import TensorDict
+
+    from constrained_albc.algorithms.encoder.actor_critic_encoder import ActorCriticEncoder
 
     dev = torch.device(device)
     ckpt = torch.load(ckpt_path, map_location=dev, weights_only=False)
