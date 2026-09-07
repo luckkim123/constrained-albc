@@ -13,7 +13,8 @@ import numpy as np
 
 ATT_AMP_DEG = 30.0  # Attitude step amplitude (degrees); full trained att envelope (config att_cmd_rp_range +-pi/6)
 LIN_VEL_AMP = 0.25  # Linear velocity step amplitude (m/s)
-YAW_RATE_AMP = 0.5  # Yaw rate step amplitude (rad/s); full trained yaw envelope (config yaw_rate_cmd_range +-0.5)
+YAW_AMP = 0.5  # Yaw heading step amplitude (rad = 28.6 deg); a TARGET ANGLE, not a rate
+#              (the policy now takes a yaw position command; config yaw_cmd_range spans +-pi)
 WARMUP_SEGMENTS = 1  # Initial warmup segments (inter-block warmups also excluded via _classify_segment)
 
 
@@ -21,7 +22,7 @@ def build_step_trajectory(
     segment_duration: float,
     step_dt: float,
     att_amp_deg: float | None = None,
-    yaw_rate_amp: float | None = None,
+    yaw_amp: float | None = None,
 ) -> tuple[np.ndarray, dict[str, np.ndarray], list[str], int]:
     """Build 6-DOF step-change target trajectory with inter-block warmups.
 
@@ -32,13 +33,13 @@ def build_step_trajectory(
 
     Att block (10 segs): 3x3 grid (-a,0,+a) x (-a,0,+a) + final (0,0) return-to-neutral.
     Lin vel block (10 segs): 2x2x2 corners (+/-v) + (0,0,0) twice.
-    Yaw block (4 segs): (+w, -w, 0, 0).
+    Yaw block (4 segs): heading targets (+w, -w, 0, 0) in rad; 0 = return to heading 0.
 
     Args:
         segment_duration: seconds per segment.
         step_dt: seconds per sim step.
         att_amp_deg: override for ATT_AMP_DEG (module default when None).
-        yaw_rate_amp: override for YAW_RATE_AMP (module default when None).
+        yaw_amp: override for YAW_AMP (module default when None).
 
     Returns:
         time_s: 1D time array (seconds).
@@ -48,9 +49,12 @@ def build_step_trajectory(
     """
     a = ATT_AMP_DEG if att_amp_deg is None else att_amp_deg
     v = LIN_VEL_AMP
-    w = YAW_RATE_AMP if yaw_rate_amp is None else yaw_rate_amp
+    w = YAW_AMP if yaw_amp is None else yaw_amp
 
-    # (roll_deg, pitch_deg, vx, vy, vz, yaw_rate, name)
+    # (roll_deg, pitch_deg, vx, vy, vz, yaw, name)
+    # NOTE: the 6th slot is a yaw TARGET HEADING in rad. The dict key stays 'yaw_rate'
+    # (and the npz key 'target_yaw_rate') because eval_plots/eval_serialize/_analyze read
+    # those names; only the quantity changed, rad instead of rad/s.
     # NOTE: every block now starts with a logged zero-command segment so the
     # first plotted step shows the policy at zero command (rather than the
     # raw post-warmup state mid-transition). The attitude block also has its
@@ -94,7 +98,7 @@ def build_step_trajectory(
         (0, 0, 0, 0, 0, 0, "warmup (pre-yaw)"),
         # Logged zero-command pre-yaw (1 seg)
         (0, 0, 0, 0, 0, 0, "yaw zero (post-warmup)"),
-        # Yaw rate block (4 segs): +/- + zero twice.
+        # Yaw heading block (4 segs): +/- + return-to-0 twice.
         (0, 0, 0, 0, 0,  w, f"yaw +{w}"),
         (0, 0, 0, 0, 0, -w, f"yaw {-w}"),
         (0, 0, 0, 0, 0,  0, "yaw return 0 (1)"),
@@ -107,7 +111,7 @@ def build_step_trajectory(
     warmup_steps = WARMUP_SEGMENTS * steps_per_seg
 
     time_s = np.arange(total_steps) * step_dt
-    keys = ["roll_deg", "pitch_deg", "vx", "vy", "vz", "yaw_rate"]
+    keys = ["roll_deg", "pitch_deg", "vx", "vy", "vz", "yaw_rate"]  # "yaw_rate" now carries rad
     targets: dict[str, np.ndarray] = {k: np.zeros(total_steps) for k in keys}
     seg_names: list[str] = []
 

@@ -14,17 +14,17 @@ The actor receives o_t + z. The critic receives o_t + z + p_t (asymmetric).
 Linear velocity is excluded from o_t (no DVL on the real robot); it appears only in p_t.
 
 Current proprioception (20D) -- measurable on real robot:
-    Command (3D):       ang_cmd(3) [att_rp(2) + yaw_rate(1)]   -- no lin_vel command
+    Command (3D):       ang_cmd(3) [att_rp(2) + yaw(1)]   -- no lin_vel command
     Body State (6D):    euler(3), ang_vel(3)                   -- no measured lin_vel
     Arm State (5D):     joint_pos(2), joint_vel(2), manipulability(1)
     Thruster (6D):      filtered output (ESC channels m0-m5)
 
 Temporal history (46D) -- ring buffer, stride=3:
     Joint tracking (12D):   (q_des_prev - q_actual, joint_vel) x 3 steps
-    Body tracking (18D):    (ang_err [att_rp(2)+yaw_rate(1)], rpy(3)) x 3 steps   -- no lin_vel_err
+    Body tracking (18D):    (ang_err [att_rp(2)+yaw(1)], rpy(3)) x 3 steps   -- no lin_vel_err
     Action (16D):           full_action(8D) x 2 steps
 
-Integral error (3D): leaky-integrated [roll, pitch, yaw_rate] (mirrors the 3 tracking channels).
+Integral error (3D): leaky-integrated [roll, pitch, yaw] (mirrors the 3 tracking channels).
 """
 
 from __future__ import annotations
@@ -49,7 +49,7 @@ def compute_policy_obs(
     Linear velocity is excluded -- no DVL on real robot.
 
     Command (3D):
-        [0:3]   ang_cmd [roll_att, pitch_att, yaw_rate]
+        [0:3]   ang_cmd [roll_att, pitch_att, yaw_target_heading]
 
     Body State (6D):
         [3:6]   euler angles (roll, pitch, yaw)
@@ -71,7 +71,7 @@ def compute_policy_obs(
     return torch.cat(
         [
             # Command (3D) -- attitude only (no linear velocity command)
-            env._ang_cmd,  # 3D: [roll_att_cmd, pitch_att_cmd, yaw_rate_cmd]
+            env._ang_cmd,  # 3D: [roll_att_cmd, pitch_att_cmd, yaw_heading_cmd]
             # Body State (6D) -- no measured linear velocity (no DVL on real robot)
             torch.stack([roll, pitch, yaw], dim=-1),  # 3D: euler angles
             robot.data.root_ang_vel_b,  # 3D: angular velocity body

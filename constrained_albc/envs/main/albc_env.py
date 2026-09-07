@@ -96,18 +96,18 @@ def _apply_control_delay(buf: DelayBuffer | None, actions: torch.Tensor) -> torc
 
 
 class ALBCEnv(DirectRLEnv):
-    """Attitude-only ALBC environment with constrained RL (pure roll/pitch + yaw-rate tracking).
+    """Attitude-only ALBC environment with constrained RL (pure roll/pitch + yaw-angle tracking).
 
     Linear-velocity tracking is removed entirely (no DVL on the real robot): the actor obs
     carries no measured linear velocity, no lin_vel command, and no lin_vel reward term. The
     critic still sees measured linear velocity (privileged p_t), so the asymmetry is preserved.
 
     Obs (69D): current_proprio(20D) + temporal_history(46D) + integral_error(3D).
-        Current: ang_cmd(3) [att_rp(2) + yaw_rate(1)], euler(3), ang_vel(3),
+        Current: ang_cmd(3) [att_rp(2) + yaw(1)], euler(3), ang_vel(3),
                  jpos(2), jvel(2), manipulability(1), thr(6).  -- no measured lin_vel.
         History (per step, strided): joint_tracking(4) + body_tracking(6) + action(8),
                  i.e. 10*hist_len + 8*hist_action_len; body_tracking = ang_err(3) + euler(3),
-                 where ang_err = [att_rp_err(2), yaw_rate_err(1)].  -- no lin_vel_err.
+                 where ang_err = [att_rp_err(2), yaw_err(1)].  -- no lin_vel_err.
     Action (8D): Delta arm targets (2D) + thruster commands (6D).  -- actuator count, target-invariant.
     """
 
@@ -253,7 +253,7 @@ class ALBCEnv(DirectRLEnv):
         # Pre-build the integral error-gating sigma tensor once (step-invariant cfg constants).
         # Avoids re-allocating torch.tensor(...) every step in _get_rewards (hot loop).
         if self.cfg.use_integral_obs and self.cfg.integral_gated:
-            # Attitude-only: 3 integral channels [roll, pitch, yaw_rate].
+            # Attitude-only: 3 integral channels [roll, pitch, yaw].
             # R1 decouple: read the independent per-axis integral_gate_threshold, NOT
             # reward.*.sigma -- removes the shared-sigma aliasing (reward.md 7 review). The
             # default (0.10, 0.10, 0.10) reproduces the historical copied value byte-identically.
@@ -411,14 +411,14 @@ class ALBCEnv(DirectRLEnv):
         # Previous-step velocity for settling cost constraints (anti-overshoot)
         self._prev_root_lin_vel_b = torch.zeros(self.num_envs, 3, device=self.device)
         self._prev_root_ang_vel_z = torch.zeros(self.num_envs, device=self.device)
-        # [0:2] = roll/pitch attitude (rad), [2] = yaw rate (rad/s)
+        # [0:2] = roll/pitch attitude (rad), [2] = yaw target heading (rad, world frame)
         self._ang_cmd = torch.zeros(self.num_envs, 3, device=self.device)
         self._att_rp_err = torch.zeros(self.num_envs, 2, device=self.device)
-        self._yaw_rate_err = torch.zeros(self.num_envs, device=self.device)
-        # 3D mixed error for history buffer: [att_rp_err(2), yaw_rate_err(1)]
+        self._yaw_err = torch.zeros(self.num_envs, device=self.device)
+        # 3D mixed error for history buffer: [att_rp_err(2), yaw_err(1)]
         self._ang_err = torch.zeros(self.num_envs, 3, device=self.device)
         # Leaky-integrated error for Hwangbo 2017 pattern
-        # Attitude-only: 3D [roll, pitch, yaw_rate] -- mirrors the 3 attitude-control channels
+        # Attitude-only: 3D [roll, pitch, yaw] -- mirrors the 3 attitude-control channels
         # (no linear-velocity integral; lin_vel tracking is removed).
         self._error_integral = torch.zeros(self.num_envs, self.cfg.integral_dims, device=self.device)
         # EMA bias buffer (3D, ungated) for sustained offset penalization. Updated every
@@ -690,7 +690,7 @@ class ALBCEnv(DirectRLEnv):
 
         Body tracking (6D) -- system response:
             [4:6]   roll/pitch attitude error (radians, wrapped)
-            [6]     yaw rate error (rad/s)
+            [6]     yaw heading error (rad, wrapped to (-pi, pi])
             [7:10]  euler angles (roll, pitch, yaw)
 
         Action (8D) -- recent control input:
@@ -705,15 +705,16 @@ class ALBCEnv(DirectRLEnv):
         # Roll/pitch: attitude error (wrapped to [-pi, pi])
         att_raw = self._ang_cmd[:, :2] - torch.stack([roll, pitch], dim=-1)
         att_rp_err = torch.atan2(torch.sin(att_raw), torch.cos(att_raw))
-        # Yaw: rate error
-        yaw_rate_err = self._ang_cmd[:, 2] - self._robot.data.root_ang_vel_b[:, 2]
-        ang_err = torch.cat([att_rp_err, yaw_rate_err.unsqueeze(-1)], dim=-1)
+        # Yaw: heading error wrapped to (-pi, pi] -- its sign is the shortest turn direction
+        yaw_raw = self._ang_cmd[:, 2] - yaw
+        yaw_err = torch.atan2(torch.sin(yaw_raw), torch.cos(yaw_raw))
+        ang_err = torch.cat([att_rp_err, yaw_err.unsqueeze(-1)], dim=-1)
 
         return torch.cat(
             [
                 joint_pos_error,  # 2D: q_des_{t-1} - q_actual_t
                 joint_vel,  # 2D: joint velocities
-                ang_err,  # 3D: [att_rp_err(2), yaw_rate_err(1)]
+                ang_err,  # 3D: [att_rp_err(2), yaw_err(1)]
                 torch.stack([roll, pitch, yaw], dim=-1),  # 3D: euler angles
                 self._prev_actions,  # 8D: action that produced current state
             ],
@@ -857,36 +858,45 @@ class ALBCEnv(DirectRLEnv):
         """Sample random attitude commands for specified environments (no linear velocity).
 
         Roll/pitch: attitude command (radians) from att_cmd_rp_range.
-        Yaw: rate command (rad/s) from yaw_rate_cmd_range.
+        Yaw: target heading (radians, world frame) from yaw_cmd_range.
         Ranges use per-env cmd_*_scale, which is permanently 1.0 (inert residue; command
         difficulty is a fixed task knob, not DORAEMON-curriculum-managed).
         With probability ``vel_cmd_zero_prob``, an env receives a zero command.
         (The ``vel_cmd_*`` names are retained as the shared command-timing/zeroing knobs;
         they no longer drive any linear-velocity command.)
 
-        In play_mode, all commands are fixed to zero (hovering/station-keeping).
+        In play_mode, roll/pitch are fixed to zero and yaw holds the current heading
+        (hovering/station-keeping).
         """
+        # A yaw command is now a world-frame target ANGLE, so a zero/hover command means
+        # "hold the current heading", not 0 rad. Read yaw straight off the quaternion:
+        # _euler_cache is not yet refreshed on the reset path that calls this.
+        _, _, yaw_now = euler_xyz_from_quat(self._robot.data.root_quat_w)
+
         if self.cfg.play_mode:
-            self._ang_cmd[env_ids] = 0.0
+            self._ang_cmd[env_ids, :2] = 0.0
+            self._ang_cmd[env_ids, 2] = yaw_now[env_ids]
             self._vel_cmd_step_counter[env_ids] = 0
             return
 
         n = len(env_ids)
         att_max = abs(self.cfg.att_cmd_rp_range[1])
-        yaw_max = abs(self.cfg.yaw_rate_cmd_range[1])
+        yaw_lo, yaw_hi = self.cfg.yaw_cmd_range
 
         # Per-env command-range scales (always 1.0; command difficulty is a fixed task knob, not DORAEMON)
         att_s = self._cmd_att_scale[env_ids].unsqueeze(1)  # (n, 1)
         yaw_s = self._cmd_yaw_scale[env_ids]  # (n,)
 
         self._ang_cmd[env_ids, :2] = torch.empty(n, 2, device=self.device).uniform_(-1, 1) * (att_max * att_s)
-        self._ang_cmd[env_ids, 2] = torch.empty(n, device=self.device).uniform_(-1, 1) * (yaw_max * yaw_s)
+        self._ang_cmd[env_ids, 2] = torch.empty(n, device=self.device).uniform_(yaw_lo, yaw_hi) * yaw_s
 
-        # Zero-command envs: hovering / station-keeping
+        # Zero-command envs: hovering / station-keeping. Roll/pitch zero is level (absolute);
+        # yaw zero means "hold heading", so it takes the env's own current yaw.
         zero_mask = torch.rand(n, device=self.device) < self.cfg.vel_cmd_zero_prob
         if zero_mask.any():
             zero_ids = env_ids[zero_mask]
-            self._ang_cmd[zero_ids] = 0.0
+            self._ang_cmd[zero_ids, :2] = 0.0
+            self._ang_cmd[zero_ids, 2] = yaw_now[zero_ids]
         self._vel_cmd_step_counter[env_ids] = 0
 
     # ------------------------------------------------------------------
@@ -1344,13 +1354,14 @@ class ALBCEnv(DirectRLEnv):
         return observations
 
     def _compute_ang_errors(self) -> None:
-        """Compute roll/pitch attitude error + yaw rate error from current state."""
-        roll, pitch, _ = self._euler_cache
+        """Compute roll/pitch attitude error + wrapped yaw heading error from current state."""
+        roll, pitch, yaw = self._euler_cache
         raw = self._ang_cmd[:, :2] - torch.stack([roll, pitch], dim=-1)
         self._att_rp_err = torch.atan2(torch.sin(raw), torch.cos(raw))
-        self._yaw_rate_err = self._ang_cmd[:, 2] - self._robot.data.root_ang_vel_b[:, 2]
+        yaw_raw = self._ang_cmd[:, 2] - yaw
+        self._yaw_err = torch.atan2(torch.sin(yaw_raw), torch.cos(yaw_raw))
         self._ang_err[:, :2] = self._att_rp_err
-        self._ang_err[:, 2] = self._yaw_rate_err
+        self._ang_err[:, 2] = self._yaw_err
 
     def _get_rewards(self) -> torch.Tensor:
         """Compute tracking rewards and constraint costs.
@@ -1358,18 +1369,18 @@ class ALBCEnv(DirectRLEnv):
         Returns:
             Reward tensor. Shape: (num_envs,).
         """
-        # Roll/pitch attitude error + yaw rate error
+        # Roll/pitch attitude error + wrapped yaw heading error
         self._compute_ang_errors()
 
         # Update leaky-integrated error: I = leak * I + err * dt
         if self.cfg.use_integral_obs:
             self._error_integral.mul_(self.cfg.integral_leak)
 
-            # Attitude-only: 3 integral channels [roll, pitch, yaw_rate]
+            # Attitude-only: 3 integral channels [roll, pitch, yaw]
             errs = [
                 self._att_rp_err[:, 0],  # roll
                 self._att_rp_err[:, 1],  # pitch
-                self._yaw_rate_err,  # yaw rate
+                self._yaw_err,  # yaw heading error (wrapped)
             ]
 
             if self.cfg.integral_gated:
@@ -1383,14 +1394,14 @@ class ALBCEnv(DirectRLEnv):
 
             self._error_integral.clamp_(-self.cfg.integral_clamp, self.cfg.integral_clamp)
 
-        # Update EMA bias buffer (3D ungated: roll, pitch, yaw_rate). Captures sustained
+        # Update EMA bias buffer (3D ungated: roll, pitch, yaw). Captures sustained
         # per-env offset that per-step tracking reward ignores. Consumed by bias_ema_penalty term.
         if self.cfg.reward.k_bias != 0.0:
             err3 = torch.stack(
                 [
                     self._att_rp_err[:, 0],  # roll
                     self._att_rp_err[:, 1],  # pitch
-                    self._yaw_rate_err,  # yaw rate
+                    self._yaw_err,  # yaw heading error (wrapped)
                 ],
                 dim=-1,
             )
@@ -1464,13 +1475,13 @@ class ALBCEnv(DirectRLEnv):
         log["Track/att/roll_err_deg"] = torch.rad2deg(att_err[:, 0]).abs().mean().item()
         log["Track/att/pitch_err_deg"] = torch.rad2deg(att_err[:, 1]).abs().mean().item()
 
-        # Yaw rate tracking
-        log["Track/yaw/rate_err"] = self._yaw_rate_err[env_ids].abs().mean().item()
+        # Yaw heading tracking
+        log["Track/yaw/err_deg"] = torch.rad2deg(self._yaw_err[env_ids]).abs().mean().item()
 
         # Command diagnostics (attitude + yaw grouped, linear grouped)
         log["Track/cmd_att/roll_deg"] = torch.rad2deg(self._ang_cmd[env_ids, 0]).abs().mean().item()
         log["Track/cmd_att/pitch_deg"] = torch.rad2deg(self._ang_cmd[env_ids, 1]).abs().mean().item()
-        log["Track/cmd_att/yaw_rate"] = self._ang_cmd[env_ids, 2].abs().mean().item()
+        log["Track/cmd_att/yaw_deg"] = torch.rad2deg(self._ang_cmd[env_ids, 2]).abs().mean().item()
 
         # Arm manipulability
         log["Track/arm/manip_mean"] = self._manipulability[env_ids].mean().item()
@@ -1824,12 +1835,13 @@ class ALBCEnv(DirectRLEnv):
         self._sample_velocity_command(env_ids)
 
         # Initialize errors
-        roll_r, pitch_r, _ = euler_xyz_from_quat(self._robot.data.root_quat_w[env_ids])
+        roll_r, pitch_r, yaw_r = euler_xyz_from_quat(self._robot.data.root_quat_w[env_ids])
         raw = self._ang_cmd[env_ids, :2] - torch.stack([roll_r, pitch_r], dim=-1)
         self._att_rp_err[env_ids] = torch.atan2(torch.sin(raw), torch.cos(raw))
-        self._yaw_rate_err[env_ids] = self._ang_cmd[env_ids, 2] - self._robot.data.root_ang_vel_b[env_ids, 2]
+        yaw_raw = self._ang_cmd[env_ids, 2] - yaw_r
+        self._yaw_err[env_ids] = torch.atan2(torch.sin(yaw_raw), torch.cos(yaw_raw))
         self._ang_err[env_ids, :2] = self._att_rp_err[env_ids]
-        self._ang_err[env_ids, 2] = self._yaw_rate_err[env_ids]
+        self._ang_err[env_ids, 2] = self._yaw_err[env_ids]
         # Reset integral error on episode reset
         self._error_integral[env_ids] = 0.0
         self._bias_ema[env_ids] = 0.0

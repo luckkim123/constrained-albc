@@ -390,7 +390,12 @@ def compute_metrics(data: dict) -> dict:
         total_lin_vel_error = float("nan")
         lin_vel_survival = float("nan")
 
-    # ---- Yaw rate metrics (only yaw segments) ----
+    # ---- Yaw metrics (only yaw segments) ----
+    # NOTE: total_yaw_error below is the wrapped HEADING error (rad). The per-segment
+    # yaw_ss_* / yaw_rise_times / yaw_overshoot_pcts / yaw_zero_crossings computed in this
+    # loop still difference the measured yaw RATE against the command; with a position
+    # command that comparison is no longer dimensionally meaningful. Left as-is: the
+    # rate->position spec scoped this file to the total only.
     yaw_ss_errors: list[float] = []
     yaw_ss_jitters: list[float] = []
     yaw_ss_jitters_std: list[float] = []  # env-to-env spread of per-env jitter (rule03 CV)
@@ -446,13 +451,18 @@ def compute_metrics(data: dict) -> dict:
 
     yaw_block_start, yaw_block_end = _get_block_step_range(seg_names, seg_steps, "yaw")
     yaw_block_alive = alive[yaw_block_start:yaw_block_end]
-    yaw_block_actual = data["yaw_rate"][yaw_block_start:yaw_block_end]
+    # The yaw command is a heading TARGET, so the tracking error is the shortest-path
+    # wrapped angle difference wrap(cmd - yaw) in (-pi, pi] (rad) -- the same atan2 idiom
+    # the env uses -- not a rate difference. data["yaw"] is the measured heading (rad);
+    # data["target_yaw_rate"] keeps its historical key but now carries rad.
+    yaw_block_meas = data["yaw"][yaw_block_start:yaw_block_end]
     yaw_block_target = data["target_yaw_rate"][yaw_block_start:yaw_block_end, None]  # (T,) -> (T,1) for broadcast
-    yaw_block_err = np.abs(yaw_block_actual - yaw_block_target)
+    yaw_block_raw = yaw_block_target - yaw_block_meas
+    yaw_block_err = np.abs(np.arctan2(np.sin(yaw_block_raw), np.cos(yaw_block_raw)))
     if yaw_block_alive.any():
-        total_yaw_rate_error = float(np.nanmean(np.where(yaw_block_alive, yaw_block_err, np.nan)))
+        total_yaw_error = float(np.nanmean(np.where(yaw_block_alive, yaw_block_err, np.nan)))
     else:
-        total_yaw_rate_error = float("nan")
+        total_yaw_error = float("nan")
 
     yaw_survival = float(alive[yaw_block_end - 1].sum()) / num_envs * 100.0 if yaw_block_end > 0 else 0.0
 
@@ -477,7 +487,7 @@ def compute_metrics(data: dict) -> dict:
         "lin_vel_zero_crossings": lin_vel_zero_crossings,
         "lin_vel_survival": lin_vel_survival,
         # Yaw
-        "total_yaw_rate_error": total_yaw_rate_error,
+        "total_yaw_error": total_yaw_error,  # rad, wrapped heading error
         "yaw_ss_errors": yaw_ss_errors,
         "yaw_ss_jitters": yaw_ss_jitters,
         "yaw_ss_jitters_std": yaw_ss_jitters_std,
