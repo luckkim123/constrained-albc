@@ -52,13 +52,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   now zeroes the hidden at each env's own done step and leaves envs without a reset on the
   fused path, bit-for-bit unchanged. No effect on the adopted student checkpoint until a
   re-distillation. Regression test `tests/test_student_gru_episode_boundary.py`.
-- **Six eval/deploy defects that failed silently** (WP2), each with a contract test watched
-  failing on the pre-fix code: the run-log path wrote to a retired store; `resolve_run`
-  index 0 sorted by name so "newest" was whichever label sorted last (it now sorts by the
+- **Seven eval/deploy defects that failed silently** (WP2; the commit message says six and
+  lists D2-D7, D8 was implemented and tested but not declared there), each with a contract
+  test watched failing on the pre-fix code: the run-log path wrote to a retired store (D2);
+  the legacy finder stopped one layer short so grouped runs were invisible (D3); `resolve_run`
+  index 0 sorted by name so "newest" was whichever label sorted last (D4; it now sorts by the
   manifest's `created`, and the legacy finder was fixed in the same pass so "newest" cannot
-  mean two things in one module); `--spec` silently ignored `--golden`/`--report`; a symlink
-  failure left the manifest claiming a path that was never created; a corrupt manifest was
-  swallowed instead of raising with its path.
+  mean two things in one module); `--spec` silently ignored `--golden`/`--report` (D5); a
+  symlink failure left the manifest claiming a path that was never created (D6); the eval
+  summary swallowed exceptions without type or stack (D7); a corrupt manifest was swallowed
+  instead of raising with its path (D8). Merge review 2026-09-07 narrowed D8: the raise stays
+  for callers that name a run, while `find_runs` warns and skips a corrupt sibling instead of
+  dying on it (`tests/test_paths.py::test_find_runs_survives_one_corrupt_manifest`).
+- **Merge-review corrections (2026-09-07, merge into `exp/koopman-marine-obs` d1fb67d).**
+  WP3's `normalize_value` deletion also removed the `@property` on
+  `ConstraintEncoderRunner._should_log` (a bound method is always truthy; masked today
+  because rsl_rl's `learn` applies the same predicate first) -- restored. WP3 left the
+  `_init_tracking_buffers` docstring and one OU comment pointing at deleted code -- removed.
+  WP0 turned `tests/test_eval_adapter.py::test_cli_emits_json` into a `pytest.skip` whenever
+  the gitignored fixture is absent, which is every fresh clone -- recorded here because the
+  commit did not say so. Known reader effects after the merge: a fresh `env.yaml` no longer
+  carries `ou_*`, `terrain`, `use_marine_feature_obs`, `koopman_module_path`, and
+  `agent.yaml` loses `normalize_value`, so `scripts/plantdiff.py` against a pre-merge
+  incumbent shows seven spurious key diffs; and a `doraemon_state.pt` written by post-merge
+  code has no `buffer_log_probs`, so it cannot be resumed under pre-merge code (the reverse
+  direction loads).
 - **Student log root escaped the repo.** `algorithms/student/config.py` anchored `_REPO_ROOT`
   with a fixed count of `..` hops; the move to `constrained_albc/algorithms/` changed the
   module's depth and every student run then wrote its logs, checkpoints and experiments index

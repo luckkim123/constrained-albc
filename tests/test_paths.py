@@ -648,6 +648,16 @@ def test_absent_manifest_still_returns_none(tmp_path):
     assert P._read_manifest_if_present(root) is None
 
 
+def test_find_runs_survives_one_corrupt_manifest(tmp_path):
+    """D8 at the scan boundary: one corrupt sibling must not hide the good runs."""
+    exp = tmp_path / "experiments"
+    _make_run_with_created(exp, "good_trpo_260901_000000", None)
+    bad = _make_new_run(exp, "bad_trpo_260101_000000")
+    (bad / P.MANIFEST_NAME).write_text("{not json")
+    runs = P.find_runs(str(exp))
+    assert "good_trpo_260901_000000" in [r.run_id for r in runs]
+
+
 # ---------------------------------------------------------------------------
 # D3: the legacy scan must reach the <exp>/<group>/<run> layer that
 # train.py --run_group has written since 2026-06-08, not just <exp>/<run>.

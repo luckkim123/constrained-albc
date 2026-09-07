@@ -433,7 +433,7 @@ class ALBCEnv(DirectRLEnv):
         self._extra_last_step = -1
         self._vel_cmd_step_counter = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
     def _init_tracking_buffers(self) -> None:
-        """Manipulability, cumulative yaw, mid-episode dynamics, and OU process buffers."""
+        """Manipulability, cumulative yaw, and mid-episode dynamics buffers."""
         self._manipulability = torch.zeros(self.num_envs, device=self.device)
         self._cumulative_yaw = torch.zeros(self.num_envs, device=self.device)
         self._prev_yaw = torch.zeros(self.num_envs, device=self.device)
@@ -444,7 +444,6 @@ class ALBCEnv(DirectRLEnv):
         self._payload_toggled = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
         self._stashed_payload_mass = torch.zeros(self.num_envs, device=self.device)
         self._stashed_payload_cog_offset = torch.zeros(self.num_envs, 3, device=self.device)
-        # OU process base current (mean-reversion target, set at reset)
 
     def _init_force_buffers(self) -> None:
         """Hydrodynamic force/torque accumulation buffers."""

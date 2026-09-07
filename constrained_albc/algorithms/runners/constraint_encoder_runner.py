@@ -122,6 +122,7 @@ class ConstraintEncoderRunner(OnPolicyRunner):
         if self._has_encoder:
             logger.info("[ConstraintEncoderRunner] Encoder detected. Encoder metrics logging enabled.")
 
+    @property
     def _should_log(self) -> bool:
         """Whether logging is active (log_dir set and logs not disabled)."""
         return self.log_dir is not None and not self.disable_logs

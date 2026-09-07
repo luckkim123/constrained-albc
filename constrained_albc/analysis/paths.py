@@ -167,7 +167,14 @@ class RunHandle:
 
 def _is_run_dir(d: Path) -> tuple[bool, dict | None]:
     """A directory is a run when it holds a manifest or a ``train`` entry."""
-    manifest = _read_manifest_if_present(d)
+    try:
+        manifest = _read_manifest_if_present(d)
+    except RuntimeError as exc:
+        # One corrupt manifest must not take the whole scan down. The raise stays for
+        # callers that NAMED the run (resolve_run, emit_run_manifest); the scan warns
+        # and treats the directory like a legacy one (merge review 2026-09-07).
+        logging.getLogger(__name__).warning("%s -- skipped in find_runs scan", exc)
+        manifest = None
     return (manifest is not None or (d / TRAIN_LINK_NAME).exists()), manifest
 
 
