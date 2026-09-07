@@ -51,6 +51,7 @@ from .mdp.events import (
     randomize_payload,
     reset_joint_positions_default,
     reset_robot_pose_default,
+    sample_control_delay_steps,
 )
 from .mdp.observations import (
     MARINE_SRC_IDX,
@@ -1793,15 +1794,42 @@ class ALBCEnv(DirectRLEnv):
         self._payload_toggle_counter[env_ids] = 0
         self._payload_toggled[env_ids] = False
 
-        # Re-draw per-env control delay lag and reset the delay buffer's history.
-        if self._action_delay_buf is not None:
-            lo, hi = self.cfg.randomization.control_delay_steps
-            new_lag = torch.randint(
-                low=lo, high=hi + 1, size=(len(env_ids),), dtype=torch.int, device=self.device
-            )
-            self._control_delay_steps[env_ids] = new_lag
-            self._action_delay_buf.set_time_lag(new_lag, env_ids)
-            self._action_delay_buf.reset(env_ids)
+        # NOTE: the control-delay lag re-draw used to live here. It moved to
+        # _reset_control_delay, called from _reset_physics, because the DORAEMON sample that
+        # now paces it (control_delay_strength) does not exist until _reset_physics runs --
+        # _reset_framework is called BEFORE it. Nothing else about the draw changed, and the
+        # buffer history reset moved with it (both still happen before the next
+        # _pre_physics_step, which is the only reader).
+
+    def _reset_control_delay(self, env_ids: torch.Tensor, sampled: dict | None) -> None:
+        """Re-draw the per-env action-delay lag and clear the delay buffer's history.
+
+        The lag is paced by the DORAEMON ``control_delay_strength`` knob: the sampled
+        per-env value when the dim is registered (training), else a uniform draw over
+        ``randomization.control_delay_strength_range`` (the eval-sweep fallback, same
+        pattern as obs_noise_scale / fault_severity / fz_disturbance_strength).
+
+        A cfg predating the range field falls back to ``(1.0, 1.0)`` -> strength 1 -> the
+        full ``[lo, hi]`` band, i.e. the pre-curriculum behaviour.
+
+        Returns immediately when ``_action_delay_buf`` is None, which is what
+        ``control_delay_steps == (0, 0)`` produces. That is the branch that keeps the
+        incumbent bit-identical: at the cfg default the block never runs at all, in the old
+        code or the new, so no RNG is drawn and no lag is written.
+        """
+        if self._action_delay_buf is None:
+            return
+        rng = getattr(self.cfg.randomization, "control_delay_strength_range", (1.0, 1.0))
+        if sampled is not None and "control_delay_strength" in sampled:
+            strength = sampled["control_delay_strength"]
+        else:
+            strength = faults.sample_uniform_per_env(len(env_ids), rng, self.device)
+        new_lag = sample_control_delay_steps(
+            self.cfg.randomization.control_delay_steps, strength, self.device
+        )
+        self._control_delay_steps[env_ids] = new_lag
+        self._action_delay_buf.set_time_lag(new_lag, env_ids)
+        self._action_delay_buf.reset(env_ids)
 
     def _reset_physics(self, env_ids: torch.Tensor) -> None:
         """Reset hydrodynamics, thrusters, payload, and apply domain randomization."""
@@ -1838,7 +1866,11 @@ class ALBCEnv(DirectRLEnv):
             self._setup_payload_toggle(env_ids)
             if self.cfg.ou_enable:
                 self._ou_base_current[env_ids] = self._hydro.current.velocity_w[env_ids, :3].clone()
-            # DORAEMON cannot run without DR, so the strength falls back to the uniform draw.
+            # DORAEMON cannot run without DR, so both strengths fall back to a uniform draw.
+            # The delay call is here as well as at the end because control_delay_steps is
+            # read straight off the cfg by _draw_control_delay -- the buffer exists whether
+            # or not randomization.enable is set, exactly as it did before this moved.
+            self._reset_control_delay(env_ids, None)
             self._reset_fz_disturbance(env_ids, None)
             return
 
@@ -1911,6 +1943,9 @@ class ALBCEnv(DirectRLEnv):
                 len(env_ids), self.cfg.thrusters.num_thrusters, self.cfg.fault, self.device, severity=severity
             )
             self._thruster.set_thruster_health(env_ids, health)
+
+        # Action-delay lag, paced by the DORAEMON control_delay_strength knob.
+        self._reset_control_delay(env_ids, sampled)
 
         # Exogenous heave disturbance: strength from the DORAEMON draw when registered,
         # then a fresh Fz and hold. No-op (and no RNG) unless cfg.disturbance.enable.
