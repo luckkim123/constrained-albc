@@ -57,7 +57,10 @@ def _build_static_data(num_envs: int = 4, has_lin_vel: bool = True,
         "actual_pitch_deg": col(targets["pitch_deg"]),
         "error_roll": np.zeros((total_steps, num_envs)),
         "error_pitch": np.zeros((total_steps, num_envs)),
+        # yaw command is a heading target: "yaw" is the measured heading compute_metrics
+        # reads; "yaw_rate" remains the measured body-rate column.
         "yaw_rate": col(targets["yaw_rate"]),
+        "yaw": col(targets["yaw_rate"]),
         "target_yaw_rate": targets["yaw_rate"],
         "has_lin_vel": has_lin_vel,
     }

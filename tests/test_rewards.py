@@ -81,7 +81,7 @@ def _track_term(**kw):
 def _reward_cfg(**kw):
     cfg = SimpleNamespace(
         att_rp=_track_term(), att_roll_weight=1.5,
-        lin_vel=_track_term(), yaw_vel=_track_term(),
+        lin_vel=_track_term(), yaw=_track_term(),
         extra_terms=[],
     )
     for k, v in kw.items():
@@ -101,7 +101,7 @@ def _env(*, lin_err=None, att_err=None, yaw_err=None, actions=None,
     # the delayed triple (byte-identical-when-off) unless a test overrides it to
     # exercise the on-delay divergence explicitly.
     return SimpleNamespace(
-        _lin_vel_err=lin_err, _att_rp_err=att_err, _yaw_rate_err=yaw_err,
+        _lin_vel_err=lin_err, _att_rp_err=att_err, _yaw_err=yaw_err,
         _actions=actions, _prev_actions=prev, _prev_prev_actions=prev_prev,
         _cmd_actions=cmd_actions if cmd_actions is not None else actions,
         _prev_cmd_actions=prev_cmd if prev_cmd is not None else prev,
@@ -117,10 +117,11 @@ def _env(*, lin_err=None, att_err=None, yaw_err=None, actions=None,
 # ---------------------------------------------------------------------------
 
 
-def test_yaw_vel_tracking_peaks_at_zero():
-    assert R.yaw_vel_tracking(_env(yaw_err=torch.zeros(1))).item() == pytest.approx(1.0)
-    near = R.yaw_vel_tracking(_env(yaw_err=torch.tensor([0.05]))).item()
-    far = R.yaw_vel_tracking(_env(yaw_err=torch.tensor([0.5]))).item()
+def test_yaw_tracking_peaks_at_zero():
+    """yaw_err is the WRAPPED heading error (rad); reward peaks at zero error."""
+    assert R.yaw_tracking(_env(yaw_err=torch.zeros(1))).item() == pytest.approx(1.0)
+    near = R.yaw_tracking(_env(yaw_err=torch.tensor([0.05]))).item()
+    far = R.yaw_tracking(_env(yaw_err=torch.tensor([0.5]))).item()
     assert near > far
 
 
@@ -211,7 +212,7 @@ def test_reward_manager_extra_terms_flow_through_compute():
         return torch.full((1,), 2.0) * gain
 
     cfg = _reward_cfg(
-        att_rp=_track_term(k=0.0), yaw_vel=_track_term(k=0.0),
+        att_rp=_track_term(k=0.0), yaw=_track_term(k=0.0),
         k_tau=0.0, k_thr=0.0, k_s=0.0, k_bias=0.0,
         bias_weights=(1.0, 1.0, 1.0),
         extra_terms=[R.RewardTermCfg(func=probe, params={"gain": 2.0}, weight=0.5, name="probe")],

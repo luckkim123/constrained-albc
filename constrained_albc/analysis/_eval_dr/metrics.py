@@ -391,11 +391,9 @@ def compute_metrics(data: dict) -> dict:
         lin_vel_survival = float("nan")
 
     # ---- Yaw metrics (only yaw segments) ----
-    # NOTE: total_yaw_error below is the wrapped HEADING error (rad). The per-segment
-    # yaw_ss_* / yaw_rise_times / yaw_overshoot_pcts / yaw_zero_crossings computed in this
-    # loop still difference the measured yaw RATE against the command; with a position
-    # command that comparison is no longer dimensionally meaningful. Left as-is: the
-    # rate->position spec scoped this file to the total only.
+    # Yaw is a POSITION command, so every metric here is in rad, computed from the
+    # measured heading data["yaw"] against the heading target data["target_yaw_rate"]
+    # (historical key name, rad since the rate->position change).
     yaw_ss_errors: list[float] = []
     yaw_ss_jitters: list[float] = []
     yaw_ss_jitters_std: list[float] = []  # env-to-env spread of per-env jitter (rule03 CV)
@@ -410,9 +408,20 @@ def compute_metrics(data: dict) -> dict:
         e = (seg_idx + 1) * seg_steps
         seg_alive = alive[s:e]
         seg_time = time_s[s:e]
-        seg_actual = data["yaw_rate"][s:e]
         cur_target = float(data["target_yaw_rate"][s])
         prev_target = float(data["target_yaw_rate"][s - 1]) if s > 0 else 0.0
+        # Measured heading re-expressed continuously around THIS segment's target:
+        #     seg_actual = cur_target - wrap(cur_target - yaw)
+        # so |seg_actual - cur_target| is exactly the wrapped heading error, and
+        # seg_actual travels from ~prev_target to cur_target across the step. Every
+        # metric below (SS error, jitter, zero crossings, rise/overshoot against the
+        # prev->cur step) is then the identical computation the attitude block runs,
+        # on rad instead of rad/s. The exam's yaw step is 0.5 rad, well inside pi, so
+        # the trace does not wrap mid-step.
+        # ponytail: an excursion beyond +-pi from the target folds back toward it.
+        # Fine while a yaw segment commands < pi; revisit if that ever changes.
+        _seg_raw = cur_target - data["yaw"][s:e]
+        seg_actual = cur_target - np.arctan2(np.sin(_seg_raw), np.cos(_seg_raw))
 
         # SS error and jitter
         ss_start = int(seg_steps * 0.5)

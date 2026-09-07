@@ -8,14 +8,15 @@ Sim-free (AST + source), mirroring tests/test_bias_ema_obs.py check (1): booting
 real ALBCEnv would need Isaac Sim, so the static contract is asserted instead.
 
 R1 (reward_sigma wiki review): the integral-obs settling-band gate historically COPIED
-reward.att_rp.sigma (roll, pitch) and reward.yaw_vel.sigma (yaw_rate) at env init
+reward.att_rp.sigma (roll, pitch) and the yaw tracking sigma (reward.yaw_vel then,
+reward.yaw since the yaw rate->position change) at env init
 (albc_env.py) -- one scalar aliased two orthogonal knobs (reward-kernel width AND the
 gate threshold), so a reward-kernel ablation silently retuned the gate. R1 adds an
 independent cfg field `integral_gate_threshold` that the gate reads instead.
 
 Two guarantees:
   (1) BYTE-IDENTITY at the decouple: the default MUST equal the historical shared-sigma
-      value (att_rp.sigma = yaw_vel.sigma = 0.10 -> gate = (0.10, 0.10, 0.10)), so
+      value (att_rp.sigma = the yaw sigma = 0.10 -> gate = (0.10, 0.10, 0.10)), so
       today's behavior is unchanged.
   (2) DECOUPLE: the env's gate build must read `integral_gate_threshold`, NOT
       `reward.*.sigma` -- otherwise the aliasing survives. Note this test deliberately
@@ -31,8 +32,9 @@ from pathlib import Path
 CONFIG_PY = Path(__file__).resolve().parent.parent / "constrained_albc" / "envs" / "main" / "config.py"
 ALBC_ENV_PY = Path(__file__).resolve().parent.parent / "constrained_albc" / "envs" / "main" / "albc_env.py"
 
-# Historical pre-R1 gate values [roll, pitch, yaw_rate], copied from reward.att_rp.sigma
-# (roll, pitch) and reward.yaw_vel.sigma (yaw_rate), both 0.10 (config yaw_vel sigma=0.10;
+# Historical pre-R1 gate values [roll, pitch, yaw], copied from reward.att_rp.sigma
+# (roll, pitch) and the yaw tracking sigma, both 0.10 (the yaw term was named yaw_vel
+# then and carried a rate; it is reward.yaw now and carries a wrapped angle;
 # att_rp sigma=0.10 in ALBCRewardCfg; wiki reward_sigma review, code-verified 2026-07-24).
 HISTORICAL_GATE = (0.10, 0.10, 0.10)
 
@@ -67,6 +69,6 @@ def test_env_gate_reads_threshold_not_reward_sigma():
     # inspect the assignment statement (up to the closing of torch.tensor(...))
     build = src[i : src.index(")", i) + 1]
     assert "integral_gate_threshold" in build, "gate build does not read integral_gate_threshold"
-    assert "reward.att_rp.sigma" not in build and "reward.yaw_vel.sigma" not in build, (
+    assert "reward.att_rp.sigma" not in build and "reward.yaw.sigma" not in build, (
         "gate build still references reward.*.sigma -- the shared-sigma aliasing was not removed"
     )
