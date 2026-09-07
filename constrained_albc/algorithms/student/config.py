@@ -4,11 +4,18 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
-# Repo root = constrained-albc/ (this file is constrained_albc/algorithms/student/config.py,
-# so five levels up). Used to anchor log_dir_root to an ABSOLUTE path: train_student.py runs
-# via isaaclab.sh from /workspace/isaaclab, so a relative root would leak student output into
-# the isaaclab repo. Anchoring here keeps teacher and student output in one source-of-truth tree.
-_REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
+# Repo root = constrained-albc/. Used to anchor log_dir_root to an ABSOLUTE path:
+# train_student.py runs via isaaclab.sh from /workspace/isaaclab, so a relative root would
+# leak student output into the isaaclab repo. Anchoring here keeps teacher and student
+# output in one source-of-truth tree.
+#
+# The hop count tracks this module's depth and MUST be re-counted whenever the file moves:
+# dirname(__file__) is <repo>/constrained_albc/algorithms/student, so three hops reach the
+# repo. It was four while this lived at constrained_albc/envs/_core/student/, and the 2026-09
+# WP4 promotion to constrained_albc/algorithms/ left the four in place -- every student run
+# then wrote one directory ABOVE the repo, with nothing failing to say so.
+# `tests/test_student_log_root.py` is the guard.
+_REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
 
 @dataclass
