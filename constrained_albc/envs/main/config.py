@@ -190,7 +190,7 @@ class DomainRandomizationCfg:
     cog_offset_z: tuple[float, float] = (-0.04, 0.04)
 
     # -- Inertia / Mass --
-    inertia_scale: tuple[float, float] = (0.4, 4.5)  # 2026-09-07: upper 2.0->4.5 so the measured assembly J_pitch 0.39-0.51 (vault finding/145, finding/312) is reachable: J = 0.0994*s + min(0.09*a, 0.0944*s), needs s>=4.48 at a=0.5; nominal pinned to 1.0 in doraemon._NOMINAL_OVERRIDES (midpoint would be 2.45). Reaches PhysX only via set_inertias (G5).
+    inertia_scale: tuple[float, float] = (0.4, 4.8)  # 2026-09-07 (PLAN item 12, decision/147 rule: measured outside band -> move the NOMINAL): measured assembly J_pitch 0.39-0.51 (vault finding/145 via finding/312) = scale 3.0-4.2 on the URDF 0.0994 since J = 0.0994*s + min(0.09*a, 0.0944*s) (clamp not binding). Nominal pinned to 4.0 (J 0.488) in doraemon._NOMINAL_OVERRIDES; upper 4.8 = 4.0 x 1.2 (K uncertainty); lower 0.4 kept as the light tail. Old ceiling was 0.334 (finding/312 wrote 0.39 assuming the clamp binds). Reaches PhysX only via set_inertias (G5).
     body_mass_scale: tuple[float, float] = (0.75, 1.25)
     water_density_range: tuple[float, float] = (995.0, 1025.0)
 
