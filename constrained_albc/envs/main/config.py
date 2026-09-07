@@ -37,7 +37,6 @@ from .mdp.constraints import (
     ALBCConstraintCfg,
     ConstraintTermCfg,
     attitude_limit_cost,
-    cumulative_yaw_cost,
     joint1_position_cost,
     manipulability_cost,
     rp_rate_cost,
@@ -46,15 +45,16 @@ from .mdp.constraints import (
     torque_limit_cost,
     velocity_limit_cost,
     yaw_rate_cost,
+    yaw_settling_cost,
 )
 from .mdp.koopman import KOOPMAN_PRED_DIM
 from .mdp.rewards import ALBCRewardCfg, TrackingTermCfg
 
-# 10 constraint terms: 5 Probabilistic + 5 Average.
+# 10 constraint terms: 4 Probabilistic + 6 Average.
 # thruster_rate removed: structurally incompatible with entropy_coef>0 (noise alone violates 5x).
 # thruster_sat reverted to thruster_util (Average, budget=0.40): original form.
 _FULL_DOF_CONSTRAINT_TERMS: list[ConstraintTermCfg] = [
-    # --- Probabilistic (5): binary indicator, budget = violation probability ---
+    # --- Probabilistic (4): binary indicator, budget = violation probability ---
     ConstraintTermCfg(func=attitude_limit_cost, params={"limit": 1.396}, budget=0.01, name="attitude"),
     ConstraintTermCfg(func=torque_limit_cost, params={"limit_nm": 9.5}, budget=0.08, name="arm_torque"),
     # 2.15 = inside the 2.40 rad/s PhysX cap (albc.py velocity_limit_sim, = driver OPERATING_VELOCITY cap, vault finding/145; 2.8/3.1 ratio kept): soft must
@@ -62,13 +62,15 @@ _FULL_DOF_CONSTRAINT_TERMS: list[ConstraintTermCfg] = [
     # constraint). The old 2.5-2.8 tunable window (wiki ripple card) assumed the 3.1 cap; rescale by 2.40/3.1 if revisited.
     ConstraintTermCfg(func=velocity_limit_cost, params={"limit_rad_per_s": 2.15}, budget=0.02, name="arm_joint_vel"),
     ConstraintTermCfg(func=joint1_position_cost, params={"limit_rad": 4 * math.pi}, budget=0.01, name="joint1_pos"),
-    ConstraintTermCfg(func=cumulative_yaw_cost, params={"limit_rad": 8 * math.pi}, budget=0.01, name="cumul_yaw"),
-    # --- Average (5): continuous cost, soft threshold for attitude/velocity tracking ---
+    # --- Average (6): continuous cost, soft threshold for attitude/velocity tracking ---
     ConstraintTermCfg(func=thruster_utilization_cost, budget=0.40, name="thruster_util"),
     ConstraintTermCfg(func=rp_rate_cost, params={"soft_threshold": 0.5}, budget=0.10, name="rp_rate"),
     ConstraintTermCfg(func=yaw_rate_cost, params={"soft_threshold": 0.55}, budget=0.10, name="yaw_rate"),
     ConstraintTermCfg(
         func=rp_vel_settling_cost, params={"settling_threshold": 0.087}, budget=0.20, name="rp_vel_settling"
+    ),
+    ConstraintTermCfg(
+        func=yaw_settling_cost, params={"settling_threshold": 0.087}, budget=0.20, name="yaw_settling"
     ),
     ConstraintTermCfg(func=manipulability_cost, params={"w_threshold": 0.3}, budget=0.05, name="manipulability"),
 ]
@@ -290,17 +292,17 @@ class DomainRandomizationCfg:
 # 69D Observation Noise Model
 #
 # Current Proprioception (20D):
-#   Command (3D): ang_cmd(3) [att_rp(2) + yaw_rate(1)]
+#   Command (3D): ang_cmd(3) [att_rp(2) + yaw(1)]
 #   Body State (6D): euler(3), ang_vel(3)
 #   Arm State (5D): joint_pos(2), joint_vel(2), manipulability(1)
 #   Thruster (6D): filtered output (ESC feedback)
 #
 # Temporal History (46D, stride=3):
 #   Joint tracking x3 steps (12D): joint_pos_error(2), joint_vel(2)
-#   Body tracking x3 steps (18D): ang_err(3) [att_rp(2)+yaw_rate(1)], rpy(3)
+#   Body tracking x3 steps (18D): ang_err(3) [att_rp(2)+yaw(1)], rpy(3)
 #   Action x2 steps (16D): full_action(8)
 #
-# Integral Error (3D): roll, pitch, yaw_rate
+# Integral Error (3D): roll, pitch, yaw
 # ==========================================================================
 # Width of the arm-B marine-feature block: sin/cos(roll), sin/cos(pitch), p|p|, q|q|, r|r|.
 # Kept here (not in mdp/observations.py) because config.py owns the observation_space
@@ -310,7 +312,7 @@ MARINE_FEATURE_DIM = 7
 
 _OBS_NOISE_STD = tuple(
     # --- Current Proprioception (20D) ---
-    [0.0] * 3  # ang_cmd [att_rp(2) + yaw_rate(1)] (our command, no noise)
+    [0.0] * 3  # ang_cmd [att_rp(2) + yaw(1)] (our command, no noise)
     + [0.02] * 3  # euler
     + [0.04] * 3  # ang_vel
     + [0.02] * 2  # joint_pos
@@ -320,7 +322,7 @@ _OBS_NOISE_STD = tuple(
     # --- Joint Tracking History (12D = 4D x 3 steps) ---
     + ([0.02] * 2 + [0.04] * 2) * 3  # joint_pos_error + joint_vel
     # --- Body Tracking History (18D = 6D x 3 steps) ---
-    + ([0.04] * 3 + [0.02] * 3) * 3  # ang_err [att_rp+yaw_rate] + rpy (no lin_vel_err)
+    + ([0.04] * 3 + [0.02] * 3) * 3  # ang_err [att_rp+yaw] + rpy (no lin_vel_err)
     # --- Action History (16D = 8D x 2 steps) ---
     + [0.0] * 16  # actions (our command, no noise)
     # --- Integral Error (3D) ---
@@ -442,23 +444,23 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     observation_space: int = 69  # 20D current proprio + 46D history + 3D integral
     # Breakdown: cmd(3) + body(6) + arm(5) + thruster(6) = 20D current
     #            + joint_hist(12) + body_hist(18) + action_hist(16) = 46D history
-    #            + integral(3) [roll, pitch, yaw_rate]
+    #            + integral(3) [roll, pitch, yaw]
     state_space: int = 28  # Privileged info (see observations.py compute_privileged_obs)
     # Integral error observation (Hwangbo 2017 pattern, validated in R7/R8 experiments)
     use_integral_obs: bool = True
-    integral_dims: int = 3  # [roll, pitch, yaw_rate]
+    integral_dims: int = 3  # [roll, pitch, yaw]
     integral_leak: float = 0.99  # Leaky integrator decay: I_{t+1} = leak * I_t + err * dt
     integral_clamp: float = 2.0  # Windup prevention: clamp |I| <= this value
     integral_gated: bool = True  # Error-gated integration: only accumulate when |err| < integral_gate_threshold
-    # Per-axis settling-band gate threshold [roll, pitch, yaw_rate] for the integral-obs
+    # Per-axis settling-band gate threshold [roll, pitch, yaw] for the integral-obs
     # accumulator (R1 decouple, reward.md 7 review). The gate accumulates only while
     # |err| < this. DECOUPLED from reward.*.sigma: default (0.10, 0.10, 0.10) reproduces the
-    # historical shared-sigma value byte-identically (att_rp.sigma=yaw_vel.sigma=0.10), but
+    # historical shared-sigma value byte-identically (att_rp.sigma=yaw.sigma=0.10), but
     # retuning a tracking-kernel sigma no longer silently retunes this gate -- removes the
-    # aliasing that confounded reward-kernel ablations. roll/pitch in rad, yaw_rate in rad/s.
+    # aliasing that confounded reward-kernel ablations. all three in rad (yaw is an angle now).
     integral_gate_threshold: tuple[float, float, float] = (0.10, 0.10, 0.10)
     # bias-ema obs: ON by default since P-B1 (adopted 2026-07-16). Exposes the 3D _bias_ema
-    # buffer [roll, pitch, yaw_rate] the reward.k_bias penalty already reads but the policy
+    # buffer [roll, pitch, yaw] the reward.k_bias penalty already reads but the policy
     # cannot observe (non-Markov bias reward, R1). +3 obs dims, 69->72D; materialized by
     # apply_bias_ema_obs() below, called from ALBCEnv.__init__ before super().__init__().
     use_bias_ema_obs: bool = True  # P-B1: -68% roll/-29% pitch at DR-fair none; hard-level caveat DR-confounded (wiki)
@@ -525,22 +527,24 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     """Number of action history steps to include in observation (newest N of hist_len)."""
 
     # ==========================================================================
-    # Task: Command Tracking (attitude only -- roll/pitch + yaw rate; no linear velocity)
+    # Task: Command Tracking (attitude only -- roll/pitch + yaw angle; no linear velocity)
     # ==========================================================================
     att_cmd_rp_range: tuple[float, float] = (-math.pi / 6.0, math.pi / 6.0)
     """Roll/pitch attitude command range (radians). +-30 degrees."""
-    yaw_rate_cmd_range: tuple[float, float] = (-0.5, 0.5)
-    """Yaw rate command range (rad/s, body frame)."""
+    yaw_cmd_range: tuple[float, float] = (-math.pi, math.pi)
+    """Yaw TARGET HEADING command range (rad, world frame). Full circle: the wrapped
+    error picks the shortest turn, so any target is at most pi away."""
     vel_cmd_resample_steps: int = 250
     """Resample velocity command every N steps (250 = 5s at 50Hz)."""
     vel_cmd_zero_prob: float = 0.1
     """Probability of zeroing velocity command per env on each resample."""
 
     play_mode: bool = False
-    """Play/eval mode: disable command resampling, fix all commands to zero (hovering)."""
+    """Play/eval mode: disable command resampling; roll/pitch fixed to zero and yaw held
+    at each env's current heading (hovering/station-keeping)."""
 
     reward: ALBCRewardCfg = ALBCRewardCfg(
-        yaw_vel=TrackingTermCfg(k=3.5, sigma=0.10, quad_ratio=1.0, tanh_coef=0.3, tanh_eps=0.10),
+        yaw=TrackingTermCfg(k=3.5, sigma=0.10, quad_ratio=1.0, tanh_coef=0.3, tanh_eps=0.10),
         # r13: restored k_bias=-2.0 (r11_emabias strength). r12_baseline halving to
         # -1.0 combined with latent=16 produced rank #7 (hard roll 1.26 vs r11_emabias
         # 0.62, rank #1). Full strength emabias was verified strongest single
@@ -723,7 +727,7 @@ def apply_bias_ema_obs(cfg) -> None:
 
     use_bias_ema_obs=False (default): no-op, byte-identical to today (69D obs).
     use_bias_ema_obs=True: observation_space 69 -> 72, appending the 3D _bias_ema
-    buffer [roll, pitch, yaw_rate] after the integral dims (see
+    buffer [roll, pitch, yaw] after the integral dims (see
     ALBCEnv._get_observations). The noise/bias tuples tied to the 69 obs channels are
     extended by 3 zeros each, mirroring how the 3 integral dims are already treated
     (computed, not sensor-noised: _OBS_NOISE_STD / _OBS_BIAS_MAG both end in [0.0]*3

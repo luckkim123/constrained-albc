@@ -18,6 +18,7 @@ from .constraints import (
     torque_limit_cost,
     velocity_limit_cost,
     yaw_rate_cost,
+    yaw_settling_cost,
 )
 from .events import (
     DRSampler,
@@ -45,5 +46,5 @@ from .rewards import (
     att_rp_tracking,
     joint_torque,
     thruster_energy,
-    yaw_vel_tracking,
+    yaw_tracking,
 )
