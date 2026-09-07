@@ -293,6 +293,17 @@ class DomainRandomizationCfg:
     # DORAEMON's build_param_specs reads DR-knob bounds off this cfg only
     # (mirrors the two existing [0,1] knobs above; see doraemon.py _PARAM_DEFS).
     fault_severity_range: tuple[float, float] = (0.0, 1.0)
+    # Control-delay curriculum (PLAN item 12): a normalized knob u in [0, 1], DORAEMON-managed
+    # (same pattern as the three knobs above). Moves the CEILING of control_delay_steps, not
+    # its floor -- events.sample_control_delay_steps draws the per-env lag uniformly from
+    # [lo, lo + round(u * (hi - lo))]. Nominal u=0 -> every env at lo, which for the launch
+    # range is zero delay, the plant the deployed teacher actually trained on (finding/264);
+    # u=1 -> the full [lo, hi] band. Lives here (not on the delay tuple) because DORAEMON's
+    # build_param_specs reads DR-knob bounds off this cfg only.
+    # WITHOUT this dim nothing paced control_delay_steps at all: finding/264 recorded its
+    # absence from _PARAM_DEFS, and finding/315 measured a flat (0, 3) stalling a run from
+    # iteration 0. The launch ceiling is control_delay_steps=(0, 13) per finding/148.
+    control_delay_strength_range: tuple[float, float] = (0.0, 1.0)
 
 
 # ==========================================================================

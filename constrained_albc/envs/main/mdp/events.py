@@ -355,6 +355,39 @@ def randomize_hydrodynamics(
     randomize_physx_inertia(env, env_ids, env._buoy_body_id, buoy_scales)
 
 
+def sample_control_delay_steps(
+    control_delay_steps: tuple[int, int],
+    strength: torch.Tensor,
+    device: str | torch.device,
+) -> torch.Tensor:
+    """Per-env integer action-delay lag, paced by a DORAEMON strength [n] in [0, 1].
+
+    The curriculum moves the CEILING, never the floor: env i draws uniformly from the
+    INCLUSIVE integer range ``[lo, lo + round(s_i * (hi - lo))]``. So ``s = 0`` pins every
+    env at ``lo`` -- for the launch range that is zero delay, the plant the deployed teacher
+    was actually trained on (finding/264) -- and ``s = 1`` restores the full ``[lo, hi]``,
+    the same DISTRIBUTION as ``randint(lo, hi + 1)`` though not the same RNG draw.
+
+    Rounding is ``torch.round``, i.e. half-to-EVEN: s=0.5 on (0, 13) gives ceiling 6, not 7,
+    and s=0.5 on (0, 5) gives 2, not 3.
+
+    Why this needs a curriculum at all: ``control_delay_steps`` was never in DORAEMON's
+    ``_PARAM_DEFS`` (finding/264), so nothing paced it, and finding/315 measured a flat
+    (0, 3) from iteration 0 stalling the run under a mistuned ``performance_lb``. The launch
+    ceiling of 13 comes from finding/148 -- 152 ms median cmd->joint latency, 132-260 ms
+    range, against a 20 ms control tick.
+
+    The returned lag is clamped to ``hi`` so it can never exceed the DelayBuffer's
+    ``history_length`` (allocated from the same cfg ``hi``), even if a config override hands
+    in a strength above 1.
+    """
+    lo, hi = control_delay_steps
+    hi_eff = lo + torch.round(strength * (hi - lo))
+    span = (hi_eff - lo + 1.0).clamp(min=1.0)
+    u = torch.rand(strength.shape[0], device=device)
+    return (lo + (u * span).floor()).clamp(max=float(hi)).to(torch.int)
+
+
 def randomize_ocean_current(
     env: ALBCEnv,
     env_ids: torch.Tensor | None,

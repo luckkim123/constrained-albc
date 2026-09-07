@@ -93,6 +93,15 @@ _PARAM_DEFS: list[tuple[str, str, float, float]] = [
     # move when a run turns the disturbance on, so doraemon_state.pt and
     # curriculum_trajectory.json stay dimension-compatible across that switch.
     ("fz_disturbance_strength", "fz_disturbance_strength_range", 0.0, 1.0),
+    # Control-delay strength (PLAN item 12): a normalized scale in [0,1] on the CEILING of
+    # cfg.randomization.control_delay_steps, applied per env at reset in
+    # albc_env._reset_control_delay via events.sample_control_delay_steps. Nominal=0
+    # (_NOMINAL_OVERRIDES below) -> the curriculum starts at zero delay, which is the plant
+    # the deployed teacher was actually trained on (finding/264: control_delay_steps was
+    # never in _PARAM_DEFS, so nothing paced it), and widens toward control_delay_steps[1]
+    # as the policy masters it. finding/315 is why the pacing is needed: a flat (0, 3) from
+    # iteration 0 stalled a run under a mistuned performance_lb.
+    ("control_delay_strength", "control_delay_strength_range", 0.0, 1.0),
 ]
 NDIMS = len(_PARAM_DEFS)
 
@@ -103,6 +112,7 @@ _NOMINAL_OVERRIDES: dict[str, float] = {
     "obs_noise_scale": 0.0,  # start with no extra sensor noise, widen as policy masters it
     "fault_severity": 0.0,  # start fault-free, widen as policy masters simpler fault variants
     "fz_disturbance_strength": 0.0,  # start undisturbed, widen to the full +-fz_max heave band
+    "control_delay_strength": 0.0,  # start at zero delay (the plant the deployed teacher trained on, finding/264), widen toward control_delay_steps[1]
     "inertia_scale": 4.0,  # 2026-09-07 PLAN item 12: curriculum STARTS at the measured assembly inertia (J 0.49 = 4.0 x URDF 0.0994 + added 0.09), not at the URDF guess. Without an override the start would be the band midpoint 2.6.
 }
 
