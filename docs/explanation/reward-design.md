@@ -1,5 +1,14 @@
 # Reward Design Rationale
 
+> ⚠️ **Stale on yaw (branch `yaw-position`).** The yaw command changed from a body
+> RATE (rad/s) to a world-frame HEADING TARGET (rad), and the tracking error is now
+> the wrapped shortest-path difference. Renames: `reward.yaw_vel` -> `reward.yaw`,
+> `yaw_vel_tracking` -> `yaw_tracking`, `_yaw_rate_err` -> `_yaw_err`,
+> `yaw_rate_cmd_range` -> `yaw_cmd_range`, `Reward/yaw_vel` -> `Reward/yaw`,
+> `Track/yaw/rate_err` -> `Track/yaw/err_deg`. The `cumul_yaw` constraint was dropped
+> and `yaw_settling` added. Every yaw statement below still describes the RATE era and
+> has not been rewritten. See `DEPLOY_NOTE_yaw.md` at the repo root.
+
 > **Status**: 2026-07-12 | **Source**: `constrained_albc/envs/main/mdp/rewards.py`,
 > `constrained_albc/envs/main/mdp/constraints.py`, `constrained_albc/envs/main/config.py`
 
