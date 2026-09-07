@@ -934,3 +934,197 @@ DR band width, now that half its ground is gone; (b) the tether turn tolerance, 
 which unblocks or retires item 8; (d) whether candidate B (`velocity_limit_sim` 3.1 -> 2.40) enters
 the next teacher as a sim-fidelity repair; (e) re-running this adversarial pass against codex once its
 usage limit resets, since only one family answered.
+
+
+---
+
+## Update 2026-09-07 (day) — "마지막 기회" brief: 601-post evidence sweep, five operator answers, the p5 delta frozen, chain queued
+
+### 0. Objective — operator, verbatim (2026-09-07 ~12:00)
+
+> teacher, student policy 재학습. 재학습을 할 수 있는 마지막 기회라 생각하고 철저한 조사, 분석, 검토를
+> 수행하여 학습 계획을 세우고, 근거를 확보. 계획대로 학습 진행. 제약: 계획을 세우기 전 근거를 확보할 것;
+> 배포를 위한 student policy 까지 재학습; launch 는 여러 번 가능하나 최대 목요일 저녁까지 모든 학습 완료;
+> launch 는 큐에 넣어 자동으로 이어서; 학습 후 평가 검증, 보고서 작성까지; launch 는 사용자 승인 불필요,
+> 다만 사용자가 중간에 "다음 큐를 바로 진행하지 마라" 할 수 있음.
+> 또한, 이 머신과 marinelab 의 커뮤니티 자료 및 실험 결과 자료는 철저하게 분석할 것. 나중에 "제대로
+> 안 봤습니다, 근거가 불충했습니다" 이런 소리 안 됨.
+
+Operator answers to the five open decisions (same message): (1) widen DR — which dims, how much, why;
+add `set_inertias`. (2) tether is an operational nuisance, not a hazard; with yaw *position* control the
+`cumul_yaw` constraint is unnecessary; what matters is a yaw-rate cap, yaw oscillation damping, and never
+turning the long way round. (3) water session tonight. (4) candidate B: unsure, analyse further, but
+applying B in the next training is right. (5) run the codex re-verification.
+
+### 1. Evidence sweep — what was read and by whom
+
+Both community stores were mirrored and read in full: marinelab `.hq/community/posts/` (finding 268,
+decision 130, debugging 2, handoff 4, review 3 = **407**) and the Mac vault store (**194**), total
+**601 / 601** files, coverage stated per file in `SWEEP_native_ml_finding.md`, `SWEEP_native_ml_decision.md`,
+`SWEEP_native_mac.md` (scratchpad `evidence/`, copied to `.hq/work/p5/evidence/`). Ground 2 (volume).
+**Vendor status, stated plainly (omo degraded-mode obligation):** codex hit its usage limit in 5 s at
+12:26 (`turn.failed`, reset 14:35); agy in headless mode auto-denied every `command` permission on the
+first try and, with `--skip-permissions`, produced a 241-byte prompt echo, then a `--effort low` sweep
+whose rows are grep fragments with empty status columns — discarded as evidence. The three sweeps that
+count were native Claude agents (sonnet, ground 2), worker record in `.hq/community/sessions/2026-09-07-sweep.md`.
+Contradiction and open-lead sections (C, D) of all three were read in full by this session; section A/B
+rows were read for every delta item; section F (field numbers) of the vault sweep in full.
+
+### 2. What the sweep changed in the delta — each with the post that changed it
+
+**2.1 Control delay: not (0,3), not (0,5) flat — (0,13) paced by a new DORAEMON dim.**
+`control_delay_steps` is an **action** delay buffer (`albc_env.py:74` "Allocate the action DelayBuffer",
+applied at L761). The measurement that matches an action delay is `finding/148`: command→joint latency
+**152 ms median, 132–260 ms range** = 6.6–13 steps at 50 Hz, plus the ZOH observation staleness
+(`finding/264`: 1.2–4.7 steps; `finding/148` ZOH-bias 48 ms) which the same buffer has to lump in
+because the env has no observation-delay channel (`finding/198`, `finding/217`: a distinct, unmodelled
+channel — recorded as a known simplification, not fixed here). A flat (0,13) would stall from iteration 0
+(`finding/023` mechanism: an off-DORAEMON channel that costs return pins success below alpha, mode −2 the
+whole run; `finding/315` measured it again for (0,3) under lb 250). `finding/023`'s own stated treatment
+is *"make the costly channel a DORAEMON dim so it can be paced"*. `finding/264` (08-14) rejected exactly
+that on three grounds; each is answered by later record: (i) "bypassing is the pattern" — the pattern
+stalled twice; (ii) "an integer delay does not fit the Beta sampler" — `fault_severity` is the precedent
+(continuous strength → discrete Bernoulli outcome; here strength → `lo + round(s·(hi−lo))`);
+(iii) "a new dim dilutes the others" — 21→23. `finding/264`'s alternative — fix the board's 10 Hz joint
+publish rate first — has not happened: `finding/217` (later) still measures joints at 10 Hz. Its
+"lowering lb is a quality dial" objection was already overridden by the 09-04 lb-200 decision
+(`finding/315`→`321`). **This supersedes the (0,1)/(0,3) range decisions for this teacher.** The exam's
+`--control-delay N` sets `(N,N)`, so `lo + round(s·0) = N` — the fixed-delay exam configs are invariant
+under the new dim (verified by reading `eval.py:1443-1445`).
+
+**2.2 Inertia: nominal 4.0, band (0.4, 4.8) — not "band (0.4, 4.5), nominal 1.0" as first told the operator.**
+The reachable ceiling was recomputed from source: `J(s,a) = 0.0994 s + min(0.09 a, 0.0944 s)`
+(`added_mass = (…, 0.09, 0.09, 0.035)`, `rigid_body_inertia = (0.0994, 0.0994, 0.0372)`, clamp 0.95×rigid
+in `events.py`). At s=2.0, a=1.5 the clamp does **not** bind, so the old ceiling was **0.334**, not the 0.39
+`finding/312` wrote. Measured assembly J 0.39–0.51 (`finding/145` via `finding/312`, K-uncertainty
+included) = s 3.0–4.2. PLAN item 12 says "nominal centered on measured 0.49" and `decision/147` decision 2
+says measured-outside-band → move the nominal, not the band; the first draft ignored both and kept the
+URDF 0.0994 (`finding/312`: "probably a hand-entered guess") as the start point. Corrected: nominal 4.0
+(J 0.488) via `_NOMINAL_OVERRIDES` (without it the start would have been the band midpoint 2.6 — a
+silent re-centering), band (0.4, 4.8) = ×1.2 above the measured top. Reaches PhysX only through G5.
+Inertia is **not** in the 28D privileged obs (`priv_obs_bounds.py`, `albc_env.py`: no entry), so
+`finding/092`'s hardcoded-bound overflow class does not apply.
+
+**2.3 Item 10 (verticals pinned dead) against the 09-02 rejection of fixed-dead-plant training.**
+`decision/301`'s comment (2026-09-02 23:10, and memory `feedback-albc-ftc-not-fixed-dead-plant`) rejected
+`thruster_fixed_health=[1,1,1,0,0,1]` as a training design: FTC must stay distributional, `fixed_health`
+is eval-only. Item 10 is a different object: `m0` is owned by the depth PID and `m3` is dead, so the
+verticals are **not the policy's actuators** on the robot at all; the distributional fault DR
+(`thruster_fail_prob 0.30`, `dead_frac 0.5`) stays live on the four horizontals the policy does own.
+`decision/159` 결정 2 (2026-09-06, later, explicit) decides it. Implemented as a *new* atom
+`thruster_always_dead`, not by repurposing `thruster_fixed_health` (PLAN item 10 note). Flagged here so
+the operator sees the two decisions side by side.
+
+**2.4 Restoring stiffness K: held.** `finding/136`: real K 7.76 vs sim 6.10 N·m/rad (21%), but
+`K = B·BG` and the needed BG deviation 1.56 cm sits at percentile 81 of the ±4 cm `cog/cob_offset_z`
+band — **inside**. Residual to know: with J re-centred to 0.49 and K nominal 6.10 the sim's nominal
+pendulum mode is √(6.10/0.49)/2π = 0.56 Hz against the measured 0.6233 Hz; the DR band contains the
+real value. Not changed.
+
+**2.5 Thrust coefficient and band: held.** `finding/160`: unit thrust per command is a 4× uncertainty
+band (6.4 / 13 / 26.8 N candidates; `finding/146` sink-rate 0.16× and `finding/142` tilt-probe 0.67×
+unresolved against each other). The §5 band (0.5, 2.0)×13 = 6.5–26 N spans it. ESC deadband
+(`finding/135`, 45 counts) is not representable by a multiplicative band; `enable_thrust_curve` stays
+deferred (`decision/209` item 3).
+
+**2.6 Fault probability: held at 0.30.** Deployment = one dead of six = 0.167; 0.30 already exceeds it.
+The refuted half of 결정 3 (`finding/405`) bites on inertia, where the real value was *outside* the band,
+not on faults, where it is inside.
+
+**2.7 Candidate B carries a second change the field log did not name.** Lowering `velocity_limit_sim`
+3.1→2.40 (driver cap, `finding/145` +2.400/−2.406) without lowering the soft `arm_joint_vel` 2.8 would
+put the soft threshold above the hard cap and kill the constraint (its own comment warns this). Soft →
+2.15 (ratio 2.8/3.1 kept). No post scores either value (`SWEEP_native_ml_finding` §A); the ground is
+the driver measurement alone.
+
+**2.8 Fz disturbance magnitude has no field measurement.** The vault holds no depth-PID output record
+(grep of 601 posts: none). Ceiling set to the physical bound — one vertical at nominal 13 N — and paced
+from 0 by a DORAEMON dim, so an over-high ceiling is margin, an under-low one would be an error.
+Sign and coupling from the artifact: `My/Fz = −0.1458` (`finding/155`, supersedes 154). **Request to
+the operator for tonight: log the depth PID's commanded Fz (or m0 duty) during the G10 run.**
+
+### 3. The p5 delta, frozen
+
+On top of `Isaac-ConstrainedALBC-TRPO-SimToReal-v0` (the seven frozen overrides, `finding/377`):
+
+| # | knob | value | where | ground |
+|:--|:--|:--|:--|:--|
+| 12 | `set_inertias` (G5) | live: PhysX inertia = S^½ I S^½ per env, both bodies | code `31a1497` (`events.py`) | `finding/354`, `finding/149`; `test_physx_inertia_congruence.py`; **live check = smoke `g5_live`** |
+| 12 | `inertia_scale` | band (0.4, 4.8), nominal **4.0** | code `31a1497`+`416bf56` | §2.2 |
+| B | `velocity_limit_sim` / `arm_joint_vel` | 2.40 / 2.15 | marinelab `f70f752` / code `31a1497` | §2.7 |
+| 13 | yaw command | rate → **heading target**, obs slot = wrap-to-π shortest-path error | `4078564` + `6aaa285` (merges `4f194e1`, `251d173`) | operator (2); spec `yaw_spec.md` |
+| 14 | `cumul_yaw` | **removed** (tracking + log kept as diagnostic) | same | operator (2): unnecessary under position control |
+| 14 | `yaw_rate` | kept, 0.55 rad/s, budget 0.10 | same | operator (2): "yaw rate 너무 빠르지 않게" |
+| 14 | `yaw_settling` | **new**, |ω_z| gated on |yaw_err| ≤ 5°, budget 0.20 (= `rp_vel_settling`) | same | operator (2): "yaw 방향 진동도 잡도록" |
+| 10 | `thruster_always_dead` | `[0,3]` (m0, m3) | `71301a4` (merge `cda2d91`); launch `env.fault.thruster_always_dead=[0,3]` | `decision/159` 결정 2; §2.3 |
+| 11 | `FzDisturbanceCfg` | on; ≤13 N, `My = −0.1458·Fz`, hold U(1,5) s; DORAEMON dim `fz_disturbance_strength` nominal 0 | same; launch `env.disturbance.enable=True` | `decision/159` 결정 2; `finding/155`, `156`; §2.8 |
+| 9' | `control_delay_steps` | (0, 13), paced by DORAEMON dim `control_delay_strength` nominal 0; `lag = lo + round_half_even(s·(hi−lo))` | `58ca3d6` (merge `251d173`); launch `env.randomization.control_delay_steps=[0,13]` | §2.1 |
+| — | `decimation` | **4 (50 Hz), unchanged** | — | item 8 gated on G10 = tonight |
+| — | budget | 10 000 it, seed 30, 4096 envs | launch | `finding/405` (item 15 ground withdrawn), `finding/362` (best ≠ last → milestone pick) |
+| — | §5 seven | unchanged | task id | `finding/352` **acked by naming the task id** |
+
+DORAEMON dims: 21 → **23** (`fz_disturbance_strength`, `control_delay_strength`, both appended last, nominal 0; a 21-dim `doraemon_state.pt` cannot be resumed into this tree — p5 starts fresh, so nothing resumes). Action 8, obs 69, privileged 28 unchanged (deployment contract; the yaw slot
+changes meaning, not index — `DEPLOY_NOTE_yaw.md`).
+
+### 4. Gates
+
+| gate | state |
+|:--|:--|
+| G1 exam validity (`--env-dr-anchor`) | done `ea42375`; **p5 exams pass the full override set explicitly** — the anchor restores only the 23 `dr_*` arrays (`finding/396`) |
+| G2 config freeze test | must be **re-run** on the new code: base vs SimToReal must still differ in exactly the seven fields (`test_simtoreal_cfg.py`, `finding/406`) |
+| G5 live | **PASSED 13:0x by direct probe** (`probe_physx_inertia.py`, `finding/409`): PhysX pitch ratio 3.15–4.45 at nominal 4.0, equal to the hydro draw to 1e-6. The log key `DR/inertia_*_mean` is the hydro value and would move with the nominal alone — not evidence; the probe is. |
+| pre-smoke (done 13:0x, tree `cda2d91`, 22 dims) | exit 0; env.yaml carries every p5 field; `yaw_settling`+`yaw_rate` present, `cumul_yaw` absent; `Dist/strength` 0.008; yaw err 76° bounded; **reward at it 22 = −574 vs p3b −337 at its it-24 trough** (`Reward/yaw` −9.0 vs `att_rp` −5.6: the heading error is ~10× the old rate error, so the yaw term's share rose ~2.7×). Plateau vs lb 200 unknown until ~1500 it — see the re-tune rule below |
+| smoke (final, after the delay dim) | 60 it / 1024 envs: exit 0, 23 dims incl. both new, `always_dead` and `disturbance` in `env.yaml`, delay (0,13), inertia (0.4,4.8), yaw error ≤ 180°, `Dist/*` logged. Chain does not start without `P5_SMOKE_PASS` |
+| feasibility read (`finding/264` pattern) + **pre-registered lb re-tune** (`finding/315` remedy) | `p5_health.sh` verdicts every 30 min. Past 1200 it, if reward < 200 for ≥3 samples and the last three are within 5% (a plateau, not a climb) it prints `RETUNE_LB:<0.9×plateau>`; this session then resumes from the latest `model_<it>` with `--resume env.doraemon.performance_lb=<value>` (the p3c resume path, `p3c_extend.sh` traps 1–3) — no iterations wasted. Why it is expected: the yaw heading term lowers the achievable return (yaw's max is unchanged at +3.5/step but its floor fell from ~−0.5 to ~−10/step, and a π turn at the 0.55 rad/s cap takes 5.7 s against a 5 s command hold), so lb 200, tuned for the p3b plant, may sit above the new plateau. Stall signature (reward < lb, DR means frozen for 4 samples) without a plateau → kill and relaunch minus the axis that stalled |
+| G10 | tonight, operator, robot — ratio readout pre-registered above (§Update 09-07 night) |
+
+### 5. Chain (queued, automatic; every stage gates on the previous marker)
+
+```
+p5smoke (GPU0, ~10 min) ─► P5_SMOKE_PASS ─► p5teach (GPU0, 10k it ≈ 12 h) ─► P5_DONE
+                                          ├► p5health (30-min table, p5_health.tsv)
+                                          └► p5exam (GPU1: anchored 5-config exam of model_2500/5000/7500/10000 as they appear)
+                                                    ─► P5_EXAM_ALL_DONE ─► p5pick (medium-tier mean att ss_error, hard median tiebreak, earlier wins) ─► P5_TEACHER_CKPT
+                                                                                                                       ─► p5stud (GPU0: R3a recipe β 1→0/600, 1000 it ≈ 2.5 h) ─► SD_P5R3A_DONE ─► sd_exam_p5 (GPU0, 5 configs ≈ 1.5 h) ─► SD_P5R3A_EXAM_DONE
+```
+Timeline (launch ≈ 13:30 Mon; final tree `251d173`, G2 PASS 345 fields / 7 moved on `cda2d91`, re-run on `251d173`): teacher done ≈ 01:30 Tue; last milestone exam ≈ 03:00; student ≈ 05:30;
+student exam ≈ 07:00 Tue; pack ≈ 08:00 Tue. Leaves Tue–Thu for one relaunch if the 500-it read or the
+milestone exams say so. **Operator stop:** `tmux kill-session -t p5stud` (and `p5pick`) stops the chain
+after the teacher; nothing downstream fires without `P5_TEACHER_CKPT`.
+
+### 6. Exam protocol on the p5 plant — what changed and what is comparable
+
+`healthy` now means m0,m3 dead for the policy; `pair34` = m0,m3,m4 dead = **the deployment condition**
+(m3 dead, m4 excluded, m0 PID). Tiers none/soft/medium/hard now also sweep `fz_disturbance_strength` and
+`control_delay_strength` (none = 0). Valid comparisons: p5 checkpoints among themselves (selection);
+p5 student vs p5 teacher (same plant, same exam). **Not valid as a verdict:** p5 vs `p3b_7500` or vs any
+R-arm — different actuator set and plant; those numbers may be tabulated but only as context. The
+paper's comparison is the field test.
+
+### 7. Backlog reconciliation (hook rule: no silent drops)
+
+`needs-apply-before-retrain`: `finding/264` — applied (§2.1, as a paced dim, ceiling 13); `finding/352` —
+acked by launching on task id `Isaac-ConstrainedALBC-TRPO-SimToReal-v0`, override block in `p5_common.sh`
+(the SSOT the post asks for).
+`needs-experiment` leads from the sweeps, disposition:
+- carried into this run: `finding/354` (set_inertias), `finding/405` (결정 3 re-opened → §2.6, §2.2), `finding/387/389` (R3a recipe, noise floor — single seed, stated), `finding/362` (milestone pick), `finding/391/396` (anchored exam with explicit overrides), `finding/404` (pair34_d2 in the core set);
+- deferred with reason: `finding/397`/G10 (tonight, operator); `finding/401` candidate C (untested, would confound the new yaw settling cost — one yaw change at a time); `finding/378` joint1_pos wrap bug (p3b_7500 never exceeded 0.49 rev; deploy watchdog exists; fix in the next code pass, not this launch); `finding/198`/`217` obs-rate structure (lumped into the action buffer, §2.1); `finding/383` R4b (only if the R3a-family floor-miss persists on p5); `decision/263` recipe transfer (p5 student IS that test); `finding/296` per-dim quintile decomposition (run on p5 if return drops — tool exists); `finding/163` deploy-side integrator (board, not teacher); `finding/135`/`160` deadband, roll rank deficiency (hardware bounds, not DR); `decision/390` board gate (jump host) — pack stage, Tue; **new, found by the yaw worker (`yaw_impl_report.md` §E)**: `_OBS_NOISE_STD` is feature-grouped while the 46D history block is step-major, so from obs index 24 on the per-slot noise std is misassigned (0.02↔0.04) — pre-existing, every trained policy including R3a carries it, NOT fixed here (a noise-model change is a further variable; post as a finding after launch); the delay sampler is bit-identical to the old code only at `(0,0)` — exam configs with `--control-delay 1/2` scored on this tree will not byte-reproduce the pre-p5 arms (delay-0 configs still do), which is one more reason p5-vs-old-arm numbers are context, not verdicts.
+
+### 8. Adversarial verification (`decision/159` 결정 5)
+
+One family so far (agy, 09-07 night) and it changed the plan. Two-family gate is **open** for this
+launch (ships to the robot, hard to undo): codex resets 14:35 — the same prompt (this section + the two
+specs + the diffs) goes to codex then; its findings are folded in before the *student* stage if the
+teacher has already started (a teacher relaunch is the cost if it finds a blocker).
+
+### 9. Cost, plainly
+
+Six changes in one teacher (inertia, B, yaw, verticals, Fz, delay) — not one-variable. Screening them
+separately at 5000 it each is ~30 GPU-hours the deadline does not have. Mitigation is the smoke run, the
+500-it read, the milestone exams, and the two-family review; a confounded failure is the accepted risk
+and the health table is what localises it (`finding/296` method on standby).
+
+### 10. Predicted outcome (stated before the run so a null is cheap to recognise)
+
+Reward plateau below p3b's 210–216 (heavier plant, no vertical authority, yaw heading term) — expected ~100–180, i.e. **probably below lb 200**, in which case the pre-registered re-tune fires around it 1500 and the run continues from its own checkpoint; the
+curriculum should still open payload/current/fault by iteration ~3000 and the two new dims by ~5000. G5 is already measured live (`finding/409`); the remaining cheap null is the delay dim not appearing as the 23rd `param_name` in the final smoke.
