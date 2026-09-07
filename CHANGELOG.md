@@ -7,6 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **2026-09 code cleanup, semantic-change ledger** (branch `cleanup/2026-09`). Everything
+  below is a deliberate capability removal or a recorded bug fix, not a refactor; each was
+  gated on the R7 fixed-action GPU replay staying byte-identical on all 10 recorded arrays.
+  - Koopman observation path (`envs/main/mdp/koopman.py` and its ~45 wiring sites). User
+    decision, twice. Recover from tag `baseline-260804-koopman`.
+  - Legacy env family `envs/full_dof` and `envs/tdc` (82 files, 4,636 lines), with the TDC
+    controllers relocated to `envs/tdc_main/controllers/`. The task ids
+    `Isaac-ConstrainedALBC-Full-*-v0` and `Isaac-ConstrainedALBC-TDC-v0` no longer exist.
+    User decision, twice. Recover from tag `legacy-full-dof-final`.
+  - Hydra keys that stop being settable (Q5, user answered "remove both"): `ou_enable`,
+    `ou_theta`, `ou_sigma` (the OU current-drift path) and `normalize_value` (the HORA
+    value-normalization branch, documented dormant). Also `_cmd_{lin,att,yaw}_scale`, all
+    constant 1, and the unread `terrain` cfg field.
+  - `EpisodeBuffer.log_probs` (in marinelab; see that repo's CHANGELOG) and the env-side
+    `_episode_dr_log_probs` buffer that fed it. `DoraemonScheduler.record_episodes` now
+    takes `(xi, returns, success)`. An old checkpoint still loads; a new one is missing
+    `buffer_log_probs`, which F2 permits.
+  - The `envs/main/{algorithms,encoder,runners,student}/` shim packages and
+    `envs/main/utils/{logging,run_links}.py`: the real code moved to
+    `constrained_albc/algorithms/` (Q6). Import the module directly, e.g.
+    `from constrained_albc.algorithms.constraint_trpo import ConstraintTRPO`.
+
+### Fixed
+
+- **GRU student episode boundaries** (WP11). Training collapsed a rollout's dones into
+  `any()` and zeroed the whole window's start hidden for any env that reset in it, so steps
+  before the reset lost their carried hidden and steps after it inherited the previous
+  episode's -- while the code comment claimed the opposite. `StudentRunner._gru_seq_forward`
+  now zeroes the hidden at each env's own done step and leaves envs without a reset on the
+  fused path, bit-for-bit unchanged. No effect on the adopted student checkpoint until a
+  re-distillation. Regression test `tests/test_student_gru_episode_boundary.py`.
+- **Six eval/deploy defects that failed silently** (WP2), each with a contract test watched
+  failing on the pre-fix code: the run-log path wrote to a retired store; `resolve_run`
+  index 0 sorted by name so "newest" was whichever label sorted last (it now sorts by the
+  manifest's `created`, and the legacy finder was fixed in the same pass so "newest" cannot
+  mean two things in one module); `--spec` silently ignored `--golden`/`--report`; a symlink
+  failure left the manifest claiming a path that was never created; a corrupt manifest was
+  swallowed instead of raising with its path.
+- **Student log root escaped the repo.** `algorithms/student/config.py` anchored `_REPO_ROOT`
+  with a fixed count of `..` hops; the move to `constrained_albc/algorithms/` changed the
+  module's depth and every student run then wrote its logs, checkpoints and experiments index
+  one directory ABOVE the repo, with nothing failing to say so. Guard:
+  `tests/test_student_log_root.py`.
+- **Five tests that measured the wrong tree.** `tests/deploy/test_isolation.py` hardcoded
+  `REPO = "/workspace/constrained-albc"`, and four more hardcoded
+  `/workspace/marinelab/...`; in any clone they exercised the canonical repos instead of
+  their own checkout and would have reported green regardless of the branch. All now resolve
+  from `__file__`.
+
+### Changed
+
+- Deploy docs name `scripts/export_deploy_pack.py`, the launcher every shipped pack has
+  actually come from (including the adopted GRU pack, `2f057b9`). `scripts/export_deploy.py`
+  is kept: it is not a duplicate, it injects a wider stub set.
+
 ### Added
 
 - GRU student deploy export (2026-07-30, commit `2f057b9`): the deploy pack could export
