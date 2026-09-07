@@ -92,6 +92,7 @@ _NOMINAL_OVERRIDES: dict[str, float] = {
     "payload_cog_offset_xy_u": 0.0,  # start with no XY offset, widen as policy masters it
     "obs_noise_scale": 0.0,  # start with no extra sensor noise, widen as policy masters it
     "fault_severity": 0.0,  # start fault-free, widen as policy masters simpler fault variants
+    "inertia_scale": 1.0,  # 2026-09-07: band widened to (0.4, 4.5); without this the curriculum would START at the midpoint 2.45x. 1.0 = URDF nominal.
 }
 
 # Default specs (base bounds) for callers without a DR cfg; matches pre-promotion PARAM_SPECS.

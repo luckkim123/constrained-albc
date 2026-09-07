@@ -57,10 +57,10 @@ _FULL_DOF_CONSTRAINT_TERMS: list[ConstraintTermCfg] = [
     # --- Probabilistic (5): binary indicator, budget = violation probability ---
     ConstraintTermCfg(func=attitude_limit_cost, params={"limit": 1.396}, budget=0.01, name="attitude"),
     ConstraintTermCfg(func=torque_limit_cost, params={"limit_nm": 9.5}, budget=0.08, name="arm_torque"),
-    # 2.8 = inside the 3.1 rad/s PhysX cap (albc.py velocity_limit_sim): soft must
+    # 2.15 = inside the 2.40 rad/s PhysX cap (albc.py velocity_limit_sim, = driver OPERATING_VELOCITY cap, vault finding/145; 2.8/3.1 ratio kept): soft must
     # bite before hard, else PhysX clamps first and this cost can never fire (dead
-    # constraint). Tunable within 2.5-2.8 per the wiki ripple card.
-    ConstraintTermCfg(func=velocity_limit_cost, params={"limit_rad_per_s": 2.8}, budget=0.02, name="arm_joint_vel"),
+    # constraint). The old 2.5-2.8 tunable window (wiki ripple card) assumed the 3.1 cap; rescale by 2.40/3.1 if revisited.
+    ConstraintTermCfg(func=velocity_limit_cost, params={"limit_rad_per_s": 2.15}, budget=0.02, name="arm_joint_vel"),
     ConstraintTermCfg(func=joint1_position_cost, params={"limit_rad": 4 * math.pi}, budget=0.01, name="joint1_pos"),
     ConstraintTermCfg(func=cumulative_yaw_cost, params={"limit_rad": 8 * math.pi}, budget=0.01, name="cumul_yaw"),
     # --- Average (5): continuous cost, soft threshold for attitude/velocity tracking ---
@@ -190,7 +190,7 @@ class DomainRandomizationCfg:
     cog_offset_z: tuple[float, float] = (-0.04, 0.04)
 
     # -- Inertia / Mass --
-    inertia_scale: tuple[float, float] = (0.4, 2.0)
+    inertia_scale: tuple[float, float] = (0.4, 4.5)  # 2026-09-07: upper 2.0->4.5 so the measured assembly J_pitch 0.39-0.51 (vault finding/145, finding/312) is reachable: J = 0.0994*s + min(0.09*a, 0.0944*s), needs s>=4.48 at a=0.5; nominal pinned to 1.0 in doraemon._NOMINAL_OVERRIDES (midpoint would be 2.45). Reaches PhysX only via set_inertias (G5).
     body_mass_scale: tuple[float, float] = (0.75, 1.25)
     water_density_range: tuple[float, float] = (995.0, 1025.0)
 
