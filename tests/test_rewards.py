@@ -136,6 +136,25 @@ def test_att_rp_peaks_at_zero():
     assert R.att_rp_tracking(_env(att_err=torch.zeros(1, 2))).item() == pytest.approx(1.0)
 
 
+def test_depth_tracking_peaks_at_zero_noise_free_error():
+    robot = SimpleNamespace(data=SimpleNamespace(root_pos_w=torch.tensor([[0.0, 0.0, -0.6]])))
+    env = SimpleNamespace(_robot=robot, _depth_target=torch.tensor([0.6]))
+    assert R.depth_tracking(robot, env, sigma=0.10).item() == pytest.approx(1.0)
+    env._depth_target[:] = 0.8
+    assert R.depth_tracking(robot, env, sigma=0.10).item() < 1.0
+
+
+def test_xy_force_tracking_peaks_at_realized_commanded_force():
+    env = SimpleNamespace(
+        _thruster=SimpleNamespace(body_forces=torch.tensor([[4.0, -2.0, 7.0]])),
+        _xy_cmd=torch.tensor([[0.5, -0.25]]),
+        cfg=SimpleNamespace(depth_xy=SimpleNamespace(xy_force_scale=8.0)),
+    )
+    assert R.xy_force_tracking(None, env, sigma=2.0).item() == pytest.approx(1.0)
+    env._thruster.body_forces[:, 0] = 6.0
+    assert R.xy_force_tracking(None, env, sigma=2.0).item() < 1.0
+
+
 # ---------------------------------------------------------------------------
 # Penalty terms: non-negative magnitude (sign lives in cfg weights)
 # ---------------------------------------------------------------------------
@@ -231,3 +250,42 @@ def test_reward_manager_extra_terms_flow_through_compute():
     # func 2.0 * gain 2.0 * weight 0.5 * dt 0.02 = 0.04.
     assert total.item() == pytest.approx(0.04)
     assert rm._episode_sums["probe"].item() == pytest.approx(0.04)
+
+
+def test_doraemon_step_reward_excludes_only_named_extras_with_dt_scaling():
+    def constant(_robot, _env, value):
+        return torch.full((1,), value)
+
+    cfg = _reward_cfg(
+        att_rp=_track_term(k=0.0), yaw_vel=_track_term(k=0.0),
+        k_tau=0.0, k_thr=0.0, k_s=0.0, k_bias=0.0,
+        bias_weights=(1.0, 1.0, 1.0),
+        extra_terms=[
+            R.RewardTermCfg(
+                func=constant, params={"value": 1.0}, weight=3.0, name="depth_tracking"
+            ),
+            R.RewardTermCfg(
+                func=constant, params={"value": 1.0}, weight=2.0, name="xy_force_tracking"
+            ),
+            R.RewardTermCfg(
+                func=constant, params={"value": 4.0}, weight=0.5, name="kept_extra"
+            ),
+        ],
+    )
+    rm = R.RewardManager(
+        cfg,
+        num_envs=1,
+        device="cpu",
+        doraemon_excluded_extra_terms=("depth_tracking", "xy_force_tracking"),
+    )
+    env = _env(
+        att_err=torch.zeros(1, 2), yaw_err=torch.zeros(1),
+        actions=torch.zeros(1, 8), prev=torch.zeros(1, 8), prev_prev=torch.zeros(1, 8),
+        bias_ema=torch.zeros(1, 3),
+    )
+    env._reward_manager = rm
+    robot = SimpleNamespace(data=SimpleNamespace(applied_torque=torch.zeros(1, 4)))
+
+    total = rm.compute(robot, dt=0.02, env=env)
+    assert total.item() == pytest.approx((3.0 + 2.0 + 2.0) * 0.02)
+    assert rm.doraemon_step_reward.item() == pytest.approx(2.0 * 0.02)

@@ -86,6 +86,18 @@ def compute_policy_obs(
     )
 
 
+def compute_depth_xy_policy_obs(env: ALBCEnv) -> torch.Tensor:
+    """Return [clipped measured depth error, integral, normalized XY command]."""
+    err = (env._depth_meas_held - env._depth_target).clamp(
+        -env.cfg.depth_xy.depth_error_clip,
+        env.cfg.depth_xy.depth_error_clip,
+    )
+    return torch.cat(
+        [err.unsqueeze(-1), env._depth_error_integral.unsqueeze(-1), env._xy_cmd],
+        dim=-1,
+    )
+
+
 # Column indices, inside the 20D proprio block of compute_policy_obs, of the five signals the
 # marine features are built from: euler roll/pitch at [3:5] and body rates p/q/r at [6:9].
 MARINE_SRC_IDX = (3, 4, 6, 7, 8)
@@ -236,6 +248,11 @@ def compute_privileged_obs(
             health = torch.ones(env.num_envs, 6, device=env.device)
         p_t = torch.cat([p_t, health], dim=-1)
 
+    if env.cfg.depth_xy.enable:
+        depth = -env._robot.data.root_pos_w[:, 2]
+        true_error = depth - env._depth_target
+        p_t = torch.cat([p_t, true_error.unsqueeze(-1)], dim=-1)
+
     return p_t
 
 
@@ -309,6 +326,11 @@ def compute_student_extra_obs(
     depth_meas = -robot.data.root_pos_w[:, 2]
     if env.cfg.depth_noise_std > 0.0:
         depth_meas = depth_meas + env.cfg.depth_noise_std * torch.randn_like(depth_meas)
+    depth_xy_cfg = getattr(env.cfg, "depth_xy", None)
+    if depth_xy_cfg is not None and depth_xy_cfg.enable:
+        # Share this exact noisy, ZOH-held pressure sample with the depth-error
+        # channel; never draw a second noise realization for depth control.
+        env._depth_meas_held = depth_meas
     # Post-reset envs: re-anchor the differentiator so heave_raw = 0 (no spike).
     pending = env._extra_reset_pending
     if pending.any():

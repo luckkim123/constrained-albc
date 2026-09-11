@@ -48,7 +48,13 @@ from .mdp.constraints import (
     yaw_rate_cost,
 )
 from .mdp.koopman import KOOPMAN_PRED_DIM
-from .mdp.rewards import ALBCRewardCfg, TrackingTermCfg
+from .mdp.rewards import (
+    ALBCRewardCfg,
+    RewardTermCfg,
+    TrackingTermCfg,
+    depth_tracking,
+    xy_force_tracking,
+)
 
 # 10 constraint terms: 5 Probabilistic + 5 Average.
 # thruster_rate removed: structurally incompatible with entropy_coef>0 (noise alone violates 5x).
@@ -421,6 +427,21 @@ class ActuationNoiseCfg:
 
 
 @configclass
+class DepthXYCfg:
+    """Optional no-DVL task extension: closed-loop depth and open-loop XY force."""
+
+    enable: bool = False
+    depth_offset_range: tuple[float, float] = (-0.5, 0.5)
+    depth_error_clip: float = 1.0
+    xy_force_scale: float = 8.0
+    depth_reward_weight: float = 3.0
+    depth_reward_sigma: float = 0.10
+    xy_reward_weight: float = 2.0
+    xy_reward_sigma: float = 2.0
+    doraemon_return_excludes_new_terms: bool = True
+
+
+@configclass
 class ALBCEnvCfg(DirectRLEnvCfg):
     """Attitude-only ALBC environment configuration.
 
@@ -695,6 +716,11 @@ class ALBCEnvCfg(DirectRLEnvCfg):
     # separate from capacity crowding. Requires use_student_extra_obs=True (the channels
     # must be computed to be folded). Off by default = byte-identical to gen-1.
     use_extra_policy_obs: bool = False
+    # Optional closed-loop depth + open-loop body XY-force task. The materializer
+    # below adds [depth_error, depth_error_integral, u_x, u_y] after the gen-2
+    # channels and a noise-free depth error at the end of privileged observations.
+    # Disabled by default: no width changes, rewards, buffers, or random draws.
+    depth_xy: DepthXYCfg = DepthXYCfg()
     # Koopman plan Phase 1 (arm B): append 7 physics-informed marine observables --
     # sin/cos(roll), sin/cos(pitch) and the signed-quadratic body rates p|p|, q|q|, r|r|
     # (the per-DOF quadratic-drag shape recurring in the marine Koopman literature).
@@ -801,6 +827,57 @@ def apply_extra_policy_obs(cfg) -> None:
         noise_cfg.std = tuple(noise_cfg.std) + zeros4
         bias_cfg.n_min = tuple(bias_cfg.n_min) + zeros4
         bias_cfg.n_max = tuple(bias_cfg.n_max) + zeros4
+
+
+def apply_depth_xy_obs(cfg) -> None:
+    """Materialize the optional depth/XY task after the gen-2 observation bump.
+
+    When enabled, append four policy channels and one privileged channel, pad the
+    generic policy-noise vectors with zeros, and register the two dt-scaled reward
+    terms. The deployable depth channel has its own pressure-sensor noise model;
+    the integral and command channels must not receive generic observation noise.
+    """
+    if not cfg.depth_xy.enable:
+        return
+    if not cfg.use_extra_policy_obs:
+        raise ValueError("depth_xy.enable=True requires use_extra_policy_obs=True (gen-2 channels)")
+    if cfg.observation_space not in (73, 76):
+        raise ValueError(
+            f"depth_xy.enable=True expects observation_space 73 or 76 after the gen-2 bump, got "
+            f"{cfg.observation_space} (materializer already applied, or observation_space was "
+            "overridden elsewhere)"
+        )
+    names = {term.name or term.func.__name__ for term in cfg.reward.extra_terms}
+    new_names = {"depth_tracking", "xy_force_tracking"}
+    duplicate = names.intersection(new_names)
+    if duplicate:
+        raise ValueError(f"depth_xy reward terms already registered: {sorted(duplicate)}")
+
+    cfg.observation_space += 4
+    cfg.state_space += 1
+    if cfg.observation_noise_model is not None:
+        zeros4 = (0.0, 0.0, 0.0, 0.0)
+        noise_cfg = cfg.observation_noise_model.noise_cfg
+        bias_cfg = cfg.observation_noise_model.bias_noise_cfg
+        noise_cfg.std = tuple(noise_cfg.std) + zeros4
+        bias_cfg.n_min = tuple(bias_cfg.n_min) + zeros4
+        bias_cfg.n_max = tuple(bias_cfg.n_max) + zeros4
+
+    cfg.reward.extra_terms = [
+        *cfg.reward.extra_terms,
+        RewardTermCfg(
+            func=depth_tracking,
+            params={"sigma": cfg.depth_xy.depth_reward_sigma},
+            weight=cfg.depth_xy.depth_reward_weight,
+            name="depth_tracking",
+        ),
+        RewardTermCfg(
+            func=xy_force_tracking,
+            params={"sigma": cfg.depth_xy.xy_reward_sigma},
+            weight=cfg.depth_xy.xy_reward_weight,
+            name="xy_force_tracking",
+        ),
+    ]
 
 
 def apply_marine_feature_obs(cfg) -> None:

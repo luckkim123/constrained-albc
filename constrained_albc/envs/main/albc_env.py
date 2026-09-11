@@ -30,6 +30,7 @@ from .config import (
     MARINE_FEATURE_DIM,
     ALBCEnvCfg,
     apply_bias_ema_obs,
+    apply_depth_xy_obs,
     apply_extra_policy_obs,
     apply_koopman_module_obs,
     apply_marine_feature_obs,
@@ -54,6 +55,7 @@ from .mdp.events import (
 )
 from .mdp.observations import (
     MARINE_SRC_IDX,
+    compute_depth_xy_policy_obs,
     compute_marine_features,
     compute_policy_obs,
     compute_privileged_obs,
@@ -131,6 +133,10 @@ class ALBCEnv(DirectRLEnv):
         # MUST run AFTER apply_bias_ema_obs -- that one asserts a pre-bump width of exactly 69 --
         # and before super().__init__(), for the same reason. See config.apply_extra_policy_obs.
         apply_extra_policy_obs(cfg)
+
+        # Materialize the optional depth/XY task after gen-2, so its four policy
+        # channels land immediately after the gen-2 channels. No-op when disabled.
+        apply_depth_xy_obs(cfg)
 
         # Materialize the Koopman arm-B marine-feature toggle (no-op unless
         # cfg.use_marine_feature_obs). Runs LAST of the three obs materializers and before
@@ -235,6 +241,8 @@ class ALBCEnv(DirectRLEnv):
             expected_obs_dim += 3
         if getattr(self.cfg, "use_extra_policy_obs", False):
             expected_obs_dim += 4
+        if self.cfg.depth_xy.enable:
+            expected_obs_dim += 4
         if getattr(self.cfg, "use_marine_feature_obs", False):
             expected_obs_dim += MARINE_FEATURE_DIM
         if getattr(self.cfg, "koopman_module_path", ""):
@@ -246,6 +254,7 @@ class ALBCEnv(DirectRLEnv):
                 f"use_integral_obs={self.cfg.use_integral_obs}, integral_dims={self.cfg.integral_dims}, "
                 f"use_bias_ema_obs={self.cfg.use_bias_ema_obs}, "
                 f"use_extra_policy_obs={getattr(self.cfg, 'use_extra_policy_obs', False)}, "
+                f"depth_xy.enable={self.cfg.depth_xy.enable}, "
                 f"use_marine_feature_obs={getattr(self.cfg, 'use_marine_feature_obs', False)}, "
                 f"koopman_module_path={getattr(self.cfg, 'koopman_module_path', '')!r})"
             )
@@ -341,10 +350,14 @@ class ALBCEnv(DirectRLEnv):
 
     def _init_task_and_rewards(self) -> None:
         """Initialize reward manager for velocity tracking."""
+        doraemon_exclusions: tuple[str, ...] = ()
+        if self.cfg.depth_xy.enable and self.cfg.depth_xy.doraemon_return_excludes_new_terms:
+            doraemon_exclusions = ("depth_tracking", "xy_force_tracking")
         self._reward_manager = RewardManager(
             cfg=self.cfg.reward,
             num_envs=self.num_envs,
             device=self.device,
+            doraemon_excluded_extra_terms=doraemon_exclusions,
         )
 
     def _init_state_buffers(self) -> None:
@@ -462,6 +475,12 @@ class ALBCEnv(DirectRLEnv):
         # the held sample the policy re-reads between publishes.
         self._extra_tick = 0
         self._student_extra_held = torch.zeros(self.num_envs, 4, device=self.device)
+        if self.cfg.depth_xy.enable:
+            self._episode_start_depth = torch.zeros(self.num_envs, device=self.device)
+            self._depth_target = torch.zeros(self.num_envs, device=self.device)
+            self._depth_meas_held = torch.zeros(self.num_envs, device=self.device)
+            self._depth_error_integral = torch.zeros(self.num_envs, device=self.device)
+            self._xy_cmd = torch.zeros(self.num_envs, 2, device=self.device)
         # Step id of the last sensor-model advance. _get_observations is NOT called exactly
         # once per step -- ConstraintEncoderRunner.log -> log_encoder_metrics calls
         # env.get_observations() an extra time per training iteration -- and this sensor
@@ -544,6 +563,8 @@ class ALBCEnv(DirectRLEnv):
         # bias_ema dims do -- they carry their own sensor model, so the generic obs-noise
         # layer must be identity on them (see config.apply_extra_policy_obs).
         if getattr(self.cfg, "use_extra_policy_obs", False):
+            base = base + [0.0, 0.0, 0.0, 0.0]
+        if self.cfg.depth_xy.enable:
             base = base + [0.0, 0.0, 0.0, 0.0]
         # Koopman arm-B: std 0 for the 7 marine features, because they are computed from the
         # previous step's ALREADY-noised obs and so carry the fault/DR realization once
@@ -868,6 +889,9 @@ class ALBCEnv(DirectRLEnv):
         """
         if self.cfg.play_mode:
             self._ang_cmd[env_ids] = 0.0
+            if self.cfg.depth_xy.enable:
+                self._depth_target[env_ids] = -self._robot.data.root_pos_w[env_ids, 2]
+                self._xy_cmd[env_ids] = 0.0
             self._vel_cmd_step_counter[env_ids] = 0
             return
 
@@ -884,9 +908,20 @@ class ALBCEnv(DirectRLEnv):
 
         # Zero-command envs: hovering / station-keeping
         zero_mask = torch.rand(n, device=self.device) < self.cfg.vel_cmd_zero_prob
+
+        if self.cfg.depth_xy.enable:
+            depth_cfg = self.cfg.depth_xy
+            lo, hi = depth_cfg.depth_offset_range
+            depth_offset = torch.empty(n, device=self.device).uniform_(lo, hi)
+            self._depth_target[env_ids] = self._episode_start_depth[env_ids] + depth_offset
+            self._xy_cmd[env_ids] = torch.empty(n, 2, device=self.device).uniform_(-1.0, 1.0)
+
         if zero_mask.any():
             zero_ids = env_ids[zero_mask]
             self._ang_cmd[zero_ids] = 0.0
+            if self.cfg.depth_xy.enable:
+                self._depth_target[zero_ids] = -self._robot.data.root_pos_w[zero_ids, 2]
+                self._xy_cmd[zero_ids] = 0.0
         self._vel_cmd_step_counter[env_ids] = 0
 
     # ------------------------------------------------------------------
@@ -1261,6 +1296,11 @@ class ALBCEnv(DirectRLEnv):
         if self.cfg.use_extra_policy_obs:
             policy_obs = torch.cat([policy_obs, extra_obs], dim=-1)
 
+        # Optional no-DVL task channels, appended after gen-2 in the fixed order
+        # [measured depth error, depth-error integral, normalized u_x, normalized u_y].
+        if self.cfg.depth_xy.enable:
+            policy_obs = torch.cat([policy_obs, compute_depth_xy_policy_obs(self)], dim=-1)
+
         # Koopman arm-B dictionary lift (72 -> 79). Lands last, matching the width order
         # apply_marine_feature_obs bumps and _obs_noise_base_std pads. No-op when off.
         #
@@ -1383,6 +1423,18 @@ class ALBCEnv(DirectRLEnv):
 
             self._error_integral.clamp_(-self.cfg.integral_clamp, self.cfg.integral_clamp)
 
+        if self.cfg.depth_xy.enable:
+            depth_err = (self._depth_meas_held - self._depth_target).clamp(
+                -self.cfg.depth_xy.depth_error_clip,
+                self.cfg.depth_xy.depth_error_clip,
+            )
+            self._depth_error_integral.mul_(self.cfg.integral_leak)
+            self._depth_error_integral += depth_err * self.step_dt
+            self._depth_error_integral.clamp_(
+                -self.cfg.integral_clamp,
+                self.cfg.integral_clamp,
+            )
+
         # Update EMA bias buffer (3D ungated: roll, pitch, yaw_rate). Captures sustained
         # per-env offset that per-step tracking reward ignores. Consumed by bias_ema_penalty term.
         if self.cfg.reward.k_bias != 0.0:
@@ -1418,7 +1470,18 @@ class ALBCEnv(DirectRLEnv):
 
         # DORAEMON: accumulate episode return for binary success criterion
         if self._doraemon is not None:
-            self._episode_return_accum += reward
+            doraemon_reward = reward
+            if (
+                self.cfg.depth_xy.enable
+                and self.cfg.depth_xy.doraemon_return_excludes_new_terms
+            ):
+                doraemon_reward = self._reward_manager.doraemon_step_reward
+                if self.cfg.reward.termination_penalty != 0.0:
+                    doraemon_reward = (
+                        doraemon_reward
+                        + self.reset_terminated * self.cfg.reward.termination_penalty
+                    )
+            self._episode_return_accum += doraemon_reward
 
         return reward
 
@@ -1819,6 +1882,18 @@ class ALBCEnv(DirectRLEnv):
                 n, self.cfg.fault.joint_health_range, self.device
             )
             apply_joint_fault(env=self, env_ids=env_ids, joint_health=self._joint_health)
+
+        if self.cfg.depth_xy.enable:
+            # Anchor each episode's depth command to the post-reset, noise-free pose.
+            # Seed the held pressure sample at that same depth so the first pre-publish
+            # ZOH observation has zero sensor error and the differentiator cannot spike.
+            depth = -self._robot.data.root_pos_w[env_ids, 2]
+            self._episode_start_depth[env_ids] = depth
+            self._depth_target[env_ids] = depth
+            self._depth_meas_held[env_ids] = depth
+            self._depth_meas_prev[env_ids] = depth
+            self._depth_error_integral[env_ids] = 0.0
+            self._xy_cmd[env_ids] = 0.0
 
         # Sample commands
         self._sample_velocity_command(env_ids)
