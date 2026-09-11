@@ -76,11 +76,15 @@ class TDCControllerCfg:
     """Adaptation rate gamma. UNTUNED starting point, not a measured value --
     PLAN.md paper-ablation-5000 §5/§8-R-3 puts the classical arms through a declared
     gain grid, and this constant is an input to that search, not a result of it."""
+    m_hat_leak: float = 0.0
+    """Leakage rate toward the construction-time nominal, 1/s (sigma-modification).
+    0.0 runs the pre-leak update line unchanged; the ATDC cfgs set it. UNTUNED, like
+    `m_hat_adapt_gain`, and in the same PLAN.md §8-R-3 grid."""
     m_hat_bounds: tuple[float, float] = (0.05, 0.60)
     """Hard clamp on the adapted inertia, roughly 1/3x to 4x the nominal (0.15, 0.16).
-    Pure gradient adaptation has no leakage term, so a persistent steady-state error
-    drives m_hat monotonically to a bound; the clamp is what makes that bounded rather
-    than divergent. A run that sits at a bound is a finding about the gain, not a
+    With `m_hat_leak=0.0` the law is pure gradient adaptation, so a persistent error
+    drives m_hat monotonically to a bound (measured: finding/444); the clamp is what
+    makes that bounded rather than divergent. A run that sits at a bound is a finding about the gain, not a
     working controller."""
 
     # Link lengths from URDF (used by kinematics)
@@ -137,6 +141,7 @@ class TDCController:
         # ATDC adaptation (arm N2). Read once here so the hot loop tests a bool.
         self._adaptive_m_hat = bool(getattr(cfg, "adaptive_m_hat", False))
         self._m_hat_adapt_gain = float(getattr(cfg, "m_hat_adapt_gain", 0.0))
+        self._m_hat_leak = float(getattr(cfg, "m_hat_leak", 0.0))
         self._m_hat_lo, self._m_hat_hi = getattr(cfg, "m_hat_bounds", (0.05, 0.60))
 
         # PD gains — per-env (num_envs, 2) for adaptive gain integration
@@ -320,10 +325,9 @@ class TDCController:
         else:
             m_hat_u_pd = self._compute_pd_torque(roll, pitch, nu, target_euler)
             # Step 3b: ATDC adapts the design inertia from this step's tracking
-            # error. Deliberately AFTER the torque above, so the new estimate acts
-            # on the next control step -- a one-step delay is what makes this a
-            # discrete adaptation law rather than an implicit solve, and it keeps
-            # the non-adaptive path byte-identical (the branch simply never runs).
+            # error. The already-computed PD torque keeps the pre-update estimate,
+            # but this same step's TDE term reads the updated estimate (its measured
+            # mean-error effect is <= 0.0013 deg); do not reorder these calls.
             if self._adaptive_m_hat:
                 self._adapt_m_hat(roll, pitch, target_euler)
 
@@ -483,14 +487,18 @@ class TDCController:
         so ``d tau_i / d m_hat_i = u_pd_i``. Taking a descent step on the squared
         tracking error against that sensitivity gives
 
-            m_hat <- clamp(m_hat + gamma * dt * (e * u_pd), lo, hi)
+            m_hat <- clamp(m_hat + dt * (gamma * e * u_pd
+                              - leak * (m_hat - m_hat0)), lo, hi)
 
         which is the gradient (MIT-rule) form: when the error and the control effort
         point the same way the controller is pushing correctly but not hard enough,
         so the estimated inertia rises and the commanded torque with it. Expanded,
-        ``e * u_pd = kp * e^2 + kd * e * e_dot`` -- the first term grows the estimate
-        while an error persists, the second shrinks it while the error is closing, so
-        the law settles instead of ratcheting on a well-damped response.
+        ``e * u_pd = kp * e^2 + kd * e * e_dot``. Finding/444 §7 measured that the
+        old no-leak law ratchets: at constant open-loop ``e=0.2 rad`` it reaches the
+        0.60 bound in 11.72 s, and the closed-loop probe found 16/16 environments
+        pinned there. Leakage pulls toward the construction-time design nominal
+        ``m_hat0`` and bounds the unconstrained steady offset at
+        ``gamma * e * u_pd / leak``.
 
         Scope note for the paper: this is gradient adaptation of the TDC design
         inertia, which is the mechanism the arm exists to compare against (PLAN.md
@@ -499,11 +507,14 @@ class TDCController:
         paper -- nobody has checked it against the published equations. Say that in
         the paper, or check it first; do not cite the law as theirs.
 
-        Bounds, not a leakage term, keep it finite -- see `m_hat_bounds`.
+        The clamp still bounds transients; `m_hat_leak=0.0` runs the old update line.
         """
         e = torch.stack(
             [target_euler[:, 0] - roll, target_euler[:, 1] - pitch], dim=-1
         )
+        if self._m_hat_leak:
+            # Leak on the pre-update estimate (explicit Euler), before the gradient term.
+            self._m_hat.sub_(self._m_hat_leak * self.dt * (self._m_hat - self._m_hat_default))
         self._m_hat.add_(self._m_hat_adapt_gain * self.dt * e * self._u_pd)
         self._m_hat.clamp_(self._m_hat_lo, self._m_hat_hi)
 

@@ -29,7 +29,13 @@ Registered tasks:
 
 import gymnasium as gym
 
-from .config import ALBCATDCEnvCfg, ALBCResidualTDCEnvCfg, ALBCTDCEnvCfg
+from .config import (
+    ALBCATDCEnvCfg,
+    ALBCATDCSimToRealEnvCfg,
+    ALBCResidualTDCEnvCfg,
+    ALBCTDCEnvCfg,
+    ALBCTDCSimToRealEnvCfg,
+)
 from .pid_env import ALBCPIDEnv
 from .residual_tdc_env import ALBCResidualTDCEnv
 from .tdc_env import ALBCTDCEnv
@@ -49,6 +55,37 @@ gym.register(
         "rsl_rl_cfg_entry_point": (
             "constrained_albc.envs.main.agents.rsl_rl_ppo_cfg:ALBCTRPORunnerCfg"
         ),
+    },
+)
+
+# Evaluation-only classical arms on the section-5 plant.
+gym.register(
+    id="Isaac-ConstrainedALBC-Main-TDC-SimToReal-v0",
+    entry_point="constrained_albc.envs.tdc_main:ALBCTDCEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.config:ALBCTDCSimToRealEnvCfg",
+        "rsl_rl_cfg_entry_point": "constrained_albc.envs.main.agents.rsl_rl_ppo_cfg:ALBCTRPORunnerCfg",
+    },
+)
+
+gym.register(
+    id="Isaac-ConstrainedALBC-Main-PID-SimToReal-v0",
+    entry_point="constrained_albc.envs.tdc_main:ALBCPIDEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.config:ALBCTDCSimToRealEnvCfg",
+        "rsl_rl_cfg_entry_point": "constrained_albc.envs.main.agents.rsl_rl_ppo_cfg:ALBCTRPORunnerCfg",
+    },
+)
+
+gym.register(
+    id="Isaac-ConstrainedALBC-Main-ATDC-SimToReal-v0",
+    entry_point="constrained_albc.envs.tdc_main:ALBCTDCEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.config:ALBCATDCSimToRealEnvCfg",
+        "rsl_rl_cfg_entry_point": "constrained_albc.envs.main.agents.rsl_rl_ppo_cfg:ALBCTRPORunnerCfg",
     },
 )
 

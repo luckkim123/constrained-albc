@@ -63,6 +63,78 @@ class ALBCSimToRealEnvCfg(ALBCEnvCfg):
 
 
 @configclass
+class ALBCSimToRealNoDoraemonEnvCfg(ALBCSimToRealEnvCfg):
+    """N6a No-DORAEMON: fixed section-5 DR sampled uniformly at full static ranges.
+
+    With the scheduler disabled, ``ALBCEnv`` has no ``_doraemon`` and its reset
+    fallbacks draw every DORAEMON-managed dimension uniformly over the inherited
+    section-5 static ranges. The plant, faults, action delay, and observation noise
+    task conditions otherwise remain those of ``ALBCSimToRealEnvCfg``.
+    """
+
+    doraemon: DoraemonCfg = DoraemonCfg(
+        enable=False, kl_ub=0.12, performance_lb=200.0, step_interval=250
+    )
+
+
+@configclass
+class ALBCSimToRealNoDREnvCfg(ALBCSimToRealNoDoraemonEnvCfg):
+    """N6b No-DR: every physics DR range collapsed to its nominal point, DORAEMON off.
+
+    The points are the eval ``none`` level (``analysis/dr_config._TRUE_NOMINAL_PHYSICS``)
+    plus ``buoy_volume_scale``/``buoy_body_mass_scale`` at 1.0 -- those two are missing
+    from dr_config's interpolation list, so eval ``none`` still draws them over
+    (0.75, 1.25); N6b fixes them (operator decision 2026-09-11). ``enable`` stays True
+    on purpose: ``enable=False`` returns from ``_reset_physics`` before the thruster
+    fault draw and also skips the initial joint-position draw, which would remove
+    faults along with DR. Task conditions kept equal to N6a: action delay (0, 3),
+    ``fault_severity_range`` (0, 1), initial joint randomization.
+    """
+
+    randomization: DomainRandomizationCfg = DomainRandomizationCfg(
+        added_mass_scale=(1.0, 1.0),
+        linear_damping_scale=(1.0, 1.0),
+        quadratic_damping_scale=(1.0, 1.0),
+        volume_scale=(1.0, 1.0),
+        cob_offset_x=(0.0, 0.0),
+        cob_offset_y=(0.0, 0.0),
+        cob_offset_z=(0.0, 0.0),
+        cog_offset_x=(0.0, 0.0),
+        cog_offset_y=(0.0, 0.0),
+        cog_offset_z=(0.0, 0.0),
+        inertia_scale=(1.0, 1.0),
+        body_mass_scale=(1.0, 1.0),
+        water_density_range=(1000.0, 1000.0),
+        buoy_volume_scale=(1.0, 1.0),
+        buoy_body_mass_scale=(1.0, 1.0),
+        joint_stiffness_range=(100.0, 100.0),
+        joint_damping_range=(3.0, 3.0),
+        yaw_damping_scale=(1.0, 1.0),
+        joint_effort_limit_range=(1.0, 1.0),
+        joint_static_friction_range=(0.0, 0.0),
+        joint_viscous_friction_range=(0.0, 0.0),
+        payload_mass_range=(0.0, 0.0),
+        payload_cog_offset_xy_radius=0.0,
+        payload_cog_offset_xy_u_range=(0.0, 0.0),
+        payload_cog_offset_z=(0.0, 0.0),
+        thrust_coefficient_scale=(1.0, 1.0),
+        time_constant_scale=(1.0, 1.0),
+        max_thrust_scale=(1.0, 1.0),
+        control_delay_steps=(0, 3),
+        ocean_current_strength_range=(0.0, 0.0),
+        obs_noise_scale_range=(0.0, 0.0),
+    )
+    priv_obs_bounds_randomization: DomainRandomizationCfg = DomainRandomizationCfg(
+        thrust_coefficient_scale=(0.5, 2.0),
+        control_delay_steps=(0, 3),
+    )
+    """Encoder min-max bounds come from the section-5 ranges (the parent's), not the
+    collapsed ones above: zero-width bounds divide by zero in the encoder
+    (`constraint_encoder_runner.py`), and matching the reference arm keeps the network's
+    input scaling identical so only the training plant differs."""
+
+
+@configclass
 class ALBCSimToRealNoConstraintEnvCfg(ALBCSimToRealEnvCfg):
     """Section-5 delta plant WITH an empty constraint list.
 

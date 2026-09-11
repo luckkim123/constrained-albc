@@ -20,6 +20,8 @@ Registered tasks (these are the default ALBC tasks; the legacy full-DOF envs liv
     Isaac-ConstrainedALBC-PPO-Enc-v0:    Encoder + PPO, no IPO (ablation 4)
     Isaac-ConstrainedALBC-TRPO-NoIPO-NoEncoder-v0: TRPO, no IPO, no encoder (ablation 5, "no-both")
     Isaac-ConstrainedALBC-TRPO-SimToReal-v0: production TRPO on the section-5 plant
+    Isaac-ConstrainedALBC-TRPO-SimToReal-NoDoraemon-v0: N6a fixed full-range DR
+    Isaac-ConstrainedALBC-TRPO-SimToReal-NoDR-v0: N6b nominal-point plant, no DORAEMON
 
 Section-5 plant variants of the ablation arms (program `paper-ablation-5000`, anchor (B)):
     Isaac-ConstrainedALBC-NoEncoder-SimToReal-v0
@@ -117,6 +119,29 @@ gym.register(
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": f"{__name__}.config_simtoreal:ALBCSimToRealEnvCfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:ALBCTRPORunnerCfg",
+    },
+)
+
+# N6 paper ablations: retain the reference arm's runner; only the environment
+# configuration differs (N6a disables the curriculum; N6b also collapses every DR
+# range to its nominal point -- see config_simtoreal.py).
+gym.register(
+    id="Isaac-ConstrainedALBC-TRPO-SimToReal-NoDoraemon-v0",
+    entry_point="constrained_albc.envs.main:ALBCEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.config_simtoreal:ALBCSimToRealNoDoraemonEnvCfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:ALBCTRPORunnerCfg",
+    },
+)
+
+gym.register(
+    id="Isaac-ConstrainedALBC-TRPO-SimToReal-NoDR-v0",
+    entry_point="constrained_albc.envs.main:ALBCEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.config_simtoreal:ALBCSimToRealNoDREnvCfg",
         "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:ALBCTRPORunnerCfg",
     },
 )

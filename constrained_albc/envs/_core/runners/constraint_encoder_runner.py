@@ -98,8 +98,11 @@ class ConstraintEncoderRunner(OnPolicyRunner):
             # Pass the LIVE hydro cfg (not a fresh default) so a task that overrides
             # hydrodynamics flows into the bounds -- closing the same base-drift vector
             # this refactor exists to eliminate (spec section 4).
+            # A cfg whose DR ranges collapse to points (N6b) sets
+            # priv_obs_bounds_randomization; a zero-width range would make the encoder's
+            # (2x - (lo+hi)) / (hi - lo) a 0/0 NaN from the first rollout.
             lower, upper = derive_priv_obs_bounds_from_dr(
-                env_cfg.randomization,
+                getattr(env_cfg, "priv_obs_bounds_randomization", None) or env_cfg.randomization,
                 env_cfg.ocean_current.max_velocity,
                 env_cfg.thrusters,
                 hydro_cfg=env_cfg.hydrodynamics,

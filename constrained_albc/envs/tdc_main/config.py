@@ -74,7 +74,28 @@ class ALBCATDCEnvCfg(ALBCTDCEnvCfg):
     reportable.
     """
 
-    tdc_controller: TDCControllerCfg = TDCControllerCfg(adaptive_m_hat=True)
+    # 0.5 1/s is a starting value for the PLAN §8-R-3 grid (2 s time constant).
+    tdc_controller: TDCControllerCfg = TDCControllerCfg(adaptive_m_hat=True, m_hat_leak=0.5)
+
+
+@configclass
+class ALBCTDCSimToRealEnvCfg(ALBCSimToRealEnvCfg):
+    """Evaluation-only TDC/PID baseline on the section-5 plant.
+
+    Descends from the plant cfg and re-declares only the classical-controller
+    defaults, keeping the section-5 plant in ``config_simtoreal.py``.
+    """
+
+    tdc_controller: TDCControllerCfg = TDCControllerCfg()
+    thruster_pd: ThrusterPDCfg = ThrusterPDCfg()
+
+
+@configclass
+class ALBCATDCSimToRealEnvCfg(ALBCTDCSimToRealEnvCfg):
+    """Evaluation-only adaptive-TDC baseline on the section-5 plant."""
+
+    # 0.5 1/s is a starting value for the PLAN §8-R-3 grid (2 s time constant).
+    tdc_controller: TDCControllerCfg = TDCControllerCfg(adaptive_m_hat=True, m_hat_leak=0.5)
 
 
 @configclass
