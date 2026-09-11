@@ -348,6 +348,36 @@ sp_static.add_argument(
     "Isolates joint1 drift: a monotonic ramp in joint1_target with no command "
     "is the free-DOF drift signature. Keeps the trajectory length/DR sweep.",
 )
+sp_static.add_argument(
+    "--hold-zero-cmd",
+    action="store_true",
+    default=False,
+    help="Replace the step trajectory with one zero-command hold of --hold-seconds "
+    "(attitude, yaw rate and lin-vel all zero). For the payload grasp-step probe, where "
+    "a mid-episode toggle must not coincide with a command step; pair it with "
+    "env.payload_toggle_steps and --save-extras (per-step payload trace).",
+)
+sp_static.add_argument(
+    "--hold-seconds",
+    type=float,
+    default=30.0,
+    help="Episode length for --hold-zero-cmd (default 30 s).",
+)
+sp_static.add_argument(
+    "--payload-toggle-step",
+    type=int,
+    default=None,
+    help="Mid-episode payload toggle this many control steps after the rollout reset "
+    "(payload_no_toggle_prob 0). Applied per level after the level DR, not at env "
+    "construction: the construction reset uses the none-level DR, which has no payload.",
+)
+sp_static.add_argument(
+    "--payload-start-with",
+    type=float,
+    default=None,
+    help="payload_start_with_prob for --payload-toggle-step: 0.0 = start empty and pick up, "
+    "1.0 = start holding and drop.",
+)
 
 # ----------------------------------------------------------------------------
 # periodic: mid-episode periodic DR change, hover robustness
@@ -883,6 +913,8 @@ def run_evaluation(
     costs_log: list[np.ndarray] = []
     joint_pos_log: list[np.ndarray] = []
     joint_vel_log: list[np.ndarray] = []
+    payload_mass_log: list[np.ndarray] = []
+    payload_cog_log: list[np.ndarray] = []
     moment_logs: dict[str, list[np.ndarray]] = {
         name: []
         for name in (
@@ -904,6 +936,12 @@ def run_evaluation(
         if hasattr(policy_nn, "reset"):
             policy_nn.reset(torch.ones(num_envs, 1, dtype=torch.bool, device=device))
     raw_env.episode_length_buf[:] = 0
+    if getattr(raw_env.cfg, "payload_toggle_steps", 0) != 0:
+        # The reset marks an env "already past the toggle" from its jittered
+        # episode_length_buf (up to half the episode). Eval restarts every env at step 0,
+        # so re-arm the toggle or a fraction of envs never toggles (smoke F1 hard, 1/4).
+        raw_env._payload_toggled[:] = False
+        raw_env._payload_toggle_counter[:] = 0
 
     # Snapshot each env's now-fixed DR (post-clamp physics tensors = what the policy
     # experiences). Saved per-env so analysis can join failing envs <-> their DR.
@@ -1006,6 +1044,13 @@ def run_evaluation(
             joint_vel_log.append(
                 raw_env._robot.data.joint_vel[:, raw_env._albc_joint_ids]
                 .detach().cpu().numpy().astype(np.float16)
+            )
+            # Payload actually applied from the next step on (mid-episode toggle trace).
+            payload_mass_log.append(
+                raw_env._payload_mass.detach().reshape(num_envs).cpu().numpy().astype(np.float32)
+            )
+            payload_cog_log.append(
+                raw_env._payload_cog_offset.detach().reshape(num_envs, -1).cpu().numpy().astype(np.float32)
             )
 
         if save_moments:
@@ -1199,6 +1244,8 @@ def run_evaluation(
         extras["costs"] = np.stack(costs_log, axis=0)
         extras["joint_pos"] = np.stack(joint_pos_log, axis=0)
         extras["joint_vel"] = np.stack(joint_vel_log, axis=0)
+        extras["payload_mass"] = np.stack(payload_mass_log, axis=0)
+        extras["payload_cog_offset"] = np.stack(payload_cog_log, axis=0)
     if save_moments:
         extras.update({name: np.stack(values, axis=0) for name, values in moment_logs.items()})
     if extras:
@@ -1356,7 +1403,21 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     _apply_fault_cli(env_cfg, args_cli)
 
     # Compute episode_length_s from trajectory (see TRAJECTORY_N_SEGMENTS).
-    env_cfg.episode_length_s = TRAJECTORY_N_SEGMENTS * args_cli.segment_duration + 10.0
+    if args_cli.payload_toggle_step is not None and (
+        args_cli.payload_toggle_step <= 0
+        or args_cli.payload_start_with is None
+        or not 0.0 <= args_cli.payload_start_with <= 1.0
+    ):
+        # RuntimeError, not SystemExit: inside the Kit app a SystemExit ends the process with rc 0.
+        raise RuntimeError("--payload-toggle-step needs a positive step and --payload-start-with in [0, 1]")
+    if args_cli.hold_zero_cmd:
+        if args_cli.hold_seconds <= 0:
+            raise RuntimeError("--hold-seconds must be positive")
+        # Same 10 s slack as the trajectory path: with one control step of slack the last
+        # rollout step is a time-out and every env reads as terminated (smoke G2, 2026-09-12).
+        env_cfg.episode_length_s = args_cli.hold_seconds + 10.0
+    else:
+        env_cfg.episode_length_s = TRAJECTORY_N_SEGMENTS * args_cli.segment_duration + 10.0
 
     # ---- Load checkpoint ----
     agent_cfg = cli_args.update_rsl_rl_cfg(agent_cfg, args_cli)
@@ -1737,6 +1798,23 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
             "gravity_w": list(raw_env.sim.cfg.gravity),
             "dtype_note": "costs/moments float16, joint_pos float32",
             "alive_rule": "step t counts iff data npz terminated[t] is False",
+            "payload_trace": "payload_mass (T,N) kg, payload_cog_offset (T,N,3) m, float32, read after env.step",
+            "payload_toggle": (
+                {
+                    "steps": int(args_cli.payload_toggle_step),
+                    "start_with_prob": float(args_cli.payload_start_with),
+                    "no_toggle_prob": 0.0,
+                    "applied": "per level, after the level DR",
+                }
+                if args_cli.payload_toggle_step is not None
+                else {
+                    "steps": int(raw_env.cfg.payload_toggle_steps),
+                    "start_with_prob": float(raw_env.cfg.payload_start_with_prob),
+                    "no_toggle_prob": float(raw_env.cfg.payload_no_toggle_prob),
+                }
+            ),
+            "hold_zero_cmd": bool(args_cli.hold_zero_cmd),
+            "hold_seconds": float(args_cli.hold_seconds) if args_cli.hold_zero_cmd else None,
         }
         with open(os.path.join(output_dir, "extras_meta.json"), "w") as f:
             json.dump(extras_meta, f, indent=2)
@@ -1754,6 +1832,14 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         for _k in targets:
             targets[_k] = np.zeros_like(targets[_k])
         print("[INFO] --flat-target: all commands zeroed (station-keeping drift check).")
+    if args_cli.hold_zero_cmd:
+        # round, not int: 30 / 0.02 is not exact in binary floating point.
+        total_steps = int(round(args_cli.hold_seconds / step_dt))
+        time_s = np.arange(total_steps) * step_dt
+        targets = {_k: np.zeros(total_steps, dtype=float) for _k in targets}
+        segment_names = ["hold-zero-cmd"]
+        warmup_steps = 0
+        print(f"[INFO] --hold-zero-cmd: zero command for {args_cli.hold_seconds:g} s ({total_steps} steps).")
     print(
         f"[INFO] Trajectory: {len(segment_names)} segs x {args_cli.segment_duration}s"
         f" = {len(time_s)} steps ({time_s[-1]:.0f}s)"
@@ -1797,6 +1883,20 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
             _cd = args_cli.control_delay
             raw_env.cfg.randomization.control_delay_steps = (_cd, _cd)
             print(f"[INFO] control_delay={_cd} steps ({_cd * 20} ms) injected at level {level}")
+        if args_cli.payload_toggle_step is not None:
+            _pm = raw_env.cfg.randomization.payload_mass_range
+            if _pm[1] <= 0.1:
+                # No payload in this level's DR: a drop has no step, and a pick makes
+                # _setup_payload_toggle resample from uniform_(0.1, hi), which raises.
+                raise RuntimeError(
+                    f"[FATAL] level {level}: payload_mass_range {tuple(_pm)} has no mass above 0.1 kg, "
+                    "so a payload toggle has no step. Drop this level from --levels."
+                )
+            raw_env.cfg.payload_toggle_steps = args_cli.payload_toggle_step
+            raw_env.cfg.payload_start_with_prob = args_cli.payload_start_with
+            raw_env.cfg.payload_no_toggle_prob = 0.0
+            print(f"[INFO] payload toggle at step {args_cli.payload_toggle_step}, "
+                  f"start_with_prob={args_cli.payload_start_with} at level {level}")
 
         if is_student_mode:
             policy.reset_logs()  # per-level latent logs (don't carry across DR levels)
