@@ -196,6 +196,24 @@ sp_static.add_argument(
     "12.3) needs it paired with --save-policy-obs.",
 )
 sp_static.add_argument(
+    "--save-extras",
+    action="store_true",
+    default=False,
+    help="Store per-step constraint costs and arm joint state in extras_<level>.npz.",
+)
+sp_static.add_argument(
+    "--save-moments",
+    action="store_true",
+    default=False,
+    help="Store per-step external-moment decomposition in extras_<level>.npz.",
+)
+sp_static.add_argument(
+    "--levels",
+    type=str,
+    default=None,
+    help="Comma-separated subset of DR levels to run (for tuning; default: all).",
+)
+sp_static.add_argument(
     "--excite-std",
     type=float,
     default=0.0,
@@ -409,6 +427,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import rsl_rl.runners.on_policy_runner as _runner_module
 import torch
+from _eval_dr.extras import gravity_moment_about, moment_about  # type: ignore[import-not-found]
 from common import DR_COLORS
 from common import DR_LEVELS as _DEFAULT_DR_LEVELS
 from common import DR_SCALE as _DEFAULT_DR_SCALE
@@ -449,6 +468,7 @@ from isaaclab_tasks.utils.hydra import hydra_task_config
 from constrained_albc.envs.main.algorithms import ConstraintTRPO
 from constrained_albc.envs.main.config import (
     DomainRandomizationCfg,
+    _FULL_DOF_CONSTRAINT_TERMS,
 )
 from constrained_albc.envs.main.encoder import ActorCriticEncoder
 from constrained_albc.envs.main.mdp import (
@@ -459,6 +479,7 @@ from constrained_albc.envs.main.mdp import (
     randomize_payload,
 )
 from constrained_albc.envs.main.runners import ConstraintEncoderRunner, sync_policy_obs_dim
+from constrained_albc.envs.main.mdp.constraints import ALBCConstraintCfg
 from constrained_albc.envs.main.utils import update_latest_symlink
 
 # Runtime-mutable copies (overridden by --ood-scale in static mode)
@@ -772,6 +793,8 @@ def run_evaluation(
     save_policy_obs: bool = False,
     save_action_std: bool = False,
     save_action: bool = False,
+    save_extras: bool = False,
+    save_moments: bool = False,
     excite_std: float = 0.0,
     excite_tau: float = 0.1,
     excite_seed: int = 0,
@@ -794,6 +817,10 @@ def run_evaluation(
     diagnostic forward (which never mutates it). Paired with save_policy_obs it yields the
     (o_t, a_t) sequence an offline EDMD / lifting fit needs -- action_magnitude keeps only
     the L2 norm and joint1_cmd only dim 0, so neither reconstructs the vector.
+
+    save_extras / save_moments record constraint/joint and external-moment channels in a
+    nested ``_extras`` dict. The static caller removes that dict before the ordinary data
+    writers and metrics see it, preserving the default artifacts.
 
     excite_std > 0 adds a band-limited perturbation to the action before it is logged and
     stepped, for offline system identification only. The inference policy is deterministic
@@ -853,6 +880,21 @@ def run_evaluation(
     policy_obs_log: list[np.ndarray] = []
     action_std_log: list[np.ndarray] = []
     action_log: list[np.ndarray] = []
+    costs_log: list[np.ndarray] = []
+    joint_pos_log: list[np.ndarray] = []
+    joint_vel_log: list[np.ndarray] = []
+    moment_logs: dict[str, list[np.ndarray]] = {
+        name: []
+        for name in (
+            "m_thr",
+            "m_hull_hydro",
+            "m_buoy",
+            "m_payload",
+            "m_grav_buoy",
+            "m_grav_arm",
+            "m_grav_hull",
+        )
+    }
 
     # Force full reset via throwaway step
     raw_env.episode_length_buf[:] = raw_env.max_episode_length
@@ -869,6 +911,13 @@ def run_evaluation(
     # Snapshot each env's now-fixed FAULT (thruster health / sensor noise / joint health).
     # Empty when fault injection is disabled -> npz stays byte-identical to the DR-only case.
     per_env_fault = _read_per_env_fault(raw_env)
+
+    extras: dict[str, np.ndarray] = {}
+    body_mass = None
+    if save_moments:
+        # Masses are randomized during the reset above; read them once now, on the sim device.
+        body_mass = raw_env._robot.root_physx_view.get_masses().detach().to(device=device)
+        extras["body_mass"] = body_mass.cpu().numpy().astype(np.float32)
 
     target_roll_rad = np.deg2rad(target_roll_deg)
     target_pitch_rad = np.deg2rad(target_pitch_deg)
@@ -938,9 +987,97 @@ def run_evaluation(
                 delta_action[step_idx] = (
                     (actions_normal - actions).norm(dim=-1).detach().cpu().numpy()
                 )
-            obs, _, dones, _ = env.step(actions)
+            obs, _, dones, step_extras = env.step(actions)
             if hasattr(policy_nn, "reset"):
                 policy_nn.reset(dones)
+
+        if save_extras:
+            costs = step_extras.get("costs")
+            if costs is None:
+                raise SystemExit(
+                    "[FATAL] --save-extras requested but env.step() returned no 'costs'; "
+                    "the environment constraint configuration is not producing costs."
+                )
+            costs_log.append(costs.detach().cpu().numpy().astype(np.float16))
+            joint_pos_log.append(
+                raw_env._robot.data.joint_pos[:, raw_env._albc_joint_ids]
+                .detach().cpu().numpy().astype(np.float32)
+            )
+            joint_vel_log.append(
+                raw_env._robot.data.joint_vel[:, raw_env._albc_joint_ids]
+                .detach().cpu().numpy().astype(np.float16)
+            )
+
+        if save_moments:
+            robot_data = raw_env._robot.data
+            hull_idx = raw_env._body_id[0]
+            buoy_idx = raw_env._buoy_body_id[0]
+            gripper_idx = raw_env._gripper_body_id[0]
+            p_hull_w = robot_data.body_link_pos_w[:, hull_idx]
+            q_hull_w = robot_data.body_link_quat_w[:, hull_idx]
+
+            # The permanent wrench composer reaches apply_forces_and_torques_at_position
+            # with position_data=None/is_global=False. PhysX documents that omitting
+            # position_data applies forces at the link-transform location, in its local
+            # frame; gravity instead acts at each body's centre of mass. Thus every channel
+            # below is about the hull link origin and expressed in the hull link frame.
+            if raw_env._thruster is None:
+                m_thr = torch.zeros(num_envs, 3, device=device, dtype=p_hull_w.dtype)
+            else:
+                m_thr = raw_env._thruster.body_torques
+            m_hull_hydro = raw_env._hydro_torques
+            m_buoy = moment_about(
+                p_hull_w,
+                q_hull_w,
+                robot_data.body_link_pos_w[:, buoy_idx],
+                robot_data.body_link_quat_w[:, buoy_idx],
+                raw_env._buoy_hydro_forces,
+                raw_env._buoy_hydro_torques,
+            )
+            composer = raw_env._robot.permanent_wrench_composer
+            m_payload = moment_about(
+                p_hull_w,
+                q_hull_w,
+                robot_data.body_link_pos_w[:, gripper_idx],
+                robot_data.body_link_quat_w[:, gripper_idx],
+                composer.composed_force_as_torch[:, gripper_idx],
+                composer.composed_torque_as_torch[:, gripper_idx],
+            )
+            gravity_w = torch.as_tensor(raw_env.sim.cfg.gravity, device=device, dtype=p_hull_w.dtype)
+            m_grav_buoy = gravity_moment_about(
+                p_hull_w,
+                q_hull_w,
+                robot_data.body_com_pos_w[:, buoy_idx],
+                body_mass[:, buoy_idx],
+                gravity_w,
+            )
+            m_grav_hull = gravity_moment_about(
+                p_hull_w,
+                q_hull_w,
+                robot_data.body_com_pos_w[:, hull_idx],
+                body_mass[:, hull_idx],
+                gravity_w,
+            )
+            m_grav_arm = torch.zeros_like(m_grav_hull)
+            for body_idx in range(body_mass.shape[1]):
+                if body_idx not in (hull_idx, buoy_idx):
+                    m_grav_arm += gravity_moment_about(
+                        p_hull_w,
+                        q_hull_w,
+                        robot_data.body_com_pos_w[:, body_idx],
+                        body_mass[:, body_idx],
+                        gravity_w,
+                    )
+            for name, value in (
+                ("m_thr", m_thr),
+                ("m_hull_hydro", m_hull_hydro),
+                ("m_buoy", m_buoy),
+                ("m_payload", m_payload),
+                ("m_grav_buoy", m_grav_buoy),
+                ("m_grav_arm", m_grav_arm),
+                ("m_grav_hull", m_grav_hull),
+            ):
+                moment_logs[name].append(value.detach().cpu().numpy().astype(np.float16))
 
         # Collect action magnitude
         action_magnitude[step_idx] = torch.norm(actions, dim=-1).cpu().numpy()
@@ -1058,6 +1195,14 @@ def run_evaluation(
         out["excite_std"] = np.array(excite_std, dtype=np.float32)
         out["excite_tau"] = np.array(excite_tau, dtype=np.float32)
         out["excite_seed"] = np.array(excite_seed, dtype=np.int64)
+    if save_extras:
+        extras["costs"] = np.stack(costs_log, axis=0)
+        extras["joint_pos"] = np.stack(joint_pos_log, axis=0)
+        extras["joint_vel"] = np.stack(joint_vel_log, axis=0)
+    if save_moments:
+        extras.update({name: np.stack(values, axis=0) for name, values in moment_logs.items()})
+    if extras:
+        out["_extras"] = extras
     return out
 
 
@@ -1328,6 +1473,16 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         DR_COLORS["ood"] = "#FF00FF"  # magenta for OOD
         print("\n[INFO] OOD side-by-side: appended 'ood' level (DORAEMON-derived OOD bounds).\n")
 
+    selected = None
+    if args_cli.levels is not None:
+        selected = {level.strip() for level in args_cli.levels.split(",") if level.strip()}
+        unknown = sorted(selected.difference(DR_LEVELS))
+        if not selected or unknown:
+            bad = ", ".join(unknown) if unknown else "<empty>"
+            raise SystemExit(
+                f"Unknown --levels value(s): {bad}. Valid levels: {', '.join(DR_LEVELS)}"
+            )
+
     # ---- env-dr-anchor: grade against the run's own plant, not the class default ----
     # Set before the first apply_dr_config() (below, at env creation), which is where
     # dr_config latches the anchor.
@@ -1543,6 +1698,49 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         policy_nn = type("FakePolicy", (), {"reset": lambda _s, _d: None})()
         print("[INFO] No checkpoint mode (zero-action policy).")
 
+    costs_source = "env"
+    if args_cli.save_extras and (
+        raw_env._constraints_cfg is None or raw_env._constraints_cfg.num_constraints == 0
+    ):
+        # _constraints_cfg is only read by _get_rewards (albc_env.py:206,1411). The
+        # runner's num_constraints came from env.unwrapped.cfg.constraints, which is not
+        # touched, so this reference-only cost computation cannot affect the policy;
+        # every constraint function only reads state.
+        raw_env._constraints_cfg = ALBCConstraintCfg(terms=list(_FULL_DOF_CONSTRAINT_TERMS))
+        costs_source = "reference_swap"
+    if args_cli.save_extras:
+        print(f"[INFO] save-extras: costs_source={costs_source}")
+
+    if args_cli.save_extras or args_cli.save_moments:
+        constraints_cfg = raw_env._constraints_cfg
+        body_names = list(raw_env._robot.body_names)
+        moment_body_ids = (
+            int(raw_env._body_id[0]),
+            int(raw_env._buoy_body_id[0]),
+            int(raw_env._gripper_body_id[0]),
+        )
+        extras_meta = {
+            "costs_source": costs_source,
+            "constraint_names": (
+                list(constraints_cfg.constraint_names) if constraints_cfg is not None else []
+            ),
+            "constraint_budgets": (
+                list(constraints_cfg.constraint_budgets) if constraints_cfg is not None else []
+            ),
+            "cost_gamma": constraints_cfg.cost_gamma if constraints_cfg is not None else None,
+            "task": args_cli.task,
+            "checkpoint": resume_path,
+            "save_extras": args_cli.save_extras,
+            "save_moments": args_cli.save_moments,
+            "body_names": body_names,
+            "moment_bodies": {body_names[idx]: idx for idx in moment_body_ids},
+            "gravity_w": list(raw_env.sim.cfg.gravity),
+            "dtype_note": "costs/moments float16, joint_pos float32",
+            "alive_rule": "step t counts iff data npz terminated[t] is False",
+        }
+        with open(os.path.join(output_dir, "extras_meta.json"), "w") as f:
+            json.dump(extras_meta, f, indent=2)
+
     # ---- Build trajectory (same for all DR levels) ----
     time_s, targets, segment_names, warmup_steps = build_step_trajectory(
         segment_duration=args_cli.segment_duration,
@@ -1573,6 +1771,11 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     latent_summary = {"encoder_type": args_cli.encoder_type, "levels": {}} if is_student_mode else None
 
     for level in DR_LEVELS:
+        if selected is not None and level not in selected:
+            continue
+        # A tuning subset is not guaranteed bit-identical to this level in a full run:
+        # state that is not re-seeded per level can carry across levels. Reported numbers
+        # therefore come from full runs.
         dr_pct = int(DR_SCALE[level] * 100)
         print(f"\n{'=' * 60}")
         print(f"  DR Level: {level.upper()} | DR Scale: {dr_pct}%")
@@ -1625,10 +1828,17 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
             save_policy_obs=args_cli.save_policy_obs,
             save_action_std=args_cli.save_action_std,
             save_action=args_cli.save_action,
+            save_extras=args_cli.save_extras,
+            save_moments=args_cli.save_moments,
             excite_std=args_cli.excite_std,
             excite_tau=args_cli.excite_tau,
             excite_seed=args_cli.excite_seed,
         )
+        extras = data.pop("_extras", None)
+        if args_cli.save_extras or args_cli.save_moments:
+            if extras is None:
+                raise SystemExit("[FATAL] extras recording was requested but no extras were returned")
+            np.savez_compressed(os.path.join(output_dir, f"extras_{level}.npz"), **extras)
         all_data[level] = data
 
         if is_student_mode and args_cli.latent_noise_k:
@@ -1760,7 +1970,7 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     dr_configs_used = {
         lvl: (build_ood_dr_config(_dr_config_module._DORAEMON_RAW) if lvl == "ood"
               else build_dr_config(DR_SCALE[lvl]))
-        for lvl in DR_LEVELS
+        for lvl in DR_LEVELS if lvl in all_data
     }
     _plot_dr_distributions(dr_configs_used, _dr_config_module._DORAEMON_RAW, output_dir)
 
@@ -1774,6 +1984,8 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     )
     print("-" * 110)
     for lvl in DR_LEVELS:
+        if lvl not in all_metrics:
+            continue
         m = all_metrics[lvl]
         # LinVel column shows '--' when the env doesn't track lin-vel (attitude_only).
         lv = m['total_lin_vel_error']
@@ -1801,6 +2013,8 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
         print(f"\n{'=' * 70}\nLATENT DIAGNOSTIC (l_hat vs l_true) -- {args_cli.encoder_type}\n{'=' * 70}")
         print(f"{'Level':<10} {'mse':>9} {'per_env_rmse':>16} {'envvar h/t':>14} {'tvar h/t':>14}")
         for lvl in DR_LEVELS:
+            if lvl not in latent_summary["levels"]:
+                continue
             s = latent_summary["levels"][lvl]
             print(f"{lvl:<10} {s['overall_mse']:9.5f} "
                   f"{s['per_env_rmse_mean']:7.4f}+/-{s['per_env_rmse_std']:.4f} "
