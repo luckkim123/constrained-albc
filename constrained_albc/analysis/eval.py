@@ -1102,6 +1102,7 @@ class _InstrumentedStudentPolicy:
         # channel-health summary exists for tail-mode runs too (the proposal registers
         # their absence as a VOID condition). 0 for every non-tail student.
         self._tail_n = getattr(student, "_tail_n", 0)
+        self._tail_after = getattr(student, "_tail_after", 0)
         self.extra_log: list[np.ndarray] = []
 
     def reset_logs(self) -> None:
@@ -1127,7 +1128,11 @@ class _InstrumentedStudentPolicy:
         if self._extra_key in obs_td:
             self.extra_log.append(obs_td[self._extra_key].detach().cpu().numpy())
         elif self._tail_n:
-            self.extra_log.append(obs_td["policy"][..., -self._tail_n:].detach().cpu().numpy())
+            from constrained_albc.envs._core.student.models import split_policy_tail
+
+            p = obs_td["policy"]
+            _, tail = split_policy_tail(obs_raw=p, obs_n=p, n_tail=self._tail_n, n_after=self._tail_after)
+            self.extra_log.append(tail.detach().cpu().numpy())
         return action
 
 
@@ -1260,6 +1265,19 @@ def run_static(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
                     "are envs/main only; this student cannot be evaluated on this task."
                 )
             setattr(env_cfg, _env_flag, True)
+            if _tail:
+                # The split position follows the env's depth_xy block; the checkpoint recorded
+                # the offset it trained with (absent = 0, pre-depth_xy checkpoints).
+                from constrained_albc.envs._core.student.models import policy_tail_after
+
+                _after_ckpt = int(_sc.get("policy_tail_after", 0))
+                _after_env = policy_tail_after(env_cfg)
+                if _after_ckpt != _after_env:
+                    raise RuntimeError(
+                        f"tail-mode student trained with policy_tail_after={_after_ckpt} but the eval "
+                        f"env gives {_after_env} (depth_xy.enable differs): the split would read "
+                        "depth/XY task channels as IMU/heave or the reverse."
+                    )
             _env_sensor_cfg = _student_blob.get("env_sensor_cfg")
             if _env_sensor_cfg:
                 for _k in _ENV_SENSOR_CFG_KEYS:

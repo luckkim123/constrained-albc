@@ -66,7 +66,7 @@ class StudentInLoopPolicy:
         # width is set from cfg.policy_obs_dim in models.py, and the ring below).
         if "policy_obs_dim" in saved_cfg:
             cfg.policy_obs_dim = saved_cfg["policy_obs_dim"]
-        for field in ("extra_obs_dim", "extra_obs_scale", "extra_obs_from_policy_tail"):
+        for field in ("extra_obs_dim", "extra_obs_scale", "extra_obs_from_policy_tail", "policy_tail_after"):
             if field in saved_cfg:
                 setattr(cfg, field, saved_cfg[field])
         if cfg.policy_obs_dim != self.teacher.obs_dim:
@@ -83,6 +83,7 @@ class StudentInLoopPolicy:
         # policy_obs tail. In tail mode the encoder width is policy_obs_dim itself
         # (extra_obs_dim == 0), so the teacher-width guard above already covers it.
         self._tail_n = POLICY_TAIL_N if getattr(cfg, "extra_obs_from_policy_tail", False) else 0
+        self._tail_after = getattr(cfg, "policy_tail_after", 0)  # checkpoint's env-derived offset
         if cfg.encoder_type == "gru":
             if "gru.weight_ih_l0" in sd:
                 cfg.gru_hidden = sd["gru.weight_ih_l0"].shape[0] // 3
@@ -205,7 +206,7 @@ class StudentInLoopPolicy:
             if self._tail_n:
                 # Tail mode: channels live inside policy_obs, no side-channel key.
                 obs_for_student, extra = split_policy_tail(
-                    obs_raw=obs, obs_n=obs_for_student, n_tail=self._tail_n
+                    obs_raw=obs, obs_n=obs_for_student, n_tail=self._tail_n, n_after=self._tail_after
                 )
             elif self._extra_scale is not None and STUDENT_EXTRA_OBS_KEY not in obs_td:
                 raise RuntimeError(

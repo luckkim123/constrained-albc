@@ -78,6 +78,10 @@ class StudentCfg:
     # (guarded in extra_scale_tensor); GRU-only like the side channel. False keeps every
     # encoder forward byte-identical to the pre-X1 recipe.
     extra_obs_from_policy_tail: bool = False
+    # Tail mode only: policy_obs dims AFTER the 4 channels (4 with depth_xy.enable, else 0).
+    # Set by StudentRunner from the env cfg (models.policy_tail_after), restored from the
+    # checkpoint at eval -- never a CLI flag. 0 keeps the pre-depth_xy split.
+    policy_tail_after: int = 0
     # Static per-channel scales (divide before the encoder): IMU specific force ~ +-15
     # m/s^2 -> /10; heave rate ~ +-1 m/s -> /1. Static (not a running normalizer) so the
     # board runtime can replicate normalization from constants; calibration knobs, tune

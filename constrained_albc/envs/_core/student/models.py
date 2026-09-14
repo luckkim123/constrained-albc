@@ -24,9 +24,24 @@ STUDENT_EXTRA_OBS_KEY = "student_extra"
 # The env always emits exactly 4; train_student.py's cross-check states the same fact.
 POLICY_TAIL_N = 4
 
+# Width of the depth/XY task block the env appends AFTER the gen-2 channels when
+# cfg.depth_xy.enable (apply_depth_xy_obs, envs/main/config.py): [e_z, e_z integral, u_x, u_y].
+# The teacher's actor reads these z-scored like every other dim, so tail mode must step over them.
+DEPTH_XY_OBS_N = 4
+
+
+def policy_tail_after(env_cfg) -> int:
+    """policy_obs dims that follow the gen-2 extra block, read off the env cfg.
+
+    Derived from the env, never from a launch flag an operator could forget. The runner
+    records it in the checkpoint (StudentCfg.policy_tail_after) and eval refuses an env that
+    disagrees. Variants without a depth_xy field (full_dof/TDC) have nothing after the block.
+    """
+    return DEPTH_XY_OBS_N if getattr(getattr(env_cfg, "depth_xy", None), "enable", False) else 0
+
 
 def split_policy_tail(
-    *, obs_raw: torch.Tensor, obs_n: torch.Tensor, n_tail: int
+    *, obs_raw: torch.Tensor, obs_n: torch.Tensor, n_tail: int, n_after: int = 0
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Recover the gen-1 (normalized core, RAW extra) pair from a gen-2 policy_obs.
 
@@ -39,7 +54,12 @@ def split_policy_tail(
     defined in exactly one place. Shapes: obs_raw/obs_n (..., D) -> ((..., D-n), (..., n)).
     Keyword-only: the two tensor args have identical shapes, so a positional swap would
     silently return a z-scored tail -- the exact convention this helper exists to avoid.
+    n_after (policy_tail_after): dims the env appends after the extra block (depth_xy). They
+    stay in the normalized core; only [-(n_tail + n_after):-n_after] is taken raw.
     """
+    if n_after:
+        lo, hi = -(n_tail + n_after), -n_after
+        return torch.cat([obs_n[..., :lo], obs_n[..., hi:]], dim=-1), obs_raw[..., lo:hi]
     return obs_n[..., :-n_tail], obs_raw[..., -n_tail:]
 
 

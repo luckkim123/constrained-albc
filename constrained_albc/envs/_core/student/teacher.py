@@ -97,6 +97,14 @@ class FrozenTeacher(nn.Module):
         ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
         num_constraints = _infer_num_constraints(ckpt["model_state_dict"], default=10)
         geom = infer_teacher_geometry(ckpt["model_state_dict"])
+        # Construct-time encoder bounds must have the checkpoint's privileged width: the
+        # variant defaults are 28D, a depth_xy teacher's p_t is 29D (the training runner
+        # appends +/-depth_error_clip), and ActorCriticEncoder rejects a width mismatch before
+        # the load below could restore the persisted buffers. Same source as deploy/engine.py;
+        # the load still overwrites them, so a 28D teacher ends byte-identical.
+        _sd = ckpt["model_state_dict"]
+        enc_lower = _sd["_enc_obs_lower"].tolist() if "_enc_obs_lower" in _sd else _PRIV_OBS_LOWER
+        enc_upper = _sd["_enc_obs_upper"].tolist() if "_enc_obs_upper" in _sd else _PRIV_OBS_UPPER
         if geom["policy_obs_dim"] != cfg.policy_obs_dim:
             logger.info(
                 "Teacher geometry from checkpoint overrides cfg: policy_obs_dim %d -> %d",
@@ -121,8 +129,8 @@ class FrozenTeacher(nn.Module):
             encoder_latent_dim=geom["latent_dim"],
             encoder_activation="elu",
             encoder_obs_normalization=False,
-            encoder_obs_lower=_PRIV_OBS_LOWER,
-            encoder_obs_upper=_PRIV_OBS_UPPER,
+            encoder_obs_lower=enc_lower,
+            encoder_obs_upper=enc_upper,
             encoder_output_norm=True,
             actor_obs_normalization=True,
             critic_obs_normalization=False,

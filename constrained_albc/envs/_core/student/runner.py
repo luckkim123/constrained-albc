@@ -27,6 +27,7 @@ from .models import (
     STUDENT_EXTRA_OBS_KEY,
     extra_scale_tensor,
     make_student_encoder,
+    policy_tail_after,
     split_policy_tail,
     student_input,
 )
@@ -131,6 +132,10 @@ class StudentRunner:
         # split would raise inside student_input instead of silently feeding the
         # z-scored tail (38d979e class).
         self._tail_n = POLICY_TAIL_N if getattr(cfg, "extra_obs_from_policy_tail", False) else 0
+        # Where the 4 channels sit is a property of the env: with depth_xy.enable the last 4
+        # dims are task channels and the split steps over them. Persisted via vars(cfg).
+        cfg.policy_tail_after = policy_tail_after(env.unwrapped.cfg) if self._tail_n else 0
+        self._tail_after = cfg.policy_tail_after
 
         self.optimizer = torch.optim.Adam(self.student.parameters(), lr=cfg.lr)
 
@@ -293,7 +298,9 @@ class StudentRunner:
         else:
             obs_n = self.obs_normalizer(obs)
             if self._tail_n:
-                obs_n, extra = split_policy_tail(obs_raw=obs, obs_n=obs_n, n_tail=self._tail_n)
+                obs_n, extra = split_policy_tail(
+                    obs_raw=obs, obs_n=obs_n, n_tail=self._tail_n, n_after=self._tail_after
+                )
             x = student_input(obs_n, extra, self._extra_scale)
             l_hat_seq, self.gru_hidden = self.student(x.unsqueeze(1), hidden=self.gru_hidden)
             l_hat = l_hat_seq[:, -1]
@@ -340,7 +347,7 @@ class StudentRunner:
         extra_seq = batch.extra_seq
         if self._tail_n:
             obs_seq_n, extra_seq = split_policy_tail(
-                obs_raw=batch.obs_seq, obs_n=obs_seq_n, n_tail=self._tail_n
+                obs_raw=batch.obs_seq, obs_n=obs_seq_n, n_tail=self._tail_n, n_after=self._tail_after
             )
         x_seq = student_input(obs_seq_n, extra_seq, self._extra_scale)
         l_hat_seq, _ = self.student(x_seq, hidden=h_in)                 # (envs, T, 9)
@@ -469,7 +476,7 @@ class StudentRunner:
                     )
                     if self._tail_n:
                         obs_all_n, extra_all = split_policy_tail(
-                            obs_raw=obs_all, obs_n=obs_all_n, n_tail=self._tail_n
+                            obs_raw=obs_all, obs_n=obs_all_n, n_tail=self._tail_n, n_after=self._tail_after
                         )
                     _, h_end = self.student(
                         student_input(obs_all_n, extra_all, self._extra_scale), hidden=h_start
