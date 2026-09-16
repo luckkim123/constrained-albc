@@ -115,6 +115,41 @@ def test_zero_order_hold_serves_stale_sample_and_uses_sensor_dt():
     assert torch.allclose(seen[-1][:, 3], torch.full((4,), 1.0), atol=0.05)
 
 
+def test_depth_control_reuses_the_heave_sensor_noisy_sample():
+    compute_student_extra_obs = _load_observations().compute_student_extra_obs
+    env = _fake_env(depth_noise=0.01, hold=1)
+    env.cfg.depth_xy = types.SimpleNamespace(enable=True)
+    env._depth_meas_held = torch.zeros(4)
+
+    torch.manual_seed(12)
+    compute_student_extra_obs(env, _robot(depth=0.6))
+
+    # _depth_meas_prev is the exact sample used by the heave differentiator. The
+    # depth-control channel must hold that tensor, not make a second noise draw.
+    assert torch.equal(env._depth_meas_held, env._depth_meas_prev)
+    assert not torch.equal(env._depth_meas_held, torch.full((4,), 0.6))
+
+
+
+def test_depth_control_sample_is_held_between_sensor_publishes():
+    # hold=2: the depth-control sample may only move on a sensor publish tick, like the
+    # heave-rate channel (agy review 2026-09-12: the hold=1 test above cannot see this).
+    compute_student_extra_obs = _load_observations().compute_student_extra_obs
+    env = _fake_env(depth_noise=0.01, hold=2)
+    env.cfg.depth_xy = types.SimpleNamespace(enable=True)
+    env._depth_meas_held = torch.zeros(4)
+
+    torch.manual_seed(7)
+    compute_student_extra_obs(env, _robot(depth=0.6))  # tick 1: no publish
+    assert torch.equal(env._depth_meas_held, torch.zeros(4))
+    compute_student_extra_obs(env, _robot(depth=0.6))  # tick 2: publish
+    published = env._depth_meas_held.clone()
+    assert torch.allclose(published, torch.full((4,), 0.6), atol=0.05)
+    compute_student_extra_obs(env, _robot(depth=0.9))  # between publishes: must not move
+    assert torch.equal(env._depth_meas_held, published)
+    compute_student_extra_obs(env, _robot(depth=0.9))  # publish: follows the new depth
+    assert torch.allclose(env._depth_meas_held, torch.full((4,), 0.9), atol=0.05)
+
 _STUDENT_DIR = (
     Path(__file__).resolve().parent.parent / "constrained_albc" / "envs" / "_core" / "student"
 )

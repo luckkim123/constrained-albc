@@ -114,6 +114,13 @@ class ConstraintEncoderRunner(OnPolicyRunner):
                 # unit-range bounds, not DR-derived (no DR-range field for it).
                 lower = lower + [0.0] * 6
                 upper = upper + [1.0] * 6
+            if getattr(getattr(env_cfg, "depth_xy", None), "enable", False):
+                # compute_privileged_obs appends the noise-free depth error last.
+                # Use the policy channel's fixed +/-1 m operating scale for encoder
+                # normalization; values outside it remain visible (normalization is
+                # affine and deliberately does not clamp).
+                lower = lower + [-env_cfg.depth_xy.depth_error_clip]
+                upper = upper + [env_cfg.depth_xy.depth_error_clip]
             logger.info("Overriding encoder_obs_lower/upper with DR-derived bounds (margin 0)")
             policy_cfg["encoder_obs_lower"] = lower
             policy_cfg["encoder_obs_upper"] = upper

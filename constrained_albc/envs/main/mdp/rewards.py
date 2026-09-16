@@ -205,6 +205,21 @@ def bias_ema_penalty(env: ALBCEnv) -> torch.Tensor:
     return (env._bias_ema.pow(2) * w).sum(dim=-1)
 
 
+def depth_tracking(_robot: Articulation, env: ALBCEnv, sigma: float = 0.10) -> torch.Tensor:
+    """Track the noise-free depth target (depth is positive downward)."""
+    depth = -env._robot.data.root_pos_w[:, 2]
+    err = depth - env._depth_target
+    return torch.exp(-err.pow(2) / (2.0 * sigma**2))
+
+
+def xy_force_tracking(_robot: Articulation, env: ALBCEnv, sigma: float = 2.0) -> torch.Tensor:
+    """Track the commanded body-frame horizontal force after faults and clamping."""
+    realized_xy = env._thruster.body_forces[:, :2]
+    force_cmd = env._xy_cmd * env.cfg.depth_xy.xy_force_scale
+    err_sq = (realized_xy - force_cmd).pow(2).sum(dim=-1)
+    return torch.exp(-err_sq / (2.0 * sigma**2))
+
+
 # --- Reward Manager ---
 
 
@@ -226,7 +241,13 @@ class RewardManager:
         ("bias", lambda c: c.k_bias, lambda robot, env: bias_ema_penalty(env)),
     )
 
-    def __init__(self, cfg: ALBCRewardCfg, num_envs: int, device: str) -> None:
+    def __init__(
+        self,
+        cfg: ALBCRewardCfg,
+        num_envs: int,
+        device: str,
+        doraemon_excluded_extra_terms: tuple[str, ...] = (),
+    ) -> None:
         self._cfg = cfg
         self._buf = torch.zeros(num_envs, dtype=torch.float32, device=device)
         self._extra_terms = [(t.name or t.func.__name__, t) for t in cfg.extra_terms]
@@ -236,22 +257,42 @@ class RewardManager:
         self._episode_sums = {n: torch.zeros(num_envs, dtype=torch.float32, device=device) for n in self._names}
         # Preallocated per-axis bias weights (used by bias_ema_penalty each step).
         self._bias_w = torch.tensor(cfg.bias_weights, dtype=torch.float32, device=device)
+        self._doraemon_excluded_extra_terms = frozenset(doraemon_excluded_extra_terms)
+        unknown = self._doraemon_excluded_extra_terms.difference(n for n, _ in self._extra_terms)
+        if unknown:
+            raise ValueError(f"DORAEMON exclusions are not registered reward terms: {sorted(unknown)}")
+        self._doraemon_buf = (
+            torch.zeros(num_envs, dtype=torch.float32, device=device)
+            if self._doraemon_excluded_extra_terms
+            else None
+        )
 
     def compute(self, robot: Articulation, dt: float, env: ALBCEnv, **_ctx: Any) -> torch.Tensor:
         """Compute total reward (dt-scaled)."""
         cfg = self._cfg
         self._buf.zero_()
+        if self._doraemon_buf is not None:
+            self._doraemon_buf.zero_()
 
         for name, weight_of, func in self._BUILTIN_TERMS:
             scaled = func(robot, env) * weight_of(cfg) * dt
             self._buf += scaled
             self._episode_sums[name] += scaled
+            if self._doraemon_buf is not None:
+                self._doraemon_buf += scaled
         for name, term in self._extra_terms:
             scaled = term.func(robot, env, **term.params) * term.weight * dt
             self._buf += scaled
             self._episode_sums[name] += scaled
+            if self._doraemon_buf is not None and name not in self._doraemon_excluded_extra_terms:
+                self._doraemon_buf += scaled
 
         return self._buf
+
+    @property
+    def doraemon_step_reward(self) -> torch.Tensor:
+        """Return this step's reward with configured extra terms excluded."""
+        return self._buf if self._doraemon_buf is None else self._doraemon_buf
 
     def reset(self, env_ids: torch.Tensor) -> dict[str, float]:
         """Reset episode sums, return means before reset."""

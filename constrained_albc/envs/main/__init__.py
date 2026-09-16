@@ -20,6 +20,7 @@ Registered tasks (these are the default ALBC tasks; the legacy full-DOF envs liv
     Isaac-ConstrainedALBC-PPO-Enc-v0:    Encoder + PPO, no IPO (ablation 4)
     Isaac-ConstrainedALBC-TRPO-NoIPO-NoEncoder-v0: TRPO, no IPO, no encoder (ablation 5, "no-both")
     Isaac-ConstrainedALBC-TRPO-SimToReal-v0: production TRPO on the section-5 plant
+    Isaac-ConstrainedALBC-TRPO-SimToReal-DepthXY-v0: section-5 plant + depth/XY commands
     Isaac-ConstrainedALBC-TRPO-SimToReal-NoDoraemon-v0: N6a fixed full-range DR
     Isaac-ConstrainedALBC-TRPO-SimToReal-NoDR-v0: N6b nominal-point plant, no DORAEMON
 
@@ -119,6 +120,20 @@ gym.register(
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": f"{__name__}.config_simtoreal:ALBCSimToRealEnvCfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:ALBCTRPORunnerCfg",
+    },
+)
+
+# Section-5 plant with gen-2 deployable sensors, closed-loop depth, and open-loop
+# body-frame XY force commands. The runner is identical to the attitude-only reference.
+gym.register(
+    id="Isaac-ConstrainedALBC-TRPO-SimToReal-DepthXY-v0",
+    entry_point="constrained_albc.envs.main:ALBCEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": (
+            f"{__name__}.config_simtoreal_depthxy:ALBCSimToRealDepthXYEnvCfg"
+        ),
         "rsl_rl_cfg_entry_point": f"{__name__}.agents.rsl_rl_ppo_cfg:ALBCTRPORunnerCfg",
     },
 )
