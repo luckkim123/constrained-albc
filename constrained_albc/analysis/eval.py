@@ -8,6 +8,7 @@ Subcommands:
     static     evaluate policy across fixed DR levels (none/soft/medium/hard) + OOD  [main eval]
     periodic   mid-episode periodic DR change, hover robustness
     segmented  per-segment DR switch + student/teacher/cascade-PID compare
+    depthxy    depth steps / hover / xy force steps at attitude 0 (depth_xy.enable tasks only)
 
 OOD (out-of-distribution) generalization is evaluated within `static` via
 --extreme-ood / --ood-preset / --ood-scale / --ood-range-scale (no separate mode).
@@ -29,6 +30,12 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 # Pure (Isaac-Sim-free) trajectory + metric helpers, extracted to _eval_dr/.
 # Safe to import before the AppLauncher boot below (numpy only).
+from _eval_dr.depthxy import (  # type: ignore[import-not-found]  # noqa: E402
+    SCHEDULE_DURATION_S,
+    build_depthxy_schedule,
+    compute_depthxy_metrics,
+    render_depthxy_markdown,
+)
 from _eval_dr.dr_snapshot import (  # type: ignore[import-not-found]  # noqa: E402
     per_env_dr_from_tensors,
     per_env_fault_from_tensors,
@@ -364,6 +371,24 @@ sp_segmented.add_argument("--teacher_ckpt", type=str, default=None,
                           help="Teacher model_*.pt path (required when --student_ckpt is given).")
 sp_segmented.add_argument("--encoder_type", type=str, choices=["tcn", "gru"], default=None,
                           help="Student encoder type (required when --student_ckpt is given).")
+
+# ----------------------------------------------------------------------------
+# depthxy: depth steps / hover / xy force steps at attitude 0 (depth_xy.enable tasks only)
+# ----------------------------------------------------------------------------
+sp_depthxy = subparsers.add_parser(
+    "depthxy", description="Depth/XY exam: deterministic depth and horizontal-force command schedule."
+)
+_add_common(sp_depthxy)
+sp_depthxy.add_argument("--control-delay", type=int, default=0,
+                        help="Fixed N-step action transport delay at every DR level (same as static).")
+sp_depthxy.add_argument("--doraemon-dr", action=argparse.BooleanOptionalAction, default=True,
+                        help="Hard DR = DORAEMON-learned distribution from the run dir (same as static).")
+sp_depthxy.add_argument("--doraemon-dr-from", type=str, default=None,
+                        help="Load the DORAEMON hard DR from this run dir instead (same as static).")
+sp_depthxy.add_argument("--env-dr-anchor", action="store_true", default=False,
+                        help="Anchor DR interpolation on the run's own env cfg (same as static).")
+sp_depthxy.add_argument("--levels", type=str, default=None,
+                        help="Comma-separated subset of DR levels (default: none,soft,medium,hard).")
 
 # Parse + launch ONLY when executed directly. When this module is imported by
 # another script that owns argv, that script is responsible for calling AppLauncher
@@ -2555,6 +2580,228 @@ def run_segmented(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
 
 
 # ============================================================================
+# depthxy mode: depth steps / hover / xy force steps on a depth_xy.enable task
+# ============================================================================
+
+
+def _depthxy_rollout(env, policy, policy_nn, raw_env, sched: dict) -> tuple[dict, dict]:
+    """One pass of the depthxy schedule over every env -> (per-step arrays, override check).
+
+    Before every env.step the schedule is written into the env buffers: _ang_cmd = 0,
+    _depth_target = episode-start depth + offset, _xy_cmd = u_xy. play_mode and
+    vel_cmd_resample_steps=0 (run_depthxy) already stop the env from sampling commands; the check
+    proves nothing overwrote them. As in run_evaluation, step k's policy sees the obs built with
+    step k-1's command, so a new segment's command reaches the policy one step after it starts.
+    """
+    num_envs, device = raw_env.num_envs, raw_env.device
+    total_steps = len(sched["time"])
+    offsets = torch.as_tensor(sched["depth_offset"], device=device)
+    u_xy = torch.as_tensor(sched["u_xy"], device=device)
+    seg_start, names = sched["seg_start"], sched["segment_names"]
+    force_scale = raw_env.cfg.depth_xy.xy_force_scale
+    clip = raw_env.cfg.depth_xy.depth_error_clip
+
+    # Full reset exactly as run_evaluation: time every env out on a throwaway step, then zero the
+    # episode counter, because _reset_framework jitters episode_length_buf on a full-batch reset.
+    raw_env.episode_length_buf[:] = raw_env.max_episode_length
+    obs = env.get_observations()
+    with torch.inference_mode():
+        obs, _, _, _ = env.step(policy(obs))
+        if hasattr(policy_nn, "reset"):
+            policy_nn.reset(torch.ones(num_envs, 1, dtype=torch.bool, device=device))
+    raw_env.episode_length_buf[:] = 0
+    start_depth = raw_env._episode_start_depth.clone()
+    per_env_dr = _read_per_env_dr(raw_env)
+    per_env_fault = _read_per_env_fault(raw_env)
+
+    rec = {k: torch.zeros(total_steps, num_envs, device=device)
+           for k in ("depth", "depth_target", "roll_err_deg", "pitch_err_deg")}
+    rec["force_xy"] = torch.zeros(total_steps, num_envs, 2, device=device)
+    rec["force_cmd_xy"] = torch.zeros(total_steps, num_envs, 2, device=device)
+    rec["terminated"] = torch.zeros(total_steps, num_envs, dtype=torch.bool, device=device)
+    rec["truncated"] = torch.zeros(total_steps, num_envs, dtype=torch.bool, device=device)
+    dev_max = torch.zeros(4, device=device)  # max |dev| over envs not reset in that step
+    sample_steps = set(seg_start[:-1].tolist()) | set((seg_start[1:] - 1).tolist())
+
+    for k in range(total_steps):  # own step counter from 0, never episode_length_buf
+        target = start_depth + offsets[k]
+        raw_env._ang_cmd.zero_()
+        raw_env._depth_target.copy_(target)
+        raw_env._xy_cmd.copy_(u_xy[k].expand(num_envs, 2))
+        with torch.inference_mode():
+            obs, _, dones, _ = env.step(policy(obs))
+            if hasattr(policy_nn, "reset"):
+                policy_nn.reset(dones)
+
+        rec["depth"][k] = -raw_env._robot.data.root_pos_w[:, 2]
+        rec["depth_target"][k] = raw_env._depth_target
+        rec["force_xy"][k] = raw_env._thruster.body_forces[:, :2]  # the xy_force_tracking reward's quantity
+        rec["force_cmd_xy"][k] = raw_env._xy_cmd * force_scale
+        att_deg = torch.rad2deg(raw_env._att_rp_err)  # command 0 -> error = -attitude
+        rec["roll_err_deg"][k] = att_deg[:, 0]
+        rec["pitch_err_deg"][k] = att_deg[:, 1]
+        rec["terminated"][k] = raw_env.reset_terminated
+        rec["truncated"][k] = raw_env.reset_time_outs
+
+        # Override proof on envs not reset this step (a reset rewrites the buffers to play_mode
+        # values before the obs is built): buffers hold the schedule, and the policy-obs tail
+        # [e_z_meas, e_z integral, u_x, u_y] was built from them.
+        kept = ~dones.bool()
+        if kept.any():
+            tail = obs["policy"][kept, -4:]
+            e_z_meas = (raw_env._depth_meas_held[kept] - target[kept]).clamp(-clip, clip)
+            dev_max = torch.maximum(dev_max, torch.stack([
+                (raw_env._depth_target[kept] - target[kept]).abs().max(),
+                (raw_env._xy_cmd[kept] - u_xy[k]).abs().max(),
+                (tail[:, 2:] - u_xy[k]).abs().max(),
+                (tail[:, 0] - e_z_meas).abs().max(),
+            ]))
+        if k in sample_steps:
+            seg = int(np.searchsorted(seg_start, k, side="right") - 1)
+            alive = int((~rec["terminated"][: k + 1].any(dim=0)).sum())
+            print(f"  [depthxy k={k:4d} {names[seg]:<14s}] env0 target-start="
+                  f"{float(raw_env._depth_target[0] - start_depth[0]):+.3f} (sched {float(offsets[k]):+.3f}) "
+                  f"xy_cmd={[round(v, 3) for v in raw_env._xy_cmd[0].tolist()]} "
+                  f"obs_tail={[round(v, 4) for v in obs['policy'][0, -4:].tolist()]} "
+                  f"e_z={float(rec['depth'][k, 0] - rec['depth_target'][k, 0]):+.3f} alive={alive}/{num_envs}")
+
+    data = {k: v.cpu().numpy() for k, v in rec.items()}
+    data.update({k: sched[k] for k in ("time", "depth_offset", "u_xy", "seg_start", "segment_names")})
+    data["start_depth"] = start_depth.cpu().numpy()
+    data.update(per_env_dr)
+    data.update(per_env_fault)
+    data["fault_injection"] = np.array(bool(per_env_fault))
+    keys = ("depth_target_buf", "xy_cmd_buf", "obs_u_xy", "obs_depth_err")
+    return data, dict(zip(keys, (float(v) for v in dev_max.cpu())))
+
+
+def run_depthxy(env_cfg: DirectRLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
+    """Depth/XY exam (depth-xy-ftc-2026-09 PLAN "Eval schedule") on a depth_xy.enable task.
+
+    Env overrides, --fault_fixed_health, --env-dr-anchor / --doraemon-dr(-from), the per-level DR
+    scale and pairing seed, --control-delay and the runner load follow run_static; the command
+    stream is _eval_dr.depthxy.SCHEDULE and the metrics are compute_depthxy_metrics. Writes
+    data_<level>.npz, summary.json and summary.md. Guards raise RuntimeError, not SystemExit
+    (an Isaac script's SystemExit exits rc 0).
+    """
+    if not getattr(getattr(env_cfg, "depth_xy", None), "enable", False):
+        raise RuntimeError(
+            f"eval.py depthxy needs a task with depth_xy.enable=True; {args_cli.task} "
+            f"({type(env_cfg).__name__}) does not enable it -- use Isaac-ConstrainedALBC-TRPO-SimToReal-DepthXY-v0."
+        )
+    if not args_cli.checkpoint or args_cli.checkpoint == "none":
+        raise RuntimeError("eval.py depthxy needs an explicit --checkpoint <model_*.pt>")
+    levels = list(DR_LEVELS)
+    if args_cli.levels is not None:
+        selected = {lv.strip() for lv in args_cli.levels.split(",") if lv.strip()}
+        if not selected or selected - set(DR_LEVELS):
+            raise RuntimeError(f"bad --levels {args_cli.levels!r}; valid: {', '.join(DR_LEVELS)}")
+        levels = [lv for lv in DR_LEVELS if lv in selected]
+
+    # ---- Env config overrides (as run_static) ----
+    env_cfg.scene.num_envs = args_cli.num_envs
+    env_cfg.play_mode = True  # env-side command sampling -> zero; the schedule is written every step
+    env_cfg.vel_cmd_resample_steps = 0  # no mid-episode resampling
+    env_cfg.observation_noise_model = None
+    env_cfg.max_attitude_angle = 2.5
+    env_cfg.debug_vis = False
+    env_cfg.seed = args_cli.seed
+    env_cfg.sim.device = args_cli.device if args_cli.device is not None else env_cfg.sim.device
+    env_cfg.doraemon.enable = False
+    _apply_fault_cli(env_cfg, args_cli)
+    env_cfg.episode_length_s = SCHEDULE_DURATION_S + 10.0  # no time-out inside the schedule
+
+    agent_cfg = cli_args.update_rsl_rl_cfg(agent_cfg, args_cli)
+    resume_path = _resolve_teacher_checkpoint(agent_cfg, args_cli)
+    agent_dict = agent_cfg.to_dict()
+    run_params_path = os.path.join(os.path.dirname(resume_path), "params", "agent.yaml")
+    if os.path.isfile(run_params_path):
+        import yaml
+
+        with open(run_params_path) as f:
+            agent_dict = yaml.full_load(f)
+        print(f"[INFO] Loaded agent params from run directory: {run_params_path}")
+
+    if args_cli.env_dr_anchor:
+        _dr_config_module._USE_ENV_DR_ANCHOR = True
+        _dr_config_module.capture_env_dr_anchor(env_cfg)
+    dr_source = args_cli.doraemon_dr_from or (os.path.dirname(resume_path) if args_cli.doraemon_dr else None)
+    if dr_source:
+        cfg, raw = load_doraemon_dr(dr_source)
+        if cfg is None and args_cli.doraemon_dr_from:
+            raise RuntimeError(f"--doraemon-dr-from: no DORAEMON/mean/* scalars under {dr_source}")
+        _dr_config_module._DORAEMON_FULL_DR = cfg
+        _dr_config_module._DORAEMON_RAW = raw
+    hard_dr = dr_source if _dr_config_module._DORAEMON_FULL_DR is not None else "static DomainRandomizationCfg"
+    print(f"[INFO] Hard DR anchor: {hard_dr}")
+
+    output_dir, handled = _resolve_eval_output_dir(resume_path, "depthxy")
+    if not handled:
+        output_dir = os.path.join(os.path.dirname(resume_path), "eval_depthxy_" + os.path.splitext(os.path.basename(resume_path))[0])
+    os.makedirs(output_dir, exist_ok=True)
+
+    cd = args_cli.control_delay
+    apply_dr_config(env_cfg, DR_SCALE["none"])
+    if cd > 0:
+        env_cfg.randomization.control_delay_steps = (cd, cd)  # nonzero at __init__, see run_static
+    env = RslRlVecEnvWrapper(gym.make(args_cli.task, cfg=env_cfg), clip_actions=agent_dict.get("clip_actions"))
+    raw_env = env.unwrapped
+    sched = build_depthxy_schedule(raw_env.step_dt)
+    if len(sched["time"]) >= raw_env.max_episode_length - 1:
+        raise RuntimeError(f"schedule of {len(sched['time'])} steps does not fit {raw_env.max_episode_length}")
+
+    sync_policy_obs_dim(env, agent_dict)
+    runner_cls = (ConstraintEncoderRunner if agent_dict.get("class_name") == "ALBCConstraintEncoderRunner"
+                  else OnPolicyRunner)
+    runner = runner_cls(env, agent_dict, log_dir=None, device=agent_dict.get("device", agent_cfg.device))
+    runner.load(resume_path, load_optimizer=False)
+    policy = runner.get_inference_policy(device=raw_env.device)
+    policy_nn = runner.alg.policy
+    print(f"[INFO] Loaded {runner_cls.__name__} from {resume_path}; {len(sched['time'])} steps x "
+          f"{raw_env.num_envs} envs, levels={levels}, output={output_dir}")
+
+    import marinelab
+
+    summary: dict = {"meta": {
+        "task": args_cli.task, "checkpoint": resume_path, "num_envs": raw_env.num_envs, "seed": args_cli.seed,
+        "fault_fixed_health": args_cli.fault_fixed_health, "control_delay": cd,
+        "env_dr_anchor": args_cli.env_dr_anchor, "doraemon_dr_from": hard_dr, "levels": levels,
+        "step_dt": raw_env.step_dt, "episode_length_s": env_cfg.episode_length_s,
+        "xy_force_scale": raw_env.cfg.depth_xy.xy_force_scale, "hydra_overrides": sys.argv[1:],
+        "eval_py": os.path.abspath(__file__), "marinelab": marinelab.__file__, "constrained_albc": sys.modules["constrained_albc"].__file__,
+    }}
+    invalid = []
+    for level in levels:
+        print(f"\n{'=' * 60}\n  depthxy DR level: {level.upper()} (scale {DR_SCALE[level]})\n{'=' * 60}")
+        apply_dr_config(raw_env.cfg, DR_SCALE[level])
+        if cd > 0:
+            raw_env.cfg.randomization.control_delay_steps = (cd, cd)
+        torch.manual_seed(args_cli.seed + DR_LEVELS.index(level))  # run_static's per-level pairing seed
+        data, check = _depthxy_rollout(env, policy, policy_nn, raw_env, sched)
+        write_eval_npz(output_dir, level, data)
+        res = compute_depthxy_metrics(data, raw_env.step_dt)
+        res["n_truncated"] = int(data["truncated"].any(axis=0).sum())
+        res["override_max_abs_dev"] = check
+        res["override_ok"] = max(check.values()) < 1e-4
+        summary[level] = res
+        print(f"  survival={res['survival_frac']:.3f} truncated={res['n_truncated']} override={check}")
+        if res["n_truncated"] or not res["override_ok"]:
+            invalid.append(level)
+
+    summary["meta"]["valid"] = not invalid
+    with open(os.path.join(output_dir, "summary.json"), "w") as f:
+        json.dump(summary, f, indent=2)
+    md = render_depthxy_markdown(summary)
+    with open(os.path.join(output_dir, "summary.md"), "w") as f:
+        f.write(md)
+    print(md)
+    print(f"Output saved to: {output_dir}")
+    env.close()
+    if invalid:
+        raise RuntimeError(f"depthxy exam invalid at {invalid}: truncation or command-override deviation")
+
+
+# ============================================================================
 # Dispatch
 # ============================================================================
 
@@ -2562,6 +2809,7 @@ _MODE_DISPATCH = {
     "static": run_static,
     "periodic": run_periodic,
     "segmented": run_segmented,
+    "depthxy": run_depthxy,
 }
 
 
