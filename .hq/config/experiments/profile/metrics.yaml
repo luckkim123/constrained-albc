@@ -140,3 +140,30 @@ views:
 - trajectory
 - per_axis_bar
 - overlay
+
+# --- run completion contract (read by `omx close-check` / the closure_guard hook) ---
+# A FINISHED training run carrying none of this project evaluation artifacts blocks a
+# session from declaring closure/handoff. The mechanism ships in omx; WHAT counts as
+# finished and WHAT must exist is declared here, so it stays this project rule.
+#
+#   runs      scoped to the retrain_* campaign groups on purpose. The pre-2026-09
+#             ablation tree predates the dashboard convention: whole-tree scope denies
+#             48 historical runs at once, which is how a gate gets switched off in a day.
+#   finished  rsl_rl last save is model_{max_iterations-1}.pt and this project budgets
+#             are round, so the final checkpoint ends in 9 while every periodic save
+#             ends in 0. Measured over 133 real runs: agrees with the arithmetic test
+#             (last == max_iterations - 1) on 114. CEILING: a resume whose total is not
+#             round leaves a final checkpoint ending in 8 (e.g. 14998) and reads as
+#             unfinished. There is no end-of-run marker to key on -- scripts/train.py
+#             writes nothing to the tree after runner.learn(), and manifest.json says
+#             "status": "running" on all 133 runs, including ones finished in July.
+#   required  exactly what this project own pipeline produces: the 4-cell static eval
+#             summaries and the monitor.py training dashboard.
+run_completion:
+  runs: "rsl_rl/*/retrain_*/*"
+  exclude: ["*/latest", "*smoke*", "*probe*"]
+  finished: "train/model_*9.pt"
+  required:
+    - "eval/static_*/summary.json"
+    - "analysis/training_dashboard.png"
+  how: "python3 constrained_albc/analysis/monitor.py plot experiments/{run}/train --output experiments/{run}/analysis/training_dashboard.png   (static eval: the 4-cell eval stage of the campaign pipeline writes experiments/{run}/eval/static_<ts>_<cell>_<delay>/summary.json)"
