@@ -525,10 +525,7 @@ class ConstraintTRPO:
 
         Split out of `surrogate()` (2026-09-07) so a subclass can substitute a different
         constraint mechanism without copying the ~70-line surrogate around it; the body
-        is unchanged, so every IPO arm is byte-identical to before the split. The one
-        subclass today is `ConstraintLagrangian` (paper-ablation-5000 arm N1), which
-        needs the comparison "IPO vs Lagrangian" to differ in exactly this term and
-        nothing else.
+        is unchanged, so every IPO arm is byte-identical to before the split.
 
         Returned value is ADDED to the minimized surrogate, so a larger return means a
         stronger push away from the constraint boundary.

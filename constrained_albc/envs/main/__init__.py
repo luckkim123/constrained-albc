@@ -27,7 +27,6 @@ Section-5 plant variants of the ablation arms (program `paper-ablation-5000`, an
     Isaac-ConstrainedALBC-TRPO-NoIPO-SimToReal-v0
     Isaac-ConstrainedALBC-TRPO-NoIPO-NoEncoder-SimToReal-v0
     Isaac-ConstrainedALBC-PPO-Enc-SimToReal-v0
-    Isaac-ConstrainedALBC-TRPO-Lagrangian-SimToReal-v0 (arm N1, new mechanism)
 """
 
 import gymnasium as gym
@@ -203,19 +202,5 @@ gym.register(
     kwargs={
         "env_cfg_entry_point": f"{__name__}.config_simtoreal:ALBCSimToRealNoConstraintEnvCfg",
         "rsl_rl_cfg_entry_point": f"{__name__}.agents.ablation_cfgs:ALBCPPOEncRunnerCfg",
-    },
-)
-
-# Arm N1 (paper-ablation-5000 §3-2, §4-1): same constraints, different mechanism.
-# Note the env cfg is the constraint-CARRYING one -- unlike A4/A5/A6 above, this arm
-# must see the full K=10 list, because what it ablates is how the budget is enforced
-# (Lagrangian multipliers instead of the IPO barrier), not whether there is one.
-gym.register(
-    id="Isaac-ConstrainedALBC-TRPO-Lagrangian-SimToReal-v0",
-    entry_point="constrained_albc.envs.main:ALBCEnv",
-    disable_env_checker=True,
-    kwargs={
-        "env_cfg_entry_point": f"{__name__}.config_simtoreal:ALBCSimToRealEnvCfg",
-        "rsl_rl_cfg_entry_point": f"{__name__}.agents.ablation_cfgs:ALBCTRPOLagrangianRunnerCfg",
     },
 )

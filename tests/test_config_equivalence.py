@@ -76,7 +76,6 @@ def _install_stubs() -> None:
             stub(name)
     for module, symbol in [
         (f"{algo}.constraint_trpo", "ConstraintTRPO"),
-        (f"{algo}.constraint_lagrangian", "ConstraintLagrangian"),
         (f"{algo}.encoder.actor_critic_asym_constrained", "ActorCriticAsymConstrained"),
         (f"{algo}.encoder.actor_critic_encoder", "ActorCriticEncoder"),
         (f"{algo}.runners.constraint_encoder_runner", "ConstraintEncoderRunner"),
