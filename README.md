@@ -148,6 +148,23 @@ constrained-albc/
 └── tests/             # unit tests that run without Isaac Sim
 ```
 
+## Tests
+
+The unit tests need no simulator and no GPU; run them from the repo root with the Isaac Sim
+interpreter:
+
+```bash
+CUDA_VISIBLE_DEVICES= "$ISAACLAB_SH" -p -m pytest -q tests --ignore=tests/test_simtoreal_cfg.py
+```
+
+- `tests/test_simtoreal_cfg.py` boots Kit through `AppLauncher` and needs a GPU; run it on its
+  own (`"$ISAACLAB_SH" -p tests/test_simtoreal_cfg.py`).
+- `tests/test_eval_adapter.py` and `tests/test_encoder_adapter.py` exercise a local analysis
+  profile that is not part of this repository, so they are skipped in a fresh clone.
+- Known failures: `tests/test_doraemon.py` (collection error) and two tests in
+  `tests/test_fault_dr.py` import `marinelab.algorithms.doraemon`, which the current marinelab
+  release does not provide. They are not fixed here.
+
 ## License
 
 MIT, see [LICENSE](LICENSE). Files carrying the Isaac Lab Project Developers copyright header
