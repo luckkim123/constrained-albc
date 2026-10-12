@@ -5,8 +5,8 @@
 """Sim-free plotting helpers extracted from eval.py.
 
 Every function here is pure matplotlib/plotly/numpy and imports on plain
-python3 (no Isaac Sim). This is what makes eval output replottable by omx
-exp-analyze without booting sim. Mirrors the _eval_dr/ extraction pattern.
+python3 (no Isaac Sim). This is what makes eval output replottable
+without booting sim. Mirrors the _eval_dr/ extraction pattern.
 """
 
 from __future__ import annotations

@@ -2,52 +2,50 @@
 
 # constrained-albc
 
-**Constraint-aware reinforcement learning for an underwater vehicle-manipulator system on NVIDIA Isaac Lab.**
+**Training and evaluation code for "Underwater Mini-ROV Manipulation via Active Link Buoyancy
+Control with Sim-to-Real Reinforcement Learning".**
 
 ![python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![isaac-sim](https://img.shields.io/badge/Isaac%20Sim-5.1.0-76b900)
-![status](https://img.shields.io/badge/status-private%20research-red)
+![license](https://img.shields.io/badge/license-MIT-green)
 
-[Documentation](docs/README.md) | [Getting Started](#getting-started) | [Architecture](docs/architecture.md)
+[Documentation](docs/README.md) | [Reproducing the paper](#reproducing-the-paper) | [Architecture](docs/architecture.md)
 
 </div>
 
-> Private, unpublished research code. Not licensed for distribution or use. See [LICENSE](LICENSE).
-
 ## Overview
 
-`constrained-albc` is the top layer of a three-repo research stack for 6-DOF underwater
-vehicle-manipulator (UUV) reinforcement learning. It trains an attitude-only arm-linked
-buoyancy control (ALBC) teacher policy with ConstraintTRPO (TRPO + IPO interior-point
-constraints), an asymmetric critic, and a privileged-observation encoder, then distills
-the teacher into a deployable TCN/GRU student.
+A mini-ROV carries a two-joint arm whose buoyant element, repositioned by the arm, holds roll
+and pitch against an unknown payload moment. This repository trains the attitude controller
+for that vehicle in NVIDIA Isaac Lab and exports it for the onboard runtime.
+
+- **Teacher.** ConstraintTRPO (TRPO with an interior-point log-barrier on ten cost budgets)
+  with an asymmetric critic and a privileged encoder: a 72D observation and 28 privileged
+  inputs compressed to a 9D latent; the action is 8D (two arm joints, six thrusters).
+  Domain randomization follows the DORAEMON curriculum.
+- **Student.** A GRU encoder distilled to predict the latent from the observation history
+  alone, deployed with the teacher's policy at 50 Hz.
+- **Deploy.** A torch-free pack (numpy weights, CPU goldens, parity self-check, sha256
+  manifest) for the board runtime.
 
 ```
-isaaclab   (GPU sim core — pristine upstream fork)
-   └── marinelab   (public: marine physics + UUV assets + BlueROV tasks)
-          └── constrained-albc   (this repo — private research overlay)
+isaaclab   (GPU sim core — upstream)
+   └── marinelab   (marine physics, UUV assets)
+          └── constrained-albc   (this repo — ALBC tasks, training, evaluation, export)
 ```
-
-## Key Features
-
-- **ConstraintTRPO + IPO**: constrained policy optimization with interior-point barriers, on stock `rsl-rl-lib` (no fork — `ConstraintTRPO` is a standalone algorithm).
-- **Asymmetric privileged encoder**: 69D actor observation, 28D privileged observation encoded to a 9D latent for the critic path.
-- **DORAEMON domain randomization**: entropy-scheduled DR curriculum over hydrodynamics, thruster, latency, and observation-noise dimensions.
-- **Teacher-student distillation**: TCN/GRU students recover the privileged latent from onboard history for deployment.
-- **Evaluation and analysis suite**: `eval.py` static/periodic/segmented modes with per-env heavy-tail and CV diagnostics, PNG reports.
 
 ## Getting Started
 
 ### Prerequisites
 
-- Isaac Sim 5.1.0 with Isaac Lab installed (the project Docker image provides both)
-- [marinelab](../marinelab) installed into the Isaac Lab environment
+- Isaac Sim 5.1.0 with Isaac Lab
+- [marinelab](https://github.com/luckkim123/marinelab) installed into the Isaac Lab environment
 - NVIDIA GPU, Python 3.10+ (the Isaac Sim interpreter)
 
 ### Installation
 
-Three-layer install order is strict — `isaaclab -> marinelab -> constrained-albc`.
-See [docs/installation.md](docs/installation.md) for the full sequence.
+The install order is `isaaclab -> marinelab -> constrained-albc`; see
+[docs/installation.md](docs/installation.md).
 
 ```bash
 cd /workspace/isaaclab
@@ -55,102 +53,119 @@ cd /workspace/isaaclab
 ./isaaclab.sh -p -m pip install -e /workspace/constrained-albc
 ```
 
-> Every script must run through the Isaac Sim interpreter (`./isaaclab.sh -p`, or the
-> container's `python` wrapper). Plain system Python cannot find Isaac Sim modules.
+Every script runs through the Isaac Sim interpreter (`isaaclab.sh -p`).
 
-### Quick Start
+## Reproducing the paper
 
-Train the main task with the overlay-owned entry point (`isaaclab` stays a pristine
-fork; env registration and the `ConstraintEncoderRunner` dispatch live here):
-
-```bash
-cd /workspace/isaaclab
-./isaaclab.sh -p /workspace/constrained-albc/scripts/train.py \
-    --task Isaac-ConstrainedALBC-TRPO-v0 \
-    --num_envs 4096 --max_iterations 5000 \
-    --logger wandb --log_project_name albc_trpo
-```
-
-Evaluate (produces PNG plots; other modes: `periodic`, `segmented`):
+The paper's controller is trained on the section-5 plant task
+`Isaac-ConstrainedALBC-TRPO-SimToReal-v0`. Run every command below from the repository root,
+with `ISAACLAB_SH` pointing at Isaac Lab's launcher:
 
 ```bash
-./isaaclab.sh -p /workspace/constrained-albc/constrained_albc/analysis/eval.py static \
-    --task Isaac-ConstrainedALBC-TRPO-v0 --num_envs 64 --headless
+cd /path/to/constrained-albc
+export ISAACLAB_SH=/path/to/isaaclab/isaaclab.sh
 ```
 
-New here? Follow the end-to-end walkthrough in
-[docs/tutorials/getting-started.md](docs/tutorials/getting-started.md).
-
-<details>
-<summary><strong>Student distillation and student evaluation</strong></summary>
-
-Student distillation has its own overlay entry point. Run TCN then GRU;
-`--teacher_run_dir` points at the teacher's run through the
-`experiments/.../train` symlink so the student manifest links to the teacher.
-Hyperparameters are CLI flags — pass only what differs from the defaults.
+**1. Teacher.**
 
 ```bash
-cd /workspace/isaaclab
-CUDA_VISIBLE_DEVICES=1 ./isaaclab.sh -p /workspace/constrained-albc/scripts/train_student.py \
-    --encoder_type tcn \
-    --teacher_run_dir /workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/<run_id>/train \
-    --num_envs 2048 --wandb_project constrained_albc_student --headless
+"$ISAACLAB_SH" -p scripts/train.py --task Isaac-ConstrainedALBC-TRPO-SimToReal-v0 \
+    --num_envs 4096 --headless --seed 30 --run_group <campaign>
 ```
 
-A distilled student is evaluated through the same `static` path
-(teacher-comparable, plus the l_hat/l_true encoder diagnostic):
+The paper teacher (`trpo_rr_FTP_s30_260927_182609`, `model_7200`) was trained with, among other
+overrides, `env.reward.k_sstv=-5.0 env.reward.sstv_start_step=125`,
+`env.randomization.obs_delay_steps=[0,5]` and `env.randomization.control_delay_steps=[7,13]`.
+Its full resolved configuration is the run's `params/env.yaml`
+(`experiments/paper/ckpt/proposed_teacher_s30_7200/params/env.yaml` in the project data
+tree). The training randomization ranges live in code: `constrained_albc/envs/main/config.py`
+(`DomainRandomizationCfg`), `config_simtoreal.py`, and the DORAEMON dimension table
+`constrained_albc/envs/main/doraemon.py`.
+
+`scripts/paper/train_teacher.sh` is the paper teacher's training run with its complete set of
+overrides. It is a fine-tune: it resumes from a starting teacher checkpoint (`model_6400` with
+its `doraemon_state.pt`) for 801 iterations and is run as
+`RESUME_CKPT=<model_6400.pt> OUT_DIR=<dir> ARMED=1 scripts/paper/train_teacher.sh`.
+That starting checkpoint and the training chain that produced it are not released.
+
+**2. Student (GRU).**
+
+`scripts/paper/train_student.sh` is the paper student's distillation run with its complete set
+of arguments, including the DAgger schedule (teacher-action probability annealed 1 -> 0 over
+600 iterations, `--dagger_mix select`):
 
 ```bash
-./isaaclab.sh -p /workspace/constrained-albc/constrained_albc/analysis/eval.py static \
-    --teacher_ckpt experiments/rsl_rl/albc_trpo_teacher/<run_id>/train/model_4999.pt \
-    --student_ckpt experiments/rsl_rl/albc_trpo_student/<run_id>/train/models/student_999.pt \
-    --encoder_type tcn --num_envs 64 --headless
+TEACHER_CKPT=<teacher run>/model_7200.pt OUT_DIR=<dir> ARMED=1 scripts/paper/train_student.sh
 ```
 
-</details>
+**3. Evaluate.**
+
+```bash
+"$ISAACLAB_SH" -p constrained_albc/analysis/eval.py static \
+    --task Isaac-ConstrainedALBC-TRPO-SimToReal-v0 --num_envs 64 --headless \
+    --teacher_ckpt <teacher .pt> --student_ckpt <student .pt> --encoder_type gru
+```
+
+**4. Export the deploy pack.**
+
+```bash
+"$ISAACLAB_SH" -p scripts/export_deploy_pack.py --batch attitude_only_5000 \
+    --student-ckpt <student .pt> --teacher-ckpt <teacher .pt> \
+    --run-group <campaign> --tag pack_<label> --device cpu --golden --report
+```
+
+The paper's pack is `pack_rr_ft_ftp7200_s30_gru_260927_193819`; see
+[docs/how-to/deploy.md](docs/how-to/deploy.md) and
+[docs/how-to/deploy-pack-export.md](docs/how-to/deploy-pack-export.md).
+
+**Ablations and figures.** `tools/compare_arms.py` builds the ablation comparison from a
+manifest of arms; `tools/paper_figures.py` renders tables and figures from evaluation
+outputs.
 
 ## Registered Tasks
 
-The default task is `Isaac-ConstrainedALBC-TRPO-v0` (attitude-only, `envs/main`).
-The full list of 7 task IDs, their env packages, and status is maintained in
-[docs/reference/task-reference.md](docs/reference/task-reference.md).
-
-<details>
-<summary><strong>Task table</strong></summary>
-
 | Task ID | Description |
 |---|---|
-| `Isaac-ConstrainedALBC-TRPO-v0` | **Main** — attitude-only ALBC (`envs/main`), ConstraintTRPO + IPO + asymmetric encoder, DORAEMON DR |
-| `Isaac-ConstrainedALBC-{NoEncoder,PPO,TRPO-NoIPO,PPO-Enc}-v0` | Ablation arms of the above (`envs/main`) |
-| `Isaac-ConstrainedALBC-*-SimToReal-v0` | The same arms on the section-5 plant (`envs/main/config_simtoreal.py`) |
-| `Isaac-ConstrainedALBC-Main-{TDC,PID,ATDC}-v0` | Classical-control baselines, no RL training (`envs/tdc_main`) |
-| `Isaac-ConstrainedALBC-Main-ResidualTDC-SimToReal-v0` | TDC plus a learned residual arm torque (`envs/tdc_main`) |
+| `Isaac-ConstrainedALBC-TRPO-v0` | ConstraintTRPO + IPO + asymmetric encoder, DORAEMON DR (`envs/main`) |
+| `Isaac-ConstrainedALBC-{NoEncoder,PPO,TRPO-NoIPO,PPO-Enc}-v0` | Ablation arms of the above |
+| `Isaac-ConstrainedALBC-*-SimToReal-v0` | The same arms on the section-5 plant (`envs/main/config_simtoreal.py`); `TRPO-NoIPO-NoEncoder` exists only here |
+| `Isaac-ConstrainedALBC-Main-{TDC,PID}-v0` | Classical-control baselines, no RL training (`envs/tdc_main`) |
 
-The legacy full-DOF family (`envs/full_dof`, `envs/tdc`, `Isaac-ConstrainedALBC-Full-*` and
-`-TDC-v0`) was removed in the 2026-09 cleanup; recover it from tag `legacy-full-dof-final`.
-
-</details>
+Details: [docs/reference/task-reference.md](docs/reference/task-reference.md).
 
 ## Project Structure
 
 ```
 constrained-albc/
 ├── constrained_albc/
-│   ├── envs/          # main (default), full_dof (legacy), tdc — env + algorithm variants
-│   └── analysis/      # eval.py, analyze.py, encoder tools, plotting
-├── scripts/           # overlay-owned entry points: train.py, play.py, train_student.py
-├── docs/              # tutorials / how-to / reference / explanation (Diátaxis)
-├── experiments/       # run index tree (results SSOT; heavy data lives in logs/)
-└── tests/             # no-Isaac unit tests
+│   ├── algorithms/    # ConstraintTRPO, encoder actor-critic, runners, student distillation
+│   ├── envs/          # main (RL tasks), tdc_main (TDC / PID baselines)
+│   ├── analysis/      # eval.py and sim-free metric/plot helpers
+│   └── deploy/        # torch -> numpy export, goldens, pack
+├── scripts/           # train.py, train_student.py, play.py, export_deploy_pack.py
+├── tools/             # compare_arms.py, paper_figures.py
+├── docs/              # tutorials / how-to / reference / explanation
+└── tests/             # unit tests that run without Isaac Sim
 ```
 
-## Documentation
+## Tests
 
-Start at the [documentation index](docs/README.md). Reference pages are the single
-source of truth for dimensions, task IDs, and config values; the network architecture
-is documented in
-[docs/reference/main-network-architecture.md](docs/reference/main-network-architecture.md).
+The unit tests need no simulator and no GPU; run them from the repo root with the Isaac Sim
+interpreter:
+
+```bash
+CUDA_VISIBLE_DEVICES= "$ISAACLAB_SH" -p -m pytest -q tests --ignore=tests/test_simtoreal_cfg.py
+```
+
+- `tests/test_simtoreal_cfg.py` boots Kit through `AppLauncher` and needs a GPU; run it on its
+  own (`"$ISAACLAB_SH" -p tests/test_simtoreal_cfg.py`).
+- `tests/test_eval_adapter.py` and `tests/test_encoder_adapter.py` exercise a local analysis
+  profile that is not part of this repository, so they are skipped in a fresh clone.
+- Known failures: `tests/test_doraemon.py` (collection error) and two tests in
+  `tests/test_fault_dr.py` import `marinelab.algorithms.doraemon`, which the current marinelab
+  release does not provide. They are not fixed here.
 
 ## License
 
-Private research — all rights reserved. See [LICENSE](LICENSE). Not for distribution.
+MIT, see [LICENSE](LICENSE). Files carrying the Isaac Lab Project Developers copyright header
+remain under Isaac Lab's BSD-3-Clause license, reproduced in the same file.

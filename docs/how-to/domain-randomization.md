@@ -112,7 +112,7 @@ control_delay_steps: tuple[int, int] = (0, 3)   # default: (0, 0) = off
 
 ## 5. Enable the observation-noise DR knob (`obs_noise_scale`)
 
-There are two independent noise layers on the 69D observation:
+There are two independent noise layers on the 72D observation:
 
 1. **Always-on sensor noise model** (`NoiseModelWithAdditiveBiasCfg`, `_OBS_NOISE_STD` /
    `_OBS_BIAS_MAG` in `config.py`) — applies regardless of DR.

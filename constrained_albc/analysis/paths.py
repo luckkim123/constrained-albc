@@ -245,7 +245,7 @@ def _run_recency_key(run: RunHandle) -> datetime:
     legacy runs that carry no manifest. Unparseable on both counts sorts oldest rather
     than raising, because ``list_runs`` scans whatever is on disk.
 
-    ponytail: ``created`` is the manifest WRITE time, so a run registered post-hoc
+    Limitation: ``created`` is the manifest WRITE time, so a run registered post-hoc
     (``emit_run_manifest`` on a finished run) stamps the registration date and sorts as
     if it were new. Swap the two keys if that ever outweighs the legacy-run case.
     """

@@ -15,7 +15,6 @@ Run from the repo root with plain python3 (matplotlib/numpy only):
     python3 tools/paper_figures.py all
     python3 tools/paper_figures.py fault-ablation
     python3 tools/paper_figures.py teacher-summary
-    python3 tools/paper_figures.py doraemon-curriculum
     python3 tools/paper_figures.py student-comparison
 
 Each figure's output directory is the SSOT run's own `analysis/paper_figures/`
@@ -349,76 +348,12 @@ def cmd_teacher_summary(_args: argparse.Namespace) -> None:
         caveats=[
             "3-way comparison, n=1 per arm (screening protocol, not a statistical test).",
             "R30/R31 are from-scratch reproducibility-check runs at the incumbent's config, "
-            "not independent architectural alternatives -- see "
-            "teacher_final_replicate/.../analysis/diagnose-20260814-235911/report.md §0/§7.",
+            "not independent architectural alternatives.",
         ],
         extra={"axis": axis, "field": field},
     )
     print(f"[teacher-summary] wrote {len(outputs)} files to {out_dir}")
     print(f"[teacher-summary] manifest: {manifest_path}")
-
-
-# ---------------------------------------------------------------------------
-# F2/T4 -- DORAEMON curriculum: wrap the existing analyze_training.py --deep
-# output (05_doraemon_curriculum.png) into RA-L single-column PDF+PNG. Does
-# NOT recompute the curriculum (that engine is GPU/Isaac-free but its own,
-# tested tool -- .omx/profile/analyze_training.py); this only re-renders the
-# already-produced raster into the paper's format.
-# ---------------------------------------------------------------------------
-DORAEMON_RUN_DIR = "experiments/rsl_rl/albc_trpo_teacher/teacher_iter_budget/trpo_iterbudget_s30_260805_012813"
-
-
-def cmd_doraemon_curriculum(args: argparse.Namespace) -> None:
-    # analyze_training.py writes into the run's LOGS-side analysis/ dir (heavy,
-    # tied to the raw TB event data), reached from the light experiments/ index
-    # tree only via the `train` symlink -- NOT experiments/<run>/analysis/,
-    # which is exp-analyze's own diagnose-*/ report location (a different dir).
-    src_png = os.path.join(DORAEMON_RUN_DIR, "train", "analysis", "05_doraemon_curriculum.png")
-    if not os.path.isfile(src_png):
-        if not args.generate_if_missing:
-            print(f"[doraemon-curriculum] SKIPPED: {src_png} not found. "
-                  f"Re-run with --generate-if-missing to invoke analyze_training.py --deep "
-                  f"(needs /isaac-sim/python.sh, not plain python3).")
-            return
-        print(f"[doraemon-curriculum] {src_png} missing, invoking analyze_training.py --deep ...")
-        train_dir = os.path.join(DORAEMON_RUN_DIR, "train")
-        subprocess.run(
-            ["/isaac-sim/python.sh", ".omx/profile/analyze_training.py", train_dir, "--deep", "--tier", "1"],
-            cwd=REPO_ROOT, check=True,
-        )
-        if not os.path.isfile(src_png):
-            raise FileNotFoundError(f"analyze_training.py ran but {src_png} still missing")
-
-    out_dir = os.path.join(DORAEMON_RUN_DIR, "analysis", "paper_figures")
-    os.makedirs(out_dir, exist_ok=True)
-
-    img = plt.imread(src_png)
-    h, w = img.shape[0], img.shape[1]
-    with plt.rc_context(RAL_RC):
-        # RA-L single column width; this source panel is a wide multi-panel
-        # dashboard, so render at 2x single-column width (still fits a
-        # \figure*-style spanning placement, or the LaTeX side can \resizebox
-        # it back down) rather than shrinking text below legibility.
-        fig_w = 7.16  # IEEE double-column width (in)
-        fig_h = fig_w * h / w
-        fig, ax = plt.subplots(figsize=(fig_w, fig_h))
-        ax.imshow(img)
-        ax.axis("off")
-        outputs = _savefig(fig, out_dir, "doraemon_curriculum")
-
-    manifest_path = _write_manifest(
-        out_dir,
-        [src_png],
-        outputs,
-        caveats=[
-            "This is a re-rendered copy of the existing analyze_training.py --deep output "
-            "(curriculum band math is NOT recomputed here); source pixels are unchanged, "
-            "only the container format/size changed for print placement.",
-        ],
-        extra={"source_tool": ".omx/profile/analyze_training.py --deep --tier 1", "source_png": src_png},
-    )
-    print(f"[doraemon-curriculum] wrote {len(outputs)} files to {out_dir}")
-    print(f"[doraemon-curriculum] manifest: {manifest_path}")
 
 
 # ---------------------------------------------------------------------------
@@ -556,7 +491,6 @@ def cmd_student_comparison(_args: argparse.Namespace) -> None:
 COMMANDS = {
     "fault-ablation": cmd_fault_ablation,
     "teacher-summary": cmd_teacher_summary,
-    "doraemon-curriculum": cmd_doraemon_curriculum,
     "student-comparison": cmd_student_comparison,
 }
 
@@ -565,17 +499,12 @@ def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
     for name in COMMANDS:
-        sp = sub.add_parser(name)
-        if name == "doraemon-curriculum":
-            sp.add_argument("--generate-if-missing", action="store_true",
-                             help="invoke analyze_training.py --deep via /isaac-sim/python.sh if the source PNG is absent")
+        sub.add_parser(name)
     sub.add_parser("all")
     args, unknown = p.parse_known_args()
 
     if args.cmd == "all":
-        # re-parse each subcommand with defaults (doraemon-curriculum defaults to
-        # NOT generating -- reuse existing output only, per task instructions).
-        ns = argparse.Namespace(generate_if_missing=False)
+        ns = argparse.Namespace()
         for name, fn in COMMANDS.items():
             print(f"\n=== {name} ===")
             try:

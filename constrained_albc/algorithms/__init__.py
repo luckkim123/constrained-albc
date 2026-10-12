@@ -5,7 +5,7 @@
 
 """Variant-independent training machinery for the ALBC envs.
 
-Holds the algorithms (ConstraintTRPO, ConstraintLagrangian) plus the encoder,
+Holds the constrained TRPO algorithm (ConstraintTRPO) plus the encoder,
 runners, student distillation and logging utilities. Env/task logic (albc_env,
 config, mdp) stays per-variant under ``constrained_albc.envs``.
 

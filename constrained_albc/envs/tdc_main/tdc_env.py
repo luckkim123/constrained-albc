@@ -180,8 +180,7 @@ class ALBCTDCEnv(ALBCEnv):
 
         None on this class and on `ALBCPIDEnv`: they are the pure classical arms and
         `TDCController.compute` skips the term entirely when it is None, so this seam
-        leaves their output bit-identical. `ALBCResidualTDCEnv` (arm N4) overrides it
-        to return the policy's action, which is the whole of that arm.
+        leaves their output bit-identical.
 
         A method rather than an attribute so the override cannot be defeated by
         ordering -- it is read at the moment the torque is assembled.

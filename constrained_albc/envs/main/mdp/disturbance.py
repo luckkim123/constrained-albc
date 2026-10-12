@@ -13,8 +13,7 @@ One disturbance so far -- the exogenous heave force (see ``config.FzDisturbanceC
 Once ``fault.thruster_always_dead=(0, 3)`` takes the verticals out of the policy's
 actuator set, the deployed depth PID still drives the one surviving vertical channel, so
 its Fz reaches the hull as an EXOGENOUS wrench the policy cannot command -- together with
-the pitch moment the vertical geometry couples to it (decision/159 결정 2, PLAN §4
-item 11). Random in magnitude AND in timing: piecewise-constant, re-drawn per env when a
+the pitch moment the vertical geometry couples to it. Random in magnitude AND in timing: piecewise-constant, re-drawn per env when a
 random hold expires.
 
 Toggle-off contract: the env calls neither function unless ``cfg.disturbance.enable``, so
@@ -61,7 +60,7 @@ def write_fz_wrench(
     ``permanent_wrench_composer.add_forces_and_torques``; only the z force column and the
     y torque column are ever touched, so every other component keeps whatever the caller
     allocated (zeros). The moment is ``My = my_per_fz * Fz`` exactly -- a single realised
-    ratio measured on the robot (``deployed_tam.json`` My/Fz = -0.1458, finding/155), NOT
+    ratio measured on the robot (``deployed_tam.json`` My/Fz = -0.1458), NOT
     re-derived from the sim TAM columns.
     """
     col = fz.unsqueeze(-1)

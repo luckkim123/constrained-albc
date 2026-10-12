@@ -12,12 +12,12 @@ family). No expansion is defined in the codebase; treated as a proper noun.
 See [command-and-task.md](command-and-task.md).
 
 **Asymmetric critic** — The critic (value + cost networks) consumes the full
-106D input (`o_t` + `z` + raw `p_t`), while the actor only ever sees `o_t` + `z`
-(78D) — the critic has privileged information the actor does not. See
+109D input (`o_t` + `z` + raw `p_t`), while the actor only ever sees `o_t` + `z`
+(81D) — the critic has privileged information the actor does not. See
 [main-network-architecture.md](main-network-architecture.md) §1, §2.4.
 
 **Attitude-only task** — The default task's goal is roll/pitch attitude plus a
-yaw-**rate** command; there is no linear-velocity command or tracking (no DVL
+world-frame yaw **heading** command; there is no linear-velocity command or tracking (no DVL
 on the real robot). See [command-and-task.md](command-and-task.md).
 
 **BlueROV** — A separate task suite (5 registered tasks, `Isaac-BlueROV-*-Direct-v0`)
@@ -36,8 +36,7 @@ One of the 28 `p_t` components (normalized delay, 0 when off). See
 
 **CV (coefficient of variation)** — `ss_error_std / ss_error`, used to detect
 env-to-env spread that a mean alone hides; CV > 100% means the spread exceeds
-the mean (heavy-tail-prone). Defined in `.claude/rules/03-analysis-quality.md`
-("Env-to-Env Variance Analysis").
+the mean (heavy-tail-prone).
 
 **DORAEMON** — "Domain Randomization via Entropy Maximization" (Tiboni et al.,
 ICLR 2024): the adaptive Beta-distribution curriculum that schedules the
@@ -59,16 +58,15 @@ latent `z`, which the actor consumes instead of raw `p_t`. See
 
 **Heavy-tail** — A per-env outlier failure mode (extreme envs, e.g. peak
 attitude error > 20 deg) that mean+std cannot detect on its own — distinct from
-sample-mean divergence. Defined in `.claude/rules/03-analysis-quality.md`
-("Heavy-tail vs Sample-mean Divergence").
+sample-mean divergence.
 
 **IPO** — Interior-Point Optimization: the log-barrier method that turns each
 of the 10 cost-budget constraints into a smooth barrier term added to the TRPO
 surrogate objective, rather than a Lagrangian dual or projection step. See
 [constraints.md](constraints.md) §1.
 
-**o_t (observation)** — The 69D actor observation: 20D current proprioception +
-46D strided temporal history + 3D leaky error integral. Deliberately excludes
+**o_t (observation)** — The 72D actor observation: 20D current proprioception +
+46D strided temporal history + 3D leaky error integral + 3D bias EMA. Deliberately excludes
 measured linear velocity (no DVL on the real robot). See
 [observation-space.md](observation-space.md) §2.
 
@@ -81,16 +79,14 @@ the encoder and the critic, never directly to the actor. See
 `<task_short>[_<tag>]_<ts>` output (label-before-date, timestamp trailing);
 `group` is the `--run_group` campaign layer created by `train.py` at launch
 (`experiments/rsl_rl/<exp>/<group>/<run_id>/`); one campaign (group) maps to
-one wandb project. See `.claude/rules/02-operations.md` and
-`constrained_albc/analysis/paths.py`.
+one wandb project. See `constrained_albc/analysis/paths.py`.
 
 **ss_error / ss_jitter** — Steady-state metrics computed over the last 50% of
 an attitude segment in `eval.py static`: `ss_error` is the per-env-then-mean
 tracking error (DC offset); `ss_jitter` is the per-env temporal std then
 mean-across-envs (AC oscillation) — a low `ss_error` with rising `ss_jitter`
 signals policy oscillation, not tracking failure. See
-`constrained_albc/analysis/_eval_dr/metrics.py` and
-`.claude/rules/03-analysis-quality.md`.
+`constrained_albc/analysis/_eval_dr/metrics.py`.
 
 **step_dt vs physics_dt / decimation** — `physics_dt` is the raw PhysX step
 (`sim.dt = 0.005s`); `decimation = 4` means one control step advances physics 4
@@ -115,7 +111,7 @@ to `p_t`. See `constrained_albc/algorithms/student/`.
 need `p_t` at inference. See `constrained_albc/algorithms/student/runner.py`.
 
 **TDC** — Time Delay Control: a model-based control law (not RL) implemented
-as separate task variants (`Isaac-ConstrainedALBC-Main-{TDC,PID,ATDC}-v0`, `envs/tdc_main/`), used
+as separate task variants (`Isaac-ConstrainedALBC-Main-{TDC,PID}-v0`, `envs/tdc_main/`), used
 as a classical-control comparison baseline. See
 `docs/explanation/tdc-control-law.md`.
 
@@ -123,8 +119,6 @@ as a classical-control comparison baseline. See
 update (KL-constrained trust region) that `ConstraintTRPO` extends with the IPO
 barrier. See [constraints.md](constraints.md) §1.
 
-**UUV/UVMS** — `UUV`: this workspace's own term for the underwater
-vehicle-manipulator system under study (`/workspace/CLAUDE.md` §1). `UVMS`
-(underwater vehicle-manipulator system) is the term used in the field
-literature this repo cites (`docs/explanation/tdc-literature.md`) — same
-concept, literature-standard name.
+**UUV/UVMS** — `UUV`: this repo's own term for the underwater
+vehicle-manipulator system under study. `UVMS` (underwater vehicle-manipulator
+system) is the literature-standard name for the same concept.

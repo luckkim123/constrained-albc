@@ -2,25 +2,20 @@ __pycache__/
 *.pyc
 *.egg-info/
 .venv/
+.ruff_cache/
 logs/
 logs_queue/
 outputs/
 wandb/
 /experiments/
-.omc/
-docs/superpowers/
 
-# generated PDFs in docs/reference/ are derivatives of the .md SSOT; regenerate via pandoc, never commit
+# generated PDFs in docs/reference/ are derivatives of the .md source; regenerate via pandoc, never commit
 docs/reference/*.pdf
 
 # npz-replay test fixtures (large binary eval outputs; provenance in SOURCE.txt)
 # encoder/  is excluded from this ignore rule so the mini checkpoint can be committed
 tests/fixtures/*
 !tests/fixtures/encoder/
-
-# obs-oracle dumps: regenerable output of tools/obs_oracle/dump_obs_oracle.py
-# (the script itself IS tracked; only its .npz product is not)
-tools/obs_oracle/*.npz
 
 # deploy artifacts tree (weights/golden/runtime packs; on disk for docker cp / Mac pull, out of git)
 # layout: deploy/<group>/<label>_<YYMMDD_HHMMSS>/ (mirrors logs tree, label-before-date)
@@ -29,19 +24,22 @@ tools/obs_oracle/*.npz
 scratch/
 .trash/
 
-# session/tool state dirs — never commit
+# local tooling state — never commit
+.hq/
+.omc/
+.omx/
 .claude/
-.ruff_cache/
 .superpowers/
-
-# --- Code-graph indexes (regenerated from source; .graphifyignore stays tracked) ---
+docs/superpowers/
 .graphify/
+.graphifyignore
 graphify-out/
 .code-review-graph/
 .tokensave/
-
-# .hq unified store (store-spec §5) — machine-local layers only
-**/.hq/work/
-**/.hq/runtime/
-**/.harness.lock/
-**/.hq/**/.hq-lock
+.harness.lock/
+.omp/
+.oms/
+.omd/
+.sp/
+.remember/
+.code-review-graphignore

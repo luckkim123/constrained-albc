@@ -44,7 +44,7 @@ except ImportError:
 def configure_env_for_student(env) -> None:
     """Drop the DORAEMON scheduler and roll the student out on the TASK's DR ranges, uniformly.
 
-    Two defects lived here until 2026-09-06 (finding/381):
+    Two defects lived here until 2026-09-06:
     1. ``cfg.doraemon.enable = False`` after ``gym.make`` disabled nothing -- ALBCEnv reads
        the flag once in ``_init_doraemon()`` and every later check is
        ``self._doraemon is not None``. Every student distilled through this runner rolled

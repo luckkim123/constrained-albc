@@ -1,12 +1,14 @@
 [build-system]
-requires = ["setuptools>=64"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "constrained-albc"
 version = "0.1.0"
-description = "Constrained attitude-only ALBC research (ConstraintTRPO+IPO, TDC, student distillation) for Isaac Lab."
+description = "Training and evaluation code for active link buoyancy control of an underwater mini-ROV (ConstraintTRPO+IPO, GRU student distillation) on Isaac Lab."
 requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "Seungmin Kim", email = "luckkim123@postech.ac.kr" }]
 dependencies = ["marinelab", "gymnasium", "torch", "numpy"]
 
 [tool.setuptools.packages.find]
@@ -107,7 +109,7 @@ pythonPlatform = "Linux"
 enableTypeIgnoreComments = true
 
 # isaaclab/isaaclab_rl/isaaclab_tasks/marinelab are Isaac-Sim-runtime packages,
-# not pip-installed in a plain type-check environment (.claude/rules/04-isaaclab-gotchas.md).
+# not pip-installed in a plain type-check environment.
 reportMissingImports = "none"
 reportMissingModuleSource = "none"
 # @configclass synthesizes __init__ at runtime -- false positive without the plugin.

@@ -73,7 +73,7 @@ def _build_student_spec(cfg: dict, obs_dim: int, latent_dim: int):
     """
     from constrained_albc.deploy.specs import STUDENT_SPEC_BY_ENCODER
 
-    arch = cfg.get("encoder_type", "tcn")
+    arch = cfg.get("encoder_type", "gru")
     if arch not in STUDENT_SPEC_BY_ENCODER:
         raise SystemExit(
             f"student checkpoint declares encoder_type={arch!r}, which has no export spec "

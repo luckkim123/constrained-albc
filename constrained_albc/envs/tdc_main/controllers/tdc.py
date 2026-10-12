@@ -74,8 +74,7 @@ class TDCControllerCfg:
     adaptive_m_hat: bool = False
     m_hat_adapt_gain: float = 0.02
     """Adaptation rate gamma. UNTUNED starting point, not a measured value --
-    PLAN.md paper-ablation-5000 §5/§8-R-3 puts the classical arms through a declared
-    gain grid, and this constant is an input to that search, not a result of it."""
+    the classical arms go through a declared gain grid, and this constant is an input to that search, not a result of it."""
     m_hat_bounds: tuple[float, float] = (0.05, 0.60)
     """Hard clamp on the adapted inertia, roughly 1/3x to 4x the nominal (0.15, 0.16).
     Pure gradient adaptation has no leakage term, so a persistent steady-state error
@@ -493,8 +492,8 @@ class TDCController:
         the law settles instead of ratcheting on a well-damped response.
 
         Scope note for the paper: this is gradient adaptation of the TDC design
-        inertia, which is the mechanism the arm exists to compare against (PLAN.md
-        §3-2 N2, References [5] Baek et al. 2018). The exact law above was derived
+        inertia, which is the mechanism the arm exists to compare against
+        (Baek et al. 2018). The exact law above was derived
         from this controller's own torque expression, NOT transcribed from that
         paper -- nobody has checked it against the published equations. Say that in
         the paper, or check it first; do not cite the law as theirs.

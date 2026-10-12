@@ -1,7 +1,5 @@
 # Exploration and Action Noise (`envs/main`)
 
-> Verified against commit c5a8a08.
-
 > **Scope**: The exploration mechanism of the default task
 > `Isaac-ConstrainedALBC-TRPO-v0` (`constrained_albc/envs/main/`) — the policy's
 > action-noise parameterization (`log_std`), how it becomes the sampling
@@ -252,7 +250,7 @@ different roles:
 | Purpose | drive exploration | sim-to-real robustness |
 | This doc | **covered** | out of scope (see the obs/DR docs) |
 
-`_OBS_NOISE_STD` is the per-dim Gaussian added to the 69D `o_t` (plus a uniform
+`_OBS_NOISE_STD` is the per-dim Gaussian added to the 72D `o_t` (plus a uniform
 additive bias); notably its first 3 dims (the command `ang_cmd`) and all action-history
 dims are 0.0 — those are our own quantities, not sensed. That obs-noise model belongs
 to the observation pipeline, not here. This document's entire subject is `log_std`.

@@ -297,14 +297,14 @@ def randomize_physx_inertia(
     body_ids: list[int],
     scales: torch.Tensor,
 ) -> None:
-    """Push a per-axis inertia scale into PhysX (G5 / item 12, `finding/354`).
+    """Push a per-axis inertia scale into PhysX.
 
     Until this existed, ``inertia_scale`` reached only the hydrodynamics model's Coriolis
     term. ``marinelab/core/hydrodynamics.py:125`` says so in a comment -- "DR randomizes
     _rigid_body_inertia (hydro model uncertainty), but PhysX's actual inertia is NOT
     randomized by inertia_scale (only by body_mass_scale via set_masses)" -- so the DR
     dimension DORAEMON was widening could not move the rigid-body dynamics at all, and
-    `finding/149`'s 1.53x measured-vs-sim rotational inertia gap had no lever.
+    the 1.53x measured-vs-sim rotational inertia gap had no lever.
 
     ``scales`` is per-axis ``(N, 3)``, so the diagonal must scale by ``s_i`` exactly while
     the tensor stays symmetric positive-definite. The congruence ``I' = S^(1/2) I S^(1/2)``
@@ -312,7 +312,7 @@ def randomize_physx_inertia(
     and consistently interpolated off it. Scaling only the three diagonal entries gives the
     same diagonal but is not guaranteed to stay positive-definite -- it usually does on a
     diagonally-dominant tensor and can fail on an ill-conditioned one, which is the case
-    ``test_physx_inertia_congruence.py`` pins. The congruence has no such case.
+    ``tests/test_physx_inertia_congruence.py`` pins. The congruence has no such case.
 
     NOT VERIFIED LIVE as of 2026-09-07: the congruence math is covered by that test, but
     nothing has yet confirmed that ``set_inertias`` moves this articulation's PhysX inertia
@@ -365,16 +365,16 @@ def sample_control_delay_steps(
     The curriculum moves the CEILING, never the floor: env i draws uniformly from the
     INCLUSIVE integer range ``[lo, lo + round(s_i * (hi - lo))]``. So ``s = 0`` pins every
     env at ``lo`` -- for the launch range that is zero delay, the plant the deployed teacher
-    was actually trained on (finding/264) -- and ``s = 1`` restores the full ``[lo, hi]``,
+    was actually trained on -- and ``s = 1`` restores the full ``[lo, hi]``,
     the same DISTRIBUTION as ``randint(lo, hi + 1)`` though not the same RNG draw.
 
     Rounding is ``torch.round``, i.e. half-to-EVEN: s=0.5 on (0, 13) gives ceiling 6, not 7,
     and s=0.5 on (0, 5) gives 2, not 3.
 
     Why this needs a curriculum at all: ``control_delay_steps`` was never in DORAEMON's
-    ``_PARAM_DEFS`` (finding/264), so nothing paced it, and finding/315 measured a flat
-    (0, 3) from iteration 0 stalling the run under a mistuned ``performance_lb``. The launch
-    ceiling of 13 comes from finding/148 -- 152 ms median cmd->joint latency, 132-260 ms
+    ``_PARAM_DEFS``, so nothing paced it, and a flat (0, 3) from iteration 0
+    was measured to stall the run under a mistuned ``performance_lb``. The launch
+    ceiling of 13 comes from the measured actuator latency -- 152 ms median cmd->joint latency, 132-260 ms
     range, against a 20 ms control tick.
 
     The returned lag is clamped to ``hi`` so it can never exceed the DelayBuffer's

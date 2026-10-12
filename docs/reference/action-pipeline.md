@@ -1,5 +1,3 @@
-> Verified against commit c5a8a08.
-
 # Action Pipeline (`envs/main`)
 
 > **Scope**: The full action path of the default task
@@ -83,8 +81,7 @@ heads would cut it at the representation stage.
 **Don't add multi-head without evidence.** A split only pays off if the subtasks are
 heterogeneous enough to interfere, or one gradient dominates — no such evidence
 exists here. Measure arm/thruster gradient cosine similarity or run a
-separate-network ablation first (`.claude/rules/03` — no generic solutions without
-evidence).
+separate-network ablation first.
 
 ---
 
@@ -412,18 +409,18 @@ curve → coeff → health → clamp.
 ## 6. Action feedback into the observation
 
 The action does not just leave the network — it re-enters the next observation two
-ways (both part of the 69D `o_t`):
+ways (both part of the 72D `o_t`):
 
 1. **Filtered thruster state (6D)** in the current proprioception. `compute_policy_obs`
-   (`mdp/observations.py:69`) reads `env._thruster.state` — the *filtered* first-order
-   state (§5.1), labeled *"6D: filtered thruster output"* (`:83`), **not** the raw
+   (`mdp/observations.py`) reads `env._thruster.state` — the *filtered* first-order
+   state (§5.1), labeled *"6D: filtered thruster output"*, **not** the raw
    command. This mimics ESC feedback the real robot would report.
 2. **Full 8D action history (16D)** in the temporal history. `_get_hist_features`
-   (`albc_env.py:544–584`) records `self._prev_actions` (the 8D action that produced
+   (`albc_env.py`) records `self._prev_actions` (the 8D action that produced
    the current state) into the ring buffer; `_get_observations` slices the newest
-   `hist_action_len=2` steps → `8 × 2 = 16D` (`:1068,1085`).
+   `hist_action_len=2` steps → `8 × 2 = 16D`.
 
-So the policy is partly closed-loop on its own recent actions. The full 69D
+So the policy is partly closed-loop on its own recent actions. The full 72D
 composition is tabulated in `main-network-architecture.md` §2.1; here the point is
 only *which parts are action-derived*.
 
@@ -479,7 +476,7 @@ only *which parts are action-derived*.
   `clip_actions is None`.
 - **The arm target integrator is unbounded on purpose.** No wrap to `[-π, π]`, no
   clamp to joint limits — the joints are continuous-rotation, and drift is a
-  *constraint* problem (`joint1_position_cost`, `cumulative_yaw_cost`), not a clamp.
+  *constraint* problem (`joint1_position_cost`), not a clamp.
   Treating it as a bug and adding a clamp would silently change the control authority.
 - **Fault, thrust curve, and actuation noise are independent toggles, not mutually
   exclusive.** All three (§5.3, §5.4, and the per-step command-noise channel noted

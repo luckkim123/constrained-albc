@@ -4,8 +4,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 """Sim-free serialization helpers extracted from eval.py.
 
-Pure data-dict -> file. Imports on plain python3 so omx can re-export eval
-results without booting sim.
+Pure data-dict -> file. Imports on plain python3 so eval results can be re-exported
+without booting sim.
 """
 
 from __future__ import annotations

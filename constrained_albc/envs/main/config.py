@@ -55,7 +55,7 @@ _MAIN_CONSTRAINT_TERMS: list[ConstraintTermCfg] = [
     # --- Probabilistic (4): binary indicator, budget = violation probability ---
     ConstraintTermCfg(func=attitude_limit_cost, params={"limit": 1.396}, budget=0.01, name="attitude"),
     ConstraintTermCfg(func=torque_limit_cost, params={"limit_nm": 9.5}, budget=0.08, name="arm_torque"),
-    # 2.15 = inside the 2.40 rad/s PhysX cap (albc.py velocity_limit_sim, = driver OPERATING_VELOCITY cap, vault finding/145; 2.8/3.1 ratio kept): soft must
+    # 2.15 = inside the 2.40 rad/s PhysX cap (albc.py velocity_limit_sim, = driver OPERATING_VELOCITY cap; 2.8/3.1 ratio kept): soft must
     # bite before hard, else PhysX clamps first and this cost can never fire (dead
     # constraint). The old 2.5-2.8 tunable window (wiki ripple card) assumed the 3.1 cap; rescale by 2.40/3.1 if revisited.
     ConstraintTermCfg(func=velocity_limit_cost, params={"limit_rad_per_s": 2.15}, budget=0.02, name="arm_joint_vel"),
@@ -190,7 +190,7 @@ class DomainRandomizationCfg:
     cog_offset_z: tuple[float, float] = (-0.04, 0.04)
 
     # -- Inertia / Mass --
-    inertia_scale: tuple[float, float] = (0.4, 4.8)  # 2026-09-07 (PLAN item 12, decision/147 rule: measured outside band -> move the NOMINAL): measured assembly J_pitch 0.39-0.51 (vault finding/145 via finding/312) = scale 3.0-4.2 on the URDF 0.0994 since J = 0.0994*s + min(0.09*a, 0.0944*s) (clamp not binding). Nominal pinned to 4.0 (J 0.488) in doraemon._NOMINAL_OVERRIDES; upper 4.8 = 4.0 x 1.2 (K uncertainty); lower 0.4 kept as the light tail. Old ceiling was 0.334 (finding/312 wrote 0.39 assuming the clamp binds). Reaches PhysX only via set_inertias (G5).
+    inertia_scale: tuple[float, float] = (0.4, 4.8)  # 2026-09-07 (measured outside band -> move the NOMINAL): measured assembly J_pitch 0.39-0.51 = scale 3.0-4.2 on the URDF 0.0994 since J = 0.0994*s + min(0.09*a, 0.0944*s) (clamp not binding). Nominal pinned to 4.0 (J 0.488) in doraemon._NOMINAL_OVERRIDES; upper 4.8 = 4.0 x 1.2 (K uncertainty); lower 0.4 kept as the light tail. Old ceiling was 0.334 (0.39 if the clamp were binding). Reaches PhysX only via set_inertias.
     body_mass_scale: tuple[float, float] = (0.75, 1.25)
     water_density_range: tuple[float, float] = (995.0, 1025.0)
 
@@ -241,7 +241,7 @@ class DomainRandomizationCfg:
     # (14-18 V interpolated on the BlueRobotics T200 published 12/16/20 V curves) plus
     # ~5% independent-lab curve-matching uncertainty -> +/-15% = 42.5-57.5 N. The real
     # pack is a 4S LiPo (~14-16.8 V working window), NARROWER than the source window,
-    # so the band is conservative. See omx wiki `sim_hydro_nominal...`.
+    # so the band is conservative.
     # (1.0, 1.0) = OFF and numerically identical to the pre-B0c fixed ceiling.
     # B0c SCREENING VERDICT (2026-07-24): NULL. The band was measured inert behind the
     # existing +/-30% gain DR (none-level roll d ss_error -0.069 deg < 0.10 floor,
@@ -261,13 +261,23 @@ class DomainRandomizationCfg:
     # DORAEMON curriculum -- integer delay is awkward for the Beta-continuous
     # sampler. Promote to a _PARAM_DEFS entry only if warranted.
     control_delay_steps: tuple[int, int] = (0, 0)
+    # Observation transport delay (discrete N-step lag on the POLICY observation, applied
+    # after both sensor-noise layers in _get_observations) as integer control steps;
+    # 1 step = 20 ms @ 50 Hz. The board serves the policy observations 1.2-4.7 control
+    # steps stale, and the action DelayBuffer above cannot stand in
+    # for that: loop phase adds, but the policy's setpoint handling and its internal
+    # integral/history state see the world late only when the observation itself is
+    # delayed. (0, 0) = off (byte-identical).
+    # Static uniform per-env draw at reset, not a DORAEMON dim (same reasoning as
+    # control_delay_steps). The paper teacher used (0, 5).
+    obs_delay_steps: tuple[int, int] = (0, 0)
 
     # -- Ocean Current (DORAEMON-managed) --
     # Scalar strength [0, 1] multiplier on ocean_current.max_velocity.
     # DORAEMON nominal=0 (no current at curriculum start) -> expands as policy
     # masters easier variants.
     ocean_current_strength_range: tuple[float, float] = (0.0, 1.0)
-    # -- Exogenous heave disturbance (DORAEMON-managed; PLAN §4 item 11) --
+    # -- Exogenous heave disturbance (DORAEMON-managed) --
     # Scalar strength [0, 1] multiplier on FzDisturbanceCfg.fz_max, same wiring as
     # ocean_current_strength_range above. DORAEMON nominal=0 (no disturbance at
     # curriculum start) -> expands to the full +-fz_max band as the policy masters it.
@@ -293,16 +303,16 @@ class DomainRandomizationCfg:
     # DORAEMON's build_param_specs reads DR-knob bounds off this cfg only
     # (mirrors the two existing [0,1] knobs above; see doraemon.py _PARAM_DEFS).
     fault_severity_range: tuple[float, float] = (0.0, 1.0)
-    # Control-delay curriculum (PLAN item 12): a normalized knob u in [0, 1], DORAEMON-managed
+    # Control-delay curriculum: a normalized knob u in [0, 1], DORAEMON-managed
     # (same pattern as the three knobs above). Moves the CEILING of control_delay_steps, not
     # its floor -- events.sample_control_delay_steps draws the per-env lag uniformly from
     # [lo, lo + round(u * (hi - lo))]. Nominal u=0 -> every env at lo, which for the launch
-    # range is zero delay, the plant the deployed teacher actually trained on (finding/264);
+    # range is zero delay, the plant the deployed teacher actually trained on;
     # u=1 -> the full [lo, hi] band. Lives here (not on the delay tuple) because DORAEMON's
     # build_param_specs reads DR-knob bounds off this cfg only.
-    # WITHOUT this dim nothing paced control_delay_steps at all: finding/264 recorded its
-    # absence from _PARAM_DEFS, and finding/315 measured a flat (0, 3) stalling a run from
-    # iteration 0. The launch ceiling is control_delay_steps=(0, 13) per finding/148.
+    # WITHOUT this dim nothing paced control_delay_steps at all (it was absent from
+    # _PARAM_DEFS), and a flat (0, 3) was measured to stall a run from iteration 0.
+    # The launch ceiling is control_delay_steps=(0, 13) (152 ms measured latency).
     control_delay_strength_range: tuple[float, float] = (0.0, 1.0)
 
 
@@ -389,7 +399,7 @@ class FaultInjectionCfg:
     # a failed thruster keeps a residual health sampled from `thruster_health_range`
     # (0 = fully dead, 0.5 = half degradation). Healthy thrusters stay at 1.0.
     thruster_fail_prob: float = 0.10
-    # Dead atom (retrain-simtoreal-2026-09 PLAN §5 (2), G0-I): a FAILED channel is fully
+    # Dead atom: a FAILED channel is fully
     # dead (health exactly 0.0) with this probability, else its residual health is
     # U(thruster_health_range). 0.0 (default) = no extra RNG draw, byte-identical to before.
     thruster_dead_frac: float = 0.0
@@ -403,14 +413,14 @@ class FaultInjectionCfg:
     # Intended for eval only; leave None on any training run.
     thruster_fixed_health: tuple[float, ...] | None = None
 
-    # -- Structurally-absent channels (retrain-simtoreal-2026-09 PLAN §4 item 10) --
+    # -- Structurally-absent channels --
     # Firmware ESC channel indices whose health is forced to EXACTLY 0.0 in EVERY env,
     # applied AFTER the Bernoulli sampler and AFTER thruster_fixed_health, and applied
     # even when enable=False -- these channels are STRUCTURALLY ABSENT from the policy's
     # actuator set, not a fault, so they must never be alive regardless of the fault
     # toggle. `()` (default) = off, no extra RNG draw, byte-identical to before.
     # Retrain value: (0, 3) = m0, m3 (see the _ESC_CHANNEL_ORDER comment above,
-    # "m0,m3 = vertical (heave)"). decision/159 결정 2 takes the verticals out of the
+    # "m0,m3 = vertical (heave)"). The section-5 plant takes the verticals out of the
     # actuator set and re-injects the depth PID's heave as an exogenous wrench instead
     # (see FzDisturbanceCfg below). A NEW atom in the shape of thruster_dead_frac:
     # thruster_fixed_health is eval-only by its docstring and is NOT repurposed here.
@@ -450,7 +460,7 @@ class ActuationNoiseCfg:
 @configclass
 class FzDisturbanceCfg:
     """Exogenous heave force the deployed depth PID would put through the one surviving vertical
-    thruster, with the pitch moment that vertical geometry couples to it (decision/159 결정 2, PLAN §4 item 11).
+    thruster, with the pitch moment that vertical geometry couples to it.
     OFF by default; the retrain launch enables it. Randomized in magnitude and in timing."""
 
     enable: bool = False
@@ -460,8 +470,8 @@ class FzDisturbanceCfg:
     # so a ceiling above the real PID output is margin, a ceiling below it would be an error.
     # NO field measurement of the PID's Fz exists as of 2026-09-07 -- request one from the water session.
     fz_max: float = 13.0                     # N, body-frame z
-    # Realised on the robot: deployed_tam.json My/Fz = -0.1458 (finding/155). Lever 0.145 m
-    # confirmed by tape (finding/156). Do NOT re-derive the sign from the sim TAM columns.
+    # Realised on the robot: deployed_tam.json My/Fz = -0.1458. Lever 0.145 m
+    # confirmed by tape. Do NOT re-derive the sign from the sim TAM columns.
     my_per_fz: float = -0.1458               # N.m per N, body-frame y
     # Piecewise-constant random hold: each env re-draws Fz after a hold of U(lo, hi) seconds.
     hold_s: tuple[float, float] = (1.0, 5.0)

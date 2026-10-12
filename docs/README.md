@@ -29,31 +29,24 @@ Organized [Diátaxis](https://diataxis.fr/)-style by reader intent. English-only
 | Doc | Task |
 |---|---|
 | [deploy-pack-export](how-to/deploy-pack-export.md) | produce a self-verifying teacher+student deploy pack via `export_deploy_pack.py` (current export procedure) |
-| [deploy](how-to/deploy.md) | superseded pointer page — old FullDOF export is dead; redirects to `deploy-pack-export.md` |
+| [deploy](how-to/deploy.md) | deployed controller: the GRU student at 50 Hz, the paper's pack, the board-side yaw contract |
 | [domain-randomization](how-to/domain-randomization.md) | enable/disable DR, work with the DORAEMON curriculum, add a new DR parameter |
-| [run-on-dgx](how-to/run-on-dgx.md) | run a campaign stage on the NVIDIA DGX: three-repo sync, launch conventions, why the split is safe, how results come back |
 | [sim-to-real](how-to/sim-to-real.md) | sim-to-real gap analysis (actuator, sensor, hydrodynamics) and deployment strategy |
 
 ## reference/ — lookup
 
 | Doc | Use |
 |---|---|
-| [task-reference](reference/task-reference.md) | all 7 registered task IDs — env package, obs/privileged/action dims, typical launch command (SSOT for task ID enumeration) |
-| [teacher-campaign-plan](../.hq/community/programs/teacher-final-closeout/PLAN.md) | consolidated teacher-campaign plan + status (SSOT, moved 2026-07-23 into the omx program layer; redirect stub at `reference/teacher-campaign-plan.md`): canonical experiment ids, legacy-name mapping, disk-derived status, remaining work + GPU budget |
-| [observation-space](reference/observation-space.md) | `envs/main` 69D obs / 28D privileged obs breakdown, proprioception history, encoder consumption |
+| [task-reference](reference/task-reference.md) | all registered task IDs — env package, obs/privileged/action dims, typical launch command (SSOT for task ID enumeration) |
+| [observation-space](reference/observation-space.md) | `envs/main` 72D obs / 28D privileged obs breakdown, proprioception history, encoder consumption |
 | [action-pipeline](reference/action-pipeline.md) | `envs/main` action path: policy output -> clamps -> arm delta-PD + 6-thruster TAM wrench |
-| [command-and-task](reference/command-and-task.md) | `envs/main` command/goal side: attitude+yaw-rate sampling, tracking error, reward consumption |
+| [command-and-task](reference/command-and-task.md) | `envs/main` command/goal side: roll/pitch attitude + yaw heading sampling, tracking error, reward consumption |
 | [main-network-architecture](reference/main-network-architecture.md) | `envs/main` encoder/actor/critic architecture and dims |
 | [reward](reference/reward.md) | `envs/main` reward system: tracking kernel, six weighted terms, error buffers, dt-scaling |
-| [constraints](reference/constraints.md) | `envs/main` 10 IPO constraints (5 probabilistic + 5 average), config + ConstraintTRPO consumption |
+| [constraints](reference/constraints.md) | `envs/main` 10 IPO constraints (4 probabilistic + 6 average), config + ConstraintTRPO consumption |
 | [exploration-and-noise](reference/exploration-and-noise.md) | `envs/main` action-noise (`log_std`), post-update clamp, entropy bonus, entropy collapse under ConstraintTRPO |
-| [domain-randomization-and-doraemon](reference/domain-randomization-and-doraemon.md) | `envs/main` DR system: 20-param DORAEMON curriculum, `DomainRandomizationCfg`, sampling/scheduler wiring, eval-side fixed DR |
+| [domain-randomization-and-doraemon](reference/domain-randomization-and-doraemon.md) | `envs/main` DR system: 23-param DORAEMON curriculum, `DomainRandomizationCfg`, sampling/scheduler wiring, eval-side fixed DR |
 | [glossary](reference/glossary.md) | alphabetized term list, each entry linked to its owning reference page |
-| [koopman-rl-research](reference/koopman-rl-research.md) | consolidated Koopman x RL integration research (2026-08-03, 3-round adversarial review): proposal verdicts, design space, code-anchored constraints, depth-tagged references; evidence reports in `reference/koopman-rl-research/` |
-| [code-graph-architecture-map](reference/code-graph-architecture-map.md) | SNAPSHOT (2026-08-21, `exp/koopman-marine-obs` @ `1566bc8`) — graph-derived module map from the code-review-graph index: 10 communities mapped to their real packages, execution flows ranked by criticality, the three coupling warnings resolved to concrete edges, and the query caveats |
-| [experiments-archive](reference/experiments-archive.md) | ARCHIVE — experiment campaign rounds (2026-04-04 ~ 04-18) + root-cause investigations |
-| [design-history](reference/design-history.md) | ARCHIVE — design/plan document timeline (2026-02 ~ 03) mapped to current code |
-| [debug-history](reference/debug-history.md) | ARCHIVE — resolved bugs, TDC gain tuning, code review/cleanup logs |
 
 ## explanation/ — understanding
 
@@ -64,17 +57,10 @@ Organized [Diátaxis](https://diataxis.fr/)-style by reader intent. English-only
 | [physics-tuning](explanation/physics-tuning.md) | PhysX stability rationale (effort_limit, added mass, damping) |
 | [reward-design](explanation/reward-design.md) | rationale for the `envs/main` reward shape (why, not values -- values live in `reference/reward.md`) |
 | [constraint-theory](explanation/constraint-theory.md) | NORBC Constrained RL theory vs. ConstraintTRPO/IPO/cost-GAE/barrier implementation |
-| [dr-strategies-survey](explanation/dr-strategies-survey.md) | literature survey of DR-handling strategies (curriculum, privileged info, contrastive) |
 | [tdc-control-law](explanation/tdc-control-law.md) | roll/pitch TDC derivation (DLS IK, anti-windup) |
-| [tdc-literature](explanation/tdc-literature.md) | Time-Delay Control literature survey |
-| [run-id-tree-design](explanation/run-id-tree-design.md) | design of the unified `run_id` tree (`experiments/<run_id>/` manifest + `train` symlink) spanning training/eval/config |
 
-> **Currency note.** Reference pages under `reference/{action-pipeline,command-and-task,
-> constraints,domain-randomization-and-doraemon,exploration-and-noise,
-> main-network-architecture,observation-space}.md` are verified against commit `c5a8a08`
-> and describe the **default** task `Isaac-ConstrainedALBC-TRPO-v0` (`envs/main`,
-> 69D obs / 28D privileged / 8D action). The **legacy** full-DOF variants
-> (retired 2026-09, 87D obs / 24D privileged; tag `legacy-full-dof-final`) is out of scope for those pages -- see
-> [`task-reference.md`](reference/task-reference.md) for the full task table. Archive
-> pages (`experiments-archive.md`, `design-history.md`, `debug-history.md`) predate the
-> `envs/main` split and are historical narrative, not maintained as living reference.
+> **Scope note.** The reference pages describe the **default** task
+> `Isaac-ConstrainedALBC-TRPO-v0` (`envs/main`, 72D obs / 28D privileged / 8D action).
+> The **legacy** full-DOF variants (retired 2026-09, 87D obs / 24D privileged; tag
+> `legacy-full-dof-final`) are out of scope for those pages -- see
+> [`task-reference.md`](reference/task-reference.md) for the full task table.

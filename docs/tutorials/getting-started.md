@@ -63,9 +63,7 @@ ls /workspace/constrained-albc/experiments/rsl_rl/albc_trpo_teacher/<run_id>/tra
 ```
 
 Checkpoints are named `model_<iteration>.pt`, saved every 50 iterations plus
-one final save — pick the highest-numbered file. See
-[`../explanation/run-id-tree-design.md`](../explanation/run-id-tree-design.md)
-for why the two trees exist, and the `run_id / group / campaign` entry in the
+one final save — pick the highest-numbered file. See the `run_id / group / campaign` entry in the
 [glossary](../reference/glossary.md) for the naming scheme.
 
 ## 3. Evaluate the checkpoint
@@ -79,7 +77,7 @@ cd /workspace/constrained-albc && python constrained_albc/analysis/eval.py stati
 ```
 
 Output auto-resolves to `experiments/rsl_rl/albc_trpo_teacher/<run_id>/eval/static_<eval_ts>/`
-only if both hold (see `.claude/rules/03-analysis-quality.md` for the two pitfalls in detail):
+only if both hold:
 
 - `--checkpoint` points through the `experiments/.../train/` symlink, not the raw `logs/` path.
 - No explicit `--output_dir` is passed.
@@ -93,7 +91,7 @@ and writes one PNG per plot, one row per level:
 | File | Content |
 |---|---|
 | `traj_attitude.png` | roll/pitch tracking trajectory |
-| `traj_yaw.png` | yaw-rate tracking trajectory |
+| `traj_yaw.png` | yaw heading tracking trajectory |
 | `traj_error.png` | tracking error over time |
 | `summary_attitude.png`, `summary_yaw.png` | per-level steady-state metric bars |
 | `summary_failuretime.png` | time-to-failure summary |
@@ -109,9 +107,6 @@ every panel).
 
 - Sample tracks mean closely → the policy's axes are correlated.
 - Sample diverges from mean → that env does much better or worse on one axis than the others.
-
-See `.claude/rules/03-analysis-quality.md` ("Sample Env Plot Divergence Explained") for the full
-diagnostic reading.
 
 View a plot with the Read tool, or open the PNG directly — evaluation in
 this repository requires visually inspecting the plots, not just the summary

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2026.
+# Copyright (c) 2026 Seungmin Kim. SPDX-License-Identifier: MIT
 """Shared overlay-launch boilerplate for scripts/train.py and scripts/play.py.
 
 Both entry points need: (1) upstream cli_args importable via ISAACLAB_PATH, and
