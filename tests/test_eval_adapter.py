@@ -6,7 +6,9 @@ import subprocess
 import sys
 
 import yaml
-from _profile import PROFILE_DIR, REPO  # test-side store resolver
+from _profile import PROFILE_DIR, REPO, requires_profile  # test-side store resolver
+
+pytestmark = requires_profile
 
 PROFILE = os.path.join(PROFILE_DIR, "metrics.yaml")
 ADAPTER = os.path.join(PROFILE_DIR, "eval_adapter.py")
@@ -149,7 +151,7 @@ def test_segmented_cli_emits_json():
     assert payload["levels"]["hard"]["axes"]["yaw"]["post_switch"]["peak_max"] >= 0.0
 
 
-# --- failure_dr coverage: per-env DR/FAULT <-> failure join surfaced to omx report ---
+# --- failure_dr coverage: per-env DR/FAULT <-> failure join surfaced to the report ---
 
 def _write_failure_npz(eval_dir: str, level: str = "none", n: int = 64, t: int = 120) -> None:
     """Write a data_<level>.npz whose worst-roll envs have the lowest fault_thruster_3.
@@ -194,7 +196,7 @@ def test_analyze_failure_dr_separates_dr_and_fault(tmp_path):
 
 
 def test_failure_dr_cli_emits_json(tmp_path):
-    """The adapter's failure-dr subcommand is runnable and emits JSON for omx report."""
+    """The adapter's failure-dr subcommand is runnable and emits JSON for the report."""
     eval_dir = tmp_path / "eval"
     eval_dir.mkdir()
     _write_failure_npz(str(eval_dir), "none")

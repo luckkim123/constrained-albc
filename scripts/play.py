@@ -4,7 +4,7 @@
 
 Loads a trained checkpoint and rolls the policy out for visual inspection
 (GUI / livestream / video). Counterpart to ``scripts/train.py``; quantitative
-DR evaluation lives in ``analysis/eval.py`` (see CLAUDE.md).
+DR evaluation lives in ``analysis/eval.py``.
 
 isaaclab stays a pristine upstream fork: its ``rsl_rl/play.py`` only knows
 ``OnPolicyRunner`` / ``DistillationRunner``. This overlay entry owns the two

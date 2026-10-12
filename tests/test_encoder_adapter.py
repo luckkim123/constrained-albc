@@ -6,7 +6,9 @@ import subprocess
 import sys
 
 import yaml
-from _profile import PROFILE_DIR, REPO  # test-side store resolver
+from _profile import PROFILE_DIR, REPO, requires_profile  # test-side store resolver
+
+pytestmark = requires_profile
 
 PROFILE = os.path.join(PROFILE_DIR, "metrics.yaml")
 ADAPTER = os.path.join(PROFILE_DIR, "encoder_adapter.py")

@@ -418,8 +418,8 @@ def compute_metrics(data: dict) -> dict:
         # prev->cur step) is then the identical computation the attitude block runs,
         # on rad instead of rad/s. The exam's yaw step is 0.5 rad, well inside pi, so
         # the trace does not wrap mid-step.
-        # ponytail: an excursion beyond +-pi from the target folds back toward it.
-        # Fine while a yaw segment commands < pi; revisit if that ever changes.
+        # Limitation: an excursion beyond +-pi from the target folds back toward it.
+        # Fine while a yaw segment commands < pi.
         _seg_raw = cur_target - data["yaw"][s:e]
         seg_actual = cur_target - np.arctan2(np.sin(_seg_raw), np.cos(_seg_raw))
 

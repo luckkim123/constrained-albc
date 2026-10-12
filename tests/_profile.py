@@ -1,13 +1,17 @@
 # Copyright (c) 2026.
-"""Resolve the omx profile directory for the CPU-only adapter tests.
+"""Resolve the local analysis-profile directory for the CPU-only adapter tests.
 
-The store moved `.omx/profile/` -> `.hq/config/experiments/profile/` on 2026-09-01 and
-these two test modules were the only things still pointing at the old path, so they failed
-with FileNotFoundError in every clone. One constant here so the next store move is a
-one-line edit rather than a grep (rule R4: tests never hardcode a store layout).
+The profile (metrics.yaml + the eval/encoder adapters) is local tooling state and is
+not tracked in this repository. The two adapter test modules skip when it is absent.
 """
 
 import os
 
+import pytest
+
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROFILE_DIR = os.path.join(REPO, ".hq", "config", "experiments", "profile")
+
+requires_profile = pytest.mark.skipif(
+    not os.path.isdir(PROFILE_DIR), reason="local analysis profile not present"
+)

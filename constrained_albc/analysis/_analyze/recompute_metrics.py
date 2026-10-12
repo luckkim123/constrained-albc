@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 """Pure-numpy metric core for the recompute subcommand (split from recompute.py).
 
-No matplotlib, no JSON I/O. Importable on plain python3 so omx can call
+No matplotlib, no JSON I/O. Importable on plain python3 so external tooling can call
 _compute_enhanced_metrics / _process_run without booting Isaac Sim.
 
 TODO(metric-drift): steady-state / tracking-error metric logic is duplicated

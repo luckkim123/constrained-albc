@@ -107,7 +107,7 @@ pythonPlatform = "Linux"
 enableTypeIgnoreComments = true
 
 # isaaclab/isaaclab_rl/isaaclab_tasks/marinelab are Isaac-Sim-runtime packages,
-# not pip-installed in a plain type-check environment (.claude/rules/04-isaaclab-gotchas.md).
+# not pip-installed in a plain type-check environment.
 reportMissingImports = "none"
 reportMissingModuleSource = "none"
 # @configclass synthesizes __init__ at runtime -- false positive without the plugin.

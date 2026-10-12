@@ -8,7 +8,7 @@ Reads DORAEMON TB ranges and interpolates DomainRandomizationCfg across DR
 levels (none/soft/medium/hard). Sim-free in logic; importability depends on
 whether DomainRandomizationCfg pulls Isaac Sim (Step 1 probe result: NO --
 DomainRandomizationCfg transitively imports carb via isaaclab.sim, so this
-module is structural-only and NOT directly importable by omx without sim).
+module is structural-only and NOT directly importable without sim).
 
 Module-level mutable state
 --------------------------

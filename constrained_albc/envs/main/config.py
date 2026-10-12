@@ -241,7 +241,7 @@ class DomainRandomizationCfg:
     # (14-18 V interpolated on the BlueRobotics T200 published 12/16/20 V curves) plus
     # ~5% independent-lab curve-matching uncertainty -> +/-15% = 42.5-57.5 N. The real
     # pack is a 4S LiPo (~14-16.8 V working window), NARROWER than the source window,
-    # so the band is conservative. See omx wiki `sim_hydro_nominal...`.
+    # so the band is conservative.
     # (1.0, 1.0) = OFF and numerically identical to the pre-B0c fixed ceiling.
     # B0c SCREENING VERDICT (2026-07-24): NULL. The band was measured inert behind the
     # existing +/-30% gain DR (none-level roll d ss_error -0.069 deg < 0.10 floor,
