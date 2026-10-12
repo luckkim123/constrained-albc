@@ -47,7 +47,7 @@ DEFAULT_FIELD = "ss_error"
 
 # Plant fields that `--doraemon-dr-from` / `--env-dr-anchor` change but that the
 # eval npz does NOT sample-log today, so check_anchor cannot see a difference
-# confined to them (finding/396). Listed rather than assumed absent: the moment a
+# confined to them. Listed rather than assumed absent: the moment a
 # later eval.py writes either one, the gate compares it like any dr_ field.
 _PLANT_SCALARS = ("thrust_coefficient_scale", "control_delay_steps")
 
@@ -198,7 +198,7 @@ def collect_common_set(manifest: dict, stat: str = "mean") -> tuple[list[dict], 
 def check_anchor(manifest: dict, levels: list[str]) -> dict:
     """Verify every arm sat the SAME exam, by comparing the sampled DR values.
 
-    decision/392 makes anchor identity the table-admission rule: only arms
+    Anchor identity is the table-admission rule: only arms
     sharing one `--doraemon-dr-from` anchor may appear in one table. Reading
     that claim off RUN_CONDITIONS.txt is not enough -- the TDC and PID eval
     dirs carry no RUN_CONDITIONS.txt at all (measured 2026-09-06), so a
@@ -218,7 +218,7 @@ def check_anchor(manifest: dict, levels: list[str]) -> dict:
       level no arm had, and main() wrote "the arms sat the same exam" into the
       figure's provenance having read zero files.
 
-    KNOWN BLIND SPOT (finding/396, peer session, 2026-09-07). This gate reasons
+    KNOWN BLIND SPOT. This gate reasons
     forward -- same anchor => identical draws -- but USES the converse: identical
     draws => same anchor. The converse is false for any plant field the npz does
     not sample-log, and `--env-dr-anchor` changes exactly two such fields:
@@ -291,7 +291,7 @@ def _anchor_refusal(lvl: str, v: dict) -> str:
         )
     return (
         "ANCHOR MISMATCH at %s: %s -- arms did not sit the same exam, and "
-        "decision/392 forbids putting them in one table.\n"
+        "the anchor-identity rule forbids putting them in one table.\n"
         "Re-evaluate the odd arms against one --doraemon-dr-from, or pass "
         "--allow-mixed-anchor to override (the manifest will say so)."
         % (lvl, v["differing"])
@@ -325,7 +325,7 @@ def _anchor_caveat(anchor: dict) -> str:
             + " -- cross-arm differences there are confounded by the plant")
     # What "VERIFIED" does not cover. Without this the sentence above reads as a
     # same-exam guarantee, which it is not: an anchor difference confined to a
-    # field the npz never sampled is invisible here (finding/396).
+    # field the npz never sampled is invisible here.
     #
     # Reported PER TIER. A union over every tier would attach one tier's blindness
     # to another tier that did log the field -- a false qualifier is as wrong as a
@@ -337,7 +337,7 @@ def _anchor_caveat(anchor: dict) -> str:
                 "%s (%s not recorded in the npz)" % (lvl, ", ".join(b))
                 for lvl, b in blind_by_tier.items())
             + " -- an anchor difference confined to those fields would not be "
-              "detected there (finding/396)")
+              "detected there")
     return "; ".join(parts) + "."
 
 
@@ -476,7 +476,7 @@ def main() -> None:
                    help="how to reduce the per-env vector under --common-set. "
                         "mean is what the manuscript reports; at hard it is a TAIL "
                         "statistic -- PPO's median beats the full method's while its "
-                        "mean is 1.5x worse (finding/395)")
+                        "mean is 1.5x worse")
     p.add_argument("--paired", metavar="BASELINE_ARM",
                    help="per-environment scatter of every arm against BASELINE_ARM")
     p.add_argument("--paired-level", default="hard",
@@ -561,7 +561,7 @@ def main() -> None:
     # An arm can carry a NUMBER at a tier (summary.json has it) while having no
     # data_<tier>.npz to anchor-check. The gate above passes on the arms it could
     # compare, and the table then publishes the unchecked arm beside them under a
-    # caveat that says VERIFIED -- which is the thing decision/392 forbids.
+    # caveat that says VERIFIED -- which is the thing the anchor-identity rule forbids.
     unverified = {}
     for i, lvl in enumerate(levels):
         checked = set(anchor.get(lvl, {}).get("compared", ()))
@@ -631,7 +631,7 @@ def main() -> None:
     ] if unverified else [])
     caveats = [_anchor_caveat(anchor)] + unchecked_line + provenance + [
         "Exams run before 2026-09-06 were graded on the DomainRandomizationCfg CLASS "
-        "DEFAULT, not the run's own env cfg (finding/391). Arms remain comparable to "
+        "DEFAULT, not the run's own env cfg. Arms remain comparable to "
         "each other; the graded plant is not the designed plant.",
         f"y-axis is {'logarithmic' if use_log else 'linear'}.",
     ]
@@ -734,7 +734,7 @@ def _self_check() -> None:
             {"x": {"ok": False, "vacuous": True, "n_compared": 1, "n_fields": 0,
                    "differing": []}})
         # A VERIFIED verdict must carry its blind spot with it, or the sentence
-        # reads as a same-exam guarantee it cannot make (finding/396).
+        # reads as a same-exam guarantee it cannot make.
         v = check_anchor({"arms": [same, dup]}, ["x"])["x"]
         assert v["blind_to"] == sorted(_PLANT_SCALARS), v["blind_to"]
         assert v["compared"] == ["a", "b"], v["compared"]

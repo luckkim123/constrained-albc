@@ -1,4 +1,4 @@
-"""G0-I (retrain-simtoreal-2026-09 PLAN §5 (1)(2), §6 G0-I): fault-sampler exposure.
+"""Fault-sampler exposure.
 
 Loads faults.py by path (as test_doraemon.py does) so no Isaac import chain is needed.
 Closed form at severity s with q = s * p0 * d over six i.i.d. channels:
@@ -29,7 +29,7 @@ class DummyFaultCfg:
 N = 500_000
 T = 6
 DEV = "cpu"
-P0, D = 0.15, 0.5  # user-decided values (PLAN §10 item 2)
+P0, D = 0.15, 0.5  # chosen values
 TOL = 0.005        # +- 0.5 percentage points
 
 
@@ -67,7 +67,7 @@ def test_severity_integrated_uniform():
     p2 = ((health == 0.0).sum(dim=1) >= 2).float().mean().item()
     # E_s[P(>=2 dead | q = s*p0*d)] by fine quadrature
     ss = torch.linspace(0, 1, 100_001, dtype=torch.float64)
-    e2 = _closed_form(ss * P0 * D)[1].mean().item()  # ~ 2.42 % (PLAN §5, review/307)
+    e2 = _closed_form(ss * P0 * D)[1].mean().item()  # ~ 2.42 %
     assert abs(p2 - e2) <= TOL, (p2, e2)
 
 

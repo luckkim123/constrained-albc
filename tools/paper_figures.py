@@ -348,8 +348,7 @@ def cmd_teacher_summary(_args: argparse.Namespace) -> None:
         caveats=[
             "3-way comparison, n=1 per arm (screening protocol, not a statistical test).",
             "R30/R31 are from-scratch reproducibility-check runs at the incumbent's config, "
-            "not independent architectural alternatives -- see "
-            "teacher_final_replicate/.../analysis/diagnose-20260814-235911/report.md §0/§7.",
+            "not independent architectural alternatives.",
         ],
         extra={"axis": axis, "field": field},
     )

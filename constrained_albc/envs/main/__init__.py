@@ -108,7 +108,7 @@ gym.register(
 
 # Variant #6: production TRPO on the retrain-simtoreal-2026-09 section-5 plant.
 # Same runner cfg as Isaac-ConstrainedALBC-TRPO-v0; only the env cfg differs, and it
-# carries the seven overrides Phase 3b was fired with (finding/352). Launch a retrain
+# carries the seven overrides Phase 3b was fired with. Launch a retrain
 # with this task id instead of repeating the override block.
 gym.register(
     id="Isaac-ConstrainedALBC-TRPO-SimToReal-v0",
@@ -124,12 +124,11 @@ gym.register(
 # Section-5 plant variants of the ablation arms — program `paper-ablation-5000`
 # =============================================================================
 #
-# Anchor (B) (PLAN.md §8-R): every arm of the comparison table trains on the
+# Anchor (B): every arm of the comparison table trains on the
 # retrain-simtoreal-2026-09 section-5 plant, so each arm needs a task id that
-# carries the seven overrides. `finding/352` is explicit that the seven are
-# launch-override-only and that a launch which omits the block silently reverts
-# to the old plant -- PLAN.md §4-5 chose path (a), a cfg subclass per arm task
-# id, precisely to remove the way to forget it.
+# carries the seven overrides. The seven are launch-override-only, and a launch
+# which omits the block silently reverts to the old plant -- a cfg subclass per
+# arm task id removes the way to forget it.
 #
 # The runner cfg of each pair is byte-identical to its old-plant twin above; only
 # `env_cfg_entry_point` moves. That is the whole point: the arm's algorithm is the
@@ -141,7 +140,7 @@ gym.register(
 #
 # Not registered here: the reference arm on this plant. `-TRPO-SimToReal-v0` above
 # already is it; whether it is retrained from scratch at 5000 iterations is
-# `[DECISION-REQUIRED: reference-arm]` (PLAN.md §8-R-7) and is the user's call.
+# `[DECISION-REQUIRED: reference-arm]` and is the user's call.
 
 # A2 on the section-5 plant: TRPO + IPO without the encoder
 gym.register(
@@ -190,11 +189,10 @@ gym.register(
 )
 
 # A6 on the section-5 plant: encoder + PPO. Registered but never trained on either
-# plant -- PLAN.md §8-R-2 makes it launch order 1 as the pipeline canary, because it
+# plant -- it is the natural pipeline canary, because it
 # is the cheapest arm that exercises the whole path. It is only a canary if the
-# as-run params of its run directory are diffed against the seven fields (§4-5); a
-# run that silently reverted to the old plant otherwise looks like a success
-# (`finding/318`).
+# as-run params of its run directory are diffed against the seven fields; a
+# run that silently reverted to the old plant otherwise looks like a success.
 gym.register(
     id="Isaac-ConstrainedALBC-PPO-Enc-SimToReal-v0",
     entry_point="constrained_albc.envs.main:ALBCEnv",

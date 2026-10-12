@@ -40,8 +40,8 @@ class ALBCTDCEnvCfg(ALBCEnvCfg):
     `max_joint_velocity=2.5 rad/s`. The gains came from the original ROS reference
     implementation at 40.0/12.0 and were raised +20% on 2026-04-22 for OOD robustness
     (`tdc.py:48-49`, which is where the effective values live); this docstring still
-    said 40/12 until 2026-09-07. Any classical-gain search starts from 48/14 --
-    paper-ablation-5000 PLAN.md §8-R-3 is explicit about not starting from 40/12.
+    said 40/12 until 2026-09-07. Any classical-gain search starts from 48/14,
+    not from 40/12.
     """
 
     thruster_pd: ThrusterPDCfg = ThrusterPDCfg()

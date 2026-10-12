@@ -8,7 +8,7 @@ fields, with exactly the launched values, and nothing else moved.
 
 Run:  /isaac-sim/python.sh test_simtoreal_cfg.py   (needs an idle box: Kit takes a lock)
 
-2026-09-07 -- WHY THIS USED TO LOOK BROKEN (finding/379, and its stated cause was wrong).
+2026-09-07 -- WHY THIS USED TO LOOK BROKEN.
 The symptom was "exits 0 during Kit startup with no PASS line", reproduced through BOTH entry
 points on an idle box. It was never a startup failure: a bisecting probe reached every stage,
 built both configs (85 top-level keys each) and then BLOCKED in `app.close()`. The asserts had

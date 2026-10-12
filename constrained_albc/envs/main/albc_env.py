@@ -401,7 +401,7 @@ class ALBCEnv(DirectRLEnv):
         self._prev_root_ang_vel_z = torch.zeros(self.num_envs, device=self.device)
         # [0:2] = roll/pitch attitude (rad), [2] = yaw target heading (rad, world frame)
         self._ang_cmd = torch.zeros(self.num_envs, 3, device=self.device)
-        # Exogenous heave disturbance state (PLAN item 11). Piecewise-constant random hold:
+        # Exogenous heave disturbance state. Piecewise-constant random hold:
         # _dist_fz is the body-frame Fz held for _dist_hold_left more seconds, _dist_strength
         # the per-env DORAEMON scale in [0,1] drawn at reset. Allocated unconditionally (three
         # (N,) tensors) like _ou_base_current, so _reset_idx and the logger stay branch-free;
@@ -460,7 +460,7 @@ class ALBCEnv(DirectRLEnv):
         self._hydro_torques = torch.zeros(self.num_envs, 3, device=self.device)
         self._buoy_hydro_forces = torch.zeros(self.num_envs, 3, device=self.device)
         self._buoy_hydro_torques = torch.zeros(self.num_envs, 3, device=self.device)
-        # Exogenous heave disturbance wrench (PLAN item 11), shaped for
+        # Exogenous heave disturbance wrench, shaped for
         # permanent_wrench_composer.add_forces_and_torques: (N, len(body_ids), 3).
         # Only the z force column and the y torque column are ever written, so the rest
         # stays zero for the life of the env. Lives here rather than next to _dist_fz
@@ -483,7 +483,7 @@ class ALBCEnv(DirectRLEnv):
         if self.cfg.actuation_noise.enable:
             self.cfg.thrusters.actuation_noise_std = self.cfg.actuation_noise.thruster_noise_std
 
-        # PLAN item 10: thruster_always_dead pins channels to health 0 INDEPENDENTLY of
+        # thruster_always_dead pins channels to health 0 INDEPENDENTLY of
         # fault.enable, but health lives inside ThrusterModel and its buffer is allocated
         # only under enable_fault (set_thruster_health returns early on a None buffer).
         # So a non-empty tuple must switch the buffer on by itself. With every live
@@ -970,7 +970,7 @@ class ALBCEnv(DirectRLEnv):
         self._stashed_payload_cog_offset[env_ids, 2] = torch.empty(n, device=self.device).uniform_(lo, hi)
 
     # ------------------------------------------------------------------
-    # Exogenous heave disturbance (PLAN item 11, decision/159 결정 2)
+    # Exogenous heave disturbance
     # ------------------------------------------------------------------
 
     def _reset_fz_disturbance(self, env_ids: torch.Tensor, sampled: dict | None) -> None:
@@ -996,8 +996,8 @@ class ALBCEnv(DirectRLEnv):
     def _draw_fz_disturbance(self, env_ids: torch.Tensor) -> None:
         """Re-draw Fz = U(-1, 1) * strength * fz_max and a fresh hold U(hold_s) for env_ids.
 
-        Random in BOTH magnitude and timing, per decision/159 결정 2 ("일정한 외란이
-        아니라 무작위 외란"). At strength 0 the force is exactly 0 for those envs.
+        Random in BOTH magnitude and timing (a random disturbance, not a constant one).
+        At strength 0 the force is exactly 0 for those envs.
         """
         dist = self.cfg.disturbance
         fz, hold = disturbance.sample_fz_and_hold(
@@ -1072,7 +1072,7 @@ class ALBCEnv(DirectRLEnv):
             torques=payload_torques.unsqueeze(1),
         )
 
-        # Exogenous heave disturbance (PLAN item 11): the Fz the deployed depth PID puts
+        # Exogenous heave disturbance: the Fz the deployed depth PID puts
         # through the one surviving vertical thruster, plus the pitch moment vertical
         # geometry couples to it. ADDED, and added LAST, because the three calls above are
         # SETs -- exactly the reason analysis/eval.py's E3 yaw-torque injector re-adds its
@@ -1734,7 +1734,7 @@ class ALBCEnv(DirectRLEnv):
         if self._thruster is not None:
             self._thruster.reset(env_ids)
 
-        # Structurally-absent thruster channels (PLAN item 10): pin them dead for the
+        # Structurally-absent thruster channels: pin them dead for the
         # reset envs. Placed HERE -- after _thruster.reset(), before the not-DR early
         # return and before the fault block below -- because the tuple is independent of
         # BOTH toggles: fault.enable=False never reaches the fault block, and DR-disabled

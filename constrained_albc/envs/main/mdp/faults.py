@@ -22,7 +22,7 @@ buffer is None, so a fault-disabled env is byte-identical to the fault-free env.
 ONE deliberate exception: ``apply_always_dead`` ignores ``cfg.enable`` entirely. Its
 channels are structurally absent from the actuator set rather than failing, so they must
 stay dead on the fault-disabled path too. Its toggle is its own empty tuple, not `enable`
--- do not "fix" it to respect the flag. See PLAN §4 item 10.
+-- do not "fix" it to respect the flag.
 """
 from __future__ import annotations
 
@@ -36,7 +36,7 @@ def apply_always_dead(health: torch.Tensor, cfg) -> torch.Tensor:
     actuator set -- not a fault. So this applies in EVERY env, on every path
     (fixed-health override, Bernoulli sampler, and the fault-disabled baseline), and
     it does NOT consult ``cfg.enable``: a policy must never see a pinned-dead channel
-    alive. Retrain-simtoreal-2026-09 PLAN §4 item 10 / decision/159 결정 2 pins
+    alive. The section-5 plant pins
     ``(0, 3)`` = m0, m3 (the vertical/heave pair, config.py ESC wiring comment).
 
     ``()`` (the default) is a no-op that touches nothing and draws no RNG, so a cfg

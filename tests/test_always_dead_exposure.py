@@ -1,4 +1,4 @@
-"""PLAN §4 item 10: `thruster_always_dead` exposure.
+"""`thruster_always_dead` exposure.
 
 Two claims, and the second is the one that actually costs something if it is wrong:
 

@@ -1,12 +1,12 @@
-"""PLAN item 12: `control_delay_strength` paces `control_delay_steps`.
+"""`control_delay_strength` paces `control_delay_steps`.
 
-finding/264: `control_delay_steps` was never in DORAEMON's `_PARAM_DEFS`, so nothing paced
-it. finding/315: a flat (0, 3) from iteration 0 stalled a run under a mistuned
+`control_delay_steps` was never in DORAEMON's `_PARAM_DEFS`, so nothing paced
+it, and a flat (0, 3) from iteration 0 stalled a run under a mistuned
 `performance_lb`. The fix moves the CEILING with a curriculum knob, and this checks the
 three properties that matter:
 
   * s = 0 pins every env at `lo` -- the incumbent's zero-delay plant, so a run starts where
-    the deployed teacher was actually trained (finding/264);
+    the deployed teacher was actually trained;
   * s = 1 covers EXACTLY {lo..hi} -- no value missing, none out of range, so the fully-open
     curriculum is the full band and nothing more;
   * an intermediate s never exceeds its own rounded ceiling.
@@ -33,7 +33,7 @@ sample = events.sample_control_delay_steps
 
 N = 20_000
 DEV = "cpu"
-LAUNCH = (0, 13)          # finding/148: 152 ms median cmd->joint latency at 50 Hz
+LAUNCH = (0, 13)          # 152 ms median cmd->joint latency at 50 Hz
 
 
 def _const(s, n=N):

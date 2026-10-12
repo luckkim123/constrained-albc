@@ -1,10 +1,10 @@
-"""PLAN §4 item 11: exogenous heave disturbance (`FzDisturbanceCfg`).
+"""Exogenous heave disturbance (`FzDisturbanceCfg`).
 
 Checks the numerical core in `mdp/disturbance.py` -- the same functions albc_env calls,
 not a copy of their arithmetic:
 
   * ``|Fz| <= strength * fz_max`` elementwise, for a batch of strengths and draws;
-  * ``My == my_per_fz * Fz`` EXACTLY (the sign carries finding/155's realised
+  * ``My == my_per_fz * Fz`` EXACTLY (the sign carries the realised
     ``deployed_tam.json`` ratio -0.1458; a flipped sign is the failure this guards);
   * ``strength == 0`` -> the whole wrench is zeros (the DORAEMON nominal must be inert);
   * the hold re-draw fires only for envs whose counter has reached 0.
@@ -30,7 +30,7 @@ N = 10_000
 BODIES = 1
 DEV = "cpu"
 FZ_MAX = 13.0            # config default: one vertical at the 13 N measured coefficient
-MY_PER_FZ = -0.1458      # finding/155, realised deployed_tam.json My/Fz
+MY_PER_FZ = -0.1458      # realised deployed_tam.json My/Fz
 HOLD_S = (1.0, 5.0)
 STEP_DT = 0.02           # 50 Hz policy step (decimation 4 x sim dt 0.005)
 
@@ -93,7 +93,7 @@ def test_wrench_couples_my_to_fz_exactly():
     assert torch.equal(forces[:, :, :2], torch.zeros(N, BODIES, 2))
     assert torch.equal(torques[:, :, 0], torch.zeros(N, BODIES))
     assert torch.equal(torques[:, :, 2], torch.zeros(N, BODIES))
-    # the coupling is NEGATIVE (finding/155): +Fz produces -My
+    # the coupling is NEGATIVE: +Fz produces -My
     pos = fz > 0
     assert torch.all(torques[pos, 0, 1] < 0)
 
