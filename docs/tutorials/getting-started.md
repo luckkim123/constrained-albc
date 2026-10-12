@@ -91,7 +91,7 @@ and writes one PNG per plot, one row per level:
 | File | Content |
 |---|---|
 | `traj_attitude.png` | roll/pitch tracking trajectory |
-| `traj_yaw.png` | yaw-rate tracking trajectory |
+| `traj_yaw.png` | yaw heading tracking trajectory |
 | `traj_error.png` | tracking error over time |
 | `summary_attitude.png`, `summary_yaw.png` | per-level steady-state metric bars |
 | `summary_failuretime.png` | time-to-failure summary |

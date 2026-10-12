@@ -31,7 +31,7 @@ sequence.
 
 | Task ID | Env dir | Description |
 |---|---|---|
-| `Isaac-ConstrainedALBC-TRPO-v0` | `envs/main` | **Main** — attitude-only ALBC, ConstraintTRPO + IPO + asymmetric encoder, DORAEMON DR. 69D obs / 28D privileged / 8D action |
+| `Isaac-ConstrainedALBC-TRPO-v0` | `envs/main` | **Main** — attitude-only ALBC, ConstraintTRPO + IPO + asymmetric encoder, DORAEMON DR. 72D obs / 28D privileged / 8D action |
 
 The network architecture of the default `Isaac-ConstrainedALBC-TRPO-v0` is
 documented in [`docs/reference/main-network-architecture.md`](reference/main-network-architecture.md).

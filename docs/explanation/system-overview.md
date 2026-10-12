@@ -48,7 +48,7 @@ DVL on the real robot):
 | Channel | Command | Reward shape |
 |---|---|---|
 | Roll / Pitch | attitude (±30°) | exponential kernel |
-| Yaw | rate (±0.5 rad/s) | quadratic penalty |
+| Yaw | world-frame heading (±π rad) | exponential kernel (default `k=3.5`; the paper teacher used `k=0`, so heading is observed and its rate constrained but not rewarded) |
 
 Full command-sampling, resampling, and error-integral details:
 [`reference/command-and-task.md`](../reference/command-and-task.md).
@@ -60,7 +60,7 @@ The env emits `{"policy": o_t, "privileged": p_t}` per step:
 | Tensor | Dim | Composition (high level) |
 |---|---:|---|
 | Action `a_t` | 8D | 2D arm joint delta + 6D thruster command |
-| Observation `o_t` | 69D | 20D current proprioception + 46D strided temporal history + 3D leaky error integral — no measured linear velocity |
+| Observation `o_t` | 72D | 20D current proprioception + 46D strided temporal history + 3D leaky error integral + 3D bias EMA — no measured linear velocity |
 | Privileged `p_t` | 28D | one scalar per independent DR parameter (25D: hydro/dynamics/payload/actuator/env/buoy/latency) + measured body linear velocity (3D, critic-only) |
 
 `o_t` is everything the real robot can measure; `p_t` is sim-only ground truth fed
@@ -76,11 +76,11 @@ the asymmetric actor/critic routing: [`reference/observation-space.md`](../refer
 
 - **Encoder**: `p_t` (28D) -> static min-max norm -> MLP[256,128,64] elu -> LayerNorm
   -> softsign -> latent `z` (9D).
-- **Actor**: MLP[256,128,64] elu, reads `[o_t, z]` (78D), never raw `p_t`. A single
+- **Actor**: MLP[256,128,64] elu, reads `[o_t, z]` (81D), never raw `p_t`. A single
   global `log_std` (not state-dependent) is updated through the TRPO natural gradient.
 - **Critic / cost critic**: asymmetric MLP[512,256,128] elu, reads `[o_t, z, p_t]`
-  (106D). The cost critic is multi-head, one head per constraint.
-- **Constraints**: 10 IPO terms (5 probabilistic + 5 average), each with a
+  (109D). The cost critic is multi-head, one head per constraint.
+- **Constraints**: 10 IPO terms (4 probabilistic + 6 average), each with a
   per-constraint cost-advantage standardization and log-barrier margin.
 
 Full network layer sizes, the ConstraintTRPO/IPO update equations, and hyperparameters:
@@ -114,7 +114,7 @@ self-check) is produced by `scripts/export_deploy_pack.py`; see
 
 ```
 constrained_albc/envs/main/
-├── albc_env.py       # env: 8D action, 69D obs, 28D privileged
+├── albc_env.py       # env: 8D action, 72D obs, 28D privileged
 ├── config.py         # ALBCEnvCfg + DomainRandomizationCfg + constraint terms
 ├── doraemon.py        # ALBC-specific DORAEMON param defs (engine lives in marinelab)
 ├── agents/            # rsl_rl_ppo_cfg.py, ablation_cfgs.py (policy / algorithm / runner cfgs)

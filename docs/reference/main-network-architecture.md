@@ -1,16 +1,13 @@
 # Main Network Architecture (`envs/main`)
 
-> Verified against commit c5a8a08.
-
 > **Scope**: Neural-network architecture of the default task
 > `Isaac-ConstrainedALBC-TRPO-v0` (`constrained_albc/envs/main/`). This is the
-> attitude-only ALBC policy (roll/pitch + yaw-rate, no linear-velocity command),
-> with an 8D action (2D arm + 6D thruster), 69D actor observation, and 28D
+> attitude-only ALBC policy (roll/pitch attitude + yaw heading, no linear-velocity
+> command), with an 8D action (2D arm + 6D thruster), 72D actor observation, and 28D
 > privileged observation.
 >
-> This is a code-level reference verified against disk. The legacy full-DOF
-> variant (retired 2026-09, tag `legacy-full-dof-final`; 87D obs / 24D
-> privileged) is a different network and is **not** described here.
+> The legacy full-DOF variant (retired 2026-09, tag `legacy-full-dof-final`; 87D obs
+> / 24D privileged) is a different network and is **not** described here.
 
 ---
 
@@ -18,13 +15,13 @@
 
 The policy is a teacher actor-critic in the RMA/HORA family: an **encoder**
 compresses the 28D privileged physics vector into a 9D latent `z`; the **actor**
-acts on the 69D observation plus `z`; an **asymmetric critic** sees the full
+acts on the 72D observation plus `z`; an **asymmetric critic** sees the full
 privileged information directly. The algorithm is `ConstraintTRPO` (a standalone
 algorithm, not an `rsl_rl.PPO` subclass) with an IPO log-barrier on cost
 constraints.
 
 ```
-ENV obs dict  ->  {"policy": o_t (69D),  "privileged": p_t (28D)}
+ENV obs dict  ->  {"policy": o_t (72D),  "privileged": p_t (28D)}
 
 ENCODER  (input = p_t 28D, NOT the full observation)
   p_t(28D) -> static min-max normalize -> [-1, 1]   # HORA-style, deterministic, no running stat
@@ -32,47 +29,49 @@ ENCODER  (input = p_t 28D, NOT the full observation)
           -> LayerNorm(9)                            # pre-softsign
           -> softsign  ->  z (9D)                    # encoder_latent_dim = 9
 
-ACTOR  (input 78D)
-  cat[ EmpiricalNorm(o_t)(69D), z_raw(9D) ]          # only o_t is normalized; z is already softsign-bounded
+ACTOR  (input 81D)
+  cat[ EmpiricalNorm(o_t)(72D), z_raw(9D) ]          # only o_t is normalized; z is already softsign-bounded
           -> MLP[256, 128, 64]  (elu)
           -> action_mean (8D = 2D arm + 6D thruster)
   std = exp(global log_std[8]) -> expand             # state-INDEPENDENT
         init 0.7; clamped post-update by ConstraintTRPO
 
-CRITIC  (asymmetric, input 106D, critic_uses_z = True)
-  cat[ o_t(69D), z(9D), p_t(28D) ] (raw)             # value gradient flows back into the encoder through z
+CRITIC  (asymmetric, input 109D, critic_uses_z = True)
+  cat[ o_t(72D), z(9D), p_t(28D) ] (raw)             # value gradient flows back into the encoder through z
           -> MLP[512, 256, 128]  (elu) -> value (1D)
 
 COST CRITIC  (multi-head, K = num_constraints)
-  cat[ o_t(69D), z(9D), p_t(28D) ] (same 106D input)
+  cat[ o_t(72D), z(9D), p_t(28D) ] (same 109D input)
           -> MLP[512, 256, 128]  (elu) -> cost_values (K)   # one head per constraint
 ```
 
 **Key design choices:**
 - Encoder sees privileged physics `p_t`, not the observation — `z` tells the actor *what physics this environment has* (`p_t` is unobservable on the real robot).
-- Critic is asymmetric — reads `p_t` directly (106D) while the actor only gets compressed `z` (78D).
+- Critic is asymmetric — reads `p_t` directly (109D) while the actor only gets compressed `z` (81D).
 - `critic_uses_z = True` routes gradient into the encoder — the value-loss gradient flows back through `z`, so the encoder trains from both the policy and the value signal.
 
 ---
 
 ## 2. Observation and action dimensions
 
-All dimensions below are verified against disk and enforced at runtime by an
-assertion in `albc_env.py` (the env raises `ValueError` if the assembled obs does
-not equal `observation_space = 69`).
+The env raises `ValueError` at construction if the assembled observation width differs
+from `observation_space` (guard in `ALBCEnv.__init__`). The cfg declares
+`observation_space = 69`; `use_bias_ema_obs=True` (the default) makes
+`apply_bias_ema_obs` bump it to 72 by appending the 3D bias EMA, so the policy sees 72D.
 
-### 2.1 Actor observation — 69D (`o_t`)
+### 2.1 Actor observation — 72D (`o_t`)
 
 | Block | Composition | Dim |
 |---|---|---:|
 | Current proprioception | ang_cmd(3) + euler(3) + ang_vel(3) + joint_pos(2) + joint_vel(2) + manipulability(1) + thruster_state(6) | 20 |
 | Joint/body history | (joint_err 4 + body_err 6) x 3 steps (`hist_len=3`) | 30 |
 | Action history | full_action 8 x 2 steps (`hist_action_len=2`) | 16 |
-| Integral error | leaky integrator [roll, pitch, yaw_rate] | 3 |
-| **Total** | | **69** |
+| Integral error | leaky error-gated integrator [roll, pitch, yaw], yaw = wrapped heading error | 3 |
+| Bias EMA | ungated EMA of the tracking error [roll, pitch, yaw] | 3 |
+| **Total** | | **72** |
 
 Source: `mdp/observations.py:compute_policy_obs()` (20D current) +
-`albc_env.py:_get_observations()` (history + integral).
+`albc_env.py:_get_observations()` (history + integral + bias EMA). The yaw command in `ang_cmd` is a world-frame heading target (rad); see `observation-space.md`.
 
 ### 2.2 Privileged observation — 28D (`p_t`)
 
@@ -108,12 +107,14 @@ Raw action is clamped to `[-1, 1]` before use (`albc_env.py`).
 
 ### 2.4 Routing into the network
 
-`_get_observations()` returns `{"policy": (N, 69), "privileged": (N, 28)}`. The
+`_get_observations()` returns `{"policy": (N, 72), "privileged": (N, 28)}`. The
 encoder consumes `privileged`; the actor consumes `policy + z`; the critic
 consumes `policy + z + privileged`. The asymmetric split is **not** done through
 the rsl-rl `obs_groups` path — both groups are declared `["policy", "privileged"]`
-and the policy class slices them internally using the `policy_obs_dim=69` and
-`privileged_dim=28` cfg fields.
+and the policy class slices them internally using the `policy_obs_dim` and
+`privileged_dim` cfg fields. The `policy_obs_dim` literal in `rsl_rl_ppo_cfg.py` is 69 but is
+overwritten with the env's real width (72) by `sync_policy_obs_dim`
+(`algorithms/runners/__init__.py`) before the policy is built; `privileged_dim=28` is synced the same way.
 
 ---
 
@@ -126,11 +127,11 @@ The runtime network is built by flattening `_ALBCPolicyCfg` (in
 | Component | Input | Hidden | Output | Activation | Notes |
 |---|---|---|---|---|---|
 | Encoder | 28 (`privileged_dim`) | [256, 128, 64] (`encoder_hidden_dims`) | 9 (`encoder_latent_dim`) | elu + LayerNorm + softsign | `encoder_output_norm=True` adds the LayerNorm |
-| Actor | 78 = 69 + 9 | [256, 128, 64] (`actor_hidden_dims`) | 8 (`num_actions`) | elu | only `o_t` (69D) gets EmpiricalNorm |
-| Critic | 106 = 69 + 28 + 9 | [512, 256, 128] (`critic_hidden_dims`) | 1 | elu | `critic_uses_z=True`; no normalization |
-| Cost critic | 106 (same) | [512, 256, 128] (`cost_critic_hidden_dims`) | K | elu | only built when `num_constraints > 0` |
+| Actor | 81 = 72 + 9 | [256, 128, 64] (`actor_hidden_dims`) | 8 (`num_actions`) | elu | only `o_t` (72D) gets EmpiricalNorm |
+| Critic | 109 = 72 + 28 + 9 | [512, 256, 128] (`critic_hidden_dims`) | 1 | elu | `critic_uses_z=True`; no normalization |
+| Cost critic | 109 (same) | [512, 256, 128] (`cost_critic_hidden_dims`) | K | elu | only built when `num_constraints > 0` |
 
-- **Shape-determining (live wires):** `policy_obs_dim=69`, `privileged_dim=28`, `encoder_latent_dim=9`, `critic_uses_z=True`, `encoder_output_norm=True`, `num_constraints` (auto-synced from the env), the four `*_hidden_dims` lists.
+- **Shape-determining (live wires):** `policy_obs_dim` (synced to 72), `privileged_dim=28`, `encoder_latent_dim=9`, `critic_uses_z=True`, `encoder_output_norm=True`, `num_constraints` (auto-synced from the env), the four `*_hidden_dims` lists.
 - **No effect on shape:** `init_noise_std=0.7`, the `*_normalization` flags.
 
 **Encoder input normalization** is static min-max (HORA-style), not
@@ -141,7 +142,6 @@ deterministic with no running statistics, which avoids `z` drift / KL spikes.
 - **Source**: `derive_priv_obs_bounds_from_dr()` (`envs/main/utils/priv_obs_bounds.py`), injected by `ConstraintEncoderRunner.__init__` like the `num_constraints` auto-sync — bound = DR range exactly (margin 0), so a DR change auto-syncs.
 - **Fallback**: old hardcoded `_PRIV_OBS_LOWER/UPPER` in `agents/rsl_rl_ppo_cfg.py`, used only at construct time (still imported by `constrained_albc/algorithms/student/teacher.py`); it had drifted from DR (payload-mass overflow, stale CoG-xy radius) — the reason for the derivation refactor.
 - **Guard**: a terminal `_assert_bounds_match_dr()` fails loud if a future DR change desyncs the derived bounds.
-- **Tracking**: branch `exp/dr-derived-norm-bounds`, audit item B1; see `docs/plans/2026-06-30-dr-derived-priv-obs-normalization-bounds.md`.
 
 ### 3.1 Class hierarchy
 
@@ -152,7 +152,7 @@ subclasses inherit from it **as siblings**:
 - `ActorCriticEncoder(PolicyBase)` — the encoder teacher policy (production
   default, `class_name="ALBCActorCriticEncoder"`).
 - `ActorCriticAsymConstrained(PolicyBase)` — the NoEncoder ablation (actor sees
-  only the 69D `o_t`, critic is `cat([o_t, p_t]) = 97D`).
+  only the 72D `o_t`, critic is `cat([o_t, p_t]) = 100D`).
 
 `ActorCriticAsymConstrained` does **not** inherit from `ActorCriticEncoder`.
 
@@ -238,82 +238,68 @@ policy cfg is overwritten at runtime; `cost_critic` is only built when K > 0.
 A separate cost critic network **exists**, and it is a **single multi-head MLP**
 (not one network per constraint):
 
-- **Architecture**: identical 106D asymmetric input (`cat[o_t, z, p_t]`), hidden
+- **Architecture**: identical 109D asymmetric input (`cat[o_t, z, p_t]`), hidden
   `[512, 256, 128]`, activation `elu` — same shape as the reward critic but with K
   scalar outputs. Built only when `num_constraints > 0`, else `None`
-  (`constrained_albc/algorithms/encoder/_policy_base.py`). cfg `cost_critic_hidden_dims` at `rsl_rl_ppo_cfg.py:181`.
+  (`constrained_albc/algorithms/encoder/_policy_base.py`).
 - **Heads**: K scalar outputs, one head per constraint (`evaluate_costs()` returns
   K values from the same critic_obs). Cost returns/advantages are shaped `(T,N,K)`.
 - **Naming convention**: the `cost_critic.*` prefix is what routes it to the Adam
   value optimizer instead of the TRPO natural-gradient group.
 
 **`num_constraints` (K) is runtime-resolved.** The static cfg default is `0`
-placeholder (`rsl_rl_ppo_cfg.py:180`); `constrained_albc/algorithms/runners/constraint_encoder_runner.py` overwrites it from
+placeholder in `rsl_rl_ppo_cfg.py`; `constrained_albc/algorithms/runners/constraint_encoder_runner.py` overwrites it from
 `len(cfg.constraints.terms)` before `super().__init__()`, so `cost_critic` is sized
 correctly at build time.
 
-### 5.1 K on this branch
+### 5.1 K
 
-On `main` and with `joint1_constraint_arm="none"` (the default), **K = 10**
-(5 probabilistic + 5 average), defined in `envs/main/config.py` constraint terms.
+With `joint1_constraint_arm="none"` (the default), **K = 10** (4 probabilistic +
+6 average), defined in `envs/main/config.py` (`_MAIN_CONSTRAINT_TERMS`).
 
-On the `exp/joint1-constraint-redesign` branch, `config.py` adds an
-**off-by-default** joint1 anti-drift constraint:
-
-- `joint1_constraint_arm: str = "none"` (one of `"none"`, `"A"`, `"B"`),
-  `joint1_constraint_budget: float = 0.05` (per-step average budget `d_k`).
-- When set to `"A"` or `"B"`, `apply_joint1_constraint_arm()` (called from
-  `ALBCEnv.__init__`, not a cfg `__post_init__`) appends one extra constraint term
-  → **K = 11**, so the cost critic gets **one additional head**.
-- `"B"` selects `joint1_cumulative_cost` (average of the commanded integrator);
-  `"A"` selects the measured-angle variant.
-
-The MLP layer counts, dims, and activations are **unchanged** by the constraint
-choice — only the cost-critic output width (K) moves.
+`config.py` also has an **off-by-default** joint1 anti-drift option:
+`joint1_constraint_arm: str = "none"` (one of `"none"`, `"B"`) with
+`joint1_constraint_budget: float = 0.05`. Setting it to `"B"` makes
+`apply_joint1_constraint_arm()` (called from `ALBCEnv.__init__`, not a cfg
+`__post_init__`) append one extra average term (`joint1_cumulative`), so **K = 11** and
+the cost critic gets one additional head. The MLP layer counts, dims and activations are
+unchanged by the constraint choice — only the cost-critic output width (K) moves.
 
 ---
 
-## 6. Where to change what (next-experiment knob map)
+## 6. Where to change what (knob map)
 
 Unless noted, all in `constrained_albc/envs/main/agents/rsl_rl_ppo_cfg.py`.
 
-| Architecture knob | Value | Location (file:line) |
-|---|---|---|
-| actor hidden | [256, 128, 64] | `:145` |
-| critic hidden | [512, 256, 128] | `:146` |
-| cost_critic hidden | [512, 256, 128] | `:181` |
-| actor/critic activation | elu | `:147` |
-| encoder hidden | [256, 128, 64] | `:149` |
-| encoder activation | elu | `:154` |
-| encoder_latent_dim (z) | 9 | `:153` |
-| encoder_output_norm (pre-softsign LayerNorm) | True | `:174` |
-| encoder static min-max bounds | DR-derived (`derive_priv_obs_bounds_from_dr`), fallback `_PRIV_OBS_LOWER/UPPER` | `utils/priv_obs_bounds.py` |
-| encoder_obs_normalization | False | `:155` |
-| critic_uses_z (106D vs 97D) | True | `:173` |
-| init_noise_std | 0.7 | `:142` |
-| min_std / max_std (algo clamp) | 0.05 / 2.0 | `:242` / `:243` |
-| min_std_per_dim | (0.10, 0.10, 0.05 x6) | `:246` |
-| entropy_coef / per_dim | 0.003 / (0.01 x2, 0.001 x6) | `:233` / `:239` |
-| max_kl / cg_iters / cg_damping | 0.005 / 10 / 0.1 | `:201-203` |
-| barrier_t / barrier_alpha (IPO) | 100.0 / 0.05 | `:227` / `:228` |
-| num_constraints (auto-sync K) | 0 -> runtime 10 (11 with joint1 arm) | `:180` (real K = `config.py` constraint terms) |
-| policy_obs_dim / privileged_dim | 69 / 28 | `:157` / `:158` |
-| joint1 constraint arm / budget (`exp/joint1-constraint-redesign` branch) | "none" / 0.05 | `envs/main/config.py` |
-
-All line numbers above are in `agents/rsl_rl_ppo_cfg.py` unless noted otherwise.
+| Architecture knob | Value |
+|---|---|
+| actor hidden | [256, 128, 64] |
+| critic hidden | [512, 256, 128] |
+| cost_critic hidden | [512, 256, 128] |
+| actor/critic activation | elu |
+| encoder hidden | [256, 128, 64] |
+| encoder_latent_dim (z) | 9 |
+| encoder_output_norm (pre-softsign LayerNorm) | True |
+| encoder static min-max bounds | DR-derived (`derive_priv_obs_bounds_from_dr` in `utils/priv_obs_bounds.py`); `_PRIV_OBS_LOWER/UPPER` is a fallback only |
+| encoder_obs_normalization | False |
+| critic_uses_z (109D vs 100D) | True |
+| init_noise_std | 0.7 |
+| min_std / max_std (algo clamp) | 0.05 / 2.0 |
+| min_std_per_dim | (0.10, 0.10, 0.05 x6) |
+| entropy_coef / per_dim | 0.003 / (0.01 x2, 0.001 x6) |
+| max_kl / cg_iters / cg_damping | 0.005 / 10 / 0.1 |
+| barrier_t / barrier_alpha (IPO) | 100.0 / 0.05 |
+| num_constraints (auto-sync K) | 0 in cfg -> 10 at runtime (11 with joint1 arm "B"); real K = `config.py` constraint terms |
+| policy_obs_dim / privileged_dim | cfg literals 69 / 28, synced to 72 / 28 at runner construction |
 
 ---
 
 ## 7. Notes and limitations
 
 - **`state_dependent_std` does not exist in `envs/main`.** `std` is a single
-  global `log_std` parameter broadcast across the batch. The per-state std head
-  is a separate, unmerged experiment branch (`exp/attitude-only-state-std`); it
-  is not part of `main`.
+  global `log_std` parameter broadcast across the batch.
 - **No encoder auxiliary losses.** No reconstruction/KL/contrastive head on the
-  encoder; the only inference hook is a default-disabled z-ablation
-  (`mode=None`). This matches the project rule (reconstruction loss failed: the
-  decoder ignored `z` and `z` collapsed).
+  encoder; the only inference hook is a default-disabled z-ablation (`mode=None`).
 - The exact runtime `K` (number of constraints) and the physical meaning of each
   `_PRIV_OBS_LOWER/UPPER` entry are defined in the env config / `mdp/`; only the
   length (28) was cross-checked here.

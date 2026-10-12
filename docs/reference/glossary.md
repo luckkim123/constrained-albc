@@ -12,12 +12,12 @@ family). No expansion is defined in the codebase; treated as a proper noun.
 See [command-and-task.md](command-and-task.md).
 
 **Asymmetric critic** — The critic (value + cost networks) consumes the full
-106D input (`o_t` + `z` + raw `p_t`), while the actor only ever sees `o_t` + `z`
-(78D) — the critic has privileged information the actor does not. See
+109D input (`o_t` + `z` + raw `p_t`), while the actor only ever sees `o_t` + `z`
+(81D) — the critic has privileged information the actor does not. See
 [main-network-architecture.md](main-network-architecture.md) §1, §2.4.
 
 **Attitude-only task** — The default task's goal is roll/pitch attitude plus a
-yaw-**rate** command; there is no linear-velocity command or tracking (no DVL
+world-frame yaw **heading** command; there is no linear-velocity command or tracking (no DVL
 on the real robot). See [command-and-task.md](command-and-task.md).
 
 **BlueROV** — A separate task suite (5 registered tasks, `Isaac-BlueROV-*-Direct-v0`)
@@ -65,8 +65,8 @@ of the 10 cost-budget constraints into a smooth barrier term added to the TRPO
 surrogate objective, rather than a Lagrangian dual or projection step. See
 [constraints.md](constraints.md) §1.
 
-**o_t (observation)** — The 69D actor observation: 20D current proprioception +
-46D strided temporal history + 3D leaky error integral. Deliberately excludes
+**o_t (observation)** — The 72D actor observation: 20D current proprioception +
+46D strided temporal history + 3D leaky error integral + 3D bias EMA. Deliberately excludes
 measured linear velocity (no DVL on the real robot). See
 [observation-space.md](observation-space.md) §2.
 

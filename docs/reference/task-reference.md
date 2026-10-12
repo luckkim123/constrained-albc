@@ -8,7 +8,7 @@
 > `constrained_albc/envs/__init__.py` and each env package's `__init__.py` /
 > `config.py` (2026-07-12).
 >
-> For the full breakdown of the default task's 69D/28D dims (per-field indices,
+> For the full breakdown of the default task's 72D/28D dims (per-field indices,
 > noise model, encoder consumption), see
 > [`observation-space.md`](observation-space.md) — this page only gives the
 > top-level numbers.
@@ -27,7 +27,7 @@ this through `sync_policy_obs_dim`; a hardcoded 69 in an agent cfg aborts the ru
 
 | Task ID | Env package | Obs dim (policy / privileged / action) | Purpose / status | Typical entry command |
 |---|---|---|---|---|
-| `Isaac-ConstrainedALBC-TRPO-v0` | `envs/main` | 72D / 28D / 8D | **Default.** Attitude-only ALBC (roll/pitch attitude + yaw-rate, no lin_vel tracking). ConstraintTRPO + IPO + asymmetric encoder. | `python scripts/train.py --task Isaac-ConstrainedALBC-TRPO-v0 --num_envs 4096 --max_iterations 5000 --logger wandb --log_project_name albc_trpo` |
+| `Isaac-ConstrainedALBC-TRPO-v0` | `envs/main` | 72D / 28D / 8D | **Default.** Attitude-only ALBC (roll/pitch attitude + yaw heading command, no lin_vel tracking). ConstraintTRPO + IPO + asymmetric encoder. | `python scripts/train.py --task Isaac-ConstrainedALBC-TRPO-v0 --num_envs 4096 --max_iterations 5000 --logger wandb --log_project_name albc_trpo` |
 | `Isaac-ConstrainedALBC-NoEncoder-v0` | `envs/main` | 72D / 28D / 8D | Ablation baseline 1 — TRPO + IPO, encoder removed (DR/reward/constraints unchanged). | `python scripts/train.py --task Isaac-ConstrainedALBC-NoEncoder-v0 --num_envs 4096 --logger wandb --log_project_name albc_ablation` |
 | `Isaac-ConstrainedALBC-PPO-v0` | `envs/main` | 72D / 28D / 8D | Ablation baseline 2 — standard PPO + asymmetric critic, no encoder, no IPO constraint. | `python scripts/train.py --task Isaac-ConstrainedALBC-PPO-v0 --num_envs 4096 --logger wandb --log_project_name albc_ablation` |
 | `Isaac-ConstrainedALBC-TRPO-NoIPO-v0` | `envs/main` | 72D / 28D / 8D | Ablation variant 3 — encoder + TRPO with the IPO barrier disabled (empty constraint list). | `python scripts/train.py --task Isaac-ConstrainedALBC-TRPO-NoIPO-v0 --num_envs 4096 --logger wandb --log_project_name albc_ablation` |

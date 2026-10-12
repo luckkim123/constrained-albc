@@ -38,14 +38,14 @@ Organized [Diátaxis](https://diataxis.fr/)-style by reader intent. English-only
 | Doc | Use |
 |---|---|
 | [task-reference](reference/task-reference.md) | all registered task IDs — env package, obs/privileged/action dims, typical launch command (SSOT for task ID enumeration) |
-| [observation-space](reference/observation-space.md) | `envs/main` 69D obs / 28D privileged obs breakdown, proprioception history, encoder consumption |
+| [observation-space](reference/observation-space.md) | `envs/main` 72D obs / 28D privileged obs breakdown, proprioception history, encoder consumption |
 | [action-pipeline](reference/action-pipeline.md) | `envs/main` action path: policy output -> clamps -> arm delta-PD + 6-thruster TAM wrench |
-| [command-and-task](reference/command-and-task.md) | `envs/main` command/goal side: attitude+yaw-rate sampling, tracking error, reward consumption |
+| [command-and-task](reference/command-and-task.md) | `envs/main` command/goal side: roll/pitch attitude + yaw heading sampling, tracking error, reward consumption |
 | [main-network-architecture](reference/main-network-architecture.md) | `envs/main` encoder/actor/critic architecture and dims |
 | [reward](reference/reward.md) | `envs/main` reward system: tracking kernel, six weighted terms, error buffers, dt-scaling |
-| [constraints](reference/constraints.md) | `envs/main` 10 IPO constraints (5 probabilistic + 5 average), config + ConstraintTRPO consumption |
+| [constraints](reference/constraints.md) | `envs/main` 10 IPO constraints (4 probabilistic + 6 average), config + ConstraintTRPO consumption |
 | [exploration-and-noise](reference/exploration-and-noise.md) | `envs/main` action-noise (`log_std`), post-update clamp, entropy bonus, entropy collapse under ConstraintTRPO |
-| [domain-randomization-and-doraemon](reference/domain-randomization-and-doraemon.md) | `envs/main` DR system: 20-param DORAEMON curriculum, `DomainRandomizationCfg`, sampling/scheduler wiring, eval-side fixed DR |
+| [domain-randomization-and-doraemon](reference/domain-randomization-and-doraemon.md) | `envs/main` DR system: 23-param DORAEMON curriculum, `DomainRandomizationCfg`, sampling/scheduler wiring, eval-side fixed DR |
 | [glossary](reference/glossary.md) | alphabetized term list, each entry linked to its owning reference page |
 
 ## explanation/ — understanding
@@ -59,10 +59,8 @@ Organized [Diátaxis](https://diataxis.fr/)-style by reader intent. English-only
 | [constraint-theory](explanation/constraint-theory.md) | NORBC Constrained RL theory vs. ConstraintTRPO/IPO/cost-GAE/barrier implementation |
 | [tdc-control-law](explanation/tdc-control-law.md) | roll/pitch TDC derivation (DLS IK, anti-windup) |
 
-> **Currency note.** Reference pages under `reference/{action-pipeline,command-and-task,
-> constraints,domain-randomization-and-doraemon,exploration-and-noise,
-> main-network-architecture,observation-space}.md` are verified against commit `c5a8a08`
-> and describe the **default** task `Isaac-ConstrainedALBC-TRPO-v0` (`envs/main`,
-> 69D obs / 28D privileged / 8D action). The **legacy** full-DOF variants
-> (retired 2026-09, 87D obs / 24D privileged; tag `legacy-full-dof-final`) is out of scope for those pages -- see
+> **Scope note.** The reference pages describe the **default** task
+> `Isaac-ConstrainedALBC-TRPO-v0` (`envs/main`, 72D obs / 28D privileged / 8D action).
+> The **legacy** full-DOF variants (retired 2026-09, 87D obs / 24D privileged; tag
+> `legacy-full-dof-final`) are out of scope for those pages -- see
 > [`task-reference.md`](reference/task-reference.md) for the full task table.

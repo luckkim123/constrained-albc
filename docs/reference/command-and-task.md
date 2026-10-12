@@ -1,78 +1,63 @@
 # Command and Task Definition (`envs/main`)
 
-> ⚠️ **Stale on yaw (branch `yaw-position`).** The yaw command changed from a body
-> RATE (rad/s) to a world-frame HEADING TARGET (rad), and the tracking error is now
-> the wrapped shortest-path difference. Renames: `reward.yaw_vel` -> `reward.yaw`,
-> `yaw_vel_tracking` -> `yaw_tracking`, `_yaw_rate_err` -> `_yaw_err`,
-> `yaw_rate_cmd_range` -> `yaw_cmd_range`, `Reward/yaw_vel` -> `Reward/yaw`,
-> `Track/yaw/rate_err` -> `Track/yaw/err_deg`. The `cumul_yaw` constraint was dropped
-> and `yaw_settling` added. Every yaw statement below still describes the RATE era and
-> has not been rewritten. See [`how-to/deploy.md`](../how-to/deploy.md) (yaw observation contract).
-
-> Verified against commit c5a8a08.
-
 **Scope**: the command (goal) side of the default task `Isaac-ConstrainedALBC-TRPO-v0`
 (`constrained_albc/envs/main/`) — what the policy is asked to track, how commands are
-sampled/resampled, how the command enters the observation and produces the tracking
-error, and how the tracking reward consumes that error. This is an **attitude-only**
-task: roll/pitch attitude + yaw-rate, **no linear-velocity command** (no DVL on the
-real robot).
+sampled and resampled, how the command enters the observation and produces the tracking
+error, and how the tracking reward consumes that error. The task is **attitude-only**:
+a roll/pitch attitude command plus a world-frame yaw **heading** command, and **no
+linear-velocity command** (no DVL on the real robot).
 
 | Doc | Covers |
 |---|---|
 | this doc | command axis: sampling, resample, obs entry, tracking error/reward |
 | `action-pipeline.md` | what the policy *outputs* (actions) |
 | `exploration-and-noise.md` | how the policy *explores* |
-| `main-network-architecture.md` §2.1 | full 69D observation breakdown (command-derived part covered here only) |
+| `observation-space.md` | full 72D observation breakdown (command-derived part covered here only) |
+| `reward.md` | reward system in full |
 
 ---
 
 ## 1. Overview
 
-The command is a 3D vector `_ang_cmd = [roll_att, pitch_att, yaw_rate]`:
+The command is a 3D vector `_ang_cmd = [roll_att, pitch_att, yaw_heading]` (rad):
 
-- **Sampled** per env, held for a fixed window, resampled mid-episode, occasionally zeroed to a hover.
+- **Sampled** per env, held for a fixed window, resampled mid-episode, occasionally set to a hover.
 - **Observed** noise-free (it is our own quantity, not a sensed one).
-- **Drives** the tracking error and the leaky integral.
-- **Feeds** the exponential tracking reward.
+- **Drives** the tracking errors, the leaky integral and the bias EMA.
+- **Feeds** the exponential tracking reward and the yaw-settling constraint.
 
 ```
-SAMPLE  (_sample_velocity_command, per env, every 250 steps)
-  roll/pitch ~ U(-1,1) * (pi/6 * cmd_att_scale)      # +-30 deg,  cmd_att_scale = 1.0
-  yaw_rate   ~ U(-1,1) * (0.5  * cmd_yaw_scale)       # +-0.5 rad/s, cmd_yaw_scale = 1.0
-  with prob 0.1:  _ang_cmd = 0                        # hover / station-keeping
-  play_mode:      _ang_cmd = 0 always                # eval = hovering
+SAMPLE  (_sample_velocity_command, per env, every 250 control steps = 5 s)
+  roll/pitch ~ U(-1,1) * pi/6                  # +-30 deg   (att_cmd_rp_range)
+  yaw        ~ U(-pi, pi)                      # world-frame heading target (yaw_cmd_range)
+  with prob 0.1:  roll = pitch = 0, yaw = current yaw   # hover: level + hold heading
+  play_mode:      roll = pitch = 0, yaw = current yaw   # eval = hovering
 
-STORE   _ang_cmd (N, 3): [0:2] roll/pitch attitude (rad), [2] yaw rate (rad/s)
+STORE   _ang_cmd (N, 3): [0:2] roll/pitch attitude (rad), [2] yaw heading (rad)
 
 OBSERVE _ang_cmd is the first 3D of the 20D proprioception (obs noise std = 0.0)
 
-ERROR   att_rp_err = wrap(_ang_cmd[:,:2] - (roll,pitch))     # atan2(sin,cos)
-        yaw_rate_err = _ang_cmd[:,2] - measured_yaw_rate
-        -> leaky integral (3D: roll, pitch, yaw_rate)
+ERROR   att_rp_err = atan2(sin, cos)(_ang_cmd[:,:2] - (roll, pitch))
+        yaw_err    = atan2(sin, cos)(_ang_cmd[:,2]  - yaw)        # shortest-path heading error
+        -> leaky integral (3D: roll, pitch, yaw) and bias EMA (3D)
 
-REWARD  exp-kernel tracking on att_rp_err (k=9.0) + yaw_rate_err (k=3.5)
+REWARD  exp-kernel tracking on att_rp_err (k=9.0) and yaw_err (default k=3.5; paper teacher k=0.0)
 ```
 
-**One important non-obvious fact up front (§6): the command curriculum is
-scaffolded but inactive.** The per-env `cmd_*_scale` factors exist and multiply the
-command range, but nothing ever writes them — they stay `1.0` for the whole run.
-DORAEMON (see [glossary.md](glossary.md)) randomizes *physics*, not command
-difficulty. Command difficulty is a fixed config knob, not a curriculum.
+A zero yaw command would mean "face world heading 0", so a hover command takes the
+env's own current yaw instead of 0 rad.
 
 ### 1.1 Key fields
 
-Internal state buffers referenced throughout this doc:
-
 | Field | Shape | Meaning |
 |---|---|---|
-| `_ang_cmd` | (N,3) | command buffer: `[roll_att, pitch_att, yaw_rate]` |
-| `_cmd_att_scale`, `_cmd_yaw_scale`, `_cmd_lin_scale` | (N,) | per-env command-range multipliers — **inactive**, always 1.0 (§6) |
+| `_ang_cmd` | (N,3) | command buffer: `[roll_att, pitch_att, yaw_heading]` |
 | `_vel_cmd_step_counter` | (N,) | per-env steps since last resample; triggers resample at 250 |
 | `_att_rp_err` | (N,2) | wrapped roll/pitch tracking error |
-| `_yaw_rate_err` | (N,) | yaw-rate tracking error (unwrapped) |
-| `_ang_err` | (N,3) | combined error buffer `[roll, pitch, yaw_rate]` (mirrors `_ang_cmd` layout) |
-| `_error_integral` | (N,3) | leaky integral of `_ang_err` (§5.3) |
+| `_yaw_err` | (N,) | wrapped yaw heading error |
+| `_ang_err` | (N,3) | combined error buffer `[roll, pitch, yaw]` (mirrors `_ang_cmd` layout) |
+| `_error_integral` | (N,3) | leaky error-gated integral of the three errors (§5.3) |
+| `_bias_ema` | (N,3) | ungated EMA of the three errors (§5.3) |
 
 ---
 
@@ -80,104 +65,70 @@ Internal state buffers referenced throughout this doc:
 
 From `ALBCEnvCfg` (`config.py`):
 
-| Command | cfg field | Range | Meaning | Location |
-|---|---|---|---|---|
-| roll/pitch attitude | `att_cmd_rp_range` | (-π/6, π/6) = ±30° | absolute roll & pitch attitude target (rad) | `config.py:454` |
-| yaw rate | `yaw_rate_cmd_range` | (-0.5, 0.5) | body-frame yaw angular-velocity target (rad/s) | `config.py:456` |
-
-**Mixed command type**: roll/pitch are *attitude* (position) targets, yaw is a
-*rate* (velocity) target. There is no yaw *attitude* command and no
-linear-velocity command at all (rationale in §8.5). Timing/zeroing knobs:
-
-| cfg field | Value | Meaning | Location |
+| Command | cfg field | Range | Meaning |
 |---|---|---|---|
-| `vel_cmd_resample_steps` | 250 | resample every 250 control steps = 5 s at 50 Hz | `config.py:458` |
-| `vel_cmd_zero_prob` | 0.1 | per-env chance a resample yields a zero (hover) command | `config.py:460` |
-| `play_mode` | False | eval mode: fix all commands to zero (hover), no resampling | `config.py:463` |
+| roll/pitch attitude | `att_cmd_rp_range` | (-π/6, π/6) = ±30° | absolute roll & pitch attitude target (rad) |
+| yaw heading | `yaw_cmd_range` | (-π, π) | world-frame heading target (rad); the wrapped error picks the shortest turn, so any target is at most π away |
 
-The `vel_cmd_*` names are legacy (they once drove a linear-velocity command); they
-are retained now only as the shared command-timing/zeroing knobs and no longer
-produce any linear velocity. The docstring at `_sample_velocity_command` records
-this explicitly.
+All three are *angle* targets. There is no linear-velocity command at all. Timing and
+zeroing knobs:
+
+| cfg field | Value | Meaning |
+|---|---|---|
+| `vel_cmd_resample_steps` | 250 | resample every 250 control steps = 5 s at 50 Hz |
+| `vel_cmd_zero_prob` | 0.1 | per-env chance a resample yields a hover command |
+| `play_mode` | False | eval mode: no resampling; roll/pitch fixed to zero, yaw held at the env's current heading |
+
+The `vel_cmd_*` names are legacy (they once drove a linear-velocity command); they now
+only serve as the shared command-timing/zeroing knobs.
 
 ---
 
 ## 3. Sampling — `_sample_velocity_command`
 
-`albc_env.py:719–753`. Uniform in `[-1, 1]`, scaled by the range and the (always-1.0)
-per-env scale:
+Roll/pitch are drawn uniformly in `[-att_max, att_max]` and yaw uniformly in
+`yaw_cmd_range`:
 
 ```python
-att_max = abs(self.cfg.att_cmd_rp_range[1])          # pi/6
-yaw_max = abs(self.cfg.yaw_rate_cmd_range[1])         # 0.5
-att_s = self._cmd_att_scale[env_ids].unsqueeze(1)     # 1.0
-yaw_s = self._cmd_yaw_scale[env_ids]                  # 1.0
-self._ang_cmd[env_ids, :2] = torch.empty(n, 2, ...).uniform_(-1, 1) * (att_max * att_s)
-self._ang_cmd[env_ids, 2]  = torch.empty(n, ...).uniform_(-1, 1) * (yaw_max * yaw_s)
+att_max = abs(self.cfg.att_cmd_rp_range[1])                       # pi/6
+yaw_lo, yaw_hi = self.cfg.yaw_cmd_range                           # (-pi, pi)
+self._ang_cmd[env_ids, :2] = torch.empty(n, 2, ...).uniform_(-1, 1) * att_max
+self._ang_cmd[env_ids, 2]  = torch.empty(n, ...).uniform_(yaw_lo, yaw_hi)
 ```
 
-Then a per-env zero mask overrides some envs to a hover:
+A per-env zero mask then overrides some envs to a hover (level, hold current heading):
 
 ```python
-zero_mask = torch.rand(n, ...) < self.cfg.vel_cmd_zero_prob   # 0.1
-if zero_mask.any():
-    self._ang_cmd[env_ids[zero_mask]] = 0.0
-self._vel_cmd_step_counter[env_ids] = 0
+zero_mask = torch.rand(n, ...) < self.cfg.vel_cmd_zero_prob       # 0.1
+self._ang_cmd[zero_ids, :2] = 0.0
+self._ang_cmd[zero_ids, 2]  = yaw_now[zero_ids]
 ```
 
-**Two ways to get a zero command:**
-
-1. The 10% `vel_cmd_zero_prob` mask (training, teaches station-keeping).
-2. The `play_mode` early-return (`:732–735`, eval, *all* commands zero so evaluation is pure hover) — returns before any sampling:
-
-```python
-if self.cfg.play_mode:
-    self._ang_cmd[env_ids] = 0.0
-    self._vel_cmd_step_counter[env_ids] = 0
-    return
-```
-
-This is why eval (`play.py`, `eval.py`) measures hover / station-keeping performance,
-not command-following — a fact worth remembering when reading eval plots.
+**Two ways to get a hover command:** the 10% `vel_cmd_zero_prob` mask (training, teaches
+station-keeping) and the `play_mode` early return (eval: roll/pitch zero, yaw = current
+heading, no random sampling). Eval therefore measures hover / station-keeping, not
+command-following — keep that in mind when reading eval plots.
 
 ---
 
 ## 4. Command buffer and mid-episode resampling
 
-### 4.1 Buffer
+`_ang_cmd` is `(num_envs, 3)`, initialized to zero in `ALBCEnv.__init__`. The slot layout
+is fixed: `[0]` roll, `[1]` pitch, `[2]` yaw — mirrored by `_ang_err`, `_error_integral`
+and `_bias_ema`.
 
-`_ang_cmd` is `(num_envs, 3)`, initialized to zero (`albc_env.py:357`):
-
-```python
-# [0:2] = roll/pitch attitude (rad), [2] = yaw rate (rad/s)
-self._ang_cmd = torch.zeros(self.num_envs, 3, device=self.device)
-```
-
-Slot layout is fixed: `[0]` roll, `[1]` pitch, `[2]` yaw rate — mirrored by
-`_ang_err`, `_error_integral`, and the reward sigmas throughout (see §1.1).
-
-### 4.2 Resample trigger
-
-In `_pre_physics_step` (`albc_env.py:627–633`), a per-env counter drives resampling:
+In `_pre_physics_step`, a per-env counter drives resampling:
 
 ```python
 self._vel_cmd_step_counter += 1
-resample_steps = self._vel_cmd_resample_steps           # 250
-if resample_steps > 0:
-    resample_mask = self._vel_cmd_step_counter >= resample_steps
-    if resample_mask.any():
-        self._sample_velocity_command(resample_mask.nonzero(as_tuple=True)[0])
+resample_mask = self._vel_cmd_step_counter >= self._vel_cmd_resample_steps    # 250
+if resample_mask.any():
+    self._sample_velocity_command(resample_mask.nonzero(as_tuple=True)[0])
 ```
 
-Each env resamples independently once its own counter reaches 250 (reset to 0 at
-each sample, and at reset with episode-length jitter, so envs desynchronize). So
-within one 3000-step episode an env sees a new command roughly every 5 s — the
-policy must *track a changing target*, not a fixed one.
-
-Note: at the initial full-batch reset every env's resample counter starts at 0 (the
-episode-length jitter applies to `episode_length_buf`, not to `_vel_cmd_step_counter`),
-so the first mid-episode resample fires batch-synchronized at step 250; desync only
-emerges later via staggered terminations.
+Each env resamples independently once its own counter reaches 250 (the counter is reset
+to 0 at each sample). With `episode_length_s = 30` at 50 Hz (1500 control steps) an env
+sees a new command about every 5 s, so the policy must track a changing target.
 
 ---
 
@@ -185,173 +136,106 @@ emerges later via staggered terminations.
 
 ### 5.1 In the observation (noise-free)
 
-`compute_policy_obs` (`mdp/observations.py`) puts `_ang_cmd` as the **first 3D** of
-the 20D proprioception (`:71–74`):
-
-```python
-return torch.cat([
-    env._ang_cmd,                              # 3D: [roll_att_cmd, pitch_att_cmd, yaw_rate_cmd]
-    torch.stack([roll, pitch, yaw], dim=-1),   # 3D: euler
-    ...
-```
-
-The command is **noise-free**: the first 3 dims of `_OBS_NOISE_STD`
-(`config.py:261`, comment `# ang_cmd ... (our command, no noise)`) and of the bias
-model are `0.0` — it is our own set-point, not a sensor reading. Same distinction
-`exploration-and-noise.md` §7 draws for observation noise generally.
+`compute_policy_obs` (`mdp/observations.py`) puts `_ang_cmd` as the **first 3D** of the
+20D proprioception. The command is noise-free: the first 3 dims of `_OBS_NOISE_STD`
+(`config.py`) and of the bias model are `0.0` — it is our own set-point, not a sensor
+reading.
 
 ### 5.2 The tracking error
 
-`_compute_ang_errors` (`albc_env.py:1117–1124`) turns command minus measured state
-into the error the reward and integral use:
+`_compute_ang_errors` (`albc_env.py`) turns command minus measured state into the error
+the reward, integral and constraints use:
 
 ```python
-roll, pitch, _ = self._euler_cache
+roll, pitch, yaw = self._euler_cache
 raw = self._ang_cmd[:, :2] - torch.stack([roll, pitch], dim=-1)
-self._att_rp_err = torch.atan2(torch.sin(raw), torch.cos(raw))          # wrapped to [-pi, pi]
-self._yaw_rate_err = self._ang_cmd[:, 2] - self._robot.data.root_ang_vel_b[:, 2]
+self._att_rp_err = torch.atan2(torch.sin(raw), torch.cos(raw))
+yaw_raw = self._ang_cmd[:, 2] - yaw
+self._yaw_err = torch.atan2(torch.sin(yaw_raw), torch.cos(yaw_raw))
 self._ang_err[:, :2] = self._att_rp_err
-self._ang_err[:, 2]  = self._yaw_rate_err
+self._ang_err[:, 2]  = self._yaw_err
 ```
 
-- **Attitude error is angle-wrapped** (`atan2(sin, cos)`) so a command near ±π and a
-  state on the other side of the wrap give the short-way error, not a spurious ~2π.
-- **Yaw error is a plain rate difference** (no wrap — it is a velocity, not an angle).
+All three errors are angle-wrapped with `atan2(sin, cos)`, so a command near ±π and a
+state on the other side of the wrap give the short-way error, not a spurious ~2π.
 
-### 5.3 The leaky integral
+### 5.3 The leaky integral and the bias EMA
 
-The 3 command-error channels also feed a leaky integrator in `_get_rewards`
-(`albc_env.py:1135–1155`), computed as `I ← integral_leak · I + gate · err · dt`,
-clamped to `±integral_clamp`. It is error-gated (only accumulates when
-`|err| < reward sigma`) and appended to the 69D observation as the trailing 3D. Its
-purpose (Hwangbo-2017 pattern) is to give the policy a memory of *sustained* offset
-that per-step tracking reward ignores.
+Both are updated in `_get_rewards`.
 
-| cfg field | Value | Meaning |
+| Buffer | Update | Cfg |
 |---|---|---|
-| `integral_leak` | 0.99 | per-step decay of the integral |
-| `integral_clamp` | 2.0 | symmetric clamp on `\|I\|` |
-| `integral_gated` | True | accumulates only when `\|err\| < reward sigma` |
+| `_error_integral` | `I <- integral_leak * I + gate * err * dt`, clamped to `±integral_clamp`; `gate = (abs(err) < integral_gate_threshold)` per axis | `integral_leak=0.99`, `integral_clamp=2.0`, `integral_gated=True`, `integral_gate_threshold=(0.10, 0.10, 0.10)` rad |
+| `_bias_ema` | `a * bias_ema + (1-a) * err`, ungated | `reward.bias_ema_alpha=0.99`; updated only when `reward.k_bias != 0` |
 
-All three: `config.py:386–388`.
-
----
-
-## 6. Command "curriculum" — scaffolded but INACTIVE
-
-The per-env command-range scales are initialized to 1.0 (`albc_env.py:375–377`):
-
-```python
-# Per-env command range scales (DORAEMON-managed, default 1.0 if disabled)
-self._cmd_lin_scale = torch.ones(self.num_envs, device=self.device)
-self._cmd_att_scale = torch.ones(self.num_envs, device=self.device)
-self._cmd_yaw_scale = torch.ones(self.num_envs, device=self.device)
-```
-
-They are read in `_sample_velocity_command` (§3) as multipliers on the command
-range. **But nothing ever writes them** — a code comment in `_reset_physics`
-(`albc_env.py:1502–1503`) states it outright:
-
-```python
-# Command scales fixed at 1.0 (not DORAEMON-managed).
-# DORAEMON optimizes physics DR only; command difficulty is a task knob.
-```
-
-- **Despite the "DORAEMON-managed" init comment, command difficulty is not curriculum-scaled.**
-- DORAEMON's Beta-distribution curriculum acts on *physics* parameters (hydrodynamics, payload, ocean current, actuator gains — `config.py` DR + `doraemon.py`), not on command ranges.
-- Command range is a **fixed config knob** (`att_cmd_rp_range`, `yaw_rate_cmd_range`): harder commands means editing those tuples, not enabling a curriculum.
-- The `cmd_*_scale` buffers are dormant scaffolding for a command curriculum that was never implemented.
-
-> This is the kind of "name vs. implementation" gap the analysis rules warn about:
-> the `_cmd_*_scale` name and the "DORAEMON-managed" comment suggest a live command
-> curriculum; the implementation shows a constant 1.0. Do not describe command
-> difficulty as adaptive.
+Both are appended to the observation (indices 66:69 and 69:72, see `observation-space.md`)
+to give the policy a memory of *sustained* offset that per-step tracking reward ignores.
 
 ---
 
-## 7. Tracking reward (how the command error is scored)
+## 6. Command difficulty is a fixed knob
 
-The command error drives the tracking reward via a shared exponential-quadratic
-kernel `_exp_quad_saturating` (`mdp/rewards.py:129–149`):
-`exp(-e²/2σ²) - quad·e² - lin·|e| - (saturating)`.
+Command ranges are fixed config values (`att_cmd_rp_range`, `yaw_cmd_range`); harder
+commands mean editing those tuples. DORAEMON (see [glossary.md](glossary.md)) randomizes
+*physics*, not command difficulty — there is no command curriculum.
 
-| Term | Consumes | cfg (k, σ) | Location |
-|---|---|---|---|
-| `att_rp_tracking` | `_att_rp_err` (roll,pitch), roll-weighted | k=9.0, σ=0.10, quad_ratio=0.833, `att_roll_weight=1.5` | `rewards.py:108–109,152–162` |
-| `yaw_vel_tracking` | `_yaw_rate_err` | k=3.5, σ=0.10, quad_ratio=1.0, tanh_coef=0.3 | `config.py:467`, `rewards.py:165–168` |
+---
+
+## 7. Tracking reward and yaw constraints (how the command error is scored)
+
+The command error drives the tracking reward via the shared kernel
+`_exp_quad_saturating` (`mdp/rewards.py`): `exp(-e²/2σ²) - quad·e² - lin·|e| - (saturating)`.
+
+| Term | Consumes | Default cfg |
+|---|---|---|
+| `att_rp_tracking` (`reward.att_rp`) | `_att_rp_err`, roll-weighted | k=9.0, σ=0.10, quad_ratio=0.833, `att_roll_weight=1.5` |
+| `yaw_tracking` (`reward.yaw`) | `_yaw_err` | k=3.5, σ=0.10, quad_ratio=1.0, tanh_coef=0.3, tanh_eps=0.10 |
 
 Roll is up-weighted (`att_roll_weight=1.5`) because roll has weak TAM (see
-[glossary.md](glossary.md)) actuation (0.007 m roll arm vs. 0.145 m pitch arm —
-`action-pipeline.md` §5.2), so roll error is penalized harder to compensate. The
-kernel mechanics are a separate reward-doc topic; here the point is only that
-command error (§5.2) is what these terms consume, closing command → error → reward.
+[glossary.md](glossary.md)) actuation, so roll error is penalized harder to compensate.
+
+**Paper setting.** The paper's controller rewards **only roll and pitch tracking**: the
+heading command and the heading are observed, and the heading rate is constrained, but
+heading tracking itself is not rewarded. The released default keeps `reward.yaw.k = 3.5`;
+the paper teacher (`scripts/paper/train_teacher.sh`) ran with `env.reward.yaw.k=0.0`.
+
+The yaw channel is still shaped by two average-cost constraints that read the same
+state (`config.py`, `mdp/constraints.py`):
+
+| Constraint | Cost | Budget |
+|---|---|---|
+| `yaw_rate` | `max(0, abs(ω_z) - 0.55 rad/s)` — caps the slew rate toward a heading target | 0.10 |
+| `yaw_settling` | `abs(ω_z)` gated on `abs(yaw_err) <= 0.087 rad` — damps oscillation about the target | 0.20 |
 
 ---
 
 ## 8. Knob map
 
-| Knob | Value | Location |
-|---|---|---|
-| `att_cmd_rp_range` | (-π/6, π/6) = ±30° | `config.py:454` |
-| `yaw_rate_cmd_range` | (-0.5, 0.5) rad/s | `config.py:456` |
-| `vel_cmd_resample_steps` | 250 (5 s @ 50 Hz) | `config.py:458` |
-| `vel_cmd_zero_prob` | 0.1 | `config.py:460` |
-| `play_mode` (eval = hover) | False | `config.py:463` |
-| command buffer `_ang_cmd` | (N, 3) [roll, pitch, yaw_rate] | `albc_env.py:357` |
-| `cmd_*_scale` (INACTIVE, always 1.0) | 1.0 | `albc_env.py:375–377`, `1502–1503` |
-| command in obs (first 3D, noise-free) | — | `observations.py:71–74`, `config.py:261` |
-| error compute (attitude wrapped) | — | `albc_env.py:1117–1124` |
-| integral (3 channels, gated leaky) | leak 0.99 / clamp 2.0 | `config.py:386–388`, `albc_env.py:1135–1155` |
-| att / yaw tracking reward (k, σ) | 9.0 / 3.5, 0.10 | `rewards.py:108,110`, `config.py:467` |
-
----
-
-## 8.5. Why yaw is a *rate* command (roll/pitch are *attitude*)
-
-The mixed scheme — roll/pitch absolute-attitude, yaw rate — is asserted throughout
-the code and docs but its engineering rationale is never stated in-code. A
-multi-source review (control-design adversarial check + marine-control literature +
-git-history audit, 2026-07-09) established the following, separating verified from
-unverified claims.
-
-| Claim | Status | Evidence |
-|---|---|---|
-| Yaw-as-rate is inherited, not a deliberate decision | Verified | Before `git 11dcad6` (2026-04-01, "attitude command conversion") the task paradigm was velocity-tracking — all 3 axes were rate commands. That commit promoted only roll/pitch to attitude and left yaw as a rate (renamed from generic "angular velocity" to "yaw rate"). Yaw was never an absolute-angle command anywhere in repo history (`git log --all`). `full_dof` handles yaw identically (only adds a linear-velocity command) — no differential clue there. |
-| Roll/pitch have a physical restoring torque; yaw does not | Verified | Metacentric restoring torque `M ≈ Wh·θ` (CoB above CoG) gives roll/pitch a natural absolute-attitude zero (level). Yaw about the vertical axis is energetically neutral (symmetric buoyancy placement ⇒ no restoring torque). Matches the project's own dynamics notes (`references/iros_2026/notes/02_problem.md`). |
-| "No restoring force" (or "strong TAM authority") alone justifies commanding yaw as a rate | Rejected | Absence of a restoring force is the classic argument *for* an active absolute-heading loop, not against it. The policy already observes absolute yaw (`euler[3:6]`, `observations.py:54`). The real justification is task-specific (next row). |
-| Rate-command is nonetheless defensible for THIS task | Verified (task-specific) | Reward has no heading term (roll/pitch attitude + yaw-*rate* only). An absolute-yaw datum would force the policy to fight ocean-current yaw torque to hold an arbitrary heading, burning the `thruster_util` budget and injecting base motion into the arm task, for no reward benefit. `cumulative_yaw_cost` (limit 8π ≈ 4 revolutions, `config.py:64`) is a tether-wrapping safety envelope ("Prevents tether wrapping" per its docstring), not a heading objective — non-binding/inert in practice. |
-| Standard marine DP/station-keeping convention commands absolute heading, not rate | Verified (literature) | Fossen-style cascaded autopilots and ArduSub/BlueROV2 ("hold current heading") close an outer loop on absolute heading angle, using rate only as an inner-loop term — heading does not free-drift at rate=0. The quadrotor yaw-as-rate precedent (yaw = only free rotational DOF once translation consumes roll/pitch) does not transfer to an independent-thruster UUV. So "yaw-as-angle would be cleaner" aligns with the station-keeping convention, not the quadrotor one. |
-| Design is correct only if heading truly is a free DOF for the downstream task | Open / conditional | See "Unverified" below. |
-
-**Unverified / open — do not treat as settled:**
-
-1. Whether switching to a yaw-angle command would regress the tuned baseline is untested — needs a one-variable A/B, not an assertion.
-2. The marine-autopilot convention above rests on secondary sources (Fossen *Handbook* Ch. 7 primary text was not read).
-3. Whether the arm/manipulation objective implicitly needs a stable heading (directional sensor, world-frame reach) was not audited — if it does, the balance tips toward a yaw-angle command.
+| Knob | Value |
+|---|---|
+| `att_cmd_rp_range` | (-π/6, π/6) = ±30° |
+| `yaw_cmd_range` | (-π, π) rad, world-frame heading |
+| `vel_cmd_resample_steps` | 250 (5 s @ 50 Hz) |
+| `vel_cmd_zero_prob` | 0.1 |
+| `play_mode` (eval = hover) | False |
+| command in obs | first 3D of proprioception, noise-free |
+| `integral_*` | leak 0.99 / clamp 2.0 / gate 0.10 rad per axis |
+| `reward.att_rp` / `reward.yaw` (k, σ) | 9.0 / 3.5 default (paper yaw k = 0.0), σ = 0.10 |
 
 ---
 
 ## 9. Notes and limitations
 
-- **Eval is hover, not command-following.** `play_mode=True` zeroes all commands, so
-  eval measures station-keeping under DR/disturbance, not tracking of a moving
-  set-point. Read eval plots with that in mind.
-- **Mixed command semantics (rationale in §8.5).** roll/pitch are attitude (position)
-  targets; yaw is a rate target. There is no yaw-attitude command and no
-  linear-velocity command. The privileged critic still sees measured linear velocity
-  (`main-network-architecture.md` §2.2), but the actor gets no linear command. Why yaw
-  specifically is a rate — and the case for/against a yaw-angle command — is §8.5.
-- **Command curriculum is not implemented (§6).** The `cmd_*_scale` scaffolding is
-  inert; command difficulty is fixed by the config ranges. Do not report it as
-  adaptive/curriculum-scaled.
-- This is a static code-structure reference. Whether the sampled command distribution
-  is actually being tracked well on a given run is a runtime/eval question.
+- **Eval is hover, not command-following.** `play_mode=True` holds roll/pitch at zero and yaw at the current heading, so eval measures station-keeping under DR/disturbance, not tracking of a moving set-point.
+- **All three command axes are angles** (rad). The privileged critic still sees measured linear velocity (`main-network-architecture.md`), but the actor gets no linear command.
+- This is a static code-structure reference. Whether the sampled command distribution is tracked well on a given run is a runtime/eval question.
 
 ---
 
 ## Source files
 
-- `constrained_albc/envs/main/config.py` — command ranges, resample/zero/play knobs, integral cfg, `_OBS_NOISE_STD` (command dims = 0)
-- `constrained_albc/envs/main/albc_env.py` — `_sample_velocity_command` (`:719`), `_ang_cmd` buffer (`:357`), resample trigger (`:627`), `_compute_ang_errors` (`:1117`), integral update (`:1135`), `cmd_*_scale` init + inactivity note (`:375`, `:1502`)
+- `constrained_albc/envs/main/config.py` — command ranges, resample/zero/play knobs, integral cfg, `_OBS_NOISE_STD` (command dims = 0), constraint terms
+- `constrained_albc/envs/main/albc_env.py` — `_sample_velocity_command`, `_ang_cmd`, resample trigger in `_pre_physics_step`, `_compute_ang_errors`, integral and bias-EMA update in `_get_rewards`
 - `constrained_albc/envs/main/mdp/observations.py` — `compute_policy_obs` (command as first 3D)
-- `constrained_albc/envs/main/mdp/rewards.py` — `att_rp_tracking` / `yaw_vel_tracking`, `_exp_quad_saturating` kernel
+- `constrained_albc/envs/main/mdp/rewards.py` — `att_rp_tracking` / `yaw_tracking`, `_exp_quad_saturating` kernel
+- `constrained_albc/envs/main/mdp/constraints.py` — `yaw_rate_cost`, `yaw_settling_cost`
