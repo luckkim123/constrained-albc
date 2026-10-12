@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2026.
+# Copyright (c) 2026 Seungmin Kim. SPDX-License-Identifier: MIT
 """Overlay play entry for constrained-albc environments.
 
 Loads a trained checkpoint and rolls the policy out for visual inspection

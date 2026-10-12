@@ -1,4 +1,4 @@
-# Copyright (c) 2026.
+# Copyright (c) 2026 Seungmin Kim. SPDX-License-Identifier: MIT
 """Resolve the local analysis-profile directory for the CPU-only adapter tests.
 
 The profile (metrics.yaml + the eval/encoder adapters) is local tooling state and is

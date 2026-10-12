@@ -1,4 +1,4 @@
-# Copyright (c) 2026.
+# Copyright (c) 2026 Seungmin Kim. SPDX-License-Identifier: MIT
 """constrained-albc: ALBC research environments and algorithms.
 
 Default task is attitude-only (`envs.main`, `Isaac-ConstrainedALBC-TRPO-v0`). The

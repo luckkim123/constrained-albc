@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2026.
+# Copyright (c) 2026 Seungmin Kim. SPDX-License-Identifier: MIT
 """Overlay train entry for constrained-albc environments.
 
 isaaclab stays a pristine upstream fork: its train.py only knows OnPolicyRunner /
