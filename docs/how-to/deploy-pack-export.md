@@ -53,4 +53,3 @@ Mac pulls the pack directory, then:
 - Dims: obs 72, action 8, latent 9, teacher input 81, GRU hidden 128
 - Parity (container self-close, atol 1e-5): teacher normalize 0.0 / act 1.1e-6,
   GRU latent 2.8e-7 / hidden 1.8e-7 — CLOSED
-
