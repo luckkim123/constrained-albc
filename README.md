@@ -76,6 +76,12 @@ tree). The training randomization ranges live in code: `constrained_albc/envs/ma
 (`DomainRandomizationCfg`), `config_simtoreal.py`, and the DORAEMON dimension table
 `constrained_albc/envs/main/doraemon.py`.
 
+`scripts/paper/train_teacher.sh` is the paper teacher's training run with its complete set of
+overrides. It is a fine-tune: it resumes from a starting teacher checkpoint (`model_6400` with
+its `doraemon_state.pt`) for 801 iterations and is run as
+`RESUME_CKPT=<model_6400.pt> OUT_DIR=<dir> ISAACLAB_SH=<isaaclab.sh> ARMED=1 scripts/paper/train_teacher.sh`.
+That starting checkpoint and the training chain that produced it are not released.
+
 **2. Student (GRU).**
 
 ```bash
