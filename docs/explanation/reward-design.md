@@ -7,7 +7,7 @@
 > `yaw_rate_cmd_range` -> `yaw_cmd_range`, `Reward/yaw_vel` -> `Reward/yaw`,
 > `Track/yaw/rate_err` -> `Track/yaw/err_deg`. The `cumul_yaw` constraint was dropped
 > and `yaw_settling` added. Every yaw statement below still describes the RATE era and
-> has not been rewritten. See `DEPLOY_NOTE_yaw.md` at the repo root.
+> has not been rewritten. See [`how-to/deploy.md`](../how-to/deploy.md) (yaw observation contract).
 
 > **Status**: 2026-07-12 | **Source**: `constrained_albc/envs/main/mdp/rewards.py`,
 > `constrained_albc/envs/main/mdp/constraints.py`, `constrained_albc/envs/main/config.py`

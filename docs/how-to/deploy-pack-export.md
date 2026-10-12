@@ -1,7 +1,7 @@
 # Container Deploy Pack — Redeployment SSOT
 
 > Container-side workflow for producing a self-verifying deploy pack
-> (BlueROV attitude-only teacher + TCN student) for the Mac -> agent-jetson handoff.
+> (attitude-only teacher + GRU student) for the Mac -> agent-jetson handoff.
 > Recreated 2026-06-12 (the earlier copy of this file was lost from disk; workflow
 > now codified in the CLI itself, commit `feat/deploy-export`).
 
@@ -45,12 +45,12 @@ Mac pulls the pack directory, then:
 3. Deploy to agent-jetson. The board node imports `npforward.py` under py2.7 /
    numpy 1.11 — contract 3 above is what makes that import survive.
 
-## Current pack (2026-06-12)
+## Paper pack
 
-- Path: `/workspace/constrained-albc/deploy/dr_harder/pack_5000iter_260612_135619/`
-- Checkpoints: teacher `model_4999.pt` (iter 4999), student `student_999.pt` (iter 999)
-- Parity (container self-close, atol 1e-5): teacher normalize 0.0 / act 1.9e-6,
-  TCN latent 1.6e-7 — CLOSED
-- `npforward_sha256`: `8eff0046cf1665ee15955fd8fa52a5a2d96d9a7003f8beff2b9382c57a008741`
-  (py2.7 fix; supersedes `4b708314...b10e2`, which dies with SyntaxError under py2.7)
-- weights + goldens are byte-identical to the 260611 pack; only npforward.py changed.
+- Tag: `pack_rr_ft_ftp7200_s30_gru_260927_193819` (`student_arch: gru`)
+- Checkpoints: teacher `model_7200.pt` (run `trpo_rr_FTP_s30_260927_182609`), student
+  `student_999.pt` (run `trpo_sd_rr_ft_ftp7200_s30_260927_192341`)
+- Dims: obs 72, action 8, latent 9, teacher input 81, GRU hidden 128
+- Parity (container self-close, atol 1e-5): teacher normalize 0.0 / act 1.1e-6,
+  GRU latent 2.8e-7 / hidden 1.8e-7 — CLOSED
+

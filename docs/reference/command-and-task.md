@@ -7,7 +7,7 @@
 > `yaw_rate_cmd_range` -> `yaw_cmd_range`, `Reward/yaw_vel` -> `Reward/yaw`,
 > `Track/yaw/rate_err` -> `Track/yaw/err_deg`. The `cumul_yaw` constraint was dropped
 > and `yaw_settling` added. Every yaw statement below still describes the RATE era and
-> has not been rewritten. See `DEPLOY_NOTE_yaw.md` at the repo root.
+> has not been rewritten. See [`how-to/deploy.md`](../how-to/deploy.md) (yaw observation contract).
 
 > Verified against commit c5a8a08.
 
@@ -328,9 +328,6 @@ unverified claims.
 1. Whether switching to a yaw-angle command would regress the tuned baseline is untested — needs a one-variable A/B, not an assertion.
 2. The marine-autopilot convention above rests on secondary sources (Fossen *Handbook* Ch. 7 primary text was not read).
 3. Whether the arm/manipulation objective implicitly needs a stable heading (directional sensor, world-frame reach) was not audited — if it does, the balance tips toward a yaw-angle command.
-
-See the omx wiki card `yaw_command_is_rate_not_angle_inherited_design_defensible_only_i`
-for the experiment idea and the full differential-diagnosis provenance.
 
 ---
 

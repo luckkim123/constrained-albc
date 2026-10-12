@@ -499,13 +499,20 @@ env's success computation does not crash — the computed success is then discar
 
 ---
 
+> **Where the training ranges live.** The paper's randomization ranges are code, not a
+> table: `constrained_albc/envs/main/config.py` (`DomainRandomizationCfg`, plant-side
+> `*_range` fields) together with `constrained_albc/envs/main/config_simtoreal.py` (the
+> section-5 plant overrides used by the `-SimToReal-v0` tasks) and the DORAEMON dimension
+> table `constrained_albc/envs/main/doraemon.py` (`_PARAM_DEFS`). A finished run records the
+> resolved values in its `params/env.yaml`; the paper teacher's copy is
+> `experiments/paper/ckpt/proposed_teacher_s30_7200/params/env.yaml`.
+
 ## 8. Eval-Side DR
 
 **Eval DR is a fixed *uniform interpolation* that bypasses the DORAEMON Beta
 curriculum entirely.** There is no `step()` / `record_episodes` during eval; the
 only DORAEMON contact is *reading* the run's final `mean` / `std` from
-TensorBoard. The entry point is `analysis/eval.py` — **not** the `eval_dr.py`
-that the rules/CLAUDE.md still name (that file does not exist under that name).
+TensorBoard. The entry point is `analysis/eval.py`.
 
 ### The four levels
 

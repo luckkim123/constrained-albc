@@ -1,11 +1,5 @@
 # constrained-albc Architecture
 
-> **Measured counterpart**: [`reference/code-graph-architecture-map.md`](reference/code-graph-architecture-map.md)
-> holds the graph-derived module map — communities resolved to their real packages,
-> execution flows ranked by criticality, and coupling warnings resolved to concrete
-> edges. This page describes the *intended* structure; that one describes what the call
-> graph actually shows.
-
 ## Overview
 
 ### Three-layer dependency
@@ -28,7 +22,7 @@ sequence.
 
 | Subdirectory | Contents |
 |---|---|
-| `constrained_albc/envs/` | RL environments: `main` (attitude-only ALBC, TRPO+IPO+encoder — the default) and `tdc_main` (classical-control baselines: TDC / PID / ATDC / residual-TDC). The legacy `full_dof` and `tdc` packages were removed in the 2026-09 cleanup (tag `legacy-full-dof-final`). |
+| `constrained_albc/envs/` | RL environments: `main` (attitude-only ALBC, TRPO+IPO+encoder — the default) and `tdc_main` (classical-control baselines: TDC / PID). The legacy `full_dof` and `tdc` packages were removed in the 2026-09 cleanup (tag `legacy-full-dof-final`). |
 | `constrained_albc/analysis/` | Evaluation and training-analysis tooling: `eval.py` (live evaluator entry point, ~2100 lines, 3 sub-modes: `static` / `periodic` / `segmented`; `static` is the required mode for `Isaac-ConstrainedALBC-TRPO-v0`, and accepts `--student_ckpt`/`--teacher_ckpt`/`--encoder_type` to evaluate a distilled student through the same path, also emitting the l_hat/l_true encoder-fidelity diagnostic), backed by the pure-numpy, Isaac-Sim-free `_eval_dr/` package (trajectory + metrics); post-hoc tooling `analyze.py`, `compare.py`, `monitor.py`, `encoder_tools.py` (thin CLIs backed by the `_analyze/` and `_encoder/` packages), shared `common` and `cli_args` |
 | `scripts/` | Entry points: `train.py` (teacher), `train_student.py` (distillation), `play.py` (policy playback), `export_deploy_pack.py` (packaged teacher+student deploy export). Run directly via `isaaclab.sh -p` — no wrapper shell scripts |
 | `tests/` | Unit tests spanning dimension contracts, DR/DORAEMON, constraints, encoder/priv-obs bounds, eval metrics, TDC controller, and deploy-pack export (`tests/deploy/`); most run sim-free, a subset mocks `omni`/`pxr`/`carb`/`warp` directly |

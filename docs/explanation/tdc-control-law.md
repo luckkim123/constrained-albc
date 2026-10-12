@@ -3,7 +3,6 @@
 > **Status**: 2026-02-11 | **Source**: `controllers/tdc.py`, `controllers/kinematics.py`
 >
 > Mathematical derivation and implementation extensions of the ALBC Roll/Pitch TDC (Time Delay Control) control law.
-> For the theoretical background, see [tdc-literature.md](tdc-literature.md).
 
 ---
 
@@ -227,8 +226,6 @@ The control law's $\mathbf{p}_{EE}$ goes through IK -> joint command -> rate lim
 ### TDE Saturation Removal
 
 Consistent with the C++ reference implementation. Since DLS Lambda_inv + DLS IK handle singularities with natural attenuation, separate TDE magnitude clamping is unnecessary.
-
-For the saturation-related trial and error during the tuning process, see [debug-history.md](../reference/debug-history.md).
 
 ---
 

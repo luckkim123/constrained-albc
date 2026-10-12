@@ -4,8 +4,8 @@
 
 > **Scope**: The constraint system of the default task
 > `Isaac-ConstrainedALBC-TRPO-v0` (`constrained_albc/envs/main/`), the attitude-only
-> ALBC policy. Ten IPO constraints ship on this task — **5 probabilistic** (binary
-> violation-probability budgets) + **5 average** (expected-magnitude budgets) —
+> ALBC policy. Ten IPO constraints ship on this task — **4 probabilistic** (binary
+> violation-probability budgets) + **6 average** (expected-magnitude budgets) —
 > defined in `envs/main/config.py` and consumed by `ConstraintTRPO` in
 > `constrained_albc/algorithms/constraint_trpo.py`.
 >
@@ -111,18 +111,24 @@ standardization floor-clamps std to `min=1.0` to keep them from blowing up (§4.
 All values verbatim from `config.py:57-72`. Discounted budget $d_k = D_k / (1 - \gamma_c)$ with
 $\gamma_c = 0.99$, so $d_k = 100 \cdot D_k$.
 
-| # | Name | Function | Key param / threshold | Budget $D_k$ | Type | Physically limits |
-|---|---|---|---|---:|---|---|
-| 0 | `attitude` | `attitude_limit_cost` | `limit=1.396` rad (80°) | 0.01 | prob | roll/pitch magnitude |
-| 1 | `arm_torque` | `torque_limit_cost` | `limit_nm=9.5` | 0.08 | prob | arm joint torque |
-| 2 | `arm_joint_vel` | `velocity_limit_cost` | `limit_rad_per_s=2.8` | 0.02 | prob | arm joint speed |
-| 3 | `joint1_pos` | `joint1_position_cost` | `limit_rad=4*pi` (12.566) | 0.01 | prob | joint-1 absolute angle |
-| 4 | `cumul_yaw` | `cumulative_yaw_cost` | `limit_rad=8*pi` (25.133) | 0.01 | prob | accumulated yaw rotation |
-| 5 | `thruster_util` | `thruster_utilization_cost` | (no params) | 0.40 | avg | thruster authority use |
-| 6 | `rp_rate` | `rp_rate_cost` | `soft_threshold=0.5` | 0.10 | avg | roll/pitch angular rate |
-| 7 | `yaw_rate` | `yaw_rate_cost` | `soft_threshold=0.55` | 0.10 | avg | yaw angular rate |
-| 8 | `rp_vel_settling` | `rp_vel_settling_cost` | `settling_threshold=0.087` | 0.20 | avg | roll/pitch settling |
-| 9 | `manipulability` | `manipulability_cost` | `w_threshold=0.3` | 0.05 | avg | arm manipulability floor |
+The Paper column is the name used in the paper's constraint table (`table_constraints`).
+
+| # | Name | Paper | Function | Key param / threshold | Budget $D_k$ | Type | Physically limits |
+|---|---|---|---|---|---:|---|---|
+| 0 | `attitude` | $c_{\mathrm{tilt}}$ | `attitude_limit_cost` | `limit=1.396` rad (80°) | 0.01 | prob | roll/pitch magnitude |
+| 1 | `arm_torque` | $c_{\tau}$ | `torque_limit_cost` | `limit_nm=9.5` | 0.08 | prob | arm joint torque |
+| 2 | `arm_joint_vel` | $c_{\dot\gamma}$ | `velocity_limit_cost` | `limit_rad_per_s=2.15` | 0.02 | prob | arm joint speed |
+| 3 | `joint1_pos` | $c_{\mathrm{j1}}$ | `joint1_position_cost` | `limit_rad=4*pi` (720°) | 0.01 | prob | joint-1 cable winding |
+| 4 | `thruster_util` | $c_{\mathrm{thr}}$ | `thruster_utilization_cost` | (no params) | 0.40 | avg | thruster authority use |
+| 5 | `rp_rate` | $c_{\omega}$ | `rp_rate_cost` | `soft_threshold=0.5` rad/s | 0.10 | avg | roll/pitch angular rate |
+| 6 | `yaw_rate` | $c_{\dot\psi}$ | `yaw_rate_cost` | `soft_threshold=0.55` rad/s | 0.10 | avg | yaw angular rate |
+| 7 | `rp_vel_settling` | $c_{\omega,s}$ | `rp_vel_settling_cost` | `settling_threshold=0.087` (5°) | 0.20 | avg | roll/pitch settling |
+| 8 | `yaw_settling` | $c_{\dot\psi,s}$ | `yaw_settling_cost` | `settling_threshold=0.087` (5°) | 0.20 | avg | yaw settling |
+| 9 | `manipulability` | $c_{w_m}$ | `manipulability_cost` | `w_threshold=0.3` | 0.05 | avg | arm manipulability floor |
+
+`cumul_yaw` (`cumulative_yaw_cost`) is no longer in the shipped list; the function and the
+`Episode/cumul_yaw_deg` log remain as a diagnostic. Sections below that still mention
+`cumul_yaw`, the 5+5 split, or the 2.8 rad/s velocity threshold describe earlier runs.
 
 A comment directly above the list records prior surgery: `thruster_rate` was removed
 ("structurally incompatible with `entropy_coef>0`: noise alone violates 5x") and `thruster_sat`
@@ -206,7 +212,6 @@ Both arm rails sit **inside** the PhysX hard caps (`9.5<13.0`, `2.8<3.1`;
 **Invariant: soft threshold must stay inside the hard cap** — inverting it silently kills the
 constraint. The `velocity_limit_sim` $6.28\to3.1$ retrain (match real XW540 arm) paired with
 lowering `limit_rad_per_s` $4.189\to2.8$ (2026-07-12) preserves `2.8<3.1` and avoids that trap.
-Fix: omx wiki `arm_velocity_limit_sim_6_28_3_1_ripple_dead_constraint_trap_delt.md`.
 
 **Soft shaping thresholds (judgment-chosen)** — behavior/comfort envelopes, not safety limits;
 **are** legitimate experimental tuning targets:
@@ -251,8 +256,7 @@ arXiv:2308.12517v4, 2024 (KAIST Hwangbo lab), named in the module docstring (`co
 The one divergence: NORBC's PPO step is swapped for a TRPO step — NORBC's own stated choice
 (stable improvement + feasibility *checking*, not enforcement). So the two theoretical "soft
 spots" documented below (barrier saturation cap §4.1; raw-vs-standardized margin §4.3) are
-**NORBC's deliberate design, not implementation defects**. Detail + the independent-review
-resolution: omx wiki `constrainttrpo_faithful_norbc_modified_ipo_kim_2024_arxiv_2308_1.md`.
+**NORBC's deliberate design, not implementation defects**.
 
 ### 4.1 IPO log-barrier
 
@@ -487,15 +491,14 @@ d_k$, breaking that identity.
 | `thruster_util` | looked slack (large absolute margin — large budget) | ≈0.87 | genuinely binding |
 
 **The engine now normalizes** (since commit `4ff9ea1`, 2026-06-07):
-`.omx/profile/analyze_training.py` computes `_constraint_binding_ratio` (`:416-430`, $1 -
+The (untracked) training-analysis tool computes `_constraint_binding_ratio` (`:416-430`, $1 -
 \text{margin}/d_k$) and prints a `JC/dk=` column that flags the binding channel by max ratio
 (`:809`, `:820`), pinned by `test_constraint_margin_norm.py`.
 
 The low-level `_constraint_margin()` helper (`:370-379`) still returns the raw absolute margin;
 its consumer (`:803`) normalizes it. Like the manual formula, the engine ratio is exact only in
 the slack regime and saturates at $1-\alpha = 0.95$ for a genuinely-binding channel (it consumes
-the frozen margin). Source: omx wiki
-`constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md`.
+the frozen margin).
 
 ---
 
@@ -520,8 +523,7 @@ comment (`config.py:521`); the literal field default comes from marinelab's `Dor
 near-null intervention: `success_rate` stayed saturated at `0.96-0.99` the whole run, so the
 floor never gated a step. The actually-binding constraint on DR-expansion speed is the
 per-update trust-region KL (`kl_ub`, pinned at 0.06 in that run). To widen robustness, move
-`kl_ub` or DR variance directly, **not** the success floor. Source: omx wiki
-`doraemon_alpha_is_a_feasibility_floor_not_a_dr_expansion_lever_e.md`.
+`kl_ub` or DR variance directly, **not** the success floor.
 
 **`performance_lb` and `kl_ub` were raised together by design** (`config.py:514-526`):
 `performance_lb` `68.0 -> 250.0`, `kl_ub` `0.06 -> 0.12`. Calibrated from a recon run
@@ -574,7 +576,7 @@ activations are unchanged.
 
 ### Experimental findings (arm B)
 
-| Finding | Evidence | Source (omx wiki) |
+| Finding | Evidence | Source |
 |---|---|---|
 | **Never binds under station-keeping.** In a flat-target station-keeping task the joint1-cumulative constraint essentially never binds: the policy naturally parks around **0.36 revolutions**, deeply inside the $\pm4\pi$ (2-rev) rail; violation metric ≈ **-0.9997** (near-full headroom) every iteration; peak $\lvert\theta_{\text{cum}}\rvert$ never exceeds ~1.22 rev across any of 4 DR difficulty levels (0/64 envs $>4\pi$). | run `trpo_joint1_cumul_rot_260629_183545` | `joint1_cumulative_rotation_constraint_never_binds_policy_parks_a.md` |
 | **Generalizes OOD even while not binding.** Despite never binding under station-keeping, the same constraint line keeps cumulative rotational drift bounded out-of-distribution (drift slope $2.2\times10^{-4}$ rad/s, p95 final $\lvert\text{drift}\rvert=0.177$ rad $<0.224$ rad budget), even while the unrelated attitude tracker develops a genuine OOD heavy tail (roll steady-state error env-median 0.36° vs env-mean 3.87°, worst env 63°). | run `trpo_cumul_constraint_260627_231709` | `joint1_cumulative_ipo_constraint_generalizes_drift_bounded_at_oo.md` |
@@ -614,7 +616,7 @@ The `<name>` suffix is the constraint's configured name (`ALBCConstraintCfg.cons
 DORAEMON curriculum metrics use a separate `DORAEMON/*` namespace and policy diagnostics a
 `Policy/*` namespace.
 
-**Anomaly thresholds** flagged by the analysis engine (`analyze_training.py` `ANOMALY_RULES`):
+**Anomaly thresholds** used by the training-analysis tool (not shipped in this repo):
 
 | Rule | Condition | Severity | Note |
 |---|---|---|---|
@@ -652,7 +654,6 @@ code definitions above — not code invariants, just what specific runs showed.
 | `attitude` | 0.003 | deep slack |
 | `cumul_yaw` | 0.000 | fully inert |
 
-Source: omx wiki `constraint_margin_must_be_normalized_j_c_d_k_absolute_margin_fli.md`.
 (Teacher-run binding figure is ~0.87 — no supported 0.94-in-the-teacher value; the 0.944 below
 is the E6 budget-halving run, not the teacher.)
 
@@ -669,8 +670,7 @@ control authority:
 
 **Rule:** tightening a control-authority channel (thruster) is destructive. Computed in the
 slack regime ($\hat{J}_C = d_k - \text{margin}$), so it is `barrier_alpha`-independent (holds at
-0.02 or 0.05). Source: omx wiki
-`constraint_budget_x0_5_binds_only_thruster_util_authority_starva.md`.
+0.02 or 0.05).
 
 **The feasibility constraint was inert when `success = return >= 68`.** With the old
 `performance_lb=68` below the minimum episode return, `success` was pinned at 1, the DORAEMON
@@ -694,4 +694,3 @@ the exact motivation for the `lb 68 -> 250` / `kl_ub 0.06 -> 0.12` recalibration
   (runtime barrier_alpha/max_kl/std/entropy values)
 - `constrained_albc/algorithms/runners/constraint_encoder_runner.py` — `_log_constraint_metrics`,
   `num_constraints` auto-sync
-- `.omx/profile/analyze_training.py` — `ANOMALY_RULES`, `_constraint_margin`

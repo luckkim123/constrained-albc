@@ -83,8 +83,7 @@ heads would cut it at the representation stage.
 **Don't add multi-head without evidence.** A split only pays off if the subtasks are
 heterogeneous enough to interfere, or one gradient dominates — no such evidence
 exists here. Measure arm/thruster gradient cosine similarity or run a
-separate-network ablation first (`.claude/rules/03` — no generic solutions without
-evidence).
+separate-network ablation first.
 
 ---
 

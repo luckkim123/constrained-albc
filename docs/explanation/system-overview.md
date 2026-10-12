@@ -103,7 +103,7 @@ scheduler mechanics: [`reference/domain-randomization-and-doraemon.md`](../refer
 The teacher actor reads `[o_t, z]`, and `z` is computed from the **privileged**
 `p_t`, which the real robot cannot observe (no DVL, no direct hydrodynamic-parameter
 sensing). So the teacher cannot run on-robot as trained. Deployment distills a
-**student** network (TCN or GRU, `constrained_albc/algorithms/student/`) that reconstructs `z` from the
+**student** network (GRU in the paper; a TCN variant is also available, `constrained_albc/algorithms/student/`) that reconstructs `z` from the
 observation history alone, replacing the encoder at inference time while the actor
 weights are reused unchanged. The packaged export (teacher + student, golden-value
 self-check) is produced by `scripts/export_deploy_pack.py`; see
@@ -123,7 +123,6 @@ constrained_albc/envs/main/
 
 constrained_albc/algorithms/          # variant-independent training machinery
 ├── constraint_trpo.py     # ConstraintTRPO + IPO barrier
-├── constraint_lagrangian.py  # arm N1: the same budget via Lagrangian multipliers
 ├── encoder/               # actor_critic_encoder.py, actor_critic_asym_constrained.py
 ├── runners/               # constraint_encoder_runner.py, on_policy_doraemon_runner.py
 ├── student/               # TCN / GRU distillation (collector, models, runner, teacher)
@@ -137,6 +136,6 @@ under `algorithms/` is docstring-only, so importers spell the module out
 (`from constrained_albc.algorithms.constraint_trpo import ConstraintTRPO`); that is
 what lets the deploy export load the sim-free half on a host without Isaac Sim.
 
-Registered task IDs (17 total: 13 `main` + 4 `tdc_main`): see the
+Registered task IDs (13 total: 11 `main` + 2 `tdc_main`): see the
 [README](../../README.md#registered-environments). Package/entry-point layout across
 `envs/analysis/scripts/tests`: [`../architecture.md`](../architecture.md).
