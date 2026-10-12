@@ -53,17 +53,23 @@ cd /workspace/isaaclab
 ./isaaclab.sh -p -m pip install -e /workspace/constrained-albc
 ```
 
-Every script runs through the Isaac Sim interpreter (`./isaaclab.sh -p`).
+Every script runs through the Isaac Sim interpreter (`isaaclab.sh -p`).
 
 ## Reproducing the paper
 
 The paper's controller is trained on the section-5 plant task
-`Isaac-ConstrainedALBC-TRPO-SimToReal-v0`.
+`Isaac-ConstrainedALBC-TRPO-SimToReal-v0`. Run every command below from the repository root,
+with `ISAACLAB_SH` pointing at Isaac Lab's launcher:
+
+```bash
+cd /path/to/constrained-albc
+export ISAACLAB_SH=/path/to/isaaclab/isaaclab.sh
+```
 
 **1. Teacher.**
 
 ```bash
-./isaaclab.sh -p scripts/train.py --task Isaac-ConstrainedALBC-TRPO-SimToReal-v0 \
+"$ISAACLAB_SH" -p scripts/train.py --task Isaac-ConstrainedALBC-TRPO-SimToReal-v0 \
     --num_envs 4096 --headless --seed 30 --run_group <campaign>
 ```
 
@@ -79,7 +85,7 @@ tree). The training randomization ranges live in code: `constrained_albc/envs/ma
 `scripts/paper/train_teacher.sh` is the paper teacher's training run with its complete set of
 overrides. It is a fine-tune: it resumes from a starting teacher checkpoint (`model_6400` with
 its `doraemon_state.pt`) for 801 iterations and is run as
-`RESUME_CKPT=<model_6400.pt> OUT_DIR=<dir> ISAACLAB_SH=<isaaclab.sh> ARMED=1 scripts/paper/train_teacher.sh`.
+`RESUME_CKPT=<model_6400.pt> OUT_DIR=<dir> ARMED=1 scripts/paper/train_teacher.sh`.
 That starting checkpoint and the training chain that produced it are not released.
 
 **2. Student (GRU).**
@@ -89,14 +95,13 @@ of arguments, including the DAgger schedule (teacher-action probability annealed
 600 iterations, `--dagger_mix select`):
 
 ```bash
-TEACHER_CKPT=<teacher run>/model_7200.pt OUT_DIR=<dir> ISAACLAB_SH=<isaaclab.sh> ARMED=1 \
-    scripts/paper/train_student.sh
+TEACHER_CKPT=<teacher run>/model_7200.pt OUT_DIR=<dir> ARMED=1 scripts/paper/train_student.sh
 ```
 
 **3. Evaluate.**
 
 ```bash
-./isaaclab.sh -p constrained_albc/analysis/eval.py static \
+"$ISAACLAB_SH" -p constrained_albc/analysis/eval.py static \
     --task Isaac-ConstrainedALBC-TRPO-SimToReal-v0 --num_envs 64 --headless \
     --teacher_ckpt <teacher .pt> --student_ckpt <student .pt> --encoder_type gru
 ```
@@ -104,7 +109,7 @@ TEACHER_CKPT=<teacher run>/model_7200.pt OUT_DIR=<dir> ISAACLAB_SH=<isaaclab.sh>
 **4. Export the deploy pack.**
 
 ```bash
-/isaac-sim/python.sh scripts/export_deploy_pack.py --batch attitude_only_5000 \
+"$ISAACLAB_SH" -p scripts/export_deploy_pack.py --batch attitude_only_5000 \
     --student-ckpt <student .pt> --teacher-ckpt <teacher .pt> \
     --run-group <campaign> --tag pack_<label> --device cpu --golden --report
 ```
