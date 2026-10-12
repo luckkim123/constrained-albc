@@ -84,11 +84,13 @@ That starting checkpoint and the training chain that produced it are not release
 
 **2. Student (GRU).**
 
+`scripts/paper/train_student.sh` is the paper student's distillation run with its complete set
+of arguments, including the DAgger schedule (teacher-action probability annealed 1 -> 0 over
+600 iterations, `--dagger_mix select`):
+
 ```bash
-./isaaclab.sh -p scripts/train_student.py --task Isaac-ConstrainedALBC-TRPO-SimToReal-v0 \
-    --encoder_type gru --gru_hidden 128 --gru_head_hidden 64 \
-    --teacher_run_dir <teacher run dir> --teacher_checkpoint model_7200.pt \
-    --num_envs 2048 --max_iterations 1000 --headless
+TEACHER_CKPT=<teacher run>/model_7200.pt OUT_DIR=<dir> ISAACLAB_SH=<isaaclab.sh> ARMED=1 \
+    scripts/paper/train_student.sh
 ```
 
 **3. Evaluate.**
