@@ -37,3 +37,9 @@ graphify-out/
 .code-review-graph/
 .tokensave/
 .harness.lock/
+.omp/
+.oms/
+.omd/
+.sp/
+.remember/
+.code-review-graphignore
