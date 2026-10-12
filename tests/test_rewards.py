@@ -81,7 +81,7 @@ def _reward_cfg(**kw):
     cfg = SimpleNamespace(
         att_rp=_track_term(), att_roll_weight=1.5,
         lin_vel=_track_term(), yaw=_track_term(),
-        extra_terms=[],
+        extra_terms=[], k_sstv=0.0, sstv_start_step=125,
     )
     for k, v in kw.items():
         setattr(cfg, k, v)
@@ -231,3 +231,39 @@ def test_reward_manager_extra_terms_flow_through_compute():
     # func 2.0 * gain 2.0 * weight 0.5 * dt 0.02 = 0.04.
     assert total.item() == pytest.approx(0.04)
     assert rm._episode_sums["probe"].item() == pytest.approx(0.04)
+
+
+def _compute_total(k_sstv, ang_vel):
+    """One RewardManager.compute with all builtin weights zeroed; returns (manager, total)."""
+    cfg = _reward_cfg(
+        att_rp=_track_term(k=0.0), yaw=_track_term(k=0.0),
+        k_tau=0.0, k_thr=0.0, k_s=0.0, k_bias=0.0,
+        bias_weights=(1.0, 1.0, 1.0), k_sstv=k_sstv,
+    )
+    rm = R.RewardManager(cfg, num_envs=1, device="cpu")
+    env = _env(
+        att_err=torch.zeros(1, 2), yaw_err=torch.zeros(1),
+        actions=torch.zeros(1, 8), prev=torch.zeros(1, 8), prev_prev=torch.zeros(1, 8),
+        bias_ema=torch.zeros(1, 3), reward_cfg=cfg,
+    )
+    env._reward_manager = rm
+    env._vel_cmd_step_counter = torch.tensor([200])  # past sstv_start_step=125
+    robot = SimpleNamespace(data=SimpleNamespace(
+        applied_torque=torch.zeros(1, 4), root_ang_vel_b=ang_vel))
+    return rm, rm.compute(robot, dt=0.02, env=env)
+
+
+def test_sstv_off_by_default_adds_no_term():
+    """k_sstv=0 (default): no sstv term is registered and the reward ignores body rates."""
+    rm, total = _compute_total(0.0, torch.tensor([[0.4, -0.2, 0.1]]))
+    assert "sstv" not in rm._episode_sums
+    assert rm.sstv_step is None
+    assert total.item() == pytest.approx(0.0)
+
+
+def test_sstv_on_penalizes_settled_roll_pitch_rate():
+    """k_sstv<0: weight * mean(|p|,|q|) * dt after the command settles, recorded as sstv_step."""
+    rm, total = _compute_total(-5.0, torch.tensor([[0.4, -0.2, 0.1]]))
+    # -5.0 * mean(0.4, 0.2) * 0.02 = -0.03
+    assert total.item() == pytest.approx(-0.03)
+    assert rm.sstv_step.item() == pytest.approx(-0.03)

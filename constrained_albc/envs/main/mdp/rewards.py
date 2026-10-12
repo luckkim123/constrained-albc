@@ -119,6 +119,8 @@ class ALBCRewardCfg:
     bias_ema_alpha: float = 0.99  # effective window ~100 steps = 2 s at 50 Hz
     # Per-axis weights for bias penalty so roll (weak authority) gets stronger bias signal.
     bias_weights: tuple[float, float, float] = (1.5, 1.0, 1.0)
+    k_sstv: float = 0.0
+    sstv_start_step: int = 125
     # Extra experiment terms appended cfg-side (registry pattern; see RewardTermCfg).
     extra_terms: list[RewardTermCfg] = []
 
@@ -206,6 +208,12 @@ def bias_ema_penalty(env: ALBCEnv) -> torch.Tensor:
     return (env._bias_ema.pow(2) * w).sum(dim=-1)
 
 
+def ss_window_rp_tv_l1(robot: Articulation, env: ALBCEnv) -> torch.Tensor:
+    """Mean absolute roll/pitch angular velocity after the command settles."""
+    mask = env._vel_cmd_step_counter >= env.cfg.reward.sstv_start_step
+    return mask.float() * robot.data.root_ang_vel_b[:, :2].abs().mean(-1)
+
+
 # --- Reward Manager ---
 
 
@@ -230,7 +238,10 @@ class RewardManager:
     def __init__(self, cfg: ALBCRewardCfg, num_envs: int, device: str) -> None:
         self._cfg = cfg
         self._buf = torch.zeros(num_envs, dtype=torch.float32, device=device)
-        self._extra_terms = [(t.name or t.func.__name__, t) for t in cfg.extra_terms]
+        extra_terms = list(cfg.extra_terms)
+        if cfg.k_sstv != 0:
+            extra_terms.append(RewardTermCfg(func=ss_window_rp_tv_l1, weight=cfg.k_sstv, name="sstv"))
+        self._extra_terms = [(t.name or t.func.__name__, t) for t in extra_terms]
         self._names = [n for n, _, _ in self._BUILTIN_TERMS] + [n for n, _ in self._extra_terms]
         if len(set(self._names)) != len(self._names):
             raise ValueError(f"Duplicate reward term names: {self._names}")
@@ -242,6 +253,7 @@ class RewardManager:
         """Compute total reward (dt-scaled)."""
         cfg = self._cfg
         self._buf.zero_()
+        self.sstv_step = None  # sstv term is kept out of the DORAEMON success return
 
         for name, weight_of, func in self._BUILTIN_TERMS:
             scaled = func(robot, env) * weight_of(cfg) * dt
@@ -249,6 +261,8 @@ class RewardManager:
             self._episode_sums[name] += scaled
         for name, term in self._extra_terms:
             scaled = term.func(robot, env, **term.params) * term.weight * dt
+            if name == "sstv":
+                self.sstv_step = scaled
             self._buf += scaled
             self._episode_sums[name] += scaled
 

@@ -261,6 +261,16 @@ class DomainRandomizationCfg:
     # DORAEMON curriculum -- integer delay is awkward for the Beta-continuous
     # sampler. Promote to a _PARAM_DEFS entry only if warranted.
     control_delay_steps: tuple[int, int] = (0, 0)
+    # Observation transport delay (discrete N-step lag on the POLICY observation, applied
+    # after both sensor-noise layers in _get_observations) as integer control steps;
+    # 1 step = 20 ms @ 50 Hz. The board serves the policy observations 1.2-4.7 control
+    # steps stale, and the action DelayBuffer above cannot stand in
+    # for that: loop phase adds, but the policy's setpoint handling and its internal
+    # integral/history state see the world late only when the observation itself is
+    # delayed. (0, 0) = off (byte-identical).
+    # Static uniform per-env draw at reset, not a DORAEMON dim (same reasoning as
+    # control_delay_steps). The paper teacher used (0, 5).
+    obs_delay_steps: tuple[int, int] = (0, 0)
 
     # -- Ocean Current (DORAEMON-managed) --
     # Scalar strength [0, 1] multiplier on ocean_current.max_velocity.
