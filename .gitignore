@@ -17,10 +17,6 @@ docs/reference/*.pdf
 tests/fixtures/*
 !tests/fixtures/encoder/
 
-# obs-oracle dumps: regenerable output of tools/obs_oracle/dump_obs_oracle.py
-# (the script itself IS tracked; only its .npz product is not)
-tools/obs_oracle/*.npz
-
 # deploy artifacts tree (weights/golden/runtime packs; on disk for docker cp / Mac pull, out of git)
 # layout: deploy/<group>/<label>_<YYMMDD_HHMMSS>/ (mirrors logs tree, label-before-date)
 # root-anchored: must NOT catch constrained_albc/deploy/ (code) or tests/deploy/

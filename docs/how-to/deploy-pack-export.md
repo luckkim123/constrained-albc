@@ -22,10 +22,6 @@ cd /workspace/constrained-albc && /isaac-sim/python.sh scripts/export_deploy_pac
 - `--report` additionally writes `EXPORT_REPORT.md` alongside the pack.
 - Use `scripts/export_deploy_pack.py`, NOT `python -m constrained_albc.deploy` — the
   `-m` form fires the package `__init__` -> sim stack -> `pxr` and dies on export hosts.
-  The sibling launcher `scripts/export_deploy.py` shares this CLI but injects a WIDER
-  stub set (`_isolate_training_imports`, i.e. the package stub plus `constrained_albc.envs`,
-  `.envs.main` and `isaaclab.utils`). Every pack that has actually shipped, the adopted GRU
-  one included (`2f057b9`, `decision/390`), came from `export_deploy_pack.py` — use it.
 
 ## Non-negotiable contracts
 
