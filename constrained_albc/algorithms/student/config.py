@@ -34,7 +34,7 @@ class StudentCfg:
     # teacher (albc_trpo_teacher) and student (albc_trpo_student) cluster together under
     # both logs/rsl_rl/ and experiments/rsl_rl/.
     experiment_name: str = "albc_trpo_student"
-    run_name: str = "student_tcn"
+    run_name: str = "student_gru"
     seed: int = 42
 
     # Teacher (set by the caller; no hardcoded run -- the teacher is whichever
@@ -48,7 +48,7 @@ class StudentCfg:
     variant_module: str = "constrained_albc.envs.main"
 
     # Architecture
-    encoder_type: str = "tcn"       # "tcn" or "gru"
+    encoder_type: str = "gru"       # "gru" (paper) or "tcn"
     policy_obs_dim: int = 69        # attitude-only: 20 proprio + 46 history + 3 integral
     privileged_dim: int = 28        # attitude-only: 24 DR + 3 measured lin_vel + 1 control delay (critic-only)
     latent_dim: int = 9             # must match teacher encoder output
