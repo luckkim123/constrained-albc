@@ -21,7 +21,7 @@ from pathlib import Path
 
 import torch
 
-_PATH = Path(__file__).resolve().parent / "constrained_albc" / "envs" / "main" / "mdp" / "disturbance.py"
+_PATH = Path(__file__).resolve().parent.parent / "constrained_albc" / "envs" / "main" / "mdp" / "disturbance.py"
 _spec = importlib.util.spec_from_file_location("disturbance_under_test", _PATH)
 disturbance = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(disturbance)

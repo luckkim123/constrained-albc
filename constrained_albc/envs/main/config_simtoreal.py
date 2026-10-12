@@ -23,7 +23,7 @@ DORAEMON mode -2, fault_severity 0.0045).
 
 Base-class defaults are untouched, so every other task and experiment in the repo
 is unaffected. Equivalence to the override block is not asserted here -- it is
-checked by `test_simtoreal_cfg.py`, which resolves both and diffs them.
+checked by `tests/test_simtoreal_cfg.py`, which resolves both and diffs them.
 """
 
 from __future__ import annotations

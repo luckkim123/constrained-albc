@@ -25,7 +25,7 @@ from pathlib import Path
 
 import torch
 
-_PATH = Path(__file__).resolve().parent / "constrained_albc" / "envs" / "main" / "mdp" / "events.py"
+_PATH = Path(__file__).resolve().parent.parent / "constrained_albc" / "envs" / "main" / "mdp" / "events.py"
 _spec = importlib.util.spec_from_file_location("events_under_test", _PATH)
 events = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(events)

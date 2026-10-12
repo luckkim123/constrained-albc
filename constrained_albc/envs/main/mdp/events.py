@@ -312,7 +312,7 @@ def randomize_physx_inertia(
     and consistently interpolated off it. Scaling only the three diagonal entries gives the
     same diagonal but is not guaranteed to stay positive-definite -- it usually does on a
     diagonally-dominant tensor and can fail on an ill-conditioned one, which is the case
-    ``test_physx_inertia_congruence.py`` pins. The congruence has no such case.
+    ``tests/test_physx_inertia_congruence.py`` pins. The congruence has no such case.
 
     NOT VERIFIED LIVE as of 2026-09-07: the congruence math is covered by that test, but
     nothing has yet confirmed that ``set_inertias`` moves this articulation's PhysX inertia

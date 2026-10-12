@@ -21,7 +21,7 @@ from types import SimpleNamespace
 
 import torch
 
-_FAULTS_PATH = Path(__file__).resolve().parent / "constrained_albc" / "envs" / "main" / "mdp" / "faults.py"
+_FAULTS_PATH = Path(__file__).resolve().parent.parent / "constrained_albc" / "envs" / "main" / "mdp" / "faults.py"
 _spec = importlib.util.spec_from_file_location("faults_under_test", _FAULTS_PATH)
 faults = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(faults)
