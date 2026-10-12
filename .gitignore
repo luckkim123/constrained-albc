@@ -2,15 +2,14 @@ __pycache__/
 *.pyc
 *.egg-info/
 .venv/
+.ruff_cache/
 logs/
 logs_queue/
 outputs/
 wandb/
 /experiments/
-.omc/
-docs/superpowers/
 
-# generated PDFs in docs/reference/ are derivatives of the .md SSOT; regenerate via pandoc, never commit
+# generated PDFs in docs/reference/ are derivatives of the .md source; regenerate via pandoc, never commit
 docs/reference/*.pdf
 
 # npz-replay test fixtures (large binary eval outputs; provenance in SOURCE.txt)
@@ -29,19 +28,16 @@ tools/obs_oracle/*.npz
 scratch/
 .trash/
 
-# session/tool state dirs — never commit
+# local tooling state — never commit
+.hq/
+.omc/
+.omx/
 .claude/
-.ruff_cache/
 .superpowers/
-
-# --- Code-graph indexes (regenerated from source; .graphifyignore stays tracked) ---
+docs/superpowers/
 .graphify/
+.graphifyignore
 graphify-out/
 .code-review-graph/
 .tokensave/
-
-# .hq unified store (store-spec §5) — machine-local layers only
-**/.hq/work/
-**/.hq/runtime/
-**/.harness.lock/
-**/.hq/**/.hq-lock
+.harness.lock/
