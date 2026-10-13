@@ -1,0 +1,13 @@
+
+logs/rsl_rl/albc_ablation/paper_ablation_r3a/trpo_r3a_n1_lagrangian_260914_142937/params/env.yaml
+  [ok ] thrusters.thrust_coefficient                  13.0           expected 13.0
+  [ok ] randomization.thrust_coefficient_scale        (0.5, 2.0)     expected (0.5, 2.0)
+  [ok ] randomization.control_delay_steps             (0, 3)         expected (0, 3)
+  [ok ] fault.enable                                  True           expected True
+  [ok ] fault.thruster_fail_prob                      0.3            expected 0.3
+  [ok ] fault.thruster_dead_frac                      0.5            expected 0.5
+  [ok ] doraemon.performance_lb                       200.0          expected 200.0
+  [ok ] doraemon.enable                               True           expected True
+  [ok ] doraemon.kl_ub                                0.12           expected 0.12
+  [ok ] doraemon.step_interval                        250            expected 250
+  => section5

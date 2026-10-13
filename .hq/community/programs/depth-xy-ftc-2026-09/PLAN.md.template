@@ -1,0 +1,69 @@
+# Program: depth-xy-ftc-2026-09
+
+**Status: PENDING USER APPROVAL — this document authorizes NO launch.**
+
+## Objective
+
+Quote the requester's stated goal verbatim. Every decision below argues against
+THIS line, not against a restatement of it.
+
+> (paste the requester's own words here)
+
+Redefining the objective later in this document is a re-ask, not an edit: say so
+at the point of redefinition and put it in the decision list.
+
+## Diagnosis
+
+What the record already establishes, with `[EVIDENCE: ...]` per claim. Read the
+analysis reports and `omx wiki query` first — a plan that rediscovers a settled
+fact will also re-make a settled mistake.
+
+## Parameter coupling
+
+Three tiers. Anything in tier 2 needs a `[DECISION-REQUIRED: <slug>]` marker AND
+a matching entry in the decision list below.
+
+### Tier 1 — follows mechanically; nothing to set
+
+Name every config key in backticks, including the held ones a derived quantity
+divides by — a key left unquoted is a key the lint cannot see. Any row that
+names a tier-3 held key while its own value moves across the columns must carry
+`[DERIVED]` (follows by arithmetic, nothing downstream reads it) or a
+`[DECISION-REQUIRED: <slug>]` marker. A value that held while its meaning moved
+is the one shape this tier is blind to.
+
+### Tier 2 — real coupling; a decision is required
+
+| knob | current | options | coupling | marker |
+|:--|:--|:--|:--|:--|
+| (knob) | (value) | (a) / (b) | (what it couples to) | `[DECISION-REQUIRED: <slug>]` |
+
+### Tier 3 — no coupling to the variables under test; leave byte-identical
+
+## Decisions for the user
+
+One entry per tier-2 item, each repeating its `[DECISION-REQUIRED: <slug>]`
+marker. Holding a knob to keep a comparison readable is a trade against the
+objective, so it belongs here too.
+
+- `[DECISION-REQUIRED: <slug>]` **question** — options / recommendation /
+  why / what the other choice costs.
+
+## Predicted outcome
+
+What this line is expected to produce. If the honest prediction is "equivalent
+to what we have", write that and let the requester decide whether to spend the
+budget anyway.
+
+## Eval schedule
+
+Dense enough to resolve the curve. A schedule too sparse to see a transient will
+report it as a plateau and fire the stop rule on an artifact.
+
+## Wall-clock and budget
+
+## Deferred
+
+Enumerate `omx wiki list --status needs-experiment` and
+`--status needs-apply-before-retrain`; every open lead is carried or explicitly
+deferred with a reason. Silent omission is a defect.

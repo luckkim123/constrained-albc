@@ -1,0 +1,216 @@
+#!/bin/bash
+# paper-ablation-5000 — R3a-anchor exam, GPU1, serial, re-entrant. v4 (2026-09-12 03시, codex review ground 4 applied).
+# Protocol (PLAN Update 2026-09-12 01시 / 02시):
+#  - code = eval worktree (anchor 3791441 + opt-in recording commit, rate-yaw tree) + marinelab worktree 8cc84a5, both
+#    pinned by full commit and required clean (checked at start and again inside the GPU lock before every cell).
+#  - checkpoints = runs the TRAINING chain marked complete (<run>/.chain_ok: rc 0, clean final scan, loadable model_4999).
+#  - plant box = --env-dr-anchor + --doraemon-dr-from <p3b final DORAEMON>; the p3b event files are hashed at start and
+#    every cell refuses to run if they changed. N6a, N6b and p3b are graded under the reference task.
+#  - CORE = healthy, pair34 (m3+m4 dead), healthy + 1 / 2 steps delay; --att-amp-deg 15, 64 envs, seed 42.
+#  - v14: --save-extras on every cell, --save-moments on healthy; rows ready before any arm: p3b model_5000 (same-seed
+#    2nd realization) and model_7500 (the students' teacher), R3a GRU and R3b TCN students (cuDNN only in student cells);
+#    classical TDC/PID/ATDC rows once the gain search wrote a valid <GAIN_ROOT>/<ctl>/selection.json.
+#  - a cell is done only when <cell>/.complete holds this cell's input identity (task, checkpoint path+size+mtime,
+#    encoder, config, code and marinelab commits, anchor hash, flags, override hash) and rc 0 + summary.json parses +
+#    extras for every tier + extras_meta.json (+ moment keys on healthy) validated. A different identity moves the old
+#    cell aside (<cell>.stale_<time>) and re-grades it. Output root is exam_v3 so no pre-v3 result can be reused.
+#  - exit 0 only when every required cell is complete; 1 when the training chain finished but cells are missing or a
+#    selection is malformed. Stop with: kill -TERM <this pid> (the trap takes the whole process group down).
+# Smoke mode (EXAM_SMOKE=1): anchor_smoke checkpoints (no .chain_ok needed), real students, 4 envs, 0.5 s, healthy only.
+set -u
+W_CODE=/workspace/constrained-albc-eval
+W=/workspace/constrained-albc-r3a
+ML=/workspace/marinelab-r3a
+MAIN=/workspace/constrained-albc
+GPU_LOCK=/root/gpu1.lock
+EXPECT_EVAL_HEAD="${EXPECT_EVAL_HEAD:?set EXPECT_EVAL_HEAD to the eval/r3a-5000-v14 commit}"
+EXPECT_ML_HEAD=8cc84a54540f9fd06a835efc3f33d117dd8b2a84
+DR_FROM=$MAIN/logs/rsl_rl/albc_trpo_teacher/retrain_simtoreal_p3/trpo_p3b_lb200_s30_r2050_260904_163518
+P3B5000=$DR_FROM/model_5000.pt
+P3B7500=$DR_FROM/model_7500.pt
+SROOT=$MAIN/logs/rsl_rl/albc_trpo_student/retrain_simtoreal_p3
+R3A_GRU=$SROOT/trpo_sd_p3b7500_c3_dr5_beta0_s30_260906_003754/models/student_999.pt
+R3B_TCN=$SROOT/trpo_sd_p3b7500_tcn_dr5_s30_260906_013849/models/student_999.pt
+GAIN_ROOT=${GAIN_ROOT:-$MAIN/.hq/work/paper_ablation_r3a/gain_search}
+CUDNN_DIR=/isaac-sim/exts/omni.isaac.ml_archive/pip_prebundle/nvidia/cudnn/lib
+REF_TASK=Isaac-ConstrainedALBC-TRPO-SimToReal-v0
+CHAIN_LOG=$MAIN/.hq/community/programs/paper-ablation-5000/launch-logs-r3a/chain.log
+EVAL_TIMEOUT=${EVAL_TIMEOUT:-5400}
+if [ "${EXAM_SMOKE:-0}" = 1 ]; then
+  GROUP=anchor_smoke; OUT=${EXAM_OUT:-/root/examsmoke_v3}; NENV=4; SEG=(--segment_duration 0.5)
+  CORE=("1,1,1,1,1,1 0 healthy"); CKPT_GLOB='model_*.pt'
+else
+  GROUP=paper_ablation_r3a; OUT=$MAIN/.hq/work/paper_ablation_r3a/exam_v3; NENV=64; SEG=()
+  CORE=("1,1,1,1,1,1 0 healthy" "1,1,1,0,0,1 0 pair34" "1,1,1,1,1,1 1 healthy_d1" "1,1,1,1,1,1 2 healthy_d2")
+  CKPT_GLOB='model_4999.pt'
+fi
+mkdir -p "$OUT"; LOG=$OUT/exam.log
+cd "$W_CODE" || exit 1
+BASE_LD=${LD_LIBRARY_PATH:-}
+export PYTHONPATH="$W_CODE:$ML" PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 TERM=xterm CUDA_VISIBLE_DEVICES=1
+say(){ echo "[$(date +%FT%T%z)] $*" | tee -a "$LOG"; }
+# timeout puts itself in its own process group, so kill 0 alone would miss a running evaluator: stop those by their
+# command line (the output root is unique to this chain), then the rest of this group (subshells waiting in flock).
+trap 'trap - TERM INT; say "stopped by signal"; pkill -TERM -f -- "--output_dir $OUT/" ; sleep 5; pkill -KILL -f -- "--output_dir $OUT/"; kill 0' TERM INT
+full(){ git -C "$1" rev-parse --verify "$2^{commit}" 2>/dev/null; }
+EVAL_HEAD_FULL=$(full "$W_CODE" "$EXPECT_EVAL_HEAD") || true
+[ -n "$EVAL_HEAD_FULL" ] || { say "FATAL EXPECT_EVAL_HEAD $EXPECT_EVAL_HEAD is not a commit in $W_CODE"; exit 2; }
+anchor_hash(){ cat "$DR_FROM"/events.out.tfevents* | md5sum | cut -c1-32; }
+ANCHOR_MD5=$(anchor_hash)
+code_ok(){  # both worktrees at their pinned commit and clean, and the exam box unchanged (finding/407)
+  [ "$(git -C "$W_CODE" rev-parse HEAD)" = "$EVAL_HEAD_FULL" ] || { say "FATAL eval HEAD $(git -C "$W_CODE" rev-parse HEAD) != $EVAL_HEAD_FULL"; return 1; }
+  [ "$(git -C "$ML" rev-parse HEAD)" = "$EXPECT_ML_HEAD" ] || { say "FATAL marinelab HEAD $(git -C "$ML" rev-parse HEAD) != $EXPECT_ML_HEAD"; return 1; }
+  [ "$(git -C "$W_CODE" status --porcelain | wc -l)" = 0 ] || { say "FATAL eval worktree dirty: $(git -C "$W_CODE" status --porcelain | head -3 | tr '\n' ' ')"; return 1; }
+  [ "$(git -C "$ML" status --porcelain | wc -l)" = 0 ] || { say "FATAL marinelab worktree dirty"; return 1; }
+  [ "$(anchor_hash)" = "$ANCHOR_MD5" ] || { say "FATAL exam box changed: $DR_FROM event files differ from the start of this run"; return 1; }
+}
+code_ok || exit 2
+[ -f "$CUDNN_DIR/libcudnn.so.9" ] || { say "FATAL libcudnn.so.9 missing at $CUDNN_DIR (student cells need it, finding/382)"; exit 1; }
+for f in "$P3B5000" "$P3B7500" "$R3A_GRU" "$R3B_TCN"; do [ -s "$f" ] || { say "FATAL fixed-row checkpoint missing: $f"; exit 1; }; done
+BAD=0   # malformed selections seen in this run
+
+validate_cell(){  # cell_dir moments(0|1) -> 0 when the evaluator output is complete
+  python3 - "$1" "$2" <<'PY'
+import json, os, sys
+import numpy as np
+d, mom = sys.argv[1], sys.argv[2] == "1"
+s = json.load(open(os.path.join(d, "summary.json")))
+levels = [k for k in ("none", "soft", "medium", "hard") if k in s]
+assert levels, "summary.json has no tier"
+json.load(open(os.path.join(d, "extras_meta.json")))
+for lv in levels:
+    z = np.load(os.path.join(d, f"extras_{lv}.npz"))
+    assert "costs" in z.files and z["costs"].ndim == 3, lv
+    if mom:
+        assert all(k in z.files for k in ("m_thr", "m_buoy", "m_grav_buoy")), lv
+PY
+}
+identity(){  # arm task ckpt enc h dl ovf mom
+  local st="none"; [ "$3" != none ] && st="$(readlink -f "$3") $(stat -c '%s %Y' "$3")"
+  printf 'arm=%s task=%s ckpt=%s enc=%s teacher=%s cfg=%s,%s nenv=%s seg=%s eval=%s ml=%s anchor=%s extras=1 moments=%s ovr=%s\n' \
+    "$1" "$2" "$st" "${4:-none}" "$([ -n "${4:-}" ] && echo "$P3B7500" || echo none)" "$5" "$6" "$NENV" "${SEG[*]:-full}" \
+    "$EVAL_HEAD_FULL" "$EXPECT_ML_HEAD" "$ANCHOR_MD5" "$8" "$([ -n "$7" ] && md5sum < "$7" | cut -c1-32 || echo none)"
+}
+cell_done(){ [ -f "$1/.complete" ] && [ "$(cat "$1/.complete")" = "$2" ]; }
+
+exam(){  # arm task ckpt|none [student encoder] [hydra override file]
+  local arm=$1 task=$2 ck=$3 enc=${4:-} ovf=${5:-} c h dl name d rc extra pol mom mflag id ovr=()
+  [ -n "$ovf" ] && mapfile -t ovr < "$ovf"
+  for c in "${CORE[@]}"; do
+    set -- $c; h=$1; dl=$2; name=$3; d=$OUT/$arm/$name
+    mom=0; mflag=(); [ "$name" = healthy ] && { mom=1; mflag=(--save-moments); }
+    id=$(identity "$arm" "$task" "$ck" "$enc" "$h" "$dl" "$ovf" "$mom")
+    cell_done "$d" "$id" && continue
+    extra=(); [ "$dl" != 0 ] && extra=(--control-delay "$dl")
+    if [ -n "$enc" ]; then pol=(--student_ckpt "$ck" --teacher_ckpt "$P3B7500" --encoder_type "$enc"); else pol=(--checkpoint "$ck"); fi
+    say "queued $arm/$name ckpt=$ck enc=${enc:-none} (waits for $GPU_LOCK)"
+    (
+      flock 9 || { say "FATAL cannot take $GPU_LOCK"; exit 86; }
+      cell_done "$d" "$id" && exit 0          # another invocation finished it while this one waited
+      code_ok || exit 86
+      if [ -e "$d" ]; then mv "$d" "$d.stale_$(date +%Y%m%dT%H%M%S)"; fi
+      mkdir -p "$d"
+      { echo "$id" | tr ' ' '\n'; echo "hydra_overrides=${ovr[*]:-none}"; echo "lock_acquired=$(date +%FT%T%z)"; } > "$d/RUN_CONDITIONS.txt"
+      say "start $arm/$name"
+      if [ -n "$enc" ]; then export LD_LIBRARY_PATH=$CUDNN_DIR${BASE_LD:+:$BASE_LD}; else export LD_LIBRARY_PATH=$BASE_LD; fi
+      timeout -k 60 "$EVAL_TIMEOUT" /workspace/isaaclab/isaaclab.sh -p constrained_albc/analysis/eval.py static --task "$task" "${pol[@]}" \
+        --num_envs "$NENV" --seed 42 --headless --fault_fixed_health "$h" --att-amp-deg 15 "${extra[@]}" "${SEG[@]}" \
+        --env-dr-anchor --doraemon-dr-from "$DR_FROM" --save-extras "${mflag[@]}" --output_dir "$d" "${ovr[@]}" > "$d.log" 2>&1
+      rc=$?
+      echo "rc=$rc end=$(date +%FT%T%z)" >> "$d/RUN_CONDITIONS.txt"
+      if [ "$rc" = 0 ] && validate_cell "$d" "$mom" >> "$d.log" 2>&1; then echo "$id" > "$d/.complete"; exit 0; fi
+      exit $(( rc == 0 ? 3 : rc ))
+    ) 9>"$GPU_LOCK" &
+    # background + wait: bash defers traps while a foreground child runs, so a TERM would otherwise wait out the eval
+    wait $!; rc=$?
+    [ "$rc" = 86 ] && { say "FATAL stop (source/lock check failed inside the lock)"; exit 2; }
+    say "done $arm/$name rc=$rc complete=$(cell_done "$d" "$id" && echo yes || echo NO)"
+  done
+}
+selection_overrides(){  # ctl -> override file path on stdout; nonzero when the selection is missing (1) or malformed (2)
+  local sel=$GAIN_ROOT/$1/selection.json ovf=$OUT/.overrides_$1.txt
+  [ -f "$sel" ] || return 1
+  python3 - "$sel" "$1" > "$ovf.tmp" 2>> "$LOG" <<'PY' || { rm -f "$ovf.tmp"; return 2; }
+import json, math, sys
+w = json.load(open(sys.argv[1]), parse_constant=lambda c: (_ for _ in ()).throw(ValueError(c)))["selected"]
+num = lambda k: (lambda v: v if isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) else (_ for _ in ()).throw(ValueError(k)))(w[k])
+kp, kd = num("kp"), num("kd")
+m = w["m_hat"]
+assert isinstance(m, list) and len(m) == 2 and all(isinstance(x, (int, float)) and math.isfinite(x) and x > 0 for x in m), "m_hat"
+# float() on every value: Hydra rejects an int for a float cfg field -- {68:g} wrote "kp=68" and classical_tdc/healthy
+# died with "Expected float, Received int" (2026-09-13 12:20). Same fix as classical_gain_search.py build_cmd (finding/451).
+o = [f"env.tdc_controller.kp={float(kp)}", f"env.tdc_controller.kd={float(kd)}", "env.tdc_controller.m_hat=[" + ",".join(str(float(x)) for x in m) + "]"]
+if sys.argv[2] == "atdc":
+    o += [f"env.tdc_controller.m_hat_leak={float(num('m_hat_leak'))}", f"env.tdc_controller.m_hat_adapt_gain={float(num('m_hat_adapt_gain'))}"]
+else:
+    assert w.get("m_hat_leak") is None and w.get("m_hat_adapt_gain") is None, "tdc/pid selection carries ATDC fields"
+print("\n".join(o))
+PY
+  mv "$ovf.tmp" "$ovf"; echo "$ovf"
+}
+classical(){  # ctl task
+  local ovf rc
+  ovf=$(selection_overrides "$1"); rc=$?
+  [ "$rc" = 1 ] && return 0
+  [ "$rc" = 2 ] && { say "ERROR malformed $GAIN_ROOT/$1/selection.json -- classical_$1 not graded"; BAD=1; return 0; }
+  exam "classical_$1" "$2" none "" "$ovf"
+}
+ckpt_of(){  # tag -> model of the newest run the training chain marked complete (.chain_ok); smoke: newest anchor_smoke model
+  if [ "${EXAM_SMOKE:-0}" = 1 ]; then
+    find "$W/logs/rsl_rl/" -mindepth 4 -maxdepth 4 -type f -path "*/$GROUP/*_${1}_*/$CKPT_GLOB" 2>/dev/null | sort -V | tail -1; return
+  fi
+  local run
+  run=$(find "$W/logs/rsl_rl/" -mindepth 4 -maxdepth 4 -type f -name .chain_ok -path "*/$GROUP/*_${1}_*/.chain_ok" -printf '%T@ %h\n' 2>/dev/null | sort -n | tail -1 | cut -d' ' -f2-)
+  [ -n "$run" ] && [ -s "$run/$CKPT_GLOB" ] && echo "$run/$CKPT_GLOB"
+}
+
+if [ "${EXAM_SMOKE:-0}" = 1 ]; then
+  ARMS=("smoke2_ref|$REF_TASK" "smoke_a6|Isaac-ConstrainedALBC-PPO-Enc-SimToReal-v0" "smoke_n1|Isaac-ConstrainedALBC-TRPO-Lagrangian-SimToReal-v0"
+        "smoke_n4|Isaac-ConstrainedALBC-Main-ResidualTDC-SimToReal-v0" "smoke_noenc|Isaac-ConstrainedALBC-NoEncoder-SimToReal-v0"
+        "smoke_ppo|Isaac-ConstrainedALBC-PPO-SimToReal-v0" "smoke_noipo|Isaac-ConstrainedALBC-TRPO-NoIPO-SimToReal-v0"
+        "smoke_noboth|Isaac-ConstrainedALBC-TRPO-NoIPO-NoEncoder-SimToReal-v0" "smoke_n6a|$REF_TASK" "smoke2_n6b|$REF_TASK")
+else
+  ARMS=("r3a_ref_full|$REF_TASK" "r3a_a6_ppoenc|Isaac-ConstrainedALBC-PPO-Enc-SimToReal-v0" "r3a_n1_lagrangian|Isaac-ConstrainedALBC-TRPO-Lagrangian-SimToReal-v0"
+        "r3a_n4_residual|Isaac-ConstrainedALBC-Main-ResidualTDC-SimToReal-v0" "r3a_noenc|Isaac-ConstrainedALBC-NoEncoder-SimToReal-v0"
+        "r3a_ppo|Isaac-ConstrainedALBC-PPO-SimToReal-v0" "r3a_noipo|Isaac-ConstrainedALBC-TRPO-NoIPO-SimToReal-v0"
+        "r3a_noboth|Isaac-ConstrainedALBC-TRPO-NoIPO-NoEncoder-SimToReal-v0" "r3a_n6a_nodoraemon|$REF_TASK" "r3a_n6b_nodr|$REF_TASK")
+fi
+CLASSICAL=("tdc|Isaac-ConstrainedALBC-Main-TDC-SimToReal-v0" "pid|Isaac-ConstrainedALBC-Main-PID-SimToReal-v0" "atdc|Isaac-ConstrainedALBC-Main-ATDC-SimToReal-v0")
+
+fixed_rows(){
+  exam p3b_5000 "$REF_TASK" "$P3B5000"
+  exam p3b_7500 "$REF_TASK" "$P3B7500"
+  exam r3a_gru_student "$REF_TASK" "$R3A_GRU" gru
+  exam r3b_tcn_student "$REF_TASK" "$R3B_TCN" tcn
+}
+pass_all(){ local e ck; fixed_rows; for e in "${ARMS[@]}"; do ck=$(ckpt_of "${e%%|*}"); [ -n "$ck" ] && exam "${e%%|*}" "${e#*|}" "$ck"; done; for e in "${CLASSICAL[@]}"; do classical "${e%%|*}" "${e#*|}"; done; }
+missing(){  # print every required cell that is not complete (fixed rows, every arm, classical rows with a valid selection)
+  local e ck c ovf mom id
+  for e in "p3b_5000|$REF_TASK|$P3B5000|" "p3b_7500|$REF_TASK|$P3B7500|" "r3a_gru_student|$REF_TASK|$R3A_GRU|gru" "r3b_tcn_student|$REF_TASK|$R3B_TCN|tcn"; do
+    IFS='|' read -r a t k n <<< "$e"
+    for c in "${CORE[@]}"; do set -- $c; mom=0; [ "$3" = healthy ] && mom=1; id=$(identity "$a" "$t" "$k" "$n" "$1" "$2" "" "$mom"); cell_done "$OUT/$a/$3" "$id" || echo "$a/$3"; done
+  done
+  for e in "${ARMS[@]}"; do
+    ck=$(ckpt_of "${e%%|*}"); [ -z "$ck" ] && { echo "${e%%|*}/(no complete run)"; continue; }
+    for c in "${CORE[@]}"; do set -- $c; mom=0; [ "$3" = healthy ] && mom=1; id=$(identity "${e%%|*}" "${e#*|}" "$ck" "" "$1" "$2" "" "$mom"); cell_done "$OUT/${e%%|*}/$3" "$id" || echo "${e%%|*}/$3"; done
+  done
+  for e in "${CLASSICAL[@]}"; do
+    ovf=$(selection_overrides "${e%%|*}" 2>/dev/null) || continue
+    for c in "${CORE[@]}"; do set -- $c; mom=0; [ "$3" = healthy ] && mom=1; id=$(identity "classical_${e%%|*}" "${e#*|}" none "" "$1" "$2" "$ovf" "$mom"); cell_done "$OUT/classical_${e%%|*}/$3" "$id" || echo "classical_${e%%|*}/$3"; done
+  done
+}
+training_finished(){  # the LAST chain invocation's COMPLETE line, not an earlier pass's (codex review #6)
+  awk '/CHAIN START id=/{s=$NF; done=0} /CHAIN COMPLETE id=/{if ($NF==s) done=1} END{exit !(s!="" && done)}' "$CHAIN_LOG" 2>/dev/null
+}
+
+say "=== START group=$GROUP out=$OUT eval=$EVAL_HEAD_FULL ml=$EXPECT_ML_HEAD anchor_md5=$ANCHOR_MD5"
+while :; do
+  pass_all
+  m=$(missing)
+  [ -z "$m" ] && [ "$BAD" = 0 ] && { say "=== ALL REQUIRED CELLS COMPLETE"; exit 0; }
+  if [ "${EXAM_SMOKE:-0}" = 1 ] || training_finished; then
+    say "=== $( [ "${EXAM_SMOKE:-0}" = 1 ] && echo SMOKE PASS END || echo TRAINING CHAIN FINISHED ): incomplete cells: $(echo "$m" | tr '\n' ' ') malformed_selection=$BAD"
+    exit 1
+  fi
+  sleep 600
+done

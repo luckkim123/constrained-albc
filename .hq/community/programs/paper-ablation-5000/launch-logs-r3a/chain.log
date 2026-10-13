@@ -1,0 +1,20 @@
+[2026-09-12T14:51:47+0900] CHAIN START id=20260912T145147-905945
+[2026-09-12T14:51:47+0900] START ref_full task=Isaac-ConstrainedALBC-TRPO-SimToReal-v0 variant=section5 HEAD=3791441873bc0346b534aff168d785a8dac4eddc marinelab=8cc84a54540f9fd06a835efc3f33d117dd8b2a84
+[2026-09-12T14:51:57+0900] GATE ok ref_full run=logs/rsl_rl/albc_trpo_teacher/paper_ablation_r3a/trpo_r3a_ref_full_260912_145151
+[2026-09-12T19:51:03+0900] END ref_full rc=0 ok=1 run=logs/rsl_rl/albc_trpo_teacher/paper_ablation_r3a/trpo_r3a_ref_full_260912_145151
+[2026-09-12T19:51:03+0900] START a6_ppoenc task=Isaac-ConstrainedALBC-PPO-Enc-SimToReal-v0 variant=section5 HEAD=3791441873bc0346b534aff168d785a8dac4eddc marinelab=8cc84a54540f9fd06a835efc3f33d117dd8b2a84
+[2026-09-12T19:51:13+0900] GATE ok a6_ppoenc run=logs/rsl_rl/albc_ablation/paper_ablation_r3a/ppo-enc_r3a_a6_ppoenc_260912_195108
+[2026-09-12T22:46:18+0900] END a6_ppoenc rc=0 ok=1 run=logs/rsl_rl/albc_ablation/paper_ablation_r3a/ppo-enc_r3a_a6_ppoenc_260912_195108
+[2026-09-12T22:46:18+0900] START noenc task=Isaac-ConstrainedALBC-NoEncoder-SimToReal-v0 variant=section5 HEAD=3791441873bc0346b534aff168d785a8dac4eddc marinelab=8cc84a54540f9fd06a835efc3f33d117dd8b2a84
+[2026-09-12T22:46:28+0900] GATE ok noenc run=logs/rsl_rl/albc_ablation/paper_ablation_r3a/noenc_r3a_noenc_260912_224623
+[2026-09-13T02:22:33+0900] END noenc rc=0 ok=1 run=logs/rsl_rl/albc_ablation/paper_ablation_r3a/noenc_r3a_noenc_260912_224623
+[2026-09-13T02:22:33+0900] START ppo task=Isaac-ConstrainedALBC-PPO-SimToReal-v0 variant=section5 HEAD=3791441873bc0346b534aff168d785a8dac4eddc marinelab=8cc84a54540f9fd06a835efc3f33d117dd8b2a84
+[2026-09-13T02:22:43+0900] GATE ok ppo run=logs/rsl_rl/albc_ablation/paper_ablation_r3a/ppo_r3a_ppo_260913_022238
+[2026-09-13T05:02:47+0900] END ppo rc=0 ok=1 run=logs/rsl_rl/albc_ablation/paper_ablation_r3a/ppo_r3a_ppo_260913_022238
+[2026-09-13T05:02:47+0900] START noipo task=Isaac-ConstrainedALBC-TRPO-NoIPO-SimToReal-v0 variant=section5 HEAD=3791441873bc0346b534aff168d785a8dac4eddc marinelab=8cc84a54540f9fd06a835efc3f33d117dd8b2a84
+[2026-09-13T05:02:57+0900] GATE ok noipo run=logs/rsl_rl/albc_ablation/paper_ablation_r3a/trpo-noipo_r3a_noipo_260913_050252
+[2026-09-13T09:41:04+0900] END noipo rc=0 ok=1 run=logs/rsl_rl/albc_ablation/paper_ablation_r3a/trpo-noipo_r3a_noipo_260913_050252
+[2026-09-13T09:41:04+0900] START noboth task=Isaac-ConstrainedALBC-TRPO-NoIPO-NoEncoder-SimToReal-v0 variant=section5 HEAD=3791441873bc0346b534aff168d785a8dac4eddc marinelab=8cc84a54540f9fd06a835efc3f33d117dd8b2a84
+[2026-09-13T09:41:14+0900] GATE ok noboth run=logs/rsl_rl/albc_ablation/paper_ablation_r3a/trpo-noipo_r3a_noboth_260913_094109
+[2026-09-13T13:04:19+0900] END noboth rc=0 ok=1 run=logs/rsl_rl/albc_ablation/paper_ablation_r3a/trpo-noipo_r3a_noboth_260913_094109
+[2026-09-13T13:04:19+0900] CHAIN COMPLETE id=20260912T145147-905945

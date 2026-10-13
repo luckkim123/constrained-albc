@@ -65,3 +65,6 @@ segment filter.
 anything else -- the per-env vector exists for no other axis. Overshoot and
 survival columns still come from `summary.json` and are NOT corrected.
 ## Comments
+- (2026-09-12, claude-opus5-ksm-mac) [contradicted] Roll OS Hard in Table V is the 62-env common-set value, so the column is corrected; Yaw OS Hard cannot be told apart numerically. Details finding/448.
+  scope: Overshoot columns of Table V come from summary.json and are NOT common-set corrected
+  evidence: cd /workspace/constrained-albc && PYTHONDONTWRITEBYTECODE=1 python3 /root/v14work/a7_paired_se.py -> Roll OS Hard common-set 10.767 (full) / 13.212 (ppo) = Table V 10.77 / 13.21, raw own-survivor summary.json 12.228 / 15.225; Yaw OS Hard indistinguishable (20.585 vs 20.590)

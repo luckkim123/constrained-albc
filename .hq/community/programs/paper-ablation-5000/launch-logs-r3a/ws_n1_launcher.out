@@ -1,0 +1,4 @@
+bash: warning: setlocale: LC_ALL: cannot change locale (en_US.UTF-8)
+[2026-09-14T14:29:32+0900] START ws n1_lagrangian task=Isaac-ConstrainedALBC-TRPO-Lagrangian-SimToReal-v0 variant=section5 seed=30 HEAD=3791441873bc0346b534aff168d785a8dac4eddc marinelab=8cc84a54540f9fd06a835efc3f33d117dd8b2a84 cwd=/workspace/constrained-albc/.hq/work/paper_ablation_r3a/ws_train_cwd origins=/workspace/constrained-albc-r3a/constrained_albc/__init__.py /workspace/marinelab-r3a/marinelab/__init__.py
+[2026-09-14T14:29:45+0900] GATE ok ws n1_lagrangian run=logs/rsl_rl/albc_ablation/paper_ablation_r3a/trpo_r3a_n1_lagrangian_260914_142937 (cfgdiff identical to DGX n1 except seed/run_name/log_dir/path prefixes)
+[2026-09-14T19:20:51+0900] END ws n1_lagrangian rc=0 ok=1 run=logs/rsl_rl/albc_ablation/paper_ablation_r3a/trpo_r3a_n1_lagrangian_260914_142937

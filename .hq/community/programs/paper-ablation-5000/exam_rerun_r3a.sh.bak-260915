@@ -1,0 +1,111 @@
+#!/bin/bash
+# paper-ablation-5000 (2026-09-14): CORE exam of the two n1-verdict re-realizations (PLAN Update 09-14 14시 35분).
+#   ws_n1_lagrangian -- workstation GPU0 run, seed 30; compare with exam_v3/r3a_ref_full (same machine, same seed).
+#   dgx_ref_s31      -- DGX baseline seed 31 (copy under $MAIN/logs); compare with exam_v3_dgx/dgx_ref and dgx_n1_lagrangian.
+# Grader = exam_dgx_r3a.sh unchanged: eval tree afa3c6b + marinelab 8cc84a5 (both clean), p3b final DORAEMON box
+# (--env-dr-anchor --doraemon-dr-from), CORE 4 cells, --att-amp-deg 15, 64 envs, seed 42, --save-extras
+# (+ --save-moments on healthy), 5400 s cap, same identity/.complete/validate_cell. model_4999 only.
+# Usage: exam_rerun_r3a.sh <row> <md5 of model_4999.pt> -- md5 taken from the finished run, rechecked inside the lock.
+# GPU1 through /root/gpu1.lock per cell. Rerun skips complete cells. Stop: kill -TERM <this pid>.
+set -u
+ROW=${1:?row}; WANT_MD5=${2:?md5}
+W_CODE=/workspace/constrained-albc-eval
+ML=/workspace/marinelab-r3a
+MAIN=/workspace/constrained-albc
+EXPECT_ML_HEAD=8cc84a54540f9fd06a835efc3f33d117dd8b2a84
+DR_FROM=$MAIN/logs/rsl_rl/albc_trpo_teacher/retrain_simtoreal_p3/trpo_p3b_lb200_s30_r2050_260904_163518
+G=$MAIN/logs/rsl_rl
+case "$ROW" in
+  ws_n1_lagrangian) TASK=Isaac-ConstrainedALBC-TRPO-Lagrangian-SimToReal-v0
+    RDIR=$G/albc_ablation/paper_ablation_r3a/trpo_r3a_n1_lagrangian_260914_142937
+    SRC="workstation GPU0 run; compare with exam_v3/r3a_ref_full" ;;
+  dgx_ref_s31) TASK=Isaac-ConstrainedALBC-TRPO-SimToReal-v0
+    RDIR=$G/albc_trpo_teacher/paper_ablation_r3a_dgx/trpo_dgx_ref_s31_260914_142436
+    SRC="DGX run copy; compare with exam_v3_dgx/dgx_ref and dgx_n1_lagrangian" ;;
+  *) echo "unknown row: $ROW"; exit 2 ;;
+esac
+CKPT=$RDIR/model_4999.pt
+[ -f "$RDIR/.chain_ok" ] && [ -f "$CKPT" ] || { echo "FATAL $RDIR has no .chain_ok or model_4999.pt"; exit 2; }
+CORE=("1,1,1,1,1,1 0 healthy" "1,1,1,0,0,1 0 pair34" "1,1,1,1,1,1 1 healthy_d1" "1,1,1,1,1,1 2 healthy_d2")
+NENV=64
+OUT=$MAIN/.hq/work/paper_ablation_r3a/exam_v3_rerun
+LOCK=/root/gpu1.lock
+mkdir -p "$OUT"; LOG=$OUT/exam.log
+cd "$W_CODE" || exit 1
+export PYTHONPATH="$W_CODE:$ML" PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 TERM=xterm CUDA_VISIBLE_DEVICES=1
+say(){ echo "[$(date +%FT%T%z)] [$ROW] $*" | tee -a "$LOG"; }
+trap 'trap - TERM INT; say "stopped by signal"; pkill -TERM -f -- "--output_dir $OUT/$ROW/"; sleep 5; pkill -KILL -f -- "--output_dir $OUT/$ROW/"; kill 0' TERM INT
+EVAL_HEAD_FULL=$(git -C "$W_CODE" rev-parse --verify 'afa3c6b^{commit}') || { say "FATAL afa3c6b not in $W_CODE"; exit 2; }
+anchor_hash(){ cat "$DR_FROM"/events.out.tfevents* | md5sum | cut -c1-32; }
+ANCHOR_MD5=$(anchor_hash)
+code_ok(){
+  [ "$(git -C "$W_CODE" rev-parse HEAD)" = "$EVAL_HEAD_FULL" ] || { say "FATAL eval HEAD moved"; return 1; }
+  [ "$(git -C "$ML" rev-parse HEAD)" = "$EXPECT_ML_HEAD" ] || { say "FATAL marinelab HEAD moved"; return 1; }
+  [ "$(git -C "$W_CODE" status --porcelain | wc -l)" = 0 ] || { say "FATAL eval worktree dirty"; return 1; }
+  [ "$(git -C "$ML" status --porcelain | wc -l)" = 0 ] || { say "FATAL marinelab worktree dirty"; return 1; }
+  [ "$(anchor_hash)" = "$ANCHOR_MD5" ] || { say "FATAL exam box changed: $DR_FROM"; return 1; }
+}
+validate_cell(){  # cell_dir moments(0|1) -> 0 when the evaluator output is complete (copied from exam_chain_r3a.sh)
+  python3 - "$1" "$2" <<'PY'
+import json, os, sys
+import numpy as np
+d, mom = sys.argv[1], sys.argv[2] == "1"
+s = json.load(open(os.path.join(d, "summary.json")))
+levels = [k for k in ("none", "soft", "medium", "hard") if k in s]
+assert levels, "summary.json has no tier"
+json.load(open(os.path.join(d, "extras_meta.json")))
+for lv in levels:
+    z = np.load(os.path.join(d, f"extras_{lv}.npz"))
+    assert "costs" in z.files and z["costs"].ndim == 3, lv
+    if mom:
+        assert all(k in z.files for k in ("m_thr", "m_buoy", "m_grav_buoy")), lv
+PY
+}
+identity(){  # row task ckpt h dl mom -- same fields as the chain's identity for a non-student, no-override row
+  printf 'arm=%s task=%s ckpt=%s enc=none teacher=none cfg=%s,%s nenv=%s seg=full eval=%s ml=%s anchor=%s extras=1 moments=%s ovr=none\n' \
+    "$1" "$2" "$(readlink -f "$3") $(stat -c '%s %Y' "$3")" "$4" "$5" "$NENV" "$EVAL_HEAD_FULL" "$EXPECT_ML_HEAD" "$ANCHOR_MD5" "$6"
+}
+cell_done(){ [ -f "$1/.complete" ] && [ "$(cat "$1/.complete")" = "$2" ]; }
+
+cell(){  # health delay name
+  local d=$OUT/$ROW/$3 mom=0 mflag=() extra=() id rc
+  [ "$3" = healthy ] && { mom=1; mflag=(--save-moments); }
+  [ "$2" != 0 ] && extra=(--control-delay "$2")
+  id=$(identity "$ROW" "$TASK" "$CKPT" "$1" "$2" "$mom")
+  cell_done "$d" "$id" && { say "skip $ROW/$3 (complete)"; return 0; }
+  (
+    flock 9 || { say "FATAL cannot take $LOCK"; exit 86; }
+    code_ok || exit 86
+    [ "$(md5sum < "$CKPT" | cut -c1-32)" = "$WANT_MD5" ] || { say "FATAL checkpoint md5 changed: $CKPT"; exit 86; }
+    [ -e "$d" ] && mv "$d" "$d.stale_$(date +%Y%m%dT%H%M%S)"
+    mkdir -p "$d"
+    { echo "$id" | tr ' ' '\n'; echo "ckpt_md5=$WANT_MD5"; echo "source=$SRC"; echo "lock_acquired=$(date +%FT%T%z)"; } > "$d/RUN_CONDITIONS.txt"
+    say "start $ROW/$3"
+    timeout -k 60 5400 /workspace/isaaclab/isaaclab.sh -p constrained_albc/analysis/eval.py static --task "$TASK" --checkpoint "$CKPT" \
+      --num_envs "$NENV" --seed 42 --headless --fault_fixed_health "$1" --att-amp-deg 15 "${extra[@]}" \
+      --env-dr-anchor --doraemon-dr-from "$DR_FROM" --save-extras "${mflag[@]}" --output_dir "$d" > "$d.log" 2>&1
+    rc=$?
+    echo "rc=$rc end=$(date +%FT%T%z)" >> "$d/RUN_CONDITIONS.txt"
+    if [ "$rc" = 0 ] && validate_cell "$d" "$mom" >> "$d.log" 2>&1; then echo "$id" > "$d/.complete"; exit 0; fi
+    exit $(( rc == 0 ? 3 : rc ))
+  ) 9>"$LOCK" &
+  wait $!; rc=$?
+  say "done $ROW/$3 rc=$rc complete=$(cell_done "$d" "$id" && echo yes || echo NO)"
+  return $rc
+}
+
+code_ok || exit 2
+say "=== START pid=$$ ckpt=$CKPT md5=$WANT_MD5 eval=$EVAL_HEAD_FULL ml=$EXPECT_ML_HEAD anchor=$ANCHOR_MD5"
+first=1; fails=0
+for c in "${CORE[@]}"; do
+  set -- $c
+  cell "$1" "$2" "$3"; rc=$?
+  [ "$rc" = 86 ] && { say "=== FATAL stop (source/lock/checkpoint check failed)"; exit 2; }
+  if [ "$rc" != 0 ]; then
+    fails=$((fails + 1))
+    [ "$first" = 1 ] && { say "=== FIRST CELL FAILED -- batch stopped"; exit 3; }
+  fi
+  first=0
+done
+say "=== BATCH END failed_cells=$fails"
+[ "$fails" = 0 ]
