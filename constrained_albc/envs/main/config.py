@@ -261,6 +261,56 @@ class DomainRandomizationCfg:
     # DORAEMON curriculum -- integer delay is awkward for the Beta-continuous
     # sampler. Promote to a _PARAM_DEFS entry only if warranted.
     control_delay_steps: tuple[int, int] = (0, 0)
+    # Observation transport delay (discrete N-step lag on the POLICY observation, applied
+    # after both sensor-noise layers in _get_observations) as integer control steps;
+    # 1 step = 20 ms @ 50 Hz. The board serves the policy observations 1.2-4.7 control
+    # steps stale (vault finding/264), and the action DelayBuffer above cannot stand in
+    # for that: loop phase adds, but the policy's setpoint handling and its internal
+    # integral/history state see the world late only when the observation itself is
+    # delayed (vault review/226 §1-5, decision/228 D1). (0, 0) = off (byte-identical).
+    # Static uniform per-env draw at reset, not a DORAEMON dim (same reasoning as
+    # control_delay_steps). p6 launch value = (0, 5).
+    obs_delay_steps: tuple[int, int] = (0, 0)
+
+    # -- IMU observation FREEZE (arm U, ledger 144) --
+    # The board IMU intermittently stops updating: messages keep arriving at 99.9 Hz but
+    # ROLL/PITCH/YAW/GYRO_X/GYRO_Y/GYRO_Z repeat the previous value, so the policy sees a
+    # CONSTANT attitude for the whole outage and then a jump to the live one.
+    #
+    # obs_delay_steps above CANNOT stand in for this, and that is the whole reason this
+    # knob exists: a DelayBuffer is a SHIFT (every sample arrives, lag steps late, and the
+    # derivative survives) while a freeze is a HOLD (samples are LOST and the derivative
+    # reads zero).  The magnitudes are 7.6-308x apart (obs_delay max 5 steps).
+    #
+    # Only the POLICY view is held -- reward, termination and the constraint terms keep
+    # reading the true attitude, exactly as on the board (the robot really is tilting; only
+    # the message stopped).  The accelerometer channel of compute_student_extra_obs is NOT
+    # held: P18/P20 measured the six IMU values, and that path behaviour is unmeasured.
+    #
+    # Per-env rate, drawn uniformly at every reset and then Poisson-thinned per control
+    # step.  (0.0, 0.0) = off (byte-identical; no RNG is drawn).
+    #
+    # Registered value (0.0, 1.02): the MEAN is the measured overall rate (tank P20:
+    # 37 freezes / 72 min = 0.51/min over 18 bags).  The SPREAD is a deliberate modelling
+    # choice, not a measurement: P20 found the rate is NOT homogeneous (per-bag 0-1.62/min,
+    # chi2 37.5 on df 17, Monte-Carlo p ~ 0.012; 3 bags hold 16 of the 19 long events), and
+    # the tank explicitly warned that a single mean erases that burst structure.  Drawing a
+    # per-episode rate reproduces the DIRECTION of that overdispersion (quiet episodes and
+    # busy ones) while preserving the measured mean.  It does NOT reproduce the within-bag
+    # bursts themselves -- those need a modulated process, and P20 also notes its cluster
+    # windows were chosen after seeing the events, so the in-window rate is inflated.
+    imu_freeze_rate_per_min: tuple[float, float] = (0.0, 0.0)
+    # Duration pool, sampled WITH REPLACEMENT.  These are the 37 raw measured durations
+    # (tank P20, relay 89), not a fitted distribution and not a range: the earlier 7-sample
+    # range 0.76-2.56 s missed BOTH tails.  A freeze is >= 6 identical messages; the
+    # distribution is continuous from 0.05 to 6.16 s with no break at 0.5 s, so any
+    # threshold on it would be a design choice rather than a boundary in the data.
+    imu_freeze_durations_s: tuple[float, ...] = (
+        0.05, 0.06, 0.08, 0.08, 0.10, 0.14, 0.17, 0.19, 0.20, 0.23,
+        0.24, 0.26, 0.27, 0.30, 0.36, 0.40, 0.46, 0.49,
+        0.53, 0.59, 0.62, 0.70, 0.71, 0.73, 0.76, 0.91, 0.94, 1.08,
+        1.13, 1.19, 1.41, 1.85, 1.95, 2.02, 2.56, 3.09, 6.16,
+    )
 
     # -- Ocean Current (DORAEMON-managed) --
     # Scalar strength [0, 1] multiplier on ocean_current.max_velocity.

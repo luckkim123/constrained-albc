@@ -335,6 +335,19 @@ class ALBCEnv(DirectRLEnv):
         self._init_force_buffers()
         # Euler angle cache (refreshed once per step in _get_dones, read by rewards/obs/constraints)
         self._euler_cache: tuple[torch.Tensor, torch.Tensor, torch.Tensor] | None = None
+        # IMU observation-freeze state (arm U, ledger 144).  Always allocated so the
+        # readers are unconditional; _imu_freeze_active stays all-False when the knob is off.
+        self._imu_freeze_left = torch.zeros(self.num_envs, dtype=torch.int32, device=self.device)
+        self._imu_freeze_active = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
+        self._imu_freeze_rpy = torch.zeros(self.num_envs, 3, device=self.device)
+        self._imu_freeze_omega = torch.zeros(self.num_envs, 3, device=self.device)
+        self._imu_freeze_rate = torch.zeros(self.num_envs, device=self.device)
+        _dur = getattr(self.cfg.randomization, "imu_freeze_durations_s", ())
+        self._imu_freeze_pool = torch.tensor(list(_dur), device=self.device) if len(_dur) else None
+        # 굳음 전용 난수원.  전역 스트림을 안 건드려야 OFF/ON 짝의 DR 실현이 같다.
+        _sd = int(getattr(self.cfg, "seed", 0) or 0)
+        self._imu_freeze_gen = torch.Generator(device=self.device)
+        self._imu_freeze_gen.manual_seed(104729 + 7919 * _sd)
 
     def _init_action_buffers(self) -> None:
         """Action history (3-deep for smoothness penalty) and joint PD targets."""
@@ -367,6 +380,15 @@ class ALBCEnv(DirectRLEnv):
             self.num_envs,
             self.device,
         )
+        # Observation transport delay (decision/228 D1): same allocation helper, applied to
+        # the assembled policy observation in _get_observations. None when off.
+        self._obs_delay_steps, self._obs_delay_buf = _draw_control_delay(
+            getattr(self.cfg.randomization, "obs_delay_steps", (0, 0)),
+            self.num_envs,
+            self.device,
+        )
+        self._obs_delay_last_step = -1
+        self._obs_delay_held: torch.Tensor | None = None
 
     def _init_history_buffers(self) -> None:
         """Temporal history ring buffer: 21D per step (joint 4D + body 9D + action 8D)."""
@@ -657,7 +679,8 @@ class ALBCEnv(DirectRLEnv):
         joint_pos_error = self._joint_pos_targets - joint_pos
         joint_vel = self._robot.data.joint_vel[:, self._albc_joint_ids]
 
-        roll, pitch, yaw = euler_xyz_from_quat(self._robot.data.root_quat_w)
+        # arm U: the history features are an OBSERVATION path, so they see the held IMU.
+        roll, pitch, yaw = self._imu_obs_rpy()
 
         # Roll/pitch: attitude error (wrapped to [-pi, pi])
         att_raw = self._ang_cmd[:, :2] - torch.stack([roll, pitch], dim=-1)
@@ -1274,6 +1297,21 @@ class ALBCEnv(DirectRLEnv):
             policy_obs, self._dr_obs_noise_scale, base_std=self._dr_obs_base_std
         )
 
+        # Observation transport delay (decision/228 D1): the policy sees the noisy
+        # observation `lag` control steps late, exactly as the board serves it stale
+        # (finding/264). Applied after the noise layers because the noise rides inside the
+        # stale message. Guarded on common_step_counter like the extra-obs path above:
+        # _get_observations can run twice in one step (encoder logging), and a second
+        # DelayBuffer.compute would push a duplicate sample and corrupt the timeline.
+        # Just-reset envs are primed with their first sample (CircularBuffer.append fills the
+        # whole history on the first push), so the policy sees s0 held for `lag` steps and
+        # never a jump back in time.
+        if self._obs_delay_buf is not None:
+            if self._obs_delay_last_step != self.common_step_counter:
+                self._obs_delay_last_step = self.common_step_counter
+                self._obs_delay_held = self._obs_delay_buf.compute(policy_obs)
+            policy_obs = self._obs_delay_held.clone()
+
         observations = {"policy": policy_obs}
         # E1/B2 gen-1 only: publish the 4 channels as their own obs key, NOT in policy_obs, so
         # the frozen teacher actor's 72D input is untouched. Gen-2 deliberately does NOT publish
@@ -1415,6 +1453,10 @@ class ALBCEnv(DirectRLEnv):
 
         # Yaw heading tracking
         log["Track/yaw/err_deg"] = torch.rad2deg(self._yaw_err[env_ids]).abs().mean().item()
+        # Observation-delay DR readout (decision/228 D1): mean lag of the resetting envs; 0 when off.
+        log["Track/obs_delay_steps_mean"] = self._obs_delay_steps[env_ids].float().mean().item()
+        # arm U readout: fraction of the resetting envs whose IMU is held right now.  0 when off.
+        log["Track/imu_freeze_frac"] = self._imu_freeze_active[env_ids].float().mean().item()
 
         # Command diagnostics (attitude + yaw grouped, linear grouped)
         log["Track/cmd_att/roll_deg"] = torch.rad2deg(self._ang_cmd[env_ids, 0]).abs().mean().item()
@@ -1524,6 +1566,10 @@ class ALBCEnv(DirectRLEnv):
 
         # Refresh euler cache (used by _get_rewards, _get_observations, constraints)
         self._euler_cache = euler_xyz_from_quat(self._robot.data.root_quat_w)
+        # arm U: advance the IMU-freeze schedule exactly ONCE per control step.  _get_dones
+        # is the only once-per-step hook that runs after physics and before _get_observations
+        # (which can run twice per step).  Driving it from the readers would double-advance.
+        self._advance_imu_freeze()
         roll, pitch, _ = self._euler_cache
 
         # Attitude angle check: terminate if roll or pitch exceeds limit.
@@ -1639,6 +1685,104 @@ class ALBCEnv(DirectRLEnv):
         # buffer history reset moved with it (both still happen before the next
         # _pre_physics_step, which is the only reader).
 
+    def _advance_imu_freeze(self) -> None:
+        """Step the per-env IMU outage schedule by one control step (arm U, ledger 144).
+
+        Onset is a per-env Bernoulli thinning of a Poisson process at that env rate (drawn
+        at reset, see _reset_imu_freeze); duration is drawn WITH REPLACEMENT from the 37
+        measured durations in ``imu_freeze_durations_s`` (tank P20).  While an env is NOT
+        frozen its live attitude/rate are latched as the last good sample, so a freeze that
+        starts on this step serves exactly the sample the board would have kept.
+
+        No-op and no RNG when the pool is empty or every rate is 0 -> byte-identical.
+        The rate guard is what makes OFF byte-identical: the duration pool carries a
+        non-empty DEFAULT, so guarding on the pool alone would still draw torch.rand every
+        step and shift the RNG stream out from under every other arm in this tree.
+        """
+        if self._imu_freeze_pool is None or not bool((self._imu_freeze_rate > 0).any()):
+            return
+        roll, pitch, yaw = self._euler_cache
+        rpy = torch.stack([roll, pitch, yaw], dim=-1)
+        omega = self._robot.data.root_ang_vel_b
+        free = self._imu_freeze_left <= 0
+        # Latch the last good sample on every non-frozen step.
+        self._imu_freeze_rpy[free] = rpy[free]
+        self._imu_freeze_omega[free] = omega[free]
+        # Onset.  p = rate_per_min * step_dt / 60 s; at 0.51/min and 20 ms this is 1.7e-4.
+        p = self._imu_freeze_rate * (self.step_dt / 60.0)
+        start = free & (
+            torch.rand(self.num_envs, device=self.device, generator=self._imu_freeze_gen) < p
+        )
+        n = int(start.sum())
+        if n:
+            idx = torch.randint(
+                0, self._imu_freeze_pool.numel(), (n,), device=self.device,
+                generator=self._imu_freeze_gen,
+            )
+            dur_s = self._imu_freeze_pool[idx]
+            self._imu_freeze_left[start] = (dur_s / self.step_dt).round().clamp(min=1.0).to(torch.int32)
+        self._imu_freeze_active = self._imu_freeze_left > 0
+        self._imu_freeze_left = (self._imu_freeze_left - 1).clamp(min=0)
+
+    def _imu_obs_rpy(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Euler angles as the POLICY sees them -- held while the IMU is frozen (arm U).
+
+        Read-only: the schedule advances in _advance_imu_freeze.  Reward, termination and
+        the constraint terms deliberately keep using ``_euler_cache`` (the true attitude).
+        """
+        roll, pitch, yaw = self._euler_cache
+        if not bool(self._imu_freeze_active.any()):
+            return roll, pitch, yaw
+        held = self._imu_freeze_rpy
+        m = self._imu_freeze_active
+        return (
+            torch.where(m, held[:, 0], roll),
+            torch.where(m, held[:, 1], pitch),
+            torch.where(m, held[:, 2], yaw),
+        )
+
+    def _imu_obs_ang_vel(self) -> torch.Tensor:
+        """Body angular velocity as the POLICY sees it -- held while the IMU is frozen."""
+        live = self._robot.data.root_ang_vel_b
+        if not bool(self._imu_freeze_active.any()):
+            return live
+        return torch.where(self._imu_freeze_active.unsqueeze(-1), self._imu_freeze_omega, live)
+
+    def _reset_imu_freeze(self, env_ids: torch.Tensor) -> None:
+        """Clear any in-flight outage and re-draw this env freeze rate (arm U).
+
+        The rate is per EPISODE, not global: P20 measured a non-homogeneous process
+        (per-bag 0-1.62/min, chi2 p ~ 0.012).  A fresh uniform draw per episode keeps the
+        measured mean while giving quiet and busy episodes, which a single rate cannot.
+        """
+        self._imu_freeze_left[env_ids] = 0
+        self._imu_freeze_active[env_ids] = False
+        lo, hi = getattr(self.cfg.randomization, "imu_freeze_rate_per_min", (0.0, 0.0))
+        if hi <= 0.0:
+            return
+        self._imu_freeze_rate[env_ids] = lo + (hi - lo) * torch.rand(
+            len(env_ids), device=self.device, generator=self._imu_freeze_gen
+        )
+
+    def _reset_obs_delay(self, env_ids: torch.Tensor) -> None:
+        """Re-draw the per-env observation lag uniformly in [lo, hi] and clear its history.
+
+        Static uniform DR (decision/228 D1), deliberately not on the DORAEMON curriculum --
+        the board's staleness (1.2-4.7 steps, finding/264) is a property of the transport,
+        not a difficulty the policy masters, so every env sees the full band from
+        iteration 0. Returns immediately when the buffer is off (obs_delay_steps hi <= 0).
+        """
+        if self._obs_delay_buf is None:
+            return
+        # An explicit env.reset() does not bump common_step_counter, so the step guard in
+        # _get_observations would otherwise serve the pre-reset held sample. Force a fresh compute.
+        self._obs_delay_last_step = -1
+        lo, hi = self.cfg.randomization.obs_delay_steps
+        new_lag = torch.randint(low=lo, high=hi + 1, size=(len(env_ids),), dtype=torch.int, device=self.device)
+        self._obs_delay_steps[env_ids] = new_lag
+        self._obs_delay_buf.set_time_lag(new_lag, env_ids)
+        self._obs_delay_buf.reset(env_ids)
+
     def _reset_control_delay(self, env_ids: torch.Tensor, sampled: dict | None) -> None:
         """Re-draw the per-env action-delay lag and clear the delay buffer's history.
 
@@ -1707,6 +1851,8 @@ class ALBCEnv(DirectRLEnv):
             # read straight off the cfg by _draw_control_delay -- the buffer exists whether
             # or not randomization.enable is set, exactly as it did before this moved.
             self._reset_control_delay(env_ids, None)
+            self._reset_obs_delay(env_ids)
+            self._reset_imu_freeze(env_ids)
             self._reset_fz_disturbance(env_ids, None)
             return
 
@@ -1779,6 +1925,9 @@ class ALBCEnv(DirectRLEnv):
 
         # Action-delay lag, paced by the DORAEMON control_delay_strength knob.
         self._reset_control_delay(env_ids, sampled)
+        # Observation-delay lag: static uniform, not DORAEMON-paced (decision/228 D1).
+        self._reset_obs_delay(env_ids)
+        self._reset_imu_freeze(env_ids)
 
         # Exogenous heave disturbance: strength from the DORAEMON draw when registered,
         # then a fresh Fz and hold. No-op (and no RNG) unless cfg.disturbance.enable.

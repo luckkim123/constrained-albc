@@ -63,7 +63,7 @@ def compute_policy_obs(
     Thruster State (6D):
         [14:20] thruster filtered output (ESC channels m0-m5)
     """
-    roll, pitch, yaw = env._euler_cache
+    roll, pitch, yaw = env._imu_obs_rpy()  # arm U: held while the IMU is frozen
     joint_pos = robot.data.joint_pos[:, env._albc_joint_ids]
     joint_vel = robot.data.joint_vel[:, env._albc_joint_ids]
     thr_state = env._thruster.state if env._thruster is not None else torch.zeros(env.num_envs, 6, device=env.device)
@@ -74,7 +74,7 @@ def compute_policy_obs(
             env._ang_cmd,  # 3D: [roll_att_cmd, pitch_att_cmd, yaw_heading_cmd]
             # Body State (6D) -- no measured linear velocity (no DVL on real robot)
             torch.stack([roll, pitch, yaw], dim=-1),  # 3D: euler angles
-            robot.data.root_ang_vel_b,  # 3D: angular velocity body
+            env._imu_obs_ang_vel(),  # 3D: angular velocity body (arm U: held when frozen)
             # Arm State (5D)
             joint_pos,  # 2D: joint positions (raw cumulative)
             joint_vel,  # 2D: joint velocities
