@@ -124,7 +124,73 @@ def self_close(out_dir: str, atol: float = _ATOL, arch: str = "tcn") -> dict:
     return parity
 
 
-def write_manifest(out_dir: str, checkpoints: dict, parity: dict, arch: str = "tcn") -> str:
+def read_obs_contract(ckpt_path: str):
+    """관측 조립 계약을 **as-run `params/env.yaml`** 에서 읽는다.  없으면 None.
+
+    왜 필요한가: `write_manifest` 의 dims 는 payload 텐서에서 유도되므로 원리적으로
+    **텐서 모양을 안 바꾸는 계약 항목을 못 본다.**  `hist_len` 3->5 는 폭이 72->92 로
+    변해 잡히지만 `hist_stride` 3->5 는 이력 표본의 시간 간격만 바꿔(스팬 0.18->0.30 s)
+    폭이 그대로다.  그러면 dims 검사 · sha256 · 골든 재현이 **전부 통과**하고 정책만
+    학습 때와 다른 시간 스팬의 이력을 먹는다.  골든은 조립된 관측을 먹이므로 조립
+    자체는 검사 범위 밖이다.
+
+    왜 cfg 객체가 아니라 as-run yaml 인가: 선언과 실제로 돈 값은 갈릴 수 있다.
+    2026-09-22 에 학습 런처가 `--seed 30` 을 하드코딩한 채 이름만 바꾸게 돼 있어
+    "이름은 s31, 시드는 30" 인 런이 가능했고, 그것을 확정한 유일한 근거가 이
+    `params/env.yaml` 이었다.  계약은 선언이 아니라 실행이다.
+
+    못 찾으면 **None 을 반환한다** -- 기본값을 조용히 적으면 없는 증거를 만든다.
+    """
+    d = os.path.dirname(os.path.abspath(ckpt_path))
+    p = None
+    for _ in range(4):            # 체크포인트가 models/ 아래에 있을 수 있다
+        cand = os.path.join(d, "params", "env.yaml")
+        if os.path.exists(cand):
+            p = cand
+            break
+        nd = os.path.dirname(d)
+        if nd == d:
+            break
+        d = nd
+    if p is None:
+        return None
+
+    import yaml
+
+    class _L(yaml.SafeLoader):
+        pass
+
+    # params/env.yaml 은 !!python/tuple 등 태그를 들고 있어 safe_load 가 죽는다.
+    _L.add_multi_constructor("tag:yaml.org,2002:python/tuple",
+                             lambda l, s, n: tuple(l.construct_sequence(n)))
+    _L.add_multi_constructor("tag:yaml.org,2002:python/", lambda l, s, n: None)
+    try:
+        with open(p) as f:
+            cfg = yaml.load(f, Loader=_L)
+        return {
+            "hist_len": int(cfg["hist_len"]),
+            "hist_action_len": int(cfg["hist_action_len"]),
+            "hist_stride": int(cfg["hist_stride"]),
+            # control_dt 는 env.yaml 에도 config.py 에도 키가 없다 -- sim.dt x decimation
+            # 이 유일한 출처다 (2026-09-22 실측 0.005 x 4 = 0.02, 보드 CONTROL_DT 와 일치).
+            "control_dt": float(cfg["sim"]["dt"]) * int(cfg["decimation"]),
+            # 2026-09-22: 보드의 ATT_DS 는 sim 의 env.delta_scale 과 **같은 자리**에 걸린다
+            # (보드 np_policy.py:285 · sim albc_env.py _apply_joint_pd_action, 둘 다 매 틱
+            #  q_des += ds * clip(a[:2], -1, 1) -- 수조 세션 relay §98 이 양쪽 코드로 확인).
+            # 그런데 이 값은 MANIFEST 에도 골든에도 안 실려서, 학습 0.1 인 정책을 보드
+            # 0.04 에 올려도 sha256·dims·골든이 전부 통과한다.  실제로 armA 계열(0.1)과
+            # 설치 팩 armE 계열(0.04)이 갈려 있고, 그 한 칸이 지터의 주효과다(원장 §174.3).
+            # control_decimation 은 그 스케일이 몇 틱마다 적용되는지라 같이 실어야 뜻이 산다.
+            "delta_scale": float(cfg["delta_scale"]),
+            "control_decimation": int(cfg["control_decimation"]),
+            "source": p,
+        }
+    except (KeyError, TypeError, ValueError, OSError):
+        return None
+
+
+def write_manifest(out_dir: str, checkpoints: dict, parity: dict, arch: str = "tcn",
+                   obs_contract: dict | None = None) -> str:
     """Write MANIFEST.json. Dims are derived from the payload tensors themselves
     (never hardcoded), so the manifest can't drift from what was actually packed."""
     wt = dict(np.load(os.path.join(out_dir, "weights_teacher.npz")))
@@ -157,6 +223,11 @@ def write_manifest(out_dir: str, checkpoints: dict, parity: dict, arch: str = "t
         "student_arch": arch,
         "checkpoints": checkpoints,
         "dims": dims,
+        # 텐서 모양에 안 나타나는 관측 조립 계약.  dims 와 섞지 않는 이유는
+        # dims 가 **유도값**이고 이쪽은 **선언값**이라서다 -- 한 딕셔너리에 섞으면
+        # 다음 사람이 이것도 텐서에서 나온 값으로 읽는다.
+        # None = "확인 불가"(cfg 를 못 찾은 옛 팩).  보드는 None 을 경고로 다룬다.
+        "obs_contract": obs_contract,
         "normalization": "(x - mean) / (std + 0.01)   # eps=0.01, _std=sqrt(var) eps NOT folded",
         "golden_device": "cpu  # standard conv, matches board numpy runtime",
         "files": files,

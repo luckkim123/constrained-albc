@@ -845,6 +845,15 @@ def run_evaluation(
     joint1_cmd = np.zeros((total_steps, num_envs))
     joint1_pos = np.zeros((total_steps, num_envs))
     joint1_target = np.zeros((total_steps, num_envs))
+    # 2026-09-23 (ws1): joint2 as well.  The arm is a HORIZONTAL 2R (agent.urdf: both
+    # joints axis (0,0,1) = body z), so the attitude moment is a 2-D vector the arm
+    # makes in POLAR form -- joint2 sets the magnitude r, joint1 the direction.  With
+    # joint1 alone r is unobservable, and the tank runs say the defect lives in r
+    # (policy parks at the folded extreme 84-95 % of the time).  Pure logging: no
+    # extra RNG draw, no change to any existing array, so earlier cells stay comparable.
+    joint2_cmd = np.zeros((total_steps, num_envs))
+    joint2_pos = np.zeros((total_steps, num_envs))
+    joint2_target = np.zeros((total_steps, num_envs))
     # z-ablation diagnostic (#1-A): ||action(z) - action(z_ablated)|| per env-step.
     # Only populated when the policy has an active z-ablation; stays zeros otherwise.
     delta_action = np.zeros((total_steps, num_envs))
@@ -958,6 +967,11 @@ def run_evaluation(
         joint1_pos[step_idx] = (
             raw_env._robot.data.joint_pos[:, raw_env._albc_joint_ids[0]].detach().cpu().numpy()
         )
+        joint2_cmd[step_idx] = actions[:, 1].detach().cpu().numpy()
+        joint2_target[step_idx] = raw_env._joint_pos_targets[:, 1].detach().cpu().numpy()
+        joint2_pos[step_idx] = (
+            raw_env._robot.data.joint_pos[:, raw_env._albc_joint_ids[1]].detach().cpu().numpy()
+        )
 
         # Attitude: actual + error
         roll_cur, pitch_cur, yaw_cur = euler_xyz_from_quat(raw_env._robot.data.root_quat_w)
@@ -1026,6 +1040,9 @@ def run_evaluation(
         "joint1_cmd": joint1_cmd,
         "joint1_target": joint1_target,
         "joint1_pos": joint1_pos,
+        "joint2_cmd": joint2_cmd,
+        "joint2_target": joint2_target,
+        "joint2_pos": joint2_pos,
         "terminated": terminated,
         "time_to_failure": time_to_failure,
         "steps_per_segment": steps_per_seg,

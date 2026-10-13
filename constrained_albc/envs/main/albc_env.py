@@ -367,6 +367,15 @@ class ALBCEnv(DirectRLEnv):
             self.num_envs,
             self.device,
         )
+        # Observation transport delay (decision/228 D1): same allocation helper, applied to
+        # the assembled policy observation in _get_observations. None when off.
+        self._obs_delay_steps, self._obs_delay_buf = _draw_control_delay(
+            getattr(self.cfg.randomization, "obs_delay_steps", (0, 0)),
+            self.num_envs,
+            self.device,
+        )
+        self._obs_delay_last_step = -1
+        self._obs_delay_held: torch.Tensor | None = None
 
     def _init_history_buffers(self) -> None:
         """Temporal history ring buffer: 21D per step (joint 4D + body 9D + action 8D)."""
@@ -1274,6 +1283,21 @@ class ALBCEnv(DirectRLEnv):
             policy_obs, self._dr_obs_noise_scale, base_std=self._dr_obs_base_std
         )
 
+        # Observation transport delay (decision/228 D1): the policy sees the noisy
+        # observation `lag` control steps late, exactly as the board serves it stale
+        # (finding/264). Applied after the noise layers because the noise rides inside the
+        # stale message. Guarded on common_step_counter like the extra-obs path above:
+        # _get_observations can run twice in one step (encoder logging), and a second
+        # DelayBuffer.compute would push a duplicate sample and corrupt the timeline.
+        # Just-reset envs are primed with their first sample (CircularBuffer.append fills the
+        # whole history on the first push), so the policy sees s0 held for `lag` steps and
+        # never a jump back in time.
+        if self._obs_delay_buf is not None:
+            if self._obs_delay_last_step != self.common_step_counter:
+                self._obs_delay_last_step = self.common_step_counter
+                self._obs_delay_held = self._obs_delay_buf.compute(policy_obs)
+            policy_obs = self._obs_delay_held.clone()
+
         observations = {"policy": policy_obs}
         # E1/B2 gen-1 only: publish the 4 channels as their own obs key, NOT in policy_obs, so
         # the frozen teacher actor's 72D input is untouched. Gen-2 deliberately does NOT publish
@@ -1415,6 +1439,8 @@ class ALBCEnv(DirectRLEnv):
 
         # Yaw heading tracking
         log["Track/yaw/err_deg"] = torch.rad2deg(self._yaw_err[env_ids]).abs().mean().item()
+        # Observation-delay DR readout (decision/228 D1): mean lag of the resetting envs; 0 when off.
+        log["Track/obs_delay_steps_mean"] = self._obs_delay_steps[env_ids].float().mean().item()
 
         # Command diagnostics (attitude + yaw grouped, linear grouped)
         log["Track/cmd_att/roll_deg"] = torch.rad2deg(self._ang_cmd[env_ids, 0]).abs().mean().item()
@@ -1639,6 +1665,25 @@ class ALBCEnv(DirectRLEnv):
         # buffer history reset moved with it (both still happen before the next
         # _pre_physics_step, which is the only reader).
 
+    def _reset_obs_delay(self, env_ids: torch.Tensor) -> None:
+        """Re-draw the per-env observation lag uniformly in [lo, hi] and clear its history.
+
+        Static uniform DR (decision/228 D1), deliberately not on the DORAEMON curriculum --
+        the board's staleness (1.2-4.7 steps, finding/264) is a property of the transport,
+        not a difficulty the policy masters, so every env sees the full band from
+        iteration 0. Returns immediately when the buffer is off (obs_delay_steps hi <= 0).
+        """
+        if self._obs_delay_buf is None:
+            return
+        # An explicit env.reset() does not bump common_step_counter, so the step guard in
+        # _get_observations would otherwise serve the pre-reset held sample. Force a fresh compute.
+        self._obs_delay_last_step = -1
+        lo, hi = self.cfg.randomization.obs_delay_steps
+        new_lag = torch.randint(low=lo, high=hi + 1, size=(len(env_ids),), dtype=torch.int, device=self.device)
+        self._obs_delay_steps[env_ids] = new_lag
+        self._obs_delay_buf.set_time_lag(new_lag, env_ids)
+        self._obs_delay_buf.reset(env_ids)
+
     def _reset_control_delay(self, env_ids: torch.Tensor, sampled: dict | None) -> None:
         """Re-draw the per-env action-delay lag and clear the delay buffer's history.
 
@@ -1707,6 +1752,7 @@ class ALBCEnv(DirectRLEnv):
             # read straight off the cfg by _draw_control_delay -- the buffer exists whether
             # or not randomization.enable is set, exactly as it did before this moved.
             self._reset_control_delay(env_ids, None)
+            self._reset_obs_delay(env_ids)
             self._reset_fz_disturbance(env_ids, None)
             return
 
@@ -1779,6 +1825,8 @@ class ALBCEnv(DirectRLEnv):
 
         # Action-delay lag, paced by the DORAEMON control_delay_strength knob.
         self._reset_control_delay(env_ids, sampled)
+        # Observation-delay lag: static uniform, not DORAEMON-paced (decision/228 D1).
+        self._reset_obs_delay(env_ids)
 
         # Exogenous heave disturbance: strength from the DORAEMON draw when registered,
         # then a fresh Fz and hold. No-op (and no RNG) unless cfg.disturbance.enable.

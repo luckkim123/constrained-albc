@@ -19,7 +19,12 @@ from constrained_albc.deploy.golden import (
     export_golden_tcn,
     export_golden_teacher,
 )
-from constrained_albc.deploy.pack import copy_npforward, self_close, write_manifest
+from constrained_albc.deploy.pack import (
+    copy_npforward,
+    read_obs_contract,
+    self_close,
+    write_manifest,
+)
 
 _D, _C, _H, _LAT, _ACT = 6, 4, 9, 3, 2
 _GH, _HH, _T = 5, 4, 7   # GRU hidden, head hidden, golden sequence length
@@ -238,3 +243,62 @@ def test_golden_internal_sanity_gate_raises_on_path_mismatch(tmp_path):
 
     with pytest.raises(RuntimeError, match="diverged"):
         export_golden_tcn(_BrokenTCN().eval(), str(tmp_path), history=_H, obs_dim=_D)
+
+
+# --- 관측 조립 계약 (2026-09-22) ---------------------------------------------
+# 이 블록이 있는 이유: hist_stride 는 텐서 폭을 안 바꿔서 dims 로는 영원히 안 보인다.
+# 즉 팩과 보드가 어긋나도 dims 검사 · sha256 · 골든 재현이 전부 통과한다.
+# 검사기가 볼 수 있는 표면에 항목 자체가 없던 것이고, 그래서 "없으면 조용히 통과" 가
+# 기본 동작이다.  아래 두 테스트가 그 기본 동작을 막는다.
+
+_ENV_YAML = """decimation: 4
+sim:
+  dt: 0.005
+hist_len: 5
+hist_stride: 5
+hist_action_len: 2
+some_tagged_field: !!python/tuple [0, 13]
+"""
+
+
+def test_read_obs_contract_reads_as_run_yaml_and_derives_control_dt(tmp_path):
+    run = tmp_path / "run"
+    (run / "params").mkdir(parents=True)
+    (run / "params" / "env.yaml").write_text(_ENV_YAML)
+    (run / "models").mkdir()
+    ckpt = run / "models" / "student_999.pt"
+    ckpt.write_bytes(b"")
+
+    oc = read_obs_contract(str(ckpt))
+    assert oc is not None, "models/ 아래 체크포인트에서 params/env.yaml 로 못 올라갔다"
+    # stride 가 hist_len 과 **다른 값**이어야 둘을 헷갈려 읽는 구현을 잡는다.
+    assert oc["hist_len"] == 5 and oc["hist_stride"] == 5 and oc["hist_action_len"] == 2
+    # control_dt 는 env.yaml 에 키가 없다 -- sim.dt x decimation 이 유일한 출처다.
+    assert oc["control_dt"] == pytest.approx(0.02)
+    assert oc["source"].endswith("params/env.yaml")
+
+
+def test_read_obs_contract_returns_none_rather_than_fabricating(tmp_path):
+    # cfg 를 못 찾으면 기본값을 적으면 안 된다 -- 없는 증거를 만드는 것이다.
+    assert read_obs_contract(str(tmp_path / "no" / "such" / "ckpt.pt")) is None
+
+
+def test_write_manifest_records_obs_contract_and_defaults_to_null(tmp_path):
+    out = str(tmp_path / "pack_tinygru_260922_000000")
+    os.makedirs(out)
+    _make_gru_pack(out)
+    copy_npforward(out)
+    parity = self_close(out, arch="gru")
+    ckpts = {"student_gru": {"file": "s.pt", "iter": 1, "path": "logs/s.pt"},
+             "teacher": {"file": "t.pt", "iter": 2, "path": "logs/t.pt"}}
+
+    oc = {"hist_len": 3, "hist_action_len": 2, "hist_stride": 5, "control_dt": 0.02,
+          "source": "/x/params/env.yaml"}
+    m = json.load(open(write_manifest(out, checkpoints=ckpts, parity=parity, arch="gru",
+                                      obs_contract=oc)))
+    assert m["obs_contract"] == oc
+    # dims 와 섞이지 않아야 한다 -- dims 는 유도값, obs_contract 는 선언값이다.
+    assert "hist_stride" not in m["dims"]
+
+    m2 = json.load(open(write_manifest(out, checkpoints=ckpts, parity=parity, arch="gru")))
+    assert m2["obs_contract"] is None, "안 넘겼는데 값이 생겼다 = 없는 증거"

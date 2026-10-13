@@ -176,7 +176,12 @@ def main(argv: list[str] | None = None) -> int:
                 export_golden_tcn,
                 export_golden_teacher,
             )
-            from constrained_albc.deploy.pack import copy_npforward, self_close, write_manifest
+            from constrained_albc.deploy.pack import (
+                copy_npforward,
+                read_obs_contract,
+                self_close,
+                write_manifest,
+            )
 
             # Goldens MUST be CPU-generated: GPU cuDNN conv differs from the
             # standard conv (~1e-4) the board numpy runtime implements (golden.py).
@@ -203,6 +208,11 @@ def main(argv: list[str] | None = None) -> int:
                 },
                 parity=parity,
                 arch=arch,
+                # 학생 런의 as-run cfg 가 1순위 -- 보드가 조립할 관측은 학생이 학습한 것과
+                # 같아야 한다.  학생 쪽이 없으면 교사 런으로 떨어지고, 둘 다 없으면 None
+                # 이 그대로 기록된다(없는 증거를 만들지 않는다).
+                obs_contract=(read_obs_contract(args.student_ckpt)
+                              or read_obs_contract(args.teacher_ckpt)),
             )
             logger = logging.getLogger("deploy.export")
             logger.info("pack complete: parity self-close CLOSED, MANIFEST written -> %s", out_dir)
